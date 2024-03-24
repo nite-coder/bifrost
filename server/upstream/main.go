@@ -46,13 +46,106 @@ const (
 		"rebated_fee_currency": "USDT",
 		"finish_as": "filled"
 	  }`
+
+	orderbook = `{
+		"current": 1711255163345,
+		"update": 1711255163342,
+		"asks": [
+			[
+				"63837.9",
+				"0.25997"
+			],
+			[
+				"63839.4",
+				"0.14"
+			],
+			[
+				"63839.5",
+				"0.18"
+			],
+			[
+				"63844.6",
+				"0.00812"
+			],
+			[
+				"63845.7",
+				"0.01256"
+			],
+			[
+				"63846.3",
+				"0.02726"
+			],
+			[
+				"63847.8",
+				"0.12405"
+			],
+			[
+				"63847.9",
+				"0.20674"
+			],
+			[
+				"63850.3",
+				"0.14139"
+			],
+			[
+				"63850.4",
+				"0.23563"
+			]
+		],
+		"bids": [
+			[
+				"63837.8",
+				"0.96189"
+			],
+			[
+				"63837.6",
+				"0.00583"
+			],
+			[
+				"63835.5",
+				"0.47803"
+			],
+			[
+				"63833.7",
+				"0.06774"
+			],
+			[
+				"63833",
+				"0.25504"
+			],
+			[
+				"63832.7",
+				"0.02192"
+			],
+			[
+				"63829.3",
+				"0.05346"
+			],
+			[
+				"63827",
+				"0.10805"
+			],
+			[
+				"63826.9",
+				"0.05348"
+			],
+			[
+				"63826.6",
+				"0.18"
+			]
+		]
+	}`
 )
 
-var orderResp []byte
+var (
+	orderResp     []byte
+	orderbookResp []byte
+)
 
 func main() {
 
 	orderResp = []byte(order)
+	orderbookResp = []byte(orderbook)
 
 	_ = netpoll.SetNumLoops(2)
 	opts := []config.Option{
@@ -63,17 +156,33 @@ func main() {
 	h := server.New(opts...)
 
 	h.POST("/", echoHandler)
-	h.POST("/orders", placeOrderHandler)
+	h.POST("/place_order", placeOrderHandler)
+	h.GET("/order_book", orderBookHandler)
+	h.DELETE("cancel_order", cancelOrderHandler)
 
 	h.Spin()
 }
 
 func echoHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetContentType("text/plain; charset=utf8")
+	ctx.Response.SetStatusCode(200)
 	ctx.Response.SetBody(ctx.Request.Body())
 }
 
 func placeOrderHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetContentType("application/json; charset=utf8")
+	ctx.Response.SetStatusCode(200)
+	ctx.Response.SetBody(orderResp)
+}
+
+func orderBookHandler(c context.Context, ctx *app.RequestContext) {
+	ctx.SetContentType("application/json; charset=utf8")
+	ctx.Response.SetStatusCode(200)
+	ctx.Response.SetBody(orderbookResp)
+}
+
+func cancelOrderHandler(c context.Context, ctx *app.RequestContext) {
+	ctx.SetContentType("application/json; charset=utf8")
+	ctx.Response.SetStatusCode(200)
 	ctx.Response.SetBody(orderResp)
 }

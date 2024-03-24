@@ -2,7 +2,7 @@ import http from 'k6/http';
 
 
 export default function () {
-    const url = 'http://localhost/upstream';
+    const url = 'http://localhost:8001/place_order';
 
     const payload = JSON.stringify({
         "market": "BTC_USDT",

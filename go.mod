@@ -5,8 +5,12 @@ go 1.22.0
 require github.com/cloudwego/netpoll v0.6.0
 
 require (
+	github.com/gorilla/websocket v1.5.1 // indirect
+	github.com/hertz-contrib/websocket v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/savsgio/gotils v0.0.0-20220530130905-52f3993e8d6d // indirect
+	golang.org/x/net v0.21.0 // indirect
 )
 
 require (
@@ -24,6 +28,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/henrylee2cn/ameda v1.4.10 // indirect
 	github.com/henrylee2cn/goutil v0.0.0-20210127050712-89660552f6f8 // indirect
+	github.com/hertz-contrib/reverseproxy v1.0.5
 	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
