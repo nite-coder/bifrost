@@ -1,6 +1,8 @@
 import http from 'k6/http';
 
 
+export const options = {}
+
 export default function () {
     const url = 'http://localhost:8001/place_order';
 
@@ -17,6 +19,7 @@ export default function () {
 
     const params = {
         headers: {
+            'Connection': 'Keep-Alive',
             'Content-Type': 'application/json',
             'X-User-ID': '1'
         },

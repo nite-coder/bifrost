@@ -1,3 +1,3 @@
-k6 run --vus=100 --iterations=100000 place_order.js
+k6 run --vus=1024 --iterations=100000 place_order.js
 
-curl -i --request POST 'http://localhost:8000/place_order'
+curl -i --request POST '<http://localhost:80/place_order>'

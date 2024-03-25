@@ -73,8 +73,9 @@ func main() {
 
 	opts := []config.Option{
 		server.WithHostPorts(port),
-		server.WithIdleTimeout(time.Second * 3),
+		server.WithIdleTimeout(time.Second * 60),
 		server.WithReadTimeout(time.Second * 3),
+		server.WithWriteTimeout(time.Second * 3),
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		WithDefaultServerHeader(true),
@@ -89,7 +90,7 @@ func main() {
 		client.WithClientReadTimeout(time.Second * 3),
 		client.WithWriteTimeout(time.Second * 3),
 		client.WithMaxIdleConnDuration(60 * time.Second),
-		client.WithMaxConnsPerHost(256),
+		client.WithMaxConnsPerHost(2000),
 		client.WithNoDefaultUserAgentHeader(true),
 		client.WithDisableHeaderNamesNormalizing(true),
 		client.WithDisablePathNormalizing(true),

@@ -150,8 +150,11 @@ func main() {
 	_ = netpoll.SetNumLoops(2)
 	opts := []config.Option{
 		server.WithHostPorts(port),
-		server.WithIdleTimeout(time.Second * 3),
+		server.WithIdleTimeout(time.Second * 60),
 		server.WithReadTimeout(time.Second * 3),
+		server.WithWriteTimeout(time.Second * 3),
+		server.WithDisableDefaultDate(true),
+		server.WithDisablePrintRoute(true),
 	}
 	h := server.New(opts...)
 
