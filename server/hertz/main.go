@@ -1,17 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
-	"github.com/cloudwego/netpoll"
+	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/hertz-contrib/reverseproxy"
-	"github.com/valyala/fasthttp"
 )
 
 const (
@@ -54,8 +57,11 @@ const (
 )
 
 var (
-	orderResp []byte
-	reqClient *fasthttp.Client
+	orderResp        []byte
+	reqClient        *client.Client
+	orderPath        = []byte(`/place_order`)
+	futuresOrderPath = []byte(`/futures/orders`)
+	myUpstream       = []byte("http://127.0.0.1:8000")
 )
 
 func WithDefaultServerHeader(disable bool) config.Option {
@@ -64,12 +70,28 @@ func WithDefaultServerHeader(disable bool) config.Option {
 	}}
 }
 
+func b2s(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
+}
+
 func main() {
 
-	reqClient = getFastReqClient()
+	clientOpts := []config.ClientOption{
+		client.WithClientReadTimeout(time.Second * 3),
+		client.WithWriteTimeout(time.Second * 3),
+		client.WithMaxIdleConnDuration(60 * time.Second),
+		client.WithMaxConnsPerHost(2000),
+		client.WithNoDefaultUserAgentHeader(true),
+		client.WithDisableHeaderNamesNormalizing(true),
+		client.WithDisablePathNormalizing(true),
+		client.WithDialTimeout(5 * time.Second),
+	}
+
+	reqClient, _ = client.NewClient(clientOpts...)
+
 	orderResp = []byte(order)
 
-	_ = netpoll.SetNumLoops(2)
+	//_ = netpoll.SetNumLoops(1)
 
 	opts := []config.Option{
 		server.WithHostPorts(port),
@@ -84,23 +106,34 @@ func main() {
 	h := server.Default(opts...)
 
 	h.POST("/", echoHandler)
-	h.POST("/orders", placeOrderHandler)
+	h.POST("/spot/orders", placeOrderHandler)
 
-	clientOpts := []config.ClientOption{
-		client.WithClientReadTimeout(time.Second * 3),
-		client.WithWriteTimeout(time.Second * 3),
-		client.WithMaxIdleConnDuration(60 * time.Second),
-		client.WithMaxConnsPerHost(2000),
-		client.WithNoDefaultUserAgentHeader(true),
-		client.WithDisableHeaderNamesNormalizing(true),
-		client.WithDisablePathNormalizing(true),
-		client.WithDialTimeout(5 * time.Second),
-	}
+	// match /futures/orders
+	h.Use(func(c context.Context, ctx *app.RequestContext) {
+		if !bytes.HasPrefix(ctx.Request.Path(), futuresOrderPath) {
+			return
+		}
+
+		placeOrderHandler(c, ctx)
+	})
+
+	// match /futures/usdt/orders
+	re, _ := regexp.Compile(`^/futures/(usdt|btc)/orders$`)
+	h.Use(func(c context.Context, ctx *app.RequestContext) {
+
+		if !re.MatchString(string(ctx.Request.Path())) {
+			return
+		}
+
+		placeOrderHandler(c, ctx)
+	})
 
 	rp, _ := reverseproxy.NewSingleHostReverseProxy("http://127.0.0.1:8000", clientOpts...)
-
 	h.Any("/place_order", rp.ServeHTTP)
-	h.Any("/upstream", upstreamOrderHandler)
+
+	h.Use(func(c context.Context, ctx *app.RequestContext) {
+		fmt.Println("done")
+	})
 
 	h.Spin()
 }
@@ -111,71 +144,33 @@ func echoHandler(c context.Context, ctx *app.RequestContext) {
 }
 
 func placeOrderHandler(c context.Context, ctx *app.RequestContext) {
-	ctx.SetContentType("application/json; charset=utf8")
-	ctx.Response.SetBody(orderResp)
-}
-
-func upstreamOrderHandler(c context.Context, ctx *app.RequestContext) {
-	nowUTC := time.Now().UTC()
-	ctx.Set("start", nowUTC)
-
-	bodyLength := len(ctx.Request.Body())
-	ctx.Set("body_length", bodyLength)
-
-	// 從請求池中分別獲取一個request、response實例
-	req, resp := fasthttp.AcquireRequest(), fasthttp.AcquireResponse()
+	req, resp := protocol.AcquireRequest(), protocol.AcquireResponse()
 	// 回收實例到請求池
 	defer func() {
-		fasthttp.ReleaseRequest(req)
-		fasthttp.ReleaseResponse(resp)
+		protocol.ReleaseRequest(req)
+		protocol.ReleaseResponse(resp)
 	}()
 	// 設定請求方式
 	req.Header.SetMethodBytes(ctx.Method())
 
 	// 設定請求地址
-	req.SetRequestURI("http://127.0.0.1:8000/orders")
+	var strBuilder strings.Builder
+	strBuilder.Write(myUpstream)
+	//strBuilder.Write(ctx.Request.Path())
+	strBuilder.Write(orderPath)
+
+	req.SetRequestURI(strBuilder.String())
 	req.SetBodyRaw(ctx.Request.Body())
 
 	// 發起請求
-	if err := reqClient.Do(req, resp); err != nil {
+
+	if err := reqClient.Do(c, req, resp); err != nil {
 		fmt.Println("fasthttp client err: ", err)
-		ctx.AbortWithError(500, err)
-		return
+
 	}
 
-	ctx.Set("upstream_addr", "127.0.0.1:8080")
-	ctx.Set("upstream_status_code", ctx.Response.StatusCode())
-
-	ctx.SetContentType("application/json; charset=utf8")
-	ctx.SetStatusCode(ctx.Response.StatusCode())
+	ctx.Response.Header.SetContentType("application/json; charset=utf8")
+	ctx.Response.SetStatusCode(resp.StatusCode())
 	ctx.Response.SetBody(resp.Body())
-
-	endUC := time.Now()
-	ctx.Set("end", endUC)
-}
-
-func getFastReqClient() *fasthttp.Client {
-
-	reqClient := &fasthttp.Client{
-		// 讀超時時間,不設定read超時,可能會造成連接復用失效
-		ReadTimeout: time.Second * 3,
-		// 寫超時時間
-		WriteTimeout: time.Second * 3,
-		// 60秒後，關閉空閒的活動連接
-		MaxIdleConnDuration: time.Minute * 1,
-		// 當true時,從請求中去掉User-Agent標頭
-		NoDefaultUserAgentHeader: true,
-		// 當true時，header中的key按照原樣傳輸，默認會根據標準化轉化
-		DisableHeaderNamesNormalizing: true,
-		//當true時,路徑按原樣傳輸，默認會根據標準化轉化
-		DisablePathNormalizing: true,
-		MaxConnsPerHost:        256,
-		// Dial: (&fasthttp.TCPDialer{
-		// 	// 最大並行數，0表示無限制
-		// 	Concurrency: 16,
-		// 	// 將 DNS 快取時間從默認分鐘增加到一小時
-		// 	DNSCacheDuration: time.Hour,
-		// }).Dial,
-	}
-	return reqClient
+	ctx.Abort()
 }
