@@ -84,3 +84,5 @@ openresty
      vus............................: 1024    min=1024      max=1024 
      vus_max........................: 1024    min=1024      max=1024 
 ```
+
+1. 如果想做動態 reload hertz, 可以查 `engine.transport`, 替換 ondata

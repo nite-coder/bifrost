@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 	"unsafe"
@@ -14,7 +12,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/protocol"
-	"github.com/hertz-contrib/reverseproxy"
+	"github.com/cloudwego/hertz/pkg/route"
 )
 
 const (
@@ -86,7 +84,6 @@ func main() {
 		client.WithDisablePathNormalizing(true),
 		client.WithDialTimeout(5 * time.Second),
 	}
-
 	reqClient, _ = client.NewClient(clientOpts...)
 
 	orderResp = []byte(order)
@@ -102,39 +99,80 @@ func main() {
 		server.WithDisablePrintRoute(true),
 		WithDefaultServerHeader(true),
 	}
-	//h := server.New(opts...)
 	h := server.Default(opts...)
 
-	h.POST("/", echoHandler)
-	h.POST("/spot/orders", placeOrderHandler)
+	options := config.NewOptions(opts)
+	engine := route.NewEngine(options)
 
-	// match /futures/orders
-	h.Use(func(c context.Context, ctx *app.RequestContext) {
-		if !bytes.HasPrefix(ctx.Request.Path(), futuresOrderPath) {
-			return
-		}
-
-		placeOrderHandler(c, ctx)
-	})
+	router1 := NewRouter()
 
 	// match /futures/usdt/orders
-	re, _ := regexp.Compile(`^/futures/(usdt|btc)/orders$`)
-	h.Use(func(c context.Context, ctx *app.RequestContext) {
+	router1.Regexp("^/futures/(usdt|btc)/orders$", placeOrderHandler)
 
-		if !re.MatchString(string(ctx.Request.Path())) {
-			return
-		}
-
-		placeOrderHandler(c, ctx)
+	router1.Use(func(c context.Context, ctx *app.RequestContext) {
+		fmt.Println("router1")
 	})
 
-	rp, _ := reverseproxy.NewSingleHostReverseProxy("http://127.0.0.1:8000", clientOpts...)
-	h.Any("/place_order", rp.ServeHTTP)
-
-	h.Use(func(c context.Context, ctx *app.RequestContext) {
-		fmt.Println("done")
+	router2 := NewRouter()
+	router2.Use(func(c context.Context, ctx *app.RequestContext) {
+		ctx.String(200, "router2")
 	})
 
+	switcher := NewSwitcher(router1)
+	engine.Use(switcher.ServeHTTP)
+
+	// ticker := time.NewTicker(2 * time.Second)
+
+	// go func() {
+	// 	use2 := true
+	// 	for {
+	// 		<-ticker.C
+	// 		if use2 {
+	// 			switcher.SetRouter(router2)
+	// 			use2 = false
+	// 		} else {
+	// 			switcher.SetRouter(router1)
+	// 			use2 = true
+	// 		}
+	// 	}
+	// }()
+
+	// engine.POST("/", echoHandler)
+	// engine.POST("/spot/orders", placeOrderHandler, func(c context.Context, ctx *app.RequestContext) {
+	// 	fmt.Println("1.1")
+	// })
+
+	// // match /futures/orders
+	// engine.Use(func(c context.Context, ctx *app.RequestContext) {
+	// 	//fmt.Println("f.1")
+	// 	if !bytes.HasPrefix(ctx.Request.Path(), futuresOrderPath) {
+	// 		return
+	// 	}
+
+	// 	placeOrderHandler(c, ctx)
+	// 	ctx.Abort()
+	// })
+
+	// // match /futures/usdt/orders
+	// re, _ := regexp.Compile(`^/futures/(usdt|btc)/orders$`)
+	// engine.Use(func(c context.Context, ctx *app.RequestContext) {
+
+	// 	if !re.MatchString(string(ctx.Request.Path())) {
+	// 		return
+	// 	}
+
+	// 	placeOrderHandler(c, ctx)
+	// 	ctx.Abort()
+	// })
+
+	// rp, _ := reverseproxy.NewSingleHostReverseProxy("http://127.0.0.1:8000", clientOpts...)
+	// engine.Any("/place_order", rp.ServeHTTP)
+
+	// engine.Use(func(c context.Context, ctx *app.RequestContext) {
+	// 	fmt.Println("done")
+	// })
+
+	h.Engine = engine
 	h.Spin()
 }
 
@@ -172,5 +210,4 @@ func placeOrderHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.Response.Header.SetContentType("application/json; charset=utf8")
 	ctx.Response.SetStatusCode(resp.StatusCode())
 	ctx.Response.SetBody(resp.Body())
-	ctx.Abort()
 }
