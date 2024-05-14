@@ -3,15 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
-	"unsafe"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
-	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/route"
 )
 
@@ -56,7 +52,6 @@ const (
 
 var (
 	orderResp        []byte
-	reqClient        *client.Client
 	orderPath        = []byte(`/place_order`)
 	futuresOrderPath = []byte(`/futures/orders`)
 	myUpstream       = []byte("http://127.0.0.1:8000")
@@ -68,27 +63,23 @@ func WithDefaultServerHeader(disable bool) config.Option {
 	}}
 }
 
-func b2s(b []byte) string {
-	return *(*string)(unsafe.Pointer(&b))
-}
-
 func main() {
 
-	clientOpts := []config.ClientOption{
-		client.WithClientReadTimeout(time.Second * 3),
-		client.WithWriteTimeout(time.Second * 3),
-		client.WithMaxIdleConnDuration(60 * time.Second),
-		client.WithMaxConnsPerHost(2000),
-		client.WithNoDefaultUserAgentHeader(true),
-		client.WithDisableHeaderNamesNormalizing(true),
-		client.WithDisablePathNormalizing(true),
-		client.WithDialTimeout(5 * time.Second),
-	}
-	reqClient, _ = client.NewClient(clientOpts...)
+	//_ = netpoll.SetNumLoops(1)
 
 	orderResp = []byte(order)
 
-	//_ = netpoll.SetNumLoops(1)
+	// setup upstreams
+	loadBalancerOpts := LoadBalancerOptions{
+		ID: "default",
+		Instances: []Instance{
+			{
+				Address: "http://127.0.0.1:8000",
+				Weight:  1,
+			},
+		},
+	}
+	upstream := NewLoadBalancer(loadBalancerOpts)
 
 	opts := []config.Option{
 		server.WithHostPorts(port),
@@ -107,19 +98,16 @@ func main() {
 	router1 := NewRouter()
 
 	// match /futures/usdt/orders
-	router1.Regexp("^/futures/(usdt|btc)/orders$", placeOrderHandler)
+	router1.Regexp("^/futures/(usdt|btc)/orders$", upstream.ServeHTTP)
 
 	router1.Use(func(c context.Context, ctx *app.RequestContext) {
-		fmt.Println("router1")
+		fmt.Println("bifrst: not found")
 	})
 
-	router2 := NewRouter()
-	router2.Use(func(c context.Context, ctx *app.RequestContext) {
-		ctx.String(200, "router2")
-	})
-
-	switcher := NewSwitcher(router1)
-	engine.Use(switcher.ServeHTTP)
+	// router2 := NewRouter()
+	// router2.Use(func(c context.Context, ctx *app.RequestContext) {
+	// 	ctx.String(200, "router2")
+	// })
 
 	// ticker := time.NewTicker(2 * time.Second)
 
@@ -165,13 +153,12 @@ func main() {
 	// 	ctx.Abort()
 	// })
 
-	// rp, _ := reverseproxy.NewSingleHostReverseProxy("http://127.0.0.1:8000", clientOpts...)
-	// engine.Any("/place_order", rp.ServeHTTP)
-
 	// engine.Use(func(c context.Context, ctx *app.RequestContext) {
 	// 	fmt.Println("done")
 	// })
 
+	switcher := NewSwitcher(router1)
+	engine.Use(switcher.ServeHTTP)
 	h.Engine = engine
 	h.Spin()
 }
@@ -179,35 +166,4 @@ func main() {
 func echoHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetContentType("text/plain; charset=utf8")
 	ctx.Response.SetBody(ctx.Request.Body())
-}
-
-func placeOrderHandler(c context.Context, ctx *app.RequestContext) {
-	req, resp := protocol.AcquireRequest(), protocol.AcquireResponse()
-	// 回收實例到請求池
-	defer func() {
-		protocol.ReleaseRequest(req)
-		protocol.ReleaseResponse(resp)
-	}()
-	// 設定請求方式
-	req.Header.SetMethodBytes(ctx.Method())
-
-	// 設定請求地址
-	var strBuilder strings.Builder
-	strBuilder.Write(myUpstream)
-	//strBuilder.Write(ctx.Request.Path())
-	strBuilder.Write(orderPath)
-
-	req.SetRequestURI(strBuilder.String())
-	req.SetBodyRaw(ctx.Request.Body())
-
-	// 發起請求
-
-	if err := reqClient.Do(c, req, resp); err != nil {
-		fmt.Println("fasthttp client err: ", err)
-
-	}
-
-	ctx.Response.Header.SetContentType("application/json; charset=utf8")
-	ctx.Response.SetStatusCode(resp.StatusCode())
-	ctx.Response.SetBody(resp.Body())
 }

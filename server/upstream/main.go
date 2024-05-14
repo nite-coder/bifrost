@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -158,8 +159,12 @@ func main() {
 	}
 	h := server.New(opts...)
 
+	h.Use(func(c context.Context, ctx *app.RequestContext) {
+		fmt.Println("futures/usdt/orders")
+	})
 	h.POST("/", echoHandler)
-	h.POST("/place_order", placeOrderHandler)
+	h.POST("/spot/orders", placeOrderHandler)
+	h.POST("/futures/usdt/orders", placeOrderHandler)
 	h.GET("/order_book", orderBookHandler)
 	h.DELETE("cancel_order", cancelOrderHandler)
 
