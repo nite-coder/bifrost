@@ -85,11 +85,8 @@ func main() {
 	// setup routes
 	router := NewRouter()
 
-	router.AddRoute(Route{
-		Match:    "/spot/orders",
-		Method:   []string{"POST"},
-		Upstream: "spot-order",
-		Entry:    []string{"web"},
+	_ = router.AddRoute(Route{
+		Match: "/spot/orders",
 	}, upstream.ServeHTTP)
 
 	router.Regexp("^/futures/(usdt|btc)/orders$", upstream.ServeHTTP)

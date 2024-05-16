@@ -9,50 +9,32 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
-type kind uint8
-
 // node represents a node in the Trie
 type node struct {
-	parent   *node          // Parent node
-	children []*node        // Child nodes
-	kind     kind           // Node type
-	name     string         // Node name
-	handler  *methodHandler // Handler functions
+	path     string           // Path name of the node
+	children map[string]*node // Child nodes, indexed by path name
+	handler  *methodHandler   // Handler functions
 }
 
 // methodHandler contains handler functions for various HTTP methods
 type methodHandler struct {
-	connect []app.HandlerFunc
-	delete  []app.HandlerFunc
-	get     []app.HandlerFunc
-	head    []app.HandlerFunc
-	options []app.HandlerFunc
-	patch   []app.HandlerFunc
-	post    []app.HandlerFunc
-	put     []app.HandlerFunc
-	trace   []app.HandlerFunc
+	handlers map[string][]app.HandlerFunc // Associates HTTP methods with handler functions
 }
 
-// Router structure contains Trie and handlers chain
+// Router struct contains the Trie and handler chain
 type Router struct {
-	tree     *node             // Root node of the Trie
-	handlers app.HandlersChain // Handlers chain
+	tree     map[string]*node  // Root node of the Trie, indexed by HTTP method
+	handlers app.HandlersChain // Handler chain
 }
 
 // NewRouter creates and returns a new router
 func NewRouter() *Router {
 	r := &Router{
-		tree: &node{
-			parent:   nil,
-			children: []*node{},
-			kind:     0,
-			name:     "/",
-			handler:  &methodHandler{},
-		},
+		tree:     make(map[string]*node),
 		handlers: make([]app.HandlerFunc, 0),
 	}
 
-	// Find static routes and execute middleware
+	// Find static routes and run middleware
 	r.use(func(c context.Context, ctx *app.RequestContext) {
 		method := B2s(ctx.Method())
 		path := B2s(ctx.Request.Path())
@@ -76,7 +58,6 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	ctx.Next(c)
 }
 
-// Regexp adds middleware for routes matching a regular expression
 func (r *Router) Regexp(expr string, middleware ...app.HandlerFunc) {
 	regx, err := regexp.Compile(expr)
 	if err != nil {
@@ -95,12 +76,62 @@ func (r *Router) Regexp(expr string, middleware ...app.HandlerFunc) {
 	})
 }
 
+var upperLetterReg = regexp.MustCompile("^[A-Z]+$")
+
 // AddRoute adds a static route
-func (r *Router) AddRoute(route Route, middleware ...app.HandlerFunc) {
-	err := r.addStaticRoute("POST", route.Match, middleware...)
-	if err != nil {
-		panic(err)
+func (r *Router) AddRoute(route Route, middleware ...app.HandlerFunc) error {
+	var err error
+
+	if len(route.Method) == 0 {
+		err = r.add(GET, route.Match, middleware...)
+		if err != nil {
+			return err
+		}
+		err = r.add(POST, route.Match, middleware...)
+		if err != nil {
+			return err
+		}
+		err = r.add(PUT, route.Match, middleware...)
+		if err != nil {
+			return err
+		}
+		err = r.add(DELETE, route.Match, middleware...)
+		if err != nil {
+			return err
+		}
+		err = r.add(PATCH, route.Match, middleware...)
+		if err != nil {
+			return err
+		}
+		err = r.add(CONNECT, route.Match, middleware...)
+		if err != nil {
+			return err
+		}
+		err = r.add(HEAD, route.Match, middleware...)
+		if err != nil {
+			return err
+		}
+		err = r.add(TRACE, route.Match, middleware...)
+		if err != nil {
+			return err
+		}
+		err = r.add(OPTIONS, route.Match, middleware...)
+		if err != nil {
+			return err
+		}
 	}
+
+	for _, method := range route.Method {
+		if matches := upperLetterReg.MatchString(method); !matches {
+			panic("http method " + method + " is not valid")
+		}
+		err = r.add(method, route.Match, middleware...)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // use adds global middleware
@@ -108,8 +139,8 @@ func (r *Router) use(middleware ...app.HandlerFunc) {
 	r.handlers = append(r.handlers, middleware...)
 }
 
-// addStaticRoute adds a static route
-func (r *Router) addStaticRoute(method string, path string, middleware ...app.HandlerFunc) error {
+// add adds a static route
+func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) error {
 	if len(path) == 0 || path[0] != '/' {
 		return errors.New("router: invalid path")
 	}
@@ -119,43 +150,53 @@ func (r *Router) addStaticRoute(method string, path string, middleware ...app.Ha
 		path = path[1:]
 	}
 
-	currentNode := r.tree
+	// Ensure the Trie root node for the HTTP method exists
+	if _, ok := r.tree[method]; !ok {
+		r.tree[method] = newNode("/")
+	}
 
-	// If path is root, directly add handler
+	currentNode := r.tree[method]
+
+	// If the path is the root path, add handler functions directly
 	if path == "" {
 		currentNode.addHandler(method, middleware)
 		return nil
 	}
 
-	// Split path and traverse nodes
+	// Split the path and traverse the nodes
 	pathArray := strings.Split(path, "/")
 	for _, element := range pathArray {
 		if len(element) == 0 {
 			continue
 		}
 
-		// Find if current node's children have a node with the same name
+		// Find if the current node's children contain a node with the same name
 		childNode := currentNode.findChildByName(element)
 
 		// If not found, create a new node
 		if childNode == nil {
-			childNode = newNode(element, skind)
+			childNode = newNode(element)
 			currentNode.addChild(childNode)
 		}
 
 		currentNode = childNode
 	}
 
-	// Add handler to the final node
+	// Add handler functions to the final node
 	currentNode.addHandler(method, middleware)
 	return nil
 }
 
-// find searches for matching handler functions in the Trie
+// find searches the Trie for handler functions matching the route
 func (r *Router) find(method string, path string) []app.HandlerFunc {
 	path = sanitizeUrl(path)
 
-	currentNode := r.tree
+	// Check if the Trie root node for the HTTP method exists
+	if _, ok := r.tree[method]; !ok {
+		return nil
+	}
+
+	currentNode := r.tree[method]
 	if path == "/" {
 		return currentNode.findHandler(method)
 	}
@@ -168,7 +209,7 @@ func (r *Router) find(method string, path string) []app.HandlerFunc {
 
 		childNode := currentNode.findChildByName(element)
 
-		// If no matching node found, return nil
+		// If no matching node is found, return nil
 		if childNode == nil {
 			return nil
 		}
@@ -181,87 +222,53 @@ func (r *Router) find(method string, path string) []app.HandlerFunc {
 }
 
 // newNode creates a new node
-func newNode(name string, t kind) *node {
+func newNode(path string) *node {
 	return &node{
-		kind:    t,
-		name:    name,
-		handler: &methodHandler{},
+		path:     path,
+		children: make(map[string]*node),
+		handler:  &methodHandler{handlers: make(map[string][]app.HandlerFunc)},
 	}
 }
 
 // addChild adds a child node to the current node
-func (n *node) addChild(node *node) {
-	node.parent = n
-	n.children = append(n.children, node)
+func (n *node) addChild(child *node) {
+	n.children[child.path] = child
 }
 
-// findChildByName searches for a node with the specified name in the children of the current node
+// findChildByName searches for a node with the specified name among the children
 func (n *node) findChildByName(name string) *node {
-	for _, element := range n.children {
-		if element.name == name && element.kind == skind {
-			return element
-		}
+	if child, ok := n.children[name]; ok {
+		return child
 	}
 	return nil
 }
 
 // addHandler adds handler functions to the node
 func (n *node) addHandler(method string, h []app.HandlerFunc) {
-	switch method {
-	case GET:
-		n.handler.get = h
-	case POST:
-		n.handler.post = h
-	case PUT:
-		n.handler.put = h
-	case DELETE:
-		n.handler.delete = h
-	case PATCH:
-		n.handler.patch = h
-	case OPTIONS:
-		n.handler.options = h
-	case HEAD:
-		n.handler.head = h
-	case CONNECT:
-		n.handler.connect = h
-	case TRACE:
-		n.handler.trace = h
-	default:
-		panic("router: invalid method")
+	if n.handler.handlers == nil {
+		n.handler.handlers = make(map[string][]app.HandlerFunc)
 	}
+	n.handler.handlers[method] = h
 }
 
-// findHandler finds handler functions based on request method
+// findHandler searches for handler functions based on the request method
 func (n *node) findHandler(method string) []app.HandlerFunc {
-	switch method {
-	case GET:
-		return n.handler.get
-	case POST:
-		return n.handler.post
-	case PUT:
-		return n.handler.put
-	case DELETE:
-		return n.handler.delete
-	case PATCH:
-		return n.handler.patch
-	case OPTIONS:
-		return n.handler.options
-	case HEAD:
-		return n.handler.head
-	case CONNECT:
-		return n.handler.connect
-	case TRACE:
-		return n.handler.trace
-	default:
-		panic("router: invalid method")
+	if handlers, ok := n.handler.handlers[method]; ok {
+		return handlers
 	}
+	return nil
 }
+
+// Regular expression to match valid URL paths
+var validPathRegex = regexp.MustCompile(`^/[^/]+(/[^/]+)*$`)
 
 // sanitizeUrl cleans the path
 func sanitizeUrl(path string) string {
-	if len(path) > 1 && path[0] == '/' && path[1] != '/' && path[1] != '\\' {
+	if validPathRegex.MatchString(path) {
 		return path
 	}
+
+	// If the path is not valid, return the default path
 	return "/"
 }
 
@@ -284,9 +291,4 @@ const (
 	PUT = "PUT"
 	// TRACE HTTP method
 	TRACE = "TRACE"
-)
-
-const (
-	// skind represents a static node
-	skind kind = iota
 )
