@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"unsafe"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
@@ -81,6 +82,27 @@ func main() {
 	}
 	upstream := NewLoadBalancer(loadBalancerOpts)
 
+	// setup routes
+	router := NewRouter()
+
+	router.AddRoute(Route{
+		Match:    "/spot/orders",
+		Method:   []string{"POST"},
+		Upstream: "spot-order",
+		Entry:    []string{"web"},
+	}, upstream.ServeHTTP)
+
+	router.Regexp("^/futures/(usdt|btc)/orders$", upstream.ServeHTTP)
+
+	// setup bifrost engine
+	bengine := NewEngine()
+	bengine.Use(router.ServeHTTP)
+	bengine.Use(func(c context.Context, ctx *app.RequestContext) {
+		fmt.Println("bifrst: not found")
+	})
+	switcher := NewSwitcher(bengine)
+
+	// create hertz server
 	opts := []config.Option{
 		server.WithHostPorts(port),
 		server.WithIdleTimeout(time.Second * 60),
@@ -93,77 +115,18 @@ func main() {
 	h := server.Default(opts...)
 
 	options := config.NewOptions(opts)
-	engine := route.NewEngine(options)
-
-	router1 := NewRouter()
-
-	// match /futures/usdt/orders
-	router1.Regexp("^/futures/(usdt|btc)/orders$", upstream.ServeHTTP)
-
-	router1.Use(func(c context.Context, ctx *app.RequestContext) {
-		fmt.Println("bifrst: not found")
-	})
-
-	// router2 := NewRouter()
-	// router2.Use(func(c context.Context, ctx *app.RequestContext) {
-	// 	ctx.String(200, "router2")
-	// })
-
-	// ticker := time.NewTicker(2 * time.Second)
-
-	// go func() {
-	// 	use2 := true
-	// 	for {
-	// 		<-ticker.C
-	// 		if use2 {
-	// 			switcher.SetRouter(router2)
-	// 			use2 = false
-	// 		} else {
-	// 			switcher.SetRouter(router1)
-	// 			use2 = true
-	// 		}
-	// 	}
-	// }()
-
-	// engine.POST("/", echoHandler)
-	// engine.POST("/spot/orders", placeOrderHandler, func(c context.Context, ctx *app.RequestContext) {
-	// 	fmt.Println("1.1")
-	// })
-
-	// // match /futures/orders
-	// engine.Use(func(c context.Context, ctx *app.RequestContext) {
-	// 	//fmt.Println("f.1")
-	// 	if !bytes.HasPrefix(ctx.Request.Path(), futuresOrderPath) {
-	// 		return
-	// 	}
-
-	// 	placeOrderHandler(c, ctx)
-	// 	ctx.Abort()
-	// })
-
-	// // match /futures/usdt/orders
-	// re, _ := regexp.Compile(`^/futures/(usdt|btc)/orders$`)
-	// engine.Use(func(c context.Context, ctx *app.RequestContext) {
-
-	// 	if !re.MatchString(string(ctx.Request.Path())) {
-	// 		return
-	// 	}
-
-	// 	placeOrderHandler(c, ctx)
-	// 	ctx.Abort()
-	// })
-
-	// engine.Use(func(c context.Context, ctx *app.RequestContext) {
-	// 	fmt.Println("done")
-	// })
-
-	switcher := NewSwitcher(router1)
-	engine.Use(switcher.ServeHTTP)
-	h.Engine = engine
+	hengine := route.NewEngine(options)
+	hengine.Use(switcher.ServeHTTP)
+	h.Engine = hengine
 	h.Spin()
 }
 
 func echoHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetContentType("text/plain; charset=utf8")
 	ctx.Response.SetBody(ctx.Request.Body())
+}
+
+func B2s(b []byte) string {
+	/* #nosec G103 */
+	return *(*string)(unsafe.Pointer(&b))
 }

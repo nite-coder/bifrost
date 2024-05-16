@@ -8,23 +8,23 @@ import (
 )
 
 type Switcher struct {
-	router atomic.Value
+	engine atomic.Value
 }
 
-func NewSwitcher(router *Router) *Switcher {
+func NewSwitcher(engine *Engine) *Switcher {
 	s := &Switcher{}
-	s.SetRouter(router)
+	s.SetEngine(engine)
 	return s
 }
 
-func (s *Switcher) Router() *Router {
-	return s.router.Load().(*Router)
+func (s *Switcher) Engine() *Engine {
+	return s.engine.Load().(*Engine)
 }
 
-func (s *Switcher) SetRouter(router *Router) {
-	s.router.Store(router)
+func (s *Switcher) SetEngine(engine *Engine) {
+	s.engine.Store(engine)
 }
 
 func (s *Switcher) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	s.Router().ServeHTTP(c, ctx)
+	s.Engine().ServeHTTP(c, ctx)
 }

@@ -62,7 +62,7 @@ func (lb *LoadBalancer) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	if proxy != nil {
 		start := time.Now()
 		proxy.ServeHTTP(c, ctx)
-		fmt.Println("proxy done")
+		//fmt.Println("proxy done")
 		dur := time.Since(start)
 		ctx.Set("$upstream_response_time", dur.Seconds())
 
