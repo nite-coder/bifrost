@@ -189,32 +189,58 @@ func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) 
 
 // find searches the Trie for handler functions matching the route
 func (r *Router) find(method string, path string) []app.HandlerFunc {
+	// Ensure the path is valid and sanitized
 	path = sanitizeUrl(path)
 
 	// Check if the Trie root node for the HTTP method exists
-	if _, ok := r.tree[method]; !ok {
+	rootNode, ok := r.tree[method]
+	if !ok {
 		return nil
 	}
 
-	currentNode := r.tree[method]
+	currentNode := rootNode
+
+	// If the path is the root path, return the handler functions directly
 	if path == "/" {
 		return currentNode.findHandler(method)
 	}
 
-	pathArray := strings.Split(path, "/")
-	for _, element := range pathArray {
-		if len(element) == 0 {
+	// Traverse the path segments
+	for {
+		// Find the next segment up to the next '/'
+		slashIndex := strings.IndexByte(path, '/')
+		var segment string
+		if slashIndex == -1 {
+			segment = path
+			path = ""
+		} else {
+			segment = path[:slashIndex]
+			path = path[slashIndex+1:]
+		}
+
+		// Skip empty segments (which can happen if there are consecutive slashes)
+		if segment == "" {
+			if path == "" {
+				break
+			}
 			continue
 		}
 
-		childNode := currentNode.findChildByName(element)
+		// Find if the current node's children contain a node with the same name
+		childNode := currentNode.findChildByName(segment)
 
 		// If no matching node is found, return nil
 		if childNode == nil {
 			return nil
 		}
 
+		// Move to the child node
 		currentNode = childNode
+
+		// If there are no more segments, break
+		if path == "" {
+			break
+		}
 	}
 
 	// Return handler functions of the final node
