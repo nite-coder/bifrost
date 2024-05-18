@@ -1,4 +1,4 @@
-package main
+package gateway
 
 import (
 	"context"
@@ -27,4 +27,5 @@ func (s *Switcher) SetEngine(engine *Engine) {
 
 func (s *Switcher) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	s.Engine().ServeHTTP(c, ctx)
+	ctx.Abort()
 }

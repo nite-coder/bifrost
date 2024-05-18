@@ -1,19 +1,35 @@
-package main
+package gateway
 
 import (
 	"context"
 	"errors"
 	"regexp"
 	"strings"
+	"unsafe"
 
 	"github.com/cloudwego/hertz/pkg/app"
 )
+
+type Route struct {
+	ID       string
+	Match    string
+	Method   []string
+	Entry    []string
+	Upstream string
+}
 
 // node represents a node in the Trie
 type node struct {
 	path     string           // Path name of the node
 	children map[string]*node // Child nodes, indexed by path name
 	handler  *methodHandler   // Handler functions
+}
+
+type routeSetting struct {
+	regex      *regexp.Regexp
+	prefixPath string
+	route      *Route
+	middleware []app.HandlerFunc
 }
 
 // methodHandler contains handler functions for various HTTP methods
@@ -23,57 +39,92 @@ type methodHandler struct {
 
 // Router struct contains the Trie and handler chain
 type Router struct {
-	tree     map[string]*node  // Root node of the Trie, indexed by HTTP method
-	handlers app.HandlersChain // Handler chain
+	tree map[string]*node // Root node of the Trie, indexed by HTTP method
+
+	prefixRoutes []routeSetting
+	regexpRoutes []routeSetting
 }
 
 // NewRouter creates and returns a new router
 func NewRouter() *Router {
 	r := &Router{
-		tree:     make(map[string]*node),
-		handlers: make([]app.HandlerFunc, 0),
+		tree:         make(map[string]*node),
+		prefixRoutes: make([]routeSetting, 0),
+		regexpRoutes: make([]routeSetting, 0),
 	}
-
-	// Find static routes and run middleware
-	r.use(func(c context.Context, ctx *app.RequestContext) {
-		method := B2s(ctx.Method())
-		path := B2s(ctx.Request.Path())
-		middleware := r.find(method, path)
-
-		if len(middleware) > 0 {
-			ctx.SetIndex(-1)
-			ctx.SetHandlers(middleware)
-			ctx.Next(c)
-			ctx.Abort()
-		}
-	})
 
 	return r
 }
 
 // ServeHTTP implements the http.Handler interface
 func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	ctx.SetIndex(-1)
-	ctx.SetHandlers(r.handlers)
-	ctx.Next(c)
-}
+	method := B2s(ctx.Method())
+	path := B2s(ctx.Request.Path())
+	middleware := r.find(method, path)
 
-func (r *Router) Regexp(expr string, middleware ...app.HandlerFunc) {
-	regx, err := regexp.Compile(expr)
-	if err != nil {
-		panic(err)
-	}
-
-	r.use(func(c context.Context, ctx *app.RequestContext) {
-		if !regx.MatchString(string(ctx.Request.Path())) {
-			return
-		}
-
+	if len(middleware) > 0 {
 		ctx.SetIndex(-1)
 		ctx.SetHandlers(middleware)
 		ctx.Next(c)
 		ctx.Abort()
-	})
+	}
+
+	// prefix
+	for _, route := range r.prefixRoutes {
+		if checkPrefixRoute(route, method, path) {
+			ctx.SetIndex(-1)
+			ctx.SetHandlers(route.middleware)
+			ctx.Next(c)
+			ctx.Abort()
+		}
+	}
+
+	// regexp
+	for _, route := range r.regexpRoutes {
+		if checkRegexpRoute(route, method, path) {
+			ctx.SetIndex(-1)
+			ctx.SetHandlers(route.middleware)
+			ctx.Next(c)
+			ctx.Abort()
+		}
+	}
+
+}
+
+func checkPrefixRoute(prefixSetting routeSetting, method, path string) bool {
+	if len(prefixSetting.route.Method) > 0 {
+		isMethodFound := false
+
+		for _, m := range prefixSetting.route.Method {
+			if m == method {
+				return true
+			}
+		}
+
+		if !isMethodFound {
+			return false
+		}
+	}
+
+	return strings.HasPrefix(path, prefixSetting.prefixPath)
+}
+
+func checkRegexpRoute(prefixSetting routeSetting, method, path string) bool {
+	if len(prefixSetting.route.Method) > 0 {
+		isMethodFound := false
+
+		for _, m := range prefixSetting.route.Method {
+			if m == method {
+				return true
+			}
+		}
+
+		if !isMethodFound {
+			return false
+		}
+	}
+
+	return prefixSetting.regex.MatchString(path)
 }
 
 var upperLetterReg = regexp.MustCompile("^[A-Z]+$")
@@ -81,6 +132,38 @@ var upperLetterReg = regexp.MustCompile("^[A-Z]+$")
 // AddRoute adds a static route
 func (r *Router) AddRoute(route Route, middleware ...app.HandlerFunc) error {
 	var err error
+
+	// check prefix
+	if strings.HasSuffix(route.Match, "*") {
+		prefixPath := strings.TrimSpace(route.Match[:len(route.Match)-1])
+
+		prefixRoute := routeSetting{
+			prefixPath: prefixPath,
+			route:      &route,
+			middleware: middleware,
+		}
+
+		r.prefixRoutes = append(r.prefixRoutes, prefixRoute)
+		return nil
+	}
+
+	// regexp
+	if route.Match[:1] == "~" {
+		expr := strings.TrimSpace(route.Match[1:])
+		regx, err := regexp.Compile(expr)
+		if err != nil {
+			return err
+		}
+
+		prefixRoute := routeSetting{
+			regex:      regx,
+			route:      &route,
+			middleware: middleware,
+		}
+
+		r.regexpRoutes = append(r.regexpRoutes, prefixRoute)
+		return nil
+	}
 
 	if len(route.Method) == 0 {
 		err = r.add(GET, route.Match, middleware...)
@@ -134,12 +217,8 @@ func (r *Router) AddRoute(route Route, middleware ...app.HandlerFunc) error {
 	return nil
 }
 
-// use adds global middleware
-func (r *Router) use(middleware ...app.HandlerFunc) {
-	r.handlers = append(r.handlers, middleware...)
-}
-
 // add adds a static route
+// TODO: support prefix route
 func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) error {
 	if len(path) == 0 || path[0] != '/' {
 		return errors.New("router: invalid path")
@@ -188,6 +267,9 @@ func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) 
 }
 
 // find searches the Trie for handler functions matching the route
+// check order:
+// 1. static routes
+// 2. prefix routes
 func (r *Router) find(method string, path string) []app.HandlerFunc {
 	// Ensure the path is valid and sanitized
 	path = sanitizeUrl(path)
@@ -318,3 +400,8 @@ const (
 	// TRACE HTTP method
 	TRACE = "TRACE"
 )
+
+func B2s(b []byte) string {
+	/* #nosec G103 */
+	return *(*string)(unsafe.Pointer(&b))
+}

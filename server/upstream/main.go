@@ -165,6 +165,7 @@ func main() {
 	h.POST("/spot/order", placeOrderHandler)
 	h.POST("/spot/orders", placeOrderHandler)
 	h.POST("/futures/usdt/orders", placeOrderHandler)
+	h.POST("/options/orders", placeOrderHandler)
 	h.GET("/order_book", orderBookHandler)
 	h.DELETE("cancel_order", cancelOrderHandler)
 
