@@ -14,6 +14,13 @@ type EntryOptions struct {
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
+	Middlewares  []MiddlwareOptions
+}
+
+type MiddlwareOptions struct {
+	ID     string
+	Kind   string
+	Params map[string]any
 }
 
 type UpstreamStrategy string
@@ -43,16 +50,18 @@ type ClientTransportOptions struct {
 }
 
 type RouteOptions struct {
-	ID       string
-	Match    string
-	Method   []string
-	Entries  []string
-	Upstream string
+	ID          string
+	Match       string
+	Method      []string
+	Entries     []string
+	Middlewares []MiddlwareOptions
+	Upstream    string
 }
 
 type Options struct {
 	Entries          []EntryOptions
 	Routes           []RouteOptions
+	Middlewares      []MiddlwareOptions
 	Upstreams        []UpstreamOptions
 	ClientTransports []ClientTransportOptions
 }

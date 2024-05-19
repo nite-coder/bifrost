@@ -1,6 +1,12 @@
 package gateway
 
-import "fmt"
+import (
+	"fmt"
+
+	"http-benchmark/middleware"
+
+	"github.com/cloudwego/hertz/pkg/app"
+)
 
 type Bifrost struct {
 	httpServers []*HTTPServer
@@ -46,4 +52,33 @@ func Load(opts Options) (*Bifrost, error) {
 
 func LoadFromConfig(path string) (*Bifrost, error) {
 	return nil, nil
+}
+
+type CreateMiddlewareHandler func(param map[string]any) (app.HandlerFunc, error)
+
+var middlewareFactory map[string]CreateMiddlewareHandler = make(map[string]CreateMiddlewareHandler)
+
+func RegisterMiddleware(kind string, handler CreateMiddlewareHandler) error {
+
+	if _, found := middlewareFactory[kind]; found {
+		return fmt.Errorf("middleware handler '%s' already exists", kind)
+	}
+
+	middlewareFactory[kind] = handler
+
+	return nil
+}
+
+func init() {
+	_ = RegisterMiddleware("strip_prefix", func(param map[string]any) (app.HandlerFunc, error) {
+		prefixes := param["prefixes"].([]string)
+		m := middleware.NewStripPrefixMiddleware(prefixes)
+		return m.ServeHTTP, nil
+	})
+
+	_ = RegisterMiddleware("add_prefix", func(param map[string]any) (app.HandlerFunc, error) {
+		prefix := param["prefix"].(string)
+		m := middleware.NewAddPrefixMiddleware(prefix)
+		return m.ServeHTTP, nil
+	})
 }

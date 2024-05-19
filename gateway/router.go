@@ -122,7 +122,7 @@ func checkRegexpRoute(prefixSetting routeSetting, method, path string) bool {
 var upperLetterReg = regexp.MustCompile("^[A-Z]+$")
 
 // AddRoute adds a static route
-func (r *Router) AddRoute(route RouteOptions, middleware ...app.HandlerFunc) error {
+func (r *Router) AddRoute(route RouteOptions, middlewares ...app.HandlerFunc) error {
 	var err error
 
 	// check prefix
@@ -132,7 +132,7 @@ func (r *Router) AddRoute(route RouteOptions, middleware ...app.HandlerFunc) err
 		prefixRoute := routeSetting{
 			prefixPath: prefixPath,
 			route:      &route,
-			middleware: middleware,
+			middleware: middlewares,
 		}
 
 		r.prefixRoutes = append(r.prefixRoutes, prefixRoute)
@@ -150,7 +150,7 @@ func (r *Router) AddRoute(route RouteOptions, middleware ...app.HandlerFunc) err
 		prefixRoute := routeSetting{
 			regex:      regx,
 			route:      &route,
-			middleware: middleware,
+			middleware: middlewares,
 		}
 
 		r.regexpRoutes = append(r.regexpRoutes, prefixRoute)
@@ -158,39 +158,39 @@ func (r *Router) AddRoute(route RouteOptions, middleware ...app.HandlerFunc) err
 	}
 
 	if len(route.Method) == 0 {
-		err = r.add(GET, route.Match, middleware...)
+		err = r.add(GET, route.Match, middlewares...)
 		if err != nil {
 			return err
 		}
-		err = r.add(POST, route.Match, middleware...)
+		err = r.add(POST, route.Match, middlewares...)
 		if err != nil {
 			return err
 		}
-		err = r.add(PUT, route.Match, middleware...)
+		err = r.add(PUT, route.Match, middlewares...)
 		if err != nil {
 			return err
 		}
-		err = r.add(DELETE, route.Match, middleware...)
+		err = r.add(DELETE, route.Match, middlewares...)
 		if err != nil {
 			return err
 		}
-		err = r.add(PATCH, route.Match, middleware...)
+		err = r.add(PATCH, route.Match, middlewares...)
 		if err != nil {
 			return err
 		}
-		err = r.add(CONNECT, route.Match, middleware...)
+		err = r.add(CONNECT, route.Match, middlewares...)
 		if err != nil {
 			return err
 		}
-		err = r.add(HEAD, route.Match, middleware...)
+		err = r.add(HEAD, route.Match, middlewares...)
 		if err != nil {
 			return err
 		}
-		err = r.add(TRACE, route.Match, middleware...)
+		err = r.add(TRACE, route.Match, middlewares...)
 		if err != nil {
 			return err
 		}
-		err = r.add(OPTIONS, route.Match, middleware...)
+		err = r.add(OPTIONS, route.Match, middlewares...)
 		if err != nil {
 			return err
 		}
@@ -200,7 +200,7 @@ func (r *Router) AddRoute(route RouteOptions, middleware ...app.HandlerFunc) err
 		if matches := upperLetterReg.MatchString(method); !matches {
 			panic("http method " + method + " is not valid")
 		}
-		err = r.add(method, route.Match, middleware...)
+		err = r.add(method, route.Match, middlewares...)
 		if err != nil {
 			return err
 		}

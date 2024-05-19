@@ -10,6 +10,12 @@ import (
 	"github.com/cloudwego/netpoll"
 )
 
+func WithDefaultServerHeader(disable bool) config.Option {
+	return config.Option{F: func(o *config.Options) {
+		o.NoDefaultServerHeader = disable
+	}}
+}
+
 const (
 	port        = ":8000"
 	actionQuery = "action"
@@ -155,6 +161,7 @@ func main() {
 		server.WithWriteTimeout(time.Second * 3),
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
+		WithDefaultServerHeader(true),
 	}
 	h := server.New(opts...)
 
