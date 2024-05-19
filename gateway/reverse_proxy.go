@@ -284,7 +284,7 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	err := fn(c, req, resp)
 	if err != nil {
 		//fmt.Println("reverse proxy2.1")
-		hlog.CtxErrorf(c, "Bifrost: Client request error: %#v, upstream: %s, request: %s,", err.Error(), req.Host(), req.Path())
+		hlog.CtxErrorf(c, "sent upstream error: %#v, upstream: %s, request: %s %s %s", err.Error(), req.Host(), req.Method(), req.Path(), req.Header.GetProtocol())
 		r.getErrorHandler()(ctx, err)
 		return
 	}

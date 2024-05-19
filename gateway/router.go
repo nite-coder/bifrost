@@ -10,14 +10,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
-type Route struct {
-	ID       string
-	Match    string
-	Method   []string
-	Entry    []string
-	Upstream string
-}
-
 // node represents a node in the Trie
 type node struct {
 	path     string           // Path name of the node
@@ -28,7 +20,7 @@ type node struct {
 type routeSetting struct {
 	regex      *regexp.Regexp
 	prefixPath string
-	route      *Route
+	route      *RouteOptions
 	middleware []app.HandlerFunc
 }
 
@@ -130,7 +122,7 @@ func checkRegexpRoute(prefixSetting routeSetting, method, path string) bool {
 var upperLetterReg = regexp.MustCompile("^[A-Z]+$")
 
 // AddRoute adds a static route
-func (r *Router) AddRoute(route Route, middleware ...app.HandlerFunc) error {
+func (r *Router) AddRoute(route RouteOptions, middleware ...app.HandlerFunc) error {
 	var err error
 
 	// check prefix
@@ -267,9 +259,6 @@ func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) 
 }
 
 // find searches the Trie for handler functions matching the route
-// check order:
-// 1. static routes
-// 2. prefix routes
 func (r *Router) find(method string, path string) []app.HandlerFunc {
 	// Ensure the path is valid and sanitized
 	path = sanitizeUrl(path)
