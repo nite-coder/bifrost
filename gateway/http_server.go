@@ -61,6 +61,11 @@ func NewHTTPServer(entry EntryOptions, opts Options) (*HTTPServer, error) {
 		}))
 	}
 
+	if entry.AccessLog.Enabled {
+		accessLogTracer := NewLoggerTracer(entry.AccessLog.Template)
+		hzOpts = append(hzOpts, server.WithTracer(accessLogTracer))
+	}
+
 	h := server.Default(hzOpts...)
 	h.Use(switcher.ServeHTTP)
 

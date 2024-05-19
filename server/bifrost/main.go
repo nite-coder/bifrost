@@ -33,6 +33,10 @@ func main() {
 						ID: "time_trace",
 					},
 				},
+				AccessLog: gateway.AccessLogOptions{
+					Enabled:  false,
+					Template: `{"time": "$time", "request": "$request", "upstream": "$upstream"}`,
+				},
 			},
 			{
 				ID:   "apiv2",

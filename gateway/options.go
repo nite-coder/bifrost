@@ -2,11 +2,6 @@ package gateway
 
 import "time"
 
-type BackendServerOptions struct {
-	URL    string
-	Weight int
-}
-
 type EntryOptions struct {
 	ID           string
 	Bind         string
@@ -15,6 +10,14 @@ type EntryOptions struct {
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
 	Middlewares  []MiddlwareOptions
+	AccessLog    AccessLogOptions
+}
+
+type AccessLogOptions struct {
+	Enabled    bool
+	BufferSize int
+	FilePath   string
+	Template   string
 }
 
 type MiddlwareOptions struct {
@@ -31,6 +34,11 @@ const (
 	RoundRobinStrategy UpstreamStrategy = "round_robin"
 	WeightedStrategy   UpstreamStrategy = "weighted"
 )
+
+type BackendServerOptions struct {
+	URL    string
+	Weight int
+}
 
 type UpstreamOptions struct {
 	ID              string
