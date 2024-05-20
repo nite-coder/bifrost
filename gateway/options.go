@@ -18,6 +18,7 @@ type AccessLogOptions struct {
 	BufferSize int
 	FilePath   string
 	Template   string
+	Flush      time.Duration
 }
 
 type MiddlwareOptions struct {

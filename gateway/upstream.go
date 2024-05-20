@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -98,11 +99,19 @@ func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	}
 
 	if proxy != nil {
-		start := time.Now()
+		addr, _ := url.Parse(proxy.Target)
+		ctx.Set(UPSTREAM_ADDR, addr.Host)
+		startTime := time.Now()
 		proxy.ServeHTTP(c, ctx)
 		//fmt.Println("proxy done")
-		dur := time.Since(start)
-		ctx.Set(UPSTREAM_RESPONSE_TIME, dur.Seconds())
+
+		ctx.Set(UPSTREAM_STATUS, ctx.Response.StatusCode())
+		dur := time.Since(startTime)
+		mic := dur.Microseconds()
+		duration := float64(mic) / 1e6
+		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
+		ctx.Set(UPSTREAM_RESPONSE_TIME, responseTime)
+
 	} else {
 		fmt.Println("no upstream found")
 	}
