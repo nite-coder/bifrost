@@ -18,6 +18,8 @@ type AccessLogOptions struct {
 	BufferSize int
 	FilePath   string
 	Template   string
+	TimeFormat string
+	Escape     bool
 	Flush      time.Duration
 }
 

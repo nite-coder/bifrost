@@ -14,6 +14,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	hertzslog "github.com/hertz-contrib/logger/slog"
+	"github.com/hertz-contrib/pprof"
 	"golang.org/x/sys/unix"
 )
 
@@ -62,11 +63,16 @@ func NewHTTPServer(entry EntryOptions, opts Options) (*HTTPServer, error) {
 	}
 
 	if entry.AccessLog.Enabled {
-		accessLogTracer := NewLoggerTracer(entry.AccessLog.Template)
+		accessLogTracer, err := NewLoggerTracer(entry.AccessLog)
+		if err != nil {
+			return nil, err
+		}
 		hzOpts = append(hzOpts, server.WithTracer(accessLogTracer))
 	}
 
 	h := server.Default(hzOpts...)
+	pprof.Register(h)
+
 	h.Use(switcher.ServeHTTP)
 
 	httpServer := &HTTPServer{
@@ -195,6 +201,12 @@ func NewEngine(entry EntryOptions, opts Options) (*Engine, error) {
 		handlers:        make([]app.HandlerFunc, 0),
 		notFoundHandler: nil,
 	}
+
+	// init middlewares
+	engine.Use(func(c context.Context, ctx *app.RequestContext) {
+		requestPath := b2s(ctx.Request.Path())
+		ctx.Set(REQUEST_PATH, requestPath)
+	})
 
 	for _, middleware := range entry.Middlewares {
 

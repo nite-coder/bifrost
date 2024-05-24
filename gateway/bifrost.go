@@ -69,6 +69,21 @@ func RegisterMiddleware(kind string, handler CreateMiddlewareHandler) error {
 	return nil
 }
 
+func Variable(c *app.RequestContext, name string) (string, bool) {
+
+	switch name {
+
+	case TIME:
+
+		return c.GetString(TIME), true
+	case REMOTE_ADDR:
+		return c.RemoteAddr().String(), true
+	default:
+		return "", false
+	}
+
+}
+
 func init() {
 	_ = RegisterMiddleware("strip_prefix", func(param map[string]any) (app.HandlerFunc, error) {
 		prefixes := param["prefixes"].([]string)

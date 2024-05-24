@@ -103,9 +103,9 @@ func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		ctx.Set(UPSTREAM_ADDR, addr.Host)
 		startTime := time.Now()
 		proxy.ServeHTTP(c, ctx)
-		//fmt.Println("proxy done")
 
 		ctx.Set(UPSTREAM_STATUS, ctx.Response.StatusCode())
+
 		dur := time.Since(startTime)
 		mic := dur.Microseconds()
 		duration := float64(mic) / 1e6
