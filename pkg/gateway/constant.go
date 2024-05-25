@@ -27,6 +27,5 @@ const (
 )
 
 var (
-	reIsVariable = regexp.MustCompile(`\$\w+`)
-	spaceByte    = []byte{byte(' ')}
+	reIsVariable = regexp.MustCompile(`\$\w+(-\w+)*`)
 )

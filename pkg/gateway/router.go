@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"errors"
+	"http-benchmark/pkg/domain"
 	"regexp"
 	"strings"
 	"unsafe"
@@ -20,7 +21,7 @@ type node struct {
 type routeSetting struct {
 	regex      *regexp.Regexp
 	prefixPath string
-	route      *RouteOptions
+	route      *domain.RouteOptions
 	middleware []app.HandlerFunc
 }
 
@@ -84,10 +85,10 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 }
 
 func checkPrefixRoute(prefixSetting routeSetting, method, path string) bool {
-	if len(prefixSetting.route.Method) > 0 {
+	if len(prefixSetting.route.Methods) > 0 {
 		isMethodFound := false
 
-		for _, m := range prefixSetting.route.Method {
+		for _, m := range prefixSetting.route.Methods {
 			if m == method {
 				return true
 			}
@@ -102,10 +103,10 @@ func checkPrefixRoute(prefixSetting routeSetting, method, path string) bool {
 }
 
 func checkRegexpRoute(prefixSetting routeSetting, method, path string) bool {
-	if len(prefixSetting.route.Method) > 0 {
+	if len(prefixSetting.route.Methods) > 0 {
 		isMethodFound := false
 
-		for _, m := range prefixSetting.route.Method {
+		for _, m := range prefixSetting.route.Methods {
 			if m == method {
 				return true
 			}
@@ -122,7 +123,7 @@ func checkRegexpRoute(prefixSetting routeSetting, method, path string) bool {
 var upperLetterReg = regexp.MustCompile("^[A-Z]+$")
 
 // AddRoute adds a static route
-func (r *Router) AddRoute(route RouteOptions, middlewares ...app.HandlerFunc) error {
+func (r *Router) AddRoute(route domain.RouteOptions, middlewares ...app.HandlerFunc) error {
 	var err error
 
 	// check prefix
@@ -157,7 +158,7 @@ func (r *Router) AddRoute(route RouteOptions, middlewares ...app.HandlerFunc) er
 		return nil
 	}
 
-	if len(route.Method) == 0 {
+	if len(route.Methods) == 0 {
 		err = r.add(GET, route.Match, middlewares...)
 		if err != nil {
 			return err
@@ -196,7 +197,7 @@ func (r *Router) AddRoute(route RouteOptions, middlewares ...app.HandlerFunc) er
 		}
 	}
 
-	for _, method := range route.Method {
+	for _, method := range route.Methods {
 		if matches := upperLetterReg.MatchString(method); !matches {
 			panic("http method " + method + " is not valid")
 		}

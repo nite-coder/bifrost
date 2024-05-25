@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"http-benchmark/pkg/domain"
 	"net"
 	"os"
 	"slices"
@@ -13,9 +14,10 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
-	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/pprof"
 	"golang.org/x/sys/unix"
+
+	hertzslog "github.com/hertz-contrib/logger/slog"
 )
 
 type HTTPServer struct {
@@ -24,7 +26,7 @@ type HTTPServer struct {
 	server   *server.Hertz
 }
 
-func NewHTTPServer(entry EntryOptions, opts Options) (*HTTPServer, error) {
+func NewHTTPServer(entry domain.EntryOptions, opts domain.Options) (*HTTPServer, error) {
 
 	//gopool.SetCap(20000)
 
@@ -37,7 +39,9 @@ func NewHTTPServer(entry EntryOptions, opts Options) (*HTTPServer, error) {
 
 	// hertz server
 	logger := hertzslog.NewLogger(hertzslog.WithOutput(os.Stdout))
+	hlog.SetLevel(hlog.LevelDebug)
 	hlog.SetLogger(logger)
+	hlog.SetSilentMode(true)
 
 	hzOpts := []config.Option{
 		server.WithHostPorts(entry.Bind),
@@ -62,8 +66,9 @@ func NewHTTPServer(entry EntryOptions, opts Options) (*HTTPServer, error) {
 		}))
 	}
 
+	var accessLogTracer *LoggerTracer
 	if entry.AccessLog.Enabled {
-		accessLogTracer, err := NewLoggerTracer(entry.AccessLog)
+		accessLogTracer, err = NewLoggerTracer(entry.AccessLog)
 		if err != nil {
 			return nil, err
 		}
@@ -71,6 +76,13 @@ func NewHTTPServer(entry EntryOptions, opts Options) (*HTTPServer, error) {
 	}
 
 	h := server.Default(hzOpts...)
+	h.OnShutdown = append(h.OnShutdown, func(ctx context.Context) {
+		if accessLogTracer != nil {
+			accessLogTracer.Shutdown()
+		}
+
+	})
+
 	pprof.Register(h)
 
 	h.Use(switcher.ServeHTTP)
@@ -90,13 +102,13 @@ func (s *HTTPServer) Run() {
 
 type Engine struct {
 	ID              string
-	opts            Options
+	opts            domain.Options
 	handlers        app.HandlersChain
 	middlewares     app.HandlersChain
 	notFoundHandler app.HandlerFunc
 }
 
-func NewEngine(entry EntryOptions, opts Options) (*Engine, error) {
+func NewEngine(entry domain.EntryOptions, opts domain.Options) (*Engine, error) {
 
 	// middlewares
 	middlewares := map[string]app.HandlerFunc{}
@@ -123,16 +135,45 @@ func NewEngine(entry EntryOptions, opts Options) (*Engine, error) {
 		middlewares[middlewareOpts.ID] = m
 	}
 
+	// transports
+	transports := map[string]*domain.TransportOptions{}
+	for _, transportOpts := range opts.Transports {
+
+		if len(transportOpts.ID) == 0 {
+			return nil, fmt.Errorf("transport id can't be empty")
+		}
+
+		_, found := transports[transportOpts.ID]
+		if found {
+			return nil, fmt.Errorf("transport '%s' already exists", transportOpts.ID)
+		}
+
+		transports[transportOpts.ID] = &transportOpts
+	}
+
 	// upstreams
 	upstreams := map[string]*Upstream{}
 	for _, upstreamOpts := range opts.Upstreams {
+
+		if len(upstreamOpts.ID) == 0 {
+			return nil, fmt.Errorf("upstream id can't be empty")
+		}
 
 		_, found := upstreams[upstreamOpts.ID]
 		if found {
 			return nil, fmt.Errorf("upstream '%s' already exists", upstreamOpts.ID)
 		}
 
-		upstream, err := NewUpstream(upstreamOpts, nil)
+		var transportOpts *domain.TransportOptions
+		if len(upstreamOpts.ClientTransport) > 0 {
+
+			transportOpts, found = transports[upstreamOpts.ClientTransport]
+			if !found {
+				return nil, fmt.Errorf("transport '%s' was not found in '%s' upstream", upstreamOpts.ClientTransport, upstreamOpts.ID)
+			}
+		}
+
+		upstream, err := NewUpstream(upstreamOpts, transportOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -160,10 +201,10 @@ func NewEngine(entry EntryOptions, opts Options) (*Engine, error) {
 		routeMiddlewares := make([]app.HandlerFunc, 0)
 
 		for _, middleware := range routeOpts.Middlewares {
-			if len(middleware.ID) > 0 {
-				val, found := middlewares[middleware.ID]
+			if len(middleware.Link) > 0 {
+				val, found := middlewares[middleware.Link]
 				if !found {
-					return nil, fmt.Errorf("middleware '%s' was not found in route: '%s'", middleware.ID, routeOpts.Match)
+					return nil, fmt.Errorf("middleware '%s' was not found in route: '%s'", middleware.Link, routeOpts.Match)
 				}
 
 				routeMiddlewares = append(routeMiddlewares, val)
@@ -210,10 +251,10 @@ func NewEngine(entry EntryOptions, opts Options) (*Engine, error) {
 
 	for _, middleware := range entry.Middlewares {
 
-		if len(middleware.ID) > 0 {
-			val, found := middlewares[middleware.ID]
+		if len(middleware.Link) > 0 {
+			val, found := middlewares[middleware.Link]
 			if !found {
-				return nil, fmt.Errorf("middleware '%s' was not found in entry id: '%s'", middleware.ID, entry.ID)
+				return nil, fmt.Errorf("middleware '%s' was not found in entry id: '%s'", middleware.Link, entry.ID)
 			}
 
 			engine.Use(val)

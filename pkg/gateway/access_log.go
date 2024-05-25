@@ -3,24 +3,26 @@ package gateway
 import (
 	"bufio"
 	"context"
+	"http-benchmark/pkg/domain"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
 type LoggerTracer struct {
-	opts      AccessLogOptions
+	opts      domain.AccessLogOptions
 	matchVars []string
 	logChan   chan string
 	logFile   *os.File
 	writer    *bufio.Writer
 }
 
-func NewLoggerTracer(opts AccessLogOptions) (*LoggerTracer, error) {
+func NewLoggerTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
 
 	if opts.TimeFormat == "" {
 		opts.TimeFormat = time.RFC3339
@@ -68,17 +70,16 @@ func NewLoggerTracer(opts AccessLogOptions) (*LoggerTracer, error) {
 				_, err = writer.WriteString(entry)
 				if err != nil {
 					if os.IsNotExist(err) || err.Error() == "file already closed" {
-						// 尝试重新打开文件
+
 						t.logFile, err = os.OpenFile(t.opts.FilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 						if err != nil {
 							continue
 						}
-						// 重新写入数据
+
 						t.writer = bufio.NewWriterSize(logFile, opts.BufferSize)
 						_, _ = t.writer.WriteString(entry)
 					}
 				}
-
 			case <-flushTimer.C:
 				_ = writer.Flush()
 				_ = t.logFile.Sync()
@@ -97,9 +98,7 @@ func (t *LoggerTracer) Start(ctx context.Context, c *app.RequestContext) context
 
 func (t *LoggerTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	replacer := t.buildReplacer(c)
-
 	result := replacer.Replace(t.opts.Template)
-
 	t.logChan <- result
 }
 
@@ -111,7 +110,6 @@ func (t *LoggerTracer) Shutdown() {
 }
 
 func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
-
 	replacements := make([]string, 0, len(t.matchVars)*2)
 
 	for _, matchVal := range t.matchVars {
@@ -136,13 +134,7 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 		case REQUEST_PROTOCOL:
 			replacements = append(replacements, REQUEST_PROTOCOL, c.Request.Header.GetProtocol())
 		case REQUEST_BODY:
-			body := ""
-			if len(c.Request.Body()) > 0 {
-				body = b2s(c.Request.Body())
-				if t.opts.Escape {
-					body = escapeString(body)
-				}
-			}
+			body := escape(b2s(c.Request.Body()), t.opts.Escape)
 			replacements = append(replacements, REQUEST_BODY, body)
 		case STATUS:
 			replacements = append(replacements, STATUS, strconv.Itoa(c.Response.StatusCode()))
@@ -158,6 +150,21 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 			duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
 			replacements = append(replacements, Duration, duration)
 		default:
+
+			if strings.HasPrefix(matchVal, "$resp_header_") {
+				headerVal := matchVal[len("$resp_header_"):]
+				headerVal = c.Response.Header.Get(headerVal)
+				headerVal = escape(headerVal, t.opts.Escape)
+				replacements = append(replacements, matchVal, headerVal)
+			}
+
+			if strings.HasPrefix(matchVal, "$header_") {
+				headerVal := matchVal[len("$header_"):]
+				headerVal = c.Request.Header.Get(headerVal)
+				headerVal = escape(headerVal, t.opts.Escape)
+				replacements = append(replacements, matchVal, headerVal)
+			}
+
 			replacements = append(replacements, "$"+matchVal, "$"+matchVal)
 		}
 	}
@@ -165,4 +172,74 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 	replacer := strings.NewReplacer(replacements...)
 
 	return replacer
+}
+
+func escape(s string, escapeType domain.EscapeType) string {
+	if len(s) == 0 {
+		return s
+	}
+
+	switch escapeType {
+	case domain.DefaultEscape:
+		s = escapeString(s)
+	case domain.JSONEscape:
+		s = escapeJSON(s)
+	case domain.NoneEscape:
+		return s
+	}
+
+	return s
+}
+
+// escapeString function to escape special characters
+func escapeString(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		c := s[i]
+		if c == '"' || c == '\\' || c < 32 || c > 126 {
+			b.WriteString(`\x`)
+			b.WriteString(strconv.FormatUint(uint64(c), 16))
+			i++
+		} else {
+			r, size := utf8.DecodeRuneInString(s[i:])
+			b.WriteRune(r)
+			i += size
+		}
+	}
+	return b.String()
+}
+
+// escapeJSON function to escape characters for JSON strings
+func escapeJSON(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		c := s[i]
+		switch c {
+		case '"':
+			b.WriteString("\\\"")
+		case '\\':
+			b.WriteString("\\\\")
+		case '\n':
+			b.WriteString("\\n")
+		case '\r':
+			b.WriteString("\\r")
+		case '\t':
+			b.WriteString("\\t")
+		case '\b':
+			b.WriteString("\\b")
+		case '\f':
+			b.WriteString("\\f")
+		default:
+			if c < 32 {
+				b.WriteString("\\u")
+				b.WriteString(strconv.FormatUint(uint64(c), 16))
+			} else {
+				r, size := utf8.DecodeRuneInString(s[i:])
+				b.WriteRune(r)
+				i += size - 1
+			}
+		}
+		i++
+	}
+	return b.String()
 }

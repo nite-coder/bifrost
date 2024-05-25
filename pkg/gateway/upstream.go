@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"http-benchmark/pkg/domain"
 	"math"
 	"net/url"
 	"strconv"
@@ -16,7 +17,7 @@ import (
 )
 
 type Upstream struct {
-	opts    UpstreamOptions
+	opts    domain.UpstreamOptions
 	proxies []*ReverseProxy
 	index   uint64
 }
@@ -32,7 +33,7 @@ var defaultClientOptions = []config.ClientOption{
 	client.WithKeepAlive(true),
 }
 
-func NewUpstream(opts UpstreamOptions, transportOptions *ClientTransportOptions) (*Upstream, error) {
+func NewUpstream(opts domain.UpstreamOptions, transportOptions *domain.TransportOptions) (*Upstream, error) {
 
 	if len(opts.ID) == 0 {
 		return nil, fmt.Errorf("upstream id can't be empty")
@@ -90,9 +91,9 @@ func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	var proxy *ReverseProxy
 
 	switch u.opts.Strategy {
-	case RoundRobinStrategy:
+	case domain.RoundRobinStrategy:
 		proxy = u.pickupByRoundRobin()
-	case RandomStrategy:
+	case domain.RandomStrategy:
 		u.serveByRandom(c, ctx)
 	default:
 		proxy = u.pickupByRoundRobin()

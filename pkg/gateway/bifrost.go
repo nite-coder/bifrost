@@ -2,8 +2,9 @@ package gateway
 
 import (
 	"fmt"
-
-	"http-benchmark/middleware"
+	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/middleware"
+	"http-benchmark/pkg/provider/file"
 
 	"github.com/cloudwego/hertz/pkg/app"
 )
@@ -20,7 +21,7 @@ func (b *Bifrost) Run() {
 	b.httpServers[len(b.httpServers)-1].Run()
 }
 
-func Load(opts Options) (*Bifrost, error) {
+func Load(opts domain.Options) (*Bifrost, error) {
 
 	bifrsot := &Bifrost{}
 
@@ -51,7 +52,19 @@ func Load(opts Options) (*Bifrost, error) {
 }
 
 func LoadFromConfig(path string) (*Bifrost, error) {
-	return nil, nil
+
+	fileProvider := file.NewFileProvider()
+	opts, err := fileProvider.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	bifrsot, err := Load(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return bifrsot, nil
 }
 
 type CreateMiddlewareHandler func(param map[string]any) (app.HandlerFunc, error)
