@@ -13,6 +13,7 @@ import (
 var (
 	reIsVariable = regexp.MustCompile(`\$\w+(-\w+)*`)
 	spaceByte    = []byte{byte(' ')}
+	questionByte = []byte{byte('?')}
 )
 
 type Bifrost struct {

@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"http-benchmark/pkg/domain"
+	"io"
 	"log/slog"
 	"net"
 	"os"
 	"slices"
+	"strings"
 	"sync/atomic"
 	"syscall"
 
@@ -23,7 +25,7 @@ import (
 
 type HTTPServer struct {
 	ID       string
-	switcher *Switcher
+	switcher *switcher
 	server   *server.Hertz
 }
 
@@ -36,11 +38,11 @@ func NewHTTPServer(entry domain.EntryOptions, opts domain.Options) (*HTTPServer,
 		return nil, err
 	}
 
-	switcher := NewSwitcher(engine)
+	switcher := newSwitcher(engine)
 
 	// hertz server
-	logger := hertzslog.NewLogger(hertzslog.WithOutput(os.Stdout))
-	hlog.SetLevel(hlog.LevelDebug)
+	logger := hertzslog.NewLogger(hertzslog.WithOutput(os.Stderr))
+	hlog.SetLevel(hlog.LevelError)
 	hlog.SetLogger(logger)
 	hlog.SetSilentMode(true)
 
@@ -51,7 +53,7 @@ func NewHTTPServer(entry domain.EntryOptions, opts domain.Options) (*HTTPServer,
 		server.WithWriteTimeout(entry.WriteTimeout),
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
-		WithDefaultServerHeader(true),
+		withDefaultServerHeader(true),
 	}
 
 	if entry.ReusePort {
@@ -245,20 +247,10 @@ func NewEngine(entry domain.EntryOptions, opts domain.Options) (*Engine, error) 
 	}
 
 	// init middlewares
-
-	var logHandler slog.Handler
-
-	logOptions := &slog.HandlerOptions{
-		Level: slog.LevelDebug,
+	logger, err := newLogger(entry.Logging)
+	if err != nil {
+		return nil, err
 	}
-
-	if entry.Logging.Enabled {
-		logHandler = slog.NewJSONHandler(os.Stdout, logOptions)
-	} else {
-		logHandler = slog.NewJSONHandler(os.Stdout, logOptions)
-	}
-
-	logger := slog.New(logHandler)
 	initMiddleware := newInitMiddleware(logger)
 	engine.Use(initMiddleware.ServeHTTP)
 
@@ -303,6 +295,10 @@ func (e *Engine) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	ctx.Abort()
 }
 
+func (e *Engine) OnShutdown() {
+
+}
+
 func (e *Engine) Use(middleware ...app.HandlerFunc) {
 	e.handlers = append(e.handlers, middleware...)
 	e.middlewares = e.handlers
@@ -312,31 +308,89 @@ func (e *Engine) Use(middleware ...app.HandlerFunc) {
 	}
 }
 
-type Switcher struct {
+type switcher struct {
 	engine atomic.Value
 }
 
-func NewSwitcher(engine *Engine) *Switcher {
-	s := &Switcher{}
+func newSwitcher(engine *Engine) *switcher {
+	s := &switcher{}
 	s.SetEngine(engine)
 	return s
 }
 
-func (s *Switcher) Engine() *Engine {
+func (s *switcher) Engine() *Engine {
 	return s.engine.Load().(*Engine)
 }
 
-func (s *Switcher) SetEngine(engine *Engine) {
+func (s *switcher) SetEngine(engine *Engine) {
 	s.engine.Store(engine)
 }
 
-func (s *Switcher) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+func (s *switcher) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	s.Engine().ServeHTTP(c, ctx)
 	ctx.Abort()
 }
 
-func WithDefaultServerHeader(disable bool) config.Option {
+func withDefaultServerHeader(disable bool) config.Option {
 	return config.Option{F: func(o *config.Options) {
 		o.NoDefaultServerHeader = disable
 	}}
+}
+
+func newLogger(opts domain.LoggingOtions) (*slog.Logger, error) {
+	var err error
+
+	logOptions := &slog.HandlerOptions{}
+
+	level := strings.TrimSpace(opts.Level)
+	level = strings.ToLower(level)
+
+	switch level {
+	case "debug":
+		logOptions.Level = slog.LevelDebug
+	case "info":
+		logOptions.Level = slog.LevelInfo
+	case "warn":
+		logOptions.Level = slog.LevelWarn
+	case "error":
+		logOptions.Level = slog.LevelError
+	default:
+		logOptions.Level = slog.LevelError
+	}
+
+	var writer io.Writer
+
+	output := strings.TrimSpace(opts.Output)
+	output = strings.ToLower(output)
+
+	switch output {
+	case "":
+	case "stderr":
+		writer = os.Stderr
+	default:
+		writer, err = os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if !opts.Enabled {
+		logOptions.Level = slog.LevelError
+		writer = io.Discard
+	}
+
+	var logHandler slog.Handler
+
+	handler := strings.TrimSpace(opts.Handler)
+	handler = strings.ToLower(handler)
+
+	switch handler {
+	case "text":
+		logHandler = slog.NewTextHandler(writer, logOptions)
+	default:
+		logHandler = slog.NewJSONHandler(writer, logOptions)
+	}
+
+	logger := slog.New(logHandler)
+	return logger, nil
 }

@@ -11,10 +11,10 @@ type Options struct {
 }
 
 type LoggingOtions struct {
-	Enabled  bool   `yaml:"enabled" json:"enabled"`
-	Level    string `yaml:"level" json:"level"`
-	Type     string `yaml:"type" json:"type"`
-	FilePath string `yaml:"file_path" json:"file_path"`
+	Enabled bool   `yaml:"enabled" json:"enabled"`
+	Level   string `yaml:"level" json:"level"`
+	Handler string `yaml:"handler" json:"handler"`
+	Output  string `yaml:"output" json:"output"`
 }
 
 type EntryOptions struct {
@@ -25,7 +25,7 @@ type EntryOptions struct {
 	WriteTimeout time.Duration      `yaml:"write_timeout" json:"write_timeout"`
 	IdleTimeout  time.Duration      `yaml:"idle_timeout" json:"idle_timeout"`
 	Middlewares  []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
-	Logging      *LoggingOtions     `yaml:"logging" json:"logging"`
+	Logging      LoggingOtions      `yaml:"logging" json:"logging"`
 	AccessLog    AccessLogOptions   `yaml:"access_log" json:"access_log"`
 }
 
