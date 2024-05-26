@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/log"
 	"math"
 	"net/url"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/common/config"
@@ -93,35 +95,53 @@ func NewUpstream(opts domain.UpstreamOptions, transportOptions *domain.Transport
 }
 
 func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+	logger := log.FromContext(c)
 	defer ctx.Abort()
 
 	var proxy *ReverseProxy
+	done := make(chan bool)
 
-	switch u.opts.Strategy {
-	case domain.RoundRobinStrategy:
-		proxy = u.pickupByRoundRobin()
-	case domain.RandomStrategy:
-		u.serveByRandom(c, ctx)
-	default:
-		proxy = u.pickupByRoundRobin()
-	}
+	gopool.CtxGo(c, func() {
+		switch u.opts.Strategy {
+		case domain.RoundRobinStrategy:
+			proxy = u.pickupByRoundRobin()
+		case domain.RandomStrategy:
+			u.serveByRandom(c, ctx)
+		default:
+			proxy = u.pickupByRoundRobin()
+		}
 
-	if proxy != nil {
-		addr, _ := url.Parse(proxy.Target)
-		ctx.Set(domain.UPSTREAM_ADDR, addr.Host)
-		startTime := time.Now()
-		proxy.ServeHTTP(c, ctx)
+		if proxy != nil {
+			// TODO: remove url.Parse here
+			addr, _ := url.Parse(proxy.Target)
+			ctx.Set(domain.UPSTREAM_ADDR, addr)
+			startTime := time.Now()
+			proxy.ServeHTTP(c, ctx)
 
-		ctx.Set(domain.UPSTREAM_STATUS, ctx.Response.StatusCode())
+			ctx.Set(domain.UPSTREAM_STATUS, ctx.Response.StatusCode())
 
-		dur := time.Since(startTime)
-		mic := dur.Microseconds()
-		duration := float64(mic) / 1e6
-		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
-		ctx.Set(domain.UPSTREAM_RESPONSE_TIME, responseTime)
+			dur := time.Since(startTime)
+			mic := dur.Microseconds()
+			duration := float64(mic) / 1e6
+			responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
+			ctx.Set(domain.UPSTREAM_RESPONSE_TIME, responseTime)
 
-	} else {
-		fmt.Println("no upstream found")
+		} else {
+			logger.ErrorContext(c, "no proxy found")
+		}
+
+		select {
+		case <-c.Done():
+			logger.Info("client request canceled")
+		default:
+			done <- true
+		}
+	})
+
+	select {
+	case <-c.Done():
+		logger.ErrorContext(c, "client request canceled")
+	case <-done:
 	}
 }
 

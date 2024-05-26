@@ -175,6 +175,7 @@ func main() {
 	h.POST("/options/orders", placeOrderHandler)
 	h.GET("/order_book", orderBookHandler)
 	h.DELETE("cancel_order", cancelOrderHandler)
+	h.POST("/long", longHandler)
 
 	h.Spin()
 }
@@ -201,4 +202,10 @@ func cancelOrderHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetContentType("application/json; charset=utf8")
 	ctx.Response.SetStatusCode(200)
 	ctx.Response.SetBody(orderResp)
+}
+
+func longHandler(c context.Context, ctx *app.RequestContext) {
+	time.Sleep(10 * time.Second)
+	ctx.SetContentType("text/plain; charset=utf8")
+	ctx.String(200, "hello")
 }

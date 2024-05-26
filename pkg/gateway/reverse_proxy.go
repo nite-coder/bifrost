@@ -245,7 +245,7 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	if r.transferTrailer {
 		hasTeTrailer = checkTeHeader(&req.Header)
 	}
-	//fmt.Println("reverse proxy1")
+
 	removeRequestConnHeaders(ctx)
 	// Remove hop-by-hop headers to the backend. Especially
 	// important is "Connection" because we want a persistent
