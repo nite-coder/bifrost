@@ -265,11 +265,12 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	// prepare request(replace headers and some URL host)
 	if ip, _, err := net.SplitHostPort(ctx.RemoteAddr().String()); err == nil {
 		tmp := req.Header.Peek("X-Forwarded-For")
+
 		if len(tmp) > 0 {
 			ip = fmt.Sprintf("%s, %s", tmp, ip)
 		}
 		if tmp == nil || string(tmp) != "" {
-			req.Header.Add("X-Forwarded-For", ip)
+			req.Header.Set("X-Forwarded-For", ip)
 		}
 	}
 

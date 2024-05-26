@@ -85,6 +85,7 @@ func NewUpstream(opts domain.UpstreamOptions, transportOptions *domain.Transport
 		}
 
 		proxy, err := NewSingleHostReverseProxy(server.URL, clientOpts...)
+		//proxy.SetSaveOriginResHeader(true)
 		if err != nil {
 			return nil, err
 		}
@@ -110,6 +111,8 @@ func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		default:
 			proxy = u.pickupByRoundRobin()
 		}
+
+		ctx.Set("X-Forwarded-For", ctx.Request.Header.Get("X-Forwarded-For"))
 
 		if proxy != nil {
 			// TODO: remove url.Parse here

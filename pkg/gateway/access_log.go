@@ -67,19 +67,7 @@ func NewLoggerTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
 					writer.Flush()
 					return
 				}
-				_, err = writer.WriteString(entry)
-				if err != nil {
-					if os.IsNotExist(err) || err.Error() == "file already closed" {
-
-						t.logFile, err = os.OpenFile(t.opts.FilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-						if err != nil {
-							continue
-						}
-
-						t.writer = bufio.NewWriterSize(logFile, opts.BufferSize)
-						_, _ = t.writer.WriteString(entry)
-					}
-				}
+				_, _ = writer.WriteString(entry)
 			case <-flushTimer.C:
 				_ = writer.Flush()
 				_ = t.logFile.Sync()
@@ -207,16 +195,25 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 				headerVal = c.Response.Header.Get(headerVal)
 				headerVal = escape(headerVal, t.opts.Escape)
 				replacements = append(replacements, matchVal, headerVal)
+				continue
 			}
 
 			if strings.HasPrefix(matchVal, "$header_") {
 				headerVal := matchVal[len("$header_"):]
+
+				if headerVal == "X-Forwarded-For" {
+					ip := c.GetString("X-Forwarded-For")
+					replacements = append(replacements, matchVal, ip)
+					continue
+				}
+
 				headerVal = c.Request.Header.Get(headerVal)
 				headerVal = escape(headerVal, t.opts.Escape)
 				replacements = append(replacements, matchVal, headerVal)
+				continue
 			}
 
-			replacements = append(replacements, "$"+matchVal, "$"+matchVal)
+			replacements = append(replacements, matchVal, matchVal)
 		}
 	}
 
