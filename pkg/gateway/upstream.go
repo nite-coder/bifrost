@@ -46,21 +46,28 @@ func NewUpstream(opts domain.UpstreamOptions, transportOptions *domain.Transport
 	clientOpts := defaultClientOptions
 
 	if len(opts.ClientTransport) > 0 && transportOptions != nil {
-		clientOpts = []config.ClientOption{
-			client.WithNoDefaultUserAgentHeader(true),
-			client.WithDisableHeaderNamesNormalizing(true),
-			client.WithDisablePathNormalizing(true),
+		if transportOptions.DailTimeout != nil {
+			clientOpts = append(clientOpts, client.WithDialTimeout(*transportOptions.DailTimeout))
+		}
 
-			client.WithDialTimeout(transportOptions.DailTimeout),
-			client.WithClientReadTimeout(transportOptions.ReadTimeout),
-			client.WithWriteTimeout(transportOptions.WriteTimeout),
-			client.WithMaxConnWaitTimeout(transportOptions.MaxConnWaitTimeout),
-			client.WithMaxConnsPerHost(transportOptions.MaxConnsPerHost),
+		if transportOptions.ReadTimeout != nil {
+			clientOpts = append(clientOpts, client.WithClientReadTimeout(*transportOptions.ReadTimeout))
+		}
 
-			//client.WithMaxIdleConns(100),
-			//client.WithMaxIdleConnDuration(60 * time.Second),
-			client.WithKeepAlive(transportOptions.KeepAlive),
-			//client.WithMaxConnDuration(120 * time.Second),
+		if transportOptions.WriteTimeout != nil {
+			clientOpts = append(clientOpts, client.WithWriteTimeout(*transportOptions.WriteTimeout))
+		}
+
+		if transportOptions.MaxConnWaitTimeout != nil {
+			clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(*transportOptions.MaxConnWaitTimeout))
+		}
+
+		if transportOptions.MaxIdleConnsPerHost != nil {
+			clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*transportOptions.MaxIdleConnsPerHost))
+		}
+
+		if transportOptions.KeepAlive != nil {
+			clientOpts = append(clientOpts, client.WithKeepAlive(*transportOptions.KeepAlive))
 		}
 	}
 
@@ -101,17 +108,17 @@ func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 	if proxy != nil {
 		addr, _ := url.Parse(proxy.Target)
-		ctx.Set(UPSTREAM_ADDR, addr.Host)
+		ctx.Set(domain.UPSTREAM_ADDR, addr.Host)
 		startTime := time.Now()
 		proxy.ServeHTTP(c, ctx)
 
-		ctx.Set(UPSTREAM_STATUS, ctx.Response.StatusCode())
+		ctx.Set(domain.UPSTREAM_STATUS, ctx.Response.StatusCode())
 
 		dur := time.Since(startTime)
 		mic := dur.Microseconds()
 		duration := float64(mic) / 1e6
 		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
-		ctx.Set(UPSTREAM_RESPONSE_TIME, responseTime)
+		ctx.Set(domain.UPSTREAM_RESPONSE_TIME, responseTime)
 
 	} else {
 		fmt.Println("no upstream found")

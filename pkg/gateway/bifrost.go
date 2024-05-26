@@ -5,8 +5,14 @@ import (
 	"http-benchmark/pkg/domain"
 	"http-benchmark/pkg/middleware"
 	"http-benchmark/pkg/provider/file"
+	"regexp"
 
 	"github.com/cloudwego/hertz/pkg/app"
+)
+
+var (
+	reIsVariable = regexp.MustCompile(`\$\w+(-\w+)*`)
+	spaceByte    = []byte{byte(' ')}
 )
 
 type Bifrost struct {
@@ -82,30 +88,21 @@ func RegisterMiddleware(kind string, handler CreateMiddlewareHandler) error {
 	return nil
 }
 
-func Variable(c *app.RequestContext, name string) (string, bool) {
-
-	switch name {
-
-	case TIME:
-
-		return c.GetString(TIME), true
-	case REMOTE_ADDR:
-		return c.RemoteAddr().String(), true
-	default:
-		return "", false
-	}
-
-}
-
 func init() {
-	_ = RegisterMiddleware("strip_prefix", func(param map[string]any) (app.HandlerFunc, error) {
-		prefixes := param["prefixes"].([]string)
+	_ = RegisterMiddleware("strip_prefix", func(params map[string]any) (app.HandlerFunc, error) {
+		val := params["prefixes"].([]any)
+
+		prefixes := make([]string, 0)
+		for _, v := range val {
+			prefixes = append(prefixes, v.(string))
+		}
+
 		m := middleware.NewStripPrefixMiddleware(prefixes)
 		return m.ServeHTTP, nil
 	})
 
-	_ = RegisterMiddleware("add_prefix", func(param map[string]any) (app.HandlerFunc, error) {
-		prefix := param["prefix"].(string)
+	_ = RegisterMiddleware("add_prefix", func(params map[string]any) (app.HandlerFunc, error) {
+		prefix := params["prefix"].(string)
 		m := middleware.NewAddPrefixMiddleware(prefix)
 		return m.ServeHTTP, nil
 	})

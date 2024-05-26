@@ -92,7 +92,7 @@ func NewLoggerTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
 
 func (t *LoggerTracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
 	time := time.Now().UTC()
-	c.Set(TIME, time)
+	c.Set(domain.TIME, time)
 	return ctx
 }
 
@@ -114,10 +114,10 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 
 	for _, matchVal := range t.matchVars {
 		switch matchVal {
-		case TIME:
-			startTime := c.GetTime(TIME)
-			replacements = append(replacements, TIME, startTime.Format(t.opts.TimeFormat))
-		case REMOTE_ADDR:
+		case domain.TIME:
+			startTime := c.GetTime(domain.TIME)
+			replacements = append(replacements, domain.TIME, startTime.Format(t.opts.TimeFormat))
+		case domain.REMOTE_ADDR:
 			var ip string
 			switch addr := c.RemoteAddr().(type) {
 			case *net.UDPAddr:
@@ -125,34 +125,85 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 			case *net.TCPAddr:
 				ip = addr.IP.String()
 			}
-			replacements = append(replacements, REMOTE_ADDR, ip)
-		case REQUEST_METHOD:
-			replacements = append(replacements, REQUEST_METHOD, b2s(c.Request.Method()))
-		case REQUEST_PATH:
-			requestPath := c.GetString(REQUEST_PATH)
-			replacements = append(replacements, REQUEST_PATH, requestPath)
-		case REQUEST_PROTOCOL:
-			replacements = append(replacements, REQUEST_PROTOCOL, c.Request.Header.GetProtocol())
-		case REQUEST_BODY:
+			replacements = append(replacements, domain.REMOTE_ADDR, ip)
+		case domain.REQUEST_METHOD:
+			replacements = append(replacements, domain.REQUEST_METHOD, b2s(c.Request.Method()))
+		case domain.REQUEST_URI:
+			builder := strings.Builder{}
+
+			val, found := c.Get(domain.REQUEST_PATH)
+			if found {
+				path, ok := val.(string)
+				if ok {
+					builder.WriteString(path)
+					if len(c.Request.QueryString()) > 0 {
+						builder.WriteString("?")
+						builder.Write(c.Request.QueryString())
+					}
+
+					replacements = append(replacements, domain.REQUEST_URI, builder.String())
+				}
+				continue
+			}
+
+			builder.Write(c.Request.Path())
+			if len(c.Request.QueryString()) > 0 {
+				builder.WriteString("?")
+				builder.Write(c.Request.QueryString())
+			}
+			replacements = append(replacements, domain.REQUEST_URI, builder.String())
+
+		case domain.REQUEST_PATH:
+			val, found := c.Get(domain.REQUEST_PATH)
+			if found {
+				b, ok := val.([]byte)
+				if ok {
+					replacements = append(replacements, domain.REQUEST_PATH, b2s(b))
+					continue
+				} else {
+					replacements = append(replacements, domain.REQUEST_PATH, "")
+				}
+				continue
+			}
+			replacements = append(replacements, domain.REQUEST_PATH, b2s(c.Request.Path()))
+		case domain.REQUEST_PROTOCOL:
+			replacements = append(replacements, domain.REQUEST_PROTOCOL, c.Request.Header.GetProtocol())
+		case domain.REQUEST_BODY:
 			body := escape(b2s(c.Request.Body()), t.opts.Escape)
-			replacements = append(replacements, REQUEST_BODY, body)
-		case STATUS:
-			replacements = append(replacements, STATUS, strconv.Itoa(c.Response.StatusCode()))
-		case UPSTREAM_ADDR:
-			aa := c.GetString(UPSTREAM_ADDR)
-			replacements = append(replacements, UPSTREAM_ADDR, aa)
-		case UPSTREAM_RESPONSE_TIME:
-			replacements = append(replacements, UPSTREAM_RESPONSE_TIME, c.GetString(UPSTREAM_RESPONSE_TIME))
-		case UPSTREAM_STATUS:
-			replacements = append(replacements, UPSTREAM_STATUS, strconv.Itoa(c.GetInt(UPSTREAM_STATUS)))
-		case Duration:
-			dur := time.Since(c.GetTime(TIME)).Microseconds()
+			replacements = append(replacements, domain.REQUEST_BODY, body)
+		case domain.STATUS:
+			replacements = append(replacements, domain.STATUS, strconv.Itoa(c.Response.StatusCode()))
+		case domain.UPSTREAM_METHOD:
+			replacements = append(replacements, domain.UPSTREAM_METHOD, b2s(c.Request.Method()))
+		case domain.UPSTREAM_PROTOCOL:
+			replacements = append(replacements, domain.UPSTREAM_PROTOCOL, c.Request.Header.GetProtocol())
+		case domain.UPSTREAM_URI:
+			builder := strings.Builder{}
+			builder.Write(c.Request.Path())
+
+			if len(c.Request.QueryString()) > 0 {
+				builder.WriteString("?")
+				builder.Write(c.Request.QueryString())
+			}
+
+			replacements = append(replacements, domain.UPSTREAM_URI, builder.String())
+		case domain.UPSTREAM_PATH:
+			replacements = append(replacements, domain.UPSTREAM_PATH, b2s(c.Request.Path()))
+		case domain.UPSTREAM_ADDR:
+			addr := c.GetString(domain.UPSTREAM_ADDR)
+			replacements = append(replacements, domain.UPSTREAM_ADDR, addr)
+		case domain.UPSTREAM_RESPONSE_TIME:
+			replacements = append(replacements, domain.UPSTREAM_RESPONSE_TIME, c.GetString(domain.UPSTREAM_RESPONSE_TIME))
+		case domain.UPSTREAM_STATUS:
+			replacements = append(replacements, domain.UPSTREAM_STATUS, strconv.Itoa(c.GetInt(domain.UPSTREAM_STATUS)))
+		case domain.DURATION:
+			dur := time.Since(c.GetTime(domain.TIME)).Microseconds()
 			duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
-			replacements = append(replacements, Duration, duration)
+			replacements = append(replacements, domain.DURATION, duration)
 		default:
 
-			if strings.HasPrefix(matchVal, "$resp_header_") {
-				headerVal := matchVal[len("$resp_header_"):]
+			if strings.HasPrefix(matchVal, "$upstream_header_") {
+				headerVal := matchVal[len("$upstream_header_"):]
 				headerVal = c.Response.Header.Get(headerVal)
 				headerVal = escape(headerVal, t.opts.Escape)
 				replacements = append(replacements, matchVal, headerVal)

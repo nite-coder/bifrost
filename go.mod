@@ -9,6 +9,7 @@ require (
 	github.com/hertz-contrib/pprof v0.1.2
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/sys v0.20.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -23,7 +24,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/felixge/fgprof v0.9.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/google/pprof v0.0.0-20240521024322-9665fa269a30 // indirect
+	github.com/google/pprof v0.0.0-20240525223248-4bfdf5a9a2af // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/nyaruka/phonenumbers v1.3.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -34,5 +35,4 @@ require (
 	golang.org/x/arch v0.8.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

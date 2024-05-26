@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"http-benchmark/pkg/domain"
+	"log/slog"
 	"net"
 	"os"
 	"slices"
@@ -222,7 +223,7 @@ func NewEngine(entry domain.EntryOptions, opts domain.Options) (*Engine, error) 
 
 			m, err := handler(middleware.Params)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("create middleware handler '%s' failed in route: '%s'", middleware.Kind, routeOpts.Match)
 			}
 
 			routeMiddlewares = append(routeMiddlewares, m)
@@ -244,10 +245,22 @@ func NewEngine(entry domain.EntryOptions, opts domain.Options) (*Engine, error) 
 	}
 
 	// init middlewares
-	engine.Use(func(c context.Context, ctx *app.RequestContext) {
-		requestPath := b2s(ctx.Request.Path())
-		ctx.Set(REQUEST_PATH, requestPath)
-	})
+
+	var logHandler slog.Handler
+
+	logOptions := &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}
+
+	if entry.Logging.Enabled {
+		logHandler = slog.NewJSONHandler(os.Stdout, logOptions)
+	} else {
+		logHandler = slog.NewJSONHandler(os.Stdout, logOptions)
+	}
+
+	logger := slog.New(logHandler)
+	initMiddleware := newInitMiddleware(logger)
+	engine.Use(initMiddleware.ServeHTTP)
 
 	for _, middleware := range entry.Middlewares {
 

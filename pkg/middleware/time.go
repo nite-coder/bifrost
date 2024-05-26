@@ -23,5 +23,5 @@ func (t *TimeMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	endTime := time.Now().UTC().UnixMicro()
 
 	ctx.Response.Header.Add("X-In-Time", strconv.FormatInt(startTime, 10))
-	ctx.Response.Header.Add("X-In-Out", strconv.FormatInt(endTime, 10))
+	ctx.Response.Header.Add("X-Out-Time", strconv.FormatInt(endTime, 10))
 }

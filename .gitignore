@@ -20,7 +20,7 @@
 # Go workspace file
 go.work
 
-server/bifrost/access.log
+server/bifrost/logs
 server/bifrost/bifrost
 config.yaml
 

@@ -6,7 +6,6 @@ import (
 	"http-benchmark/pkg/domain"
 	"regexp"
 	"strings"
-	"unsafe"
 
 	"github.com/cloudwego/hertz/pkg/app"
 )
@@ -51,8 +50,8 @@ func NewRouter() *Router {
 
 // ServeHTTP implements the http.Handler interface
 func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	method := B2s(ctx.Method())
-	path := B2s(ctx.Request.Path())
+	method := b2s(ctx.Method())
+	path := b2s(ctx.Request.Path())
 	middleware := r.find(method, path)
 
 	if len(middleware) > 0 {
@@ -390,8 +389,3 @@ const (
 	// TRACE HTTP method
 	TRACE = "TRACE"
 )
-
-func B2s(b []byte) string {
-	/* #nosec G103 */
-	return *(*string)(unsafe.Pointer(&b))
-}

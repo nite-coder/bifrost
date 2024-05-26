@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"context"
+	"http-benchmark/pkg/domain"
 
 	"github.com/cloudwego/hertz/pkg/app"
 )
@@ -23,6 +24,11 @@ func NewStripPrefixMiddleware(prefixs []string) *StripPrefixMiddleware {
 }
 
 func (m *StripPrefixMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+	_, found := ctx.Get(domain.REQUEST_PATH)
+
+	if !found {
+		ctx.Set(domain.REQUEST_PATH, string(ctx.Request.Path()))
+	}
 
 	for _, prefix := range m.prefixes {
 		if bytes.HasPrefix(ctx.Request.Path(), prefix) {

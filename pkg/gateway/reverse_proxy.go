@@ -27,17 +27,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"http-benchmark/pkg/log"
 	"net"
 	"net/textproto"
-	"reflect"
 	"strings"
 	"sync"
-	"unsafe"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/common/config"
-	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
@@ -277,19 +275,25 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 	fn := client.Do
 	if r.client != nil {
-		//fmt.Println("reverse proxy1.1")
 		fn = r.client.Do
 	}
-	//fmt.Println("reverse proxy2")
+
 	err := fn(c, req, resp)
 	if err != nil {
-		//fmt.Println("reverse proxy2.1")
-		hlog.CtxErrorf(c, "sent upstream error: %#v, upstream: %s, request: %s %s %s", err.Error(), req.Host(), req.Method(), req.Path(), req.Header.GetProtocol())
+		builder := strings.Builder{}
+		builder.Write(req.Method())
+		builder.Write(spaceByte)
+		builder.Write(req.RequestURI())
+
+		logger := log.FromContext(c)
+		logger.ErrorContext(c, "sent upstream error",
+			"error", err,
+			"upstream", builder.String(),
+		)
 		r.getErrorHandler()(ctx, err)
 		return
 	}
 
-	//fmt.Println("reverse proxy3")
 	// add tmp resp header
 	for key, hs := range respTmpHeader {
 		for _, h := range hs {
@@ -304,7 +308,7 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	respTmpHeaderPool.Put(respTmpHeader)
 
 	removeResponseConnHeaders(ctx)
-	//fmt.Println("reverse proxy4")
+
 	for _, h := range hopHeaders {
 		if r.transferTrailer && h == "Trailer" {
 			continue
@@ -315,12 +319,12 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	if r.modifyResponse == nil {
 		return
 	}
-	//fmt.Println("reverse proxy5")
+
 	err = r.modifyResponse(resp)
 	if err != nil {
 		r.getErrorHandler()(ctx, err)
 	}
-	//fmt.Println("reverse proxy6")
+
 }
 
 // SetDirector use to customize protocol.Request
@@ -356,26 +360,4 @@ func (r *ReverseProxy) getErrorHandler() func(c *app.RequestContext, err error) 
 		return r.errorHandler
 	}
 	return r.defaultErrorHandler
-}
-
-// b2s converts byte slice to a string without memory allocation.
-// See https://groups.google.com/forum/#!msg/Golang-Nuts/ENgbUzYvCuU/90yGx7GUAgAJ .
-//
-// Note it may break if string and/or slice header will change
-// in the future go versions.
-func b2s(b []byte) string {
-	return *(*string)(unsafe.Pointer(&b))
-}
-
-// s2b converts string to a byte slice without memory allocation.
-//
-// Note it may break if string and/or slice header will change
-// in the future go versions.
-func s2b(s string) (b []byte) {
-	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	sh := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	bh.Data = sh.Data
-	bh.Cap = sh.Len
-	bh.Len = sh.Len
-	return
 }
