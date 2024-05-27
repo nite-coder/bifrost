@@ -11,7 +11,9 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/bytedance/sonic"
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/valyala/bytebufferpool"
 )
 
 type LoggerTracer struct {
@@ -115,32 +117,34 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 			}
 			replacements = append(replacements, domain.REMOTE_ADDR, ip)
 		case domain.REQUEST_METHOD:
+			replacements = append(replacements, domain.REQUEST_METHOD, b2s(c.Request.Method()))
 		case domain.UPSTREAM_METHOD:
 			replacements = append(replacements, domain.REQUEST_METHOD, b2s(c.Request.Method()))
 		case domain.REQUEST_URI:
-			builder := strings.Builder{}
+			buf := bytebufferpool.Get()
+			defer bytebufferpool.Put(buf)
 
 			val, found := c.Get(domain.REQUEST_PATH)
 			if found {
 				path, ok := val.(string)
 				if ok {
-					builder.WriteString(path)
+					_, _ = buf.WriteString(path)
 					if len(c.Request.QueryString()) > 0 {
-						builder.Write(questionByte)
-						builder.Write(c.Request.QueryString())
+						_, _ = buf.Write(questionByte)
+						_, _ = buf.Write(c.Request.QueryString())
 					}
 
-					replacements = append(replacements, domain.REQUEST_URI, builder.String())
+					replacements = append(replacements, domain.REQUEST_URI, buf.String())
 				}
 				continue
 			}
 
-			builder.Write(c.Request.Path())
+			_, _ = buf.Write(c.Request.Path())
 			if len(c.Request.QueryString()) > 0 {
-				builder.Write(questionByte)
-				builder.Write(c.Request.QueryString())
+				_, _ = buf.Write(questionByte)
+				_, _ = buf.Write(c.Request.QueryString())
 			}
-			replacements = append(replacements, domain.REQUEST_URI, builder.String())
+			replacements = append(replacements, domain.REQUEST_URI, buf.String())
 
 		case domain.REQUEST_PATH:
 			val, found := c.Get(domain.REQUEST_PATH)
@@ -166,15 +170,17 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 		case domain.UPSTREAM_PROTOCOL:
 			replacements = append(replacements, domain.UPSTREAM_PROTOCOL, c.Request.Header.GetProtocol())
 		case domain.UPSTREAM_URI:
-			builder := strings.Builder{}
-			builder.Write(c.Request.Path())
+			buf := bytebufferpool.Get()
+			defer bytebufferpool.Put(buf)
+
+			_, _ = buf.Write(c.Request.Path())
 
 			if len(c.Request.QueryString()) > 0 {
-				builder.WriteString("?")
-				builder.Write(c.Request.QueryString())
+				_, _ = buf.Write(questionByte)
+				_, _ = buf.Write(c.Request.QueryString())
 			}
 
-			replacements = append(replacements, domain.UPSTREAM_URI, builder.String())
+			replacements = append(replacements, domain.UPSTREAM_URI, buf.String())
 		case domain.UPSTREAM_PATH:
 			replacements = append(replacements, domain.UPSTREAM_PATH, b2s(c.Request.Path()))
 		case domain.UPSTREAM_ADDR:
@@ -257,35 +263,14 @@ func escapeString(s string) string {
 
 // escapeJSON function to escape characters for JSON strings
 func escapeJSON(s string) string {
-	var b strings.Builder
-	for i := 0; i < len(s); {
-		c := s[i]
-		switch c {
-		case '"':
-			b.WriteString("\\\"")
-		case '\\':
-			b.WriteString("\\\\")
-		case '\n':
-			b.WriteString("\\n")
-		case '\r':
-			b.WriteString("\\r")
-		case '\t':
-			b.WriteString("\\t")
-		case '\b':
-			b.WriteString("\\b")
-		case '\f':
-			b.WriteString("\\f")
-		default:
-			if c < 32 {
-				b.WriteString("\\u")
-				b.WriteString(strconv.FormatUint(uint64(c), 16))
-			} else {
-				r, size := utf8.DecodeRuneInString(s[i:])
-				b.WriteRune(r)
-				i += size - 1
-			}
-		}
-		i++
+	b, err := sonic.Marshal(s)
+	if err != nil {
+		return s
 	}
-	return b.String()
+
+	buf := bytebufferpool.Get()
+	defer bytebufferpool.Put(buf)
+
+	_, _ = buf.Write(b)
+	return buf.String()
 }

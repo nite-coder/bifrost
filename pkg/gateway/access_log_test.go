@@ -1,9 +1,17 @@
 package gateway
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
+	"unicode/utf8"
+
+	"github.com/bytedance/sonic"
+	"github.com/valyala/bytebufferpool"
 )
 
 var template = `{"time":"$time",
@@ -160,5 +168,184 @@ func BenchmarkGoogleReplacer(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		replaceVars(template, values)
+	}
+}
+
+var path = []byte("/spot/orders")
+var queryString = []byte("a=b&c=d")
+
+func BenchmarkStringBuilder(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		var builder strings.Builder
+		builder.Write(path)
+		if len(queryString) > 0 {
+			builder.Write(questionByte)
+			builder.Write(queryString)
+		}
+		_ = builder.String()
+	}
+}
+
+func BenchmarkBytesBuffer(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		var buffer bytes.Buffer
+		buffer.Write(path)
+		if len(queryString) > 0 {
+			buffer.Write(questionByte)
+			buffer.Write(queryString)
+		}
+		_ = buffer.String()
+	}
+}
+
+func BenchmarkByteBufferPool(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		buf := bytebufferpool.Get()
+		buf.Write(path)
+		if len(queryString) > 0 {
+			buf.Write(questionByte)
+			buf.Write(queryString)
+		}
+		_ = buf.String()
+		bytebufferpool.Put(buf)
+	}
+}
+
+var testData = `{
+	"market": "BTC_USDT",
+	"base": "BTC",
+	"quote": "USDT",
+	"type": "limit",
+	"price": "25000",
+	"size": "0.0001",
+	"side": "sell",
+	"user_id": 1
+}`
+
+func escapeJSONStringBuilder(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		c := s[i]
+		switch c {
+		case '"':
+			b.WriteString("\\\"")
+		case '\\':
+			b.WriteString("\\\\")
+		case '\n':
+			b.WriteString("\\n")
+		case '\r':
+			b.WriteString("\\r")
+		case '\t':
+			b.WriteString("\\t")
+		case '\b':
+			b.WriteString("\\b")
+		case '\f':
+			b.WriteString("\\f")
+		default:
+			if c < 32 {
+				b.WriteString("\\u")
+				b.WriteString(strconv.FormatUint(uint64(c), 16))
+			} else {
+				r, size := utf8.DecodeRuneInString(s[i:])
+				b.WriteRune(r)
+				i += size - 1
+			}
+		}
+		i++
+	}
+	return b.String()
+}
+
+func escapeJSONBytePool(s string) string {
+	buf := bytebufferpool.Get()
+	defer bytebufferpool.Put(buf)
+
+	for i := 0; i < len(s); {
+		c := s[i]
+		switch c {
+		case '"':
+			buf.WriteString("\\\"")
+		case '\\':
+			buf.WriteString("\\\\")
+		case '\n':
+			buf.WriteString("\\n")
+		case '\r':
+			buf.WriteString("\\r")
+		case '\t':
+			buf.WriteString("\\t")
+		case '\b':
+			buf.WriteString("\\b")
+		case '\f':
+			buf.WriteString("\\f")
+		default:
+			if c < 32 {
+				buf.WriteString("\\u")
+				// Use a fixed-size array to avoid further allocations
+				tmp := [4]byte{}
+				hex := strconv.AppendUint(tmp[:0], uint64(c), 16)
+				if len(hex) == 1 {
+					buf.WriteString("000")
+				} else if len(hex) == 2 {
+					buf.WriteString("00")
+				} else if len(hex) == 3 {
+					buf.WriteString("0")
+				}
+				buf.Write(hex)
+			} else {
+				r, size := utf8.DecodeRuneInString(s[i:])
+				runeBytes := make([]byte, 4)
+				n := utf8.EncodeRune(runeBytes, r)
+				buf.Write(runeBytes[:n])
+				i += size - 1
+			}
+		}
+		i++
+	}
+	return buf.String()
+}
+
+func jsonEscape(i string) string {
+	b, err := json.Marshal(i)
+	if err != nil {
+		panic(err)
+	}
+
+	buf := bytebufferpool.Get()
+	buf.Write(b)
+	return buf.String()
+}
+
+func sonicEscape(i string) string {
+	b, err := sonic.Marshal(i)
+	if err != nil {
+		return i
+	}
+
+	buf := bytebufferpool.Get()
+	defer bytebufferpool.Put(buf)
+
+	_, _ = buf.Write(b)
+	return buf.String()
+}
+
+func TestEscapeJSON1(t *testing.T) {
+	fmt.Println(sonicEscape(testData))
+}
+
+func BenchmarkEscapeJSONStringBuilder(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = escapeJSONStringBuilder(testData)
+	}
+}
+
+func BenchmarkEscapeJSONBytePool(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = escapeJSONBytePool(testData)
+	}
+}
+
+func BenchmarkEscapeJSON1(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = sonicEscape(testData)
 	}
 }

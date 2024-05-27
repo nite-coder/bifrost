@@ -38,6 +38,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/valyala/bytebufferpool"
 )
 
 type ReverseProxy struct {
@@ -142,28 +143,30 @@ func JoinURLPath(req *protocol.Request, target string) (path []byte) {
 	}
 
 	targetQuery := strings.Split(target, "?")
-	var buffer bytes.Buffer
-	buffer.WriteString(targetQuery[0])
+	buffer := bytebufferpool.Get()
+	defer bytebufferpool.Put(buffer)
+
+	_, _ = buffer.WriteString(targetQuery[0])
 	switch {
 	case aslash && bslash:
-		buffer.Write(req.URI().Path()[1:])
+		_, _ = buffer.Write(req.URI().Path()[1:])
 	case !aslash && !bslash:
-		buffer.Write([]byte{'/'})
-		buffer.Write(req.URI().Path())
+		_, _ = buffer.Write([]byte{'/'})
+		_, _ = buffer.Write(req.URI().Path())
 	default:
-		buffer.Write(req.URI().Path())
+		_, _ = buffer.Write(req.URI().Path())
 	}
 	if len(targetQuery) > 1 {
-		buffer.Write([]byte{'?'})
-		buffer.WriteString(targetQuery[1])
+		_, _ = buffer.Write([]byte{'?'})
+		_, _ = buffer.WriteString(targetQuery[1])
 	}
 	if len(req.QueryString()) > 0 {
 		if len(targetQuery) == 1 {
-			buffer.Write([]byte{'?'})
+			_, _ = buffer.Write([]byte{'?'})
 		} else {
-			buffer.Write([]byte{'&'})
+			_, _ = buffer.Write([]byte{'&'})
 		}
-		buffer.Write(req.QueryString())
+		_, _ = buffer.Write(req.QueryString())
 	}
 	return buffer.Bytes()
 }
@@ -281,15 +284,17 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 	err := fn(c, req, resp)
 	if err != nil {
-		builder := strings.Builder{}
-		builder.Write(req.Method())
-		builder.Write(spaceByte)
-		builder.Write(req.RequestURI())
+		buf := bytebufferpool.Get()
+		defer bytebufferpool.Put(buf)
+
+		buf.Write(req.Method())
+		buf.Write(spaceByte)
+		buf.Write(req.RequestURI())
 
 		logger := log.FromContext(c)
 		logger.ErrorContext(c, "sent upstream error",
 			"error", err,
-			"upstream", builder.String(),
+			"upstream", buf.String(),
 		)
 		r.getErrorHandler()(ctx, err)
 		return

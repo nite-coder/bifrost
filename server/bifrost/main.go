@@ -10,8 +10,8 @@ import (
 
 func main() {
 
-	_ = gateway.RegisterMiddleware("time", func(param map[string]any) (app.HandlerFunc, error) {
-		m := middleware.NewTimeMiddleware()
+	_ = gateway.RegisterMiddleware("timing_logger", func(param map[string]any) (app.HandlerFunc, error) {
+		m := middleware.NewTimingLoggerMiddleware()
 		return m.ServeHTTP, nil
 	})
 
