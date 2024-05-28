@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"http-benchmark/pkg/domain"
 	"http-benchmark/pkg/log"
+	"log/slog"
 	"net"
 	"net/textproto"
 	"net/url"
@@ -304,8 +305,8 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 		logger := log.FromContext(c)
 		logger.ErrorContext(c, "sent upstream error",
-			"error", err.Error(),
-			"upstream", uri,
+			slog.String("error", err.Error()),
+			slog.String("upstream", uri),
 		)
 
 		if err.Error() == "timeout" {

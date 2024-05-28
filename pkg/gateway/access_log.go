@@ -188,10 +188,10 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 		case domain.UPSTREAM_STATUS:
 			code := c.GetInt(domain.UPSTREAM_STATUS)
 			replacements = append(replacements, domain.UPSTREAM_STATUS, strconv.Itoa(code))
-		case domain.UPSTREAM_RESPONSE_TIME:
-			replacements = append(replacements, domain.UPSTREAM_RESPONSE_TIME, c.GetString(domain.UPSTREAM_RESPONSE_TIME))
+		case domain.UPSTREAM_DURATION:
+			replacements = append(replacements, domain.UPSTREAM_DURATION, c.GetString(domain.UPSTREAM_DURATION))
 		case domain.DURATION:
-			val, found := c.Get(domain.CLIENT_CANCEL_TIME)
+			val, found := c.Get(domain.CLIENT_CANCELED_AT)
 
 			if found {
 				cancelTime := val.(time.Time)

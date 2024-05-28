@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"http-benchmark/pkg/domain"
 	"http-benchmark/pkg/log"
+	"log/slog"
 	"math"
 	"net/url"
 	"strconv"
@@ -16,6 +17,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/common/config"
+	"github.com/valyala/bytebufferpool"
 )
 
 type Upstream struct {
@@ -120,10 +122,9 @@ func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			mic := dur.Microseconds()
 			duration := float64(mic) / 1e6
 			responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
-			ctx.Set(domain.UPSTREAM_RESPONSE_TIME, responseTime)
+			ctx.Set(domain.UPSTREAM_DURATION, responseTime)
 
 			if ctx.GetBool("upstream_timeout") {
-				ctx.Set(domain.UPSTREAM_STATUS, 0)
 				ctx.Response.SetStatusCode(504)
 			} else {
 				ctx.Set(domain.UPSTREAM_STATUS, ctx.Response.StatusCode())
@@ -136,10 +137,20 @@ func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	})
 
 	select {
-	case <-c.Done(): // user cancel the request
+	case <-c.Done():
 		time := time.Now()
-		ctx.Set(domain.CLIENT_CANCEL_TIME, time)
-		logger.WarnContext(c, "user cancel the request")
+		ctx.Set(domain.CLIENT_CANCELED_AT, time)
+
+		buf := bytebufferpool.Get()
+		defer bytebufferpool.Put(buf)
+
+		buf.Write(ctx.Request.Method())
+		buf.Write(spaceByte)
+		buf.Write(ctx.Request.URI().FullURI())
+		fullURI := buf.String()
+		logger.WarnContext(c, "client cancel the request",
+			slog.String("full_uri", fullURI),
+		)
 		<-done
 		ctx.Response.SetStatusCode(499)
 	case <-done:
