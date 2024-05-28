@@ -118,8 +118,6 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 			replacements = append(replacements, domain.REMOTE_ADDR, ip)
 		case domain.REQUEST_METHOD:
 			replacements = append(replacements, domain.REQUEST_METHOD, b2s(c.Request.Method()))
-		case domain.UPSTREAM_METHOD:
-			replacements = append(replacements, domain.REQUEST_METHOD, b2s(c.Request.Method()))
 		case domain.REQUEST_URI:
 			buf := bytebufferpool.Get()
 			defer bytebufferpool.Put(buf)
@@ -165,10 +163,11 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 			body := escape(b2s(c.Request.Body()), t.opts.Escape)
 			replacements = append(replacements, domain.REQUEST_BODY, body)
 		case domain.STATUS:
-		case domain.UPSTREAM_STATUS:
 			replacements = append(replacements, domain.STATUS, strconv.Itoa(c.Response.StatusCode()))
 		case domain.UPSTREAM_PROTOCOL:
 			replacements = append(replacements, domain.UPSTREAM_PROTOCOL, c.Request.Header.GetProtocol())
+		case domain.UPSTREAM_METHOD:
+			replacements = append(replacements, domain.UPSTREAM_METHOD, b2s(c.Request.Method()))
 		case domain.UPSTREAM_URI:
 			buf := bytebufferpool.Get()
 			defer bytebufferpool.Put(buf)
@@ -186,9 +185,22 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 		case domain.UPSTREAM_ADDR:
 			addr := c.GetString(domain.UPSTREAM_ADDR)
 			replacements = append(replacements, domain.UPSTREAM_ADDR, addr)
+		case domain.UPSTREAM_STATUS:
+			code := c.GetInt(domain.UPSTREAM_STATUS)
+			replacements = append(replacements, domain.UPSTREAM_STATUS, strconv.Itoa(code))
 		case domain.UPSTREAM_RESPONSE_TIME:
 			replacements = append(replacements, domain.UPSTREAM_RESPONSE_TIME, c.GetString(domain.UPSTREAM_RESPONSE_TIME))
 		case domain.DURATION:
+			val, found := c.Get(domain.CLIENT_CANCEL_TIME)
+
+			if found {
+				cancelTime := val.(time.Time)
+				dur := cancelTime.Sub(c.GetTime(domain.TIME)).Microseconds()
+				duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
+				replacements = append(replacements, domain.DURATION, duration)
+				continue
+			}
+
 			dur := time.Since(c.GetTime(domain.TIME)).Microseconds()
 			duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
 			replacements = append(replacements, domain.DURATION, duration)

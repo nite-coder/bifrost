@@ -98,11 +98,11 @@ func NewUpstream(opts domain.UpstreamOptions, transportOptions *domain.Transport
 func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	logger := log.FromContext(c)
 	defer ctx.Abort()
-
-	var proxy *ReverseProxy
 	done := make(chan bool)
 
 	gopool.CtxGo(c, func() {
+
+		var proxy *ReverseProxy
 		switch u.opts.Strategy {
 		case domain.RoundRobinStrategy:
 			proxy = u.pickupByRoundRobin()
@@ -112,12 +112,7 @@ func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			proxy = u.pickupByRoundRobin()
 		}
 
-		ctx.Set("X-Forwarded-For", ctx.Request.Header.Get("X-Forwarded-For"))
-
 		if proxy != nil {
-			// TODO: remove url.Parse here
-			addr, _ := url.Parse(proxy.Target)
-			ctx.Set(domain.UPSTREAM_ADDR, addr)
 			startTime := time.Now()
 			proxy.ServeHTTP(c, ctx)
 
@@ -127,21 +122,26 @@ func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
 			ctx.Set(domain.UPSTREAM_RESPONSE_TIME, responseTime)
 
+			if ctx.GetBool("upstream_timeout") {
+				ctx.Set(domain.UPSTREAM_STATUS, 0)
+				ctx.Response.SetStatusCode(504)
+			} else {
+				ctx.Set(domain.UPSTREAM_STATUS, ctx.Response.StatusCode())
+			}
 		} else {
 			logger.ErrorContext(c, "no proxy found")
 		}
 
-		select {
-		case <-c.Done():
-			logger.Info("client request canceled")
-		default:
-			done <- true
-		}
+		done <- true
 	})
 
 	select {
-	case <-c.Done():
-		logger.ErrorContext(c, "client request canceled")
+	case <-c.Done(): // user cancel the request
+		time := time.Now()
+		ctx.Set(domain.CLIENT_CANCEL_TIME, time)
+		logger.WarnContext(c, "user cancel the request")
+		<-done
+		ctx.Response.SetStatusCode(499)
 	case <-done:
 	}
 }

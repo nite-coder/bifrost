@@ -27,9 +27,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"http-benchmark/pkg/domain"
 	"http-benchmark/pkg/log"
 	"net"
 	"net/textproto"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -77,6 +79,8 @@ type ReverseProxy struct {
 	// If nil, the default is to log the provided error and return
 	// a 502 Status Bad Gateway response.
 	errorHandler func(*app.RequestContext, error)
+
+	targetHost string
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -108,13 +112,17 @@ var hopHeaders = []string{
 // When passing config.ClientOption it will initialize a local client.Client instance.
 // Using ReverseProxy.SetClient if there is need for shared customized client.Client instance.
 func NewSingleHostReverseProxy(target string, options ...config.ClientOption) (*ReverseProxy, error) {
+	addr, _ := url.Parse(target)
+
 	r := &ReverseProxy{
-		Target: target,
+		Target:     target,
+		targetHost: addr.Host,
 		director: func(req *protocol.Request) {
 			req.SetRequestURI(b2s(JoinURLPath(req, target)))
 			req.Header.SetHostBytes(req.URI().Host())
 		},
 	}
+
 	if len(options) != 0 {
 		c, err := client.NewClient(options...)
 		if err != nil {
@@ -225,6 +233,8 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	req := &ctx.Request
 	resp := &ctx.Response
 
+	ctx.Set(domain.UPSTREAM_ADDR, r.targetHost)
+
 	// save tmp resp header
 	respTmpHeader := respTmpHeaderPool.Get().(map[string][]string)
 	if r.saveOriginResHeader {
@@ -289,13 +299,19 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 		buf.Write(req.Method())
 		buf.Write(spaceByte)
-		buf.Write(req.RequestURI())
+		buf.Write(req.URI().FullURI())
+		uri := buf.String()
 
 		logger := log.FromContext(c)
 		logger.ErrorContext(c, "sent upstream error",
-			"error", err,
-			"upstream", buf.String(),
+			"error", err.Error(),
+			"upstream", uri,
 		)
+
+		if err.Error() == "timeout" {
+			ctx.Set("upstream_timeout", true)
+		}
+
 		r.getErrorHandler()(ctx, err)
 		return
 	}

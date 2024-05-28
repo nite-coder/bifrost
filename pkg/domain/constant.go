@@ -21,6 +21,7 @@ const (
 	UPSTREAM_ADDR          = "$upstream_addr"
 	UPSTREAM_RESPONSE_TIME = "$upstream_response_time"
 	UPSTREAM_STATUS        = "$upstream_status"
+	CLIENT_CANCEL_TIME     = "$client_cancel_time"
 
 	B  = 1
 	KB = 1024 * B

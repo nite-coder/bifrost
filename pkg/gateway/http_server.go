@@ -53,6 +53,7 @@ func NewHTTPServer(entry domain.EntryOptions, opts domain.Options) (*HTTPServer,
 		server.WithWriteTimeout(entry.WriteTimeout),
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
+		server.WithSenseClientDisconnection(true),
 		withDefaultServerHeader(true),
 	}
 

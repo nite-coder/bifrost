@@ -4,7 +4,7 @@ import http from 'k6/http';
 export const options = {}
 
 export default function () {
-    const url = 'http://localhost:8001/spot/orders?1=b';
+    const url = 'http://localhost:80/spot/orders?a=b';
 
     const payload = JSON.stringify({
         "market": "BTC_USDT",
@@ -14,7 +14,8 @@ export default function () {
         "price": "25000",
         "size": "0.0001",
         "side": "sell",
-        "user_id": 1
+        "user_id": 1,
+        "text": "你好世界"
     });
 
     const params = {
