@@ -19,7 +19,6 @@ func NewMiddleware(prefix string) *AddPrefixMiddleware {
 
 func (m *AddPrefixMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	_, found := ctx.Get(domain.REQUEST_PATH)
-
 	if !found {
 		ctx.Set(domain.REQUEST_PATH, string(ctx.Request.Path()))
 	}

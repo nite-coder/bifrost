@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"http-benchmark/pkg/domain"
 	"http-benchmark/pkg/log"
@@ -73,6 +74,7 @@ func NewUpstream(opts domain.UpstreamOptions, transportOptions *domain.Transport
 		if transportOptions.KeepAlive != nil {
 			clientOpts = append(clientOpts, client.WithKeepAlive(*transportOptions.KeepAlive))
 		}
+
 	}
 
 	upstream := &Upstream{
@@ -81,12 +83,26 @@ func NewUpstream(opts domain.UpstreamOptions, transportOptions *domain.Transport
 	}
 
 	for _, server := range opts.Servers {
-
-		if !isValidURL(server.URL) {
-			return nil, fmt.Errorf("invalid upstream url: %s, must start with http:// or https://", server.URL)
+		if !checkScheme(server.URL) {
+			server.URL = fmt.Sprintf("http://%s", server.URL)
 		}
 
-		proxy, err := NewSingleHostReverseProxy(server.URL, clientOpts...)
+		var proxyOpts []config.ClientOption
+		if strings.HasPrefix(server.URL, "https") {
+			skip := true
+
+			if transportOptions != nil && transportOptions.InsecureSkipVerify != nil {
+				skip = *transportOptions.InsecureSkipVerify
+			}
+
+			proxyOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
+				InsecureSkipVerify: skip,
+			}))
+		} else {
+			proxyOpts = append(clientOpts, client.WithDialer(newDialer()))
+		}
+
+		proxy, err := NewSingleHostReverseProxy(server.URL, proxyOpts...)
 		//proxy.SetSaveOriginResHeader(true)
 		if err != nil {
 			return nil, err
@@ -103,7 +119,6 @@ func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	done := make(chan bool)
 
 	gopool.CtxGo(c, func() {
-
 		var proxy *ReverseProxy
 		switch u.opts.Strategy {
 		case domain.RoundRobinStrategy:
@@ -166,8 +181,8 @@ func (u *Upstream) pickupByRoundRobin() *ReverseProxy {
 func (u *Upstream) serveByRandom(c context.Context, ctx *app.RequestContext) {
 }
 
-// isValidURL checks if the given URL starts with http:// or https://
-func isValidURL(u string) bool {
+// checkScheme checks if the given URL starts with http:// or https://
+func checkScheme(u string) bool {
 	parsedURL, err := url.Parse(u)
 	if err != nil {
 		return false

@@ -3,6 +3,7 @@ package gateway
 import (
 	"http-benchmark/pkg/middleware/addprefix"
 	"http-benchmark/pkg/middleware/replacepath"
+	"http-benchmark/pkg/middleware/replacepathregex"
 	"http-benchmark/pkg/middleware/stripprefix"
 	"unsafe"
 
@@ -42,6 +43,13 @@ func init() {
 	_ = RegisterMiddleware("replace_path", func(params map[string]any) (app.HandlerFunc, error) {
 		newPath := params["path"].(string)
 		m := replacepath.NewMiddleware(newPath)
+		return m.ServeHTTP, nil
+	})
+
+	_ = RegisterMiddleware("replace_path_regex", func(params map[string]any) (app.HandlerFunc, error) {
+		regex := params["regex"].(string)
+		replacement := params["replacement"].(string)
+		m := replacepathregex.NewMiddleware(regex, replacement)
 		return m.ServeHTTP, nil
 	})
 }
