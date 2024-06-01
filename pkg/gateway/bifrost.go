@@ -3,7 +3,6 @@ package gateway
 import (
 	"fmt"
 	"http-benchmark/pkg/domain"
-	"http-benchmark/pkg/middleware"
 	"http-benchmark/pkg/provider/file"
 	"regexp"
 
@@ -87,24 +86,4 @@ func RegisterMiddleware(kind string, handler CreateMiddlewareHandler) error {
 	middlewareFactory[kind] = handler
 
 	return nil
-}
-
-func init() {
-	_ = RegisterMiddleware("strip_prefix", func(params map[string]any) (app.HandlerFunc, error) {
-		val := params["prefixes"].([]any)
-
-		prefixes := make([]string, 0)
-		for _, v := range val {
-			prefixes = append(prefixes, v.(string))
-		}
-
-		m := middleware.NewStripPrefixMiddleware(prefixes)
-		return m.ServeHTTP, nil
-	})
-
-	_ = RegisterMiddleware("add_prefix", func(params map[string]any) (app.HandlerFunc, error) {
-		prefix := params["prefix"].(string)
-		m := middleware.NewAddPrefixMiddleware(prefix)
-		return m.ServeHTTP, nil
-	})
 }

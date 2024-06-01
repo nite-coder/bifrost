@@ -13,6 +13,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -25,7 +26,6 @@ type LoggerTracer struct {
 }
 
 func NewLoggerTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
-
 	if opts.TimeFormat == "" {
 		opts.TimeFormat = time.RFC3339
 	}
@@ -81,8 +81,6 @@ func NewLoggerTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
 }
 
 func (t *LoggerTracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
-	time := time.Now().UTC()
-	c.Set(domain.TIME, time)
 	return ctx
 }
 
@@ -105,7 +103,12 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 	for _, matchVal := range t.matchVars {
 		switch matchVal {
 		case domain.TIME:
-			startTime := c.GetTime(domain.TIME)
+			httpStart := c.GetTraceInfo().Stats().GetEvent(stats.HTTPStart)
+			if httpStart == nil {
+				continue
+			}
+
+			startTime := httpStart.Time()
 			replacements = append(replacements, domain.TIME, startTime.Format(t.opts.TimeFormat))
 		case domain.REMOTE_ADDR:
 			var ip string
@@ -191,17 +194,22 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 		case domain.UPSTREAM_DURATION:
 			replacements = append(replacements, domain.UPSTREAM_DURATION, c.GetString(domain.UPSTREAM_DURATION))
 		case domain.DURATION:
+			httpStart := c.GetTraceInfo().Stats().GetEvent(stats.HTTPStart)
+			if httpStart == nil {
+				continue
+			}
+
 			val, found := c.Get(domain.CLIENT_CANCELED_AT)
 
 			if found {
 				cancelTime := val.(time.Time)
-				dur := cancelTime.Sub(c.GetTime(domain.TIME)).Microseconds()
+				dur := cancelTime.Sub(httpStart.Time()).Microseconds()
 				duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
 				replacements = append(replacements, domain.DURATION, duration)
 				continue
 			}
 
-			dur := time.Since(c.GetTime(domain.TIME)).Microseconds()
+			dur := time.Since(httpStart.Time()).Microseconds()
 			duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
 			replacements = append(replacements, domain.DURATION, duration)
 		default:

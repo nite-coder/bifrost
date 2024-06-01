@@ -1,4 +1,4 @@
-package middleware
+package stripprefix
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ type StripPrefixMiddleware struct {
 	prefixes [][]byte
 }
 
-func NewStripPrefixMiddleware(prefixs []string) *StripPrefixMiddleware {
+func NewMiddleware(prefixs []string) *StripPrefixMiddleware {
 	m := &StripPrefixMiddleware{
 		prefixes: make([][]byte, 0),
 	}

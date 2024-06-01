@@ -1,4 +1,4 @@
-package middleware
+package timinglogger
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 type TimingLoggerMiddleware struct {
 }
 
-func NewTimingLoggerMiddleware() *TimingLoggerMiddleware {
+func NewMiddleware() *TimingLoggerMiddleware {
 	return &TimingLoggerMiddleware{}
 }
 

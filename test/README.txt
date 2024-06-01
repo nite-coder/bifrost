@@ -20,3 +20,6 @@ go test -benchmem -run=^$ -coverprofile=/tmp/vscode-go0xlfMt/go-code-cover -benc
 go test -benchmem -run=^$ -coverprofile=/tmp/vscode-go0xlfMt/go-code-cover -bench ^BenchmarkEscapeJSONStringBuilder$ http-benchmark/pkg/gateway -v
 go test -benchmem -run=^$ -coverprofile=/tmp/vscode-go0xlfMt/go-code-cover -bench ^BenchmarkEscapeJSONBytePool$ http-benchmark/pkg/gateway -v
 go test -benchmem -run=^$ -coverprofile=/tmp/vscode-go0xlfMt/go-code-cover -bench ^BenchmarkEscapeJSON1$ http-benchmark/pkg/gateway -v
+
+
+netstat -ant | grep 8001 | grep ESTABLISHED| wc -l

@@ -281,7 +281,13 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		tmp := req.Header.Peek("X-Forwarded-For")
 
 		if len(tmp) > 0 {
-			ip = fmt.Sprintf("%s, %s", tmp, ip)
+			buf := bytebufferpool.Get()
+			defer bytebufferpool.Put(buf)
+
+			buf.Write(tmp)
+			buf.WriteString(", ")
+			buf.WriteString(ip)
+			ip = buf.String()
 		}
 		if tmp == nil || string(tmp) != "" {
 			req.Header.Set("X-Forwarded-For", ip)

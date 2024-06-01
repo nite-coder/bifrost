@@ -54,6 +54,10 @@ func NewHTTPServer(entry domain.EntryOptions, opts domain.Options) (*HTTPServer,
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		server.WithSenseClientDisconnection(true),
+		// server.WithTracer(prometheus.NewServerTracer("", "/metrics",
+		// 	prometheus.WithEnableGoCollector(true),
+		// 	prometheus.WithDisableServer(false),
+		// )),
 		withDefaultServerHeader(true),
 	}
 

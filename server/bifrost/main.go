@@ -2,16 +2,19 @@ package main
 
 import (
 	"http-benchmark/pkg/gateway"
-	"http-benchmark/pkg/middleware"
+	"http-benchmark/pkg/middleware/timinglogger"
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/netpoll"
 )
 
 func main() {
 
+	netpoll.DisableGopool()
+
 	_ = gateway.RegisterMiddleware("timing_logger", func(param map[string]any) (app.HandlerFunc, error) {
-		m := middleware.NewTimingLoggerMiddleware()
+		m := timinglogger.NewMiddleware()
 		return m.ServeHTTP, nil
 	})
 

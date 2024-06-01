@@ -1,4 +1,4 @@
-package middleware
+package addprefix
 
 import (
 	"context"
@@ -11,7 +11,7 @@ type AddPrefixMiddleware struct {
 	prefix []byte
 }
 
-func NewAddPrefixMiddleware(prefix string) *AddPrefixMiddleware {
+func NewMiddleware(prefix string) *AddPrefixMiddleware {
 	return &AddPrefixMiddleware{
 		prefix: []byte(prefix),
 	}
