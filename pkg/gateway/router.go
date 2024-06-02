@@ -210,7 +210,6 @@ func (r *Router) AddRoute(route domain.RouteOptions, middlewares ...app.HandlerF
 }
 
 // add adds a static route
-// TODO: support prefix route
 func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) error {
 	if len(path) == 0 || path[0] != '/' {
 		return errors.New("router: invalid path")

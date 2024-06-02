@@ -1,21 +1,10 @@
 import http from 'k6/http';
 
 
-export const options = {
-    scenarios: {
-        constant_request_rate: {
-            executor: 'constant-arrival-rate',
-            rate: 15000,
-            timeUnit: '1s',
-            duration: '30s',
-            preAllocatedVUs: 100,
-            maxVUs: 350,
-        },
-    },
-}
+export const options = {}
 
 export default function () {
-    const url = 'http://localhost:8001/spot/orders?a=b';
+    const url = 'http://localhost:80/spot/orders?a=b';
 
     const payload = JSON.stringify({
         "market": "BTC_USDT",

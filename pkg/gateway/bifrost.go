@@ -38,7 +38,7 @@ func Load(opts domain.Options) (*Bifrost, error) {
 	}
 
 	go func() {
-		t := time.NewTicker(5 * time.Minute)
+		t := time.NewTicker(60 * time.Minute)
 		defer t.Stop()
 		for range t.C {
 			bifrsot.resolver.Refresh(true)

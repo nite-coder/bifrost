@@ -6,12 +6,9 @@ import (
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/netpoll"
 )
 
 func main() {
-
-	netpoll.DisableGopool()
 
 	_ = gateway.RegisterMiddleware("timing_logger", func(param map[string]any) (app.HandlerFunc, error) {
 		m := timinglogger.NewMiddleware()

@@ -194,6 +194,10 @@ func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 }
 
 func (u *Upstream) pickupByRoundRobin() *ReverseProxy {
+	if len(u.proxies) == 1 {
+		return u.proxies[0]
+	}
+
 	index := u.index.Add(1)
 	proxy := u.proxies[(int(index)-1)%len(u.proxies)]
 	return proxy

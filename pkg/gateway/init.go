@@ -19,8 +19,11 @@ func newInitMiddleware(logger *slog.Logger) *initMiddleware {
 }
 
 func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	ctx.Set("X-Forwarded-For", ctx.Request.Header.Get("X-Forwarded-For"))
+	if len(ctx.Request.Header.Get("X-Forwarded-For")) > 0 {
+		ctx.Set("X-Forwarded-For", ctx.Request.Header.Get("X-Forwarded-For"))
+	}
 
+	
 	c = log.NewContext(c, m.logger)
 	ctx.Next(c)
 }
