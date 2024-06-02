@@ -8,6 +8,7 @@ import (
 	"http-benchmark/pkg/log"
 	"log/slog"
 	"math"
+	"net"
 	"net/url"
 	"strconv"
 	"strings"
@@ -18,13 +19,14 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/common/config"
+	"github.com/rs/dnscache"
 	"github.com/valyala/bytebufferpool"
 )
 
 type Upstream struct {
 	opts    domain.UpstreamOptions
 	proxies []*ReverseProxy
-	index   uint64
+	index   atomic.Uint64
 }
 
 var defaultClientOptions = []config.ClientOption{
@@ -38,7 +40,7 @@ var defaultClientOptions = []config.ClientOption{
 	client.WithKeepAlive(true),
 }
 
-func NewUpstream(opts domain.UpstreamOptions, transportOptions *domain.TransportOptions) (*Upstream, error) {
+func NewUpstream(bifrost *Bifrost, opts domain.UpstreamOptions, transportOptions *domain.TransportOptions) (*Upstream, error) {
 
 	if len(opts.ID) == 0 {
 		return nil, fmt.Errorf("upstream id can't be empty")
@@ -83,8 +85,27 @@ func NewUpstream(opts domain.UpstreamOptions, transportOptions *domain.Transport
 	}
 
 	for _, server := range opts.Servers {
-		if !checkScheme(server.URL) {
-			server.URL = fmt.Sprintf("http://%s", server.URL)
+		parsedURL, err := url.Parse(server.URL)
+		if err != nil {
+			return nil, err
+		}
+
+		scheme := strings.ToLower(parsedURL.Scheme)
+		if !(scheme == "http" || scheme == "https") {
+			return nil, fmt.Errorf("unsupported scheme: %s", scheme)
+		}
+
+		host, _, err := net.SplitHostPort(parsedURL.Host)
+		if err != nil {
+			host = parsedURL.Host
+		}
+		var dnsResolver dnscache.DNSResolver
+		if !isIP(host) {
+			_, err := bifrost.resolver.LookupHost(context.Background(), host)
+			if err != nil {
+				return nil, fmt.Errorf("lookup upstream host error: %v", err)
+			}
+			dnsResolver = bifrost.resolver
 		}
 
 		var proxyOpts []config.ClientOption
@@ -99,7 +120,7 @@ func NewUpstream(opts domain.UpstreamOptions, transportOptions *domain.Transport
 				InsecureSkipVerify: skip,
 			}))
 		} else {
-			proxyOpts = append(clientOpts, client.WithDialer(newDialer()))
+			proxyOpts = append(clientOpts, client.WithDialer(newHTTPDialer(dnsResolver)))
 		}
 
 		proxy, err := NewSingleHostReverseProxy(server.URL, proxyOpts...)
@@ -173,7 +194,7 @@ func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 }
 
 func (u *Upstream) pickupByRoundRobin() *ReverseProxy {
-	index := atomic.AddUint64(&u.index, 1)
+	index := u.index.Add(1)
 	proxy := u.proxies[(int(index)-1)%len(u.proxies)]
 	return proxy
 }
@@ -181,12 +202,6 @@ func (u *Upstream) pickupByRoundRobin() *ReverseProxy {
 func (u *Upstream) serveByRandom(c context.Context, ctx *app.RequestContext) {
 }
 
-// checkScheme checks if the given URL starts with http:// or https://
-func checkScheme(u string) bool {
-	parsedURL, err := url.Parse(u)
-	if err != nil {
-		return false
-	}
-	scheme := strings.ToLower(parsedURL.Scheme)
-	return scheme == "http" || scheme == "https"
+func isIP(str string) bool {
+	return net.ParseIP(str) != nil
 }

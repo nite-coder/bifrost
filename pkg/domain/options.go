@@ -3,11 +3,16 @@ package domain
 import "time"
 
 type Options struct {
+	Bifrost     BifrostOptions     `yaml:"bifrost" json:"bifrost"`
 	Entries     []EntryOptions     `yaml:"entries" json:"entries"`
 	Routes      []RouteOptions     `yaml:"routes" json:"routes"`
 	Middlewares []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
 	Upstreams   []UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
 	Transports  []TransportOptions `yaml:"transports" json:"transports"`
+}
+
+type BifrostOptions struct {
+	Logging LoggingOtions `yaml:"logging" json:"logging"`
 }
 
 type LoggingOtions struct {

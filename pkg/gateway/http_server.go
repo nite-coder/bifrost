@@ -7,9 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"os"
 	"slices"
-	"strings"
 	"sync/atomic"
 	"syscall"
 
@@ -24,16 +22,16 @@ import (
 )
 
 type HTTPServer struct {
-	ID       string
-	switcher *switcher
-	server   *server.Hertz
+	entryOpts domain.EntryOptions
+	switcher  *switcher
+	server    *server.Hertz
 }
 
-func NewHTTPServer(entry domain.EntryOptions, opts domain.Options) (*HTTPServer, error) {
+func NewHTTPServer(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options) (*HTTPServer, error) {
 
 	//gopool.SetCap(20000)
 
-	engine, err := NewEngine(entry, opts)
+	engine, err := NewEngine(bifrost, entry, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +39,7 @@ func NewHTTPServer(entry domain.EntryOptions, opts domain.Options) (*HTTPServer,
 	switcher := newSwitcher(engine)
 
 	// hertz server
-	logger := hertzslog.NewLogger(hertzslog.WithOutput(os.Stderr))
+	logger := hertzslog.NewLogger(hertzslog.WithOutput(io.Discard))
 	hlog.SetLevel(hlog.LevelError)
 	hlog.SetLogger(logger)
 	hlog.SetSilentMode(true)
@@ -96,15 +94,16 @@ func NewHTTPServer(entry domain.EntryOptions, opts domain.Options) (*HTTPServer,
 	h.Use(switcher.ServeHTTP)
 
 	httpServer := &HTTPServer{
-		ID:       entry.ID,
-		switcher: switcher,
-		server:   h,
+		entryOpts: entry,
+		switcher:  switcher,
+		server:    h,
 	}
 
 	return httpServer, nil
 }
 
 func (s *HTTPServer) Run() {
+	slog.Info("starting entry", "id", s.entryOpts.ID, "bind", s.entryOpts.Bind)
 	s.server.Spin()
 }
 
@@ -116,7 +115,7 @@ type Engine struct {
 	notFoundHandler app.HandlerFunc
 }
 
-func NewEngine(entry domain.EntryOptions, opts domain.Options) (*Engine, error) {
+func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options) (*Engine, error) {
 
 	// middlewares
 	middlewares := map[string]app.HandlerFunc{}
@@ -181,7 +180,7 @@ func NewEngine(entry domain.EntryOptions, opts domain.Options) (*Engine, error) 
 			}
 		}
 
-		upstream, err := NewUpstream(upstreamOpts, transportOpts)
+		upstream, err := NewUpstream(bifrost, upstreamOpts, transportOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -340,62 +339,4 @@ func withDefaultServerHeader(disable bool) config.Option {
 	return config.Option{F: func(o *config.Options) {
 		o.NoDefaultServerHeader = disable
 	}}
-}
-
-func newLogger(opts domain.LoggingOtions) (*slog.Logger, error) {
-	var err error
-
-	logOptions := &slog.HandlerOptions{}
-
-	level := strings.TrimSpace(opts.Level)
-	level = strings.ToLower(level)
-
-	switch level {
-	case "debug":
-		logOptions.Level = slog.LevelDebug
-	case "info":
-		logOptions.Level = slog.LevelInfo
-	case "warn":
-		logOptions.Level = slog.LevelWarn
-	case "error":
-		logOptions.Level = slog.LevelError
-	default:
-		logOptions.Level = slog.LevelError
-	}
-
-	var writer io.Writer
-
-	output := strings.TrimSpace(opts.Output)
-	output = strings.ToLower(output)
-
-	switch output {
-	case "":
-	case "stderr":
-		writer = os.Stderr
-	default:
-		writer, err = os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if !opts.Enabled {
-		logOptions.Level = slog.LevelError
-		writer = io.Discard
-	}
-
-	var logHandler slog.Handler
-
-	handler := strings.TrimSpace(opts.Handler)
-	handler = strings.ToLower(handler)
-
-	switch handler {
-	case "text":
-		logHandler = slog.NewTextHandler(writer, logOptions)
-	default:
-		logHandler = slog.NewJSONHandler(writer, logOptions)
-	}
-
-	logger := slog.New(logHandler)
-	return logger, nil
 }

@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"http-benchmark/pkg/domain"
 	"http-benchmark/pkg/provider/file"
+	"log/slog"
 	"regexp"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/rs/dnscache"
 )
 
 var (
@@ -17,6 +20,7 @@ var (
 
 type Bifrost struct {
 	httpServers []*HTTPServer
+	resolver    *dnscache.Resolver
 }
 
 func (b *Bifrost) Run() {
@@ -29,7 +33,24 @@ func (b *Bifrost) Run() {
 
 func Load(opts domain.Options) (*Bifrost, error) {
 
-	bifrsot := &Bifrost{}
+	bifrsot := &Bifrost{
+		resolver: &dnscache.Resolver{},
+	}
+
+	go func() {
+		t := time.NewTicker(5 * time.Minute)
+		defer t.Stop()
+		for range t.C {
+			bifrsot.resolver.Refresh(true)
+		}
+		slog.Info("refresh dns resolver")
+	}()
+
+	logger, err := newLogger(opts.Bifrost.Logging)
+	if err != nil {
+		return nil, err
+	}
+	slog.SetDefault(logger)
 
 	httpServers := map[string]*HTTPServer{}
 	for _, entry := range opts.Entries {
@@ -47,7 +68,7 @@ func Load(opts domain.Options) (*Bifrost, error) {
 			return nil, fmt.Errorf("http server '%s' already exists", entry.ID)
 		}
 
-		httpServer, err := NewHTTPServer(entry, opts)
+		httpServer, err := NewHTTPServer(bifrsot, entry, opts)
 		if err != nil {
 			return nil, err
 		}
