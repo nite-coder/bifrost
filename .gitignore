@@ -25,3 +25,4 @@ server/bifrost/bifrost
 config.yaml
 
 bin
+obj

@@ -1,10 +1,11 @@
 package gateway
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"regexp"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -25,149 +26,117 @@ var template = `{"time":"$time",
 					"request_time":$request_time,
 					"upstream_response_time":$upstream_response_time}`
 
-// 方案1：使用正则表达式和 strings.Builder
-func replaceVariablesRegex(template string, values map[string]string) string {
-	var re = regexp.MustCompile(`\$\w+`)
-	matches := re.FindAllString(template, -1)
+func replaceTemplate(template string, values map[string]string) string {
+	var builder strings.Builder
+	builder.Grow(len(template) + 100) // 预估最终字符串长度
 
-	var sb strings.Builder
-	sb.Grow(len(template) + 100) // 预估大小，避免过多的内存重新分配
+	varName := ""
+	inVar := false
 
-	lastIndex := 0
-	for _, match := range matches {
-		idx := strings.Index(template[lastIndex:], match)
-		if idx == -1 {
+	for _, char := range template {
+		if char == '$' {
+			inVar = true
+			varName = ""
 			continue
 		}
-		idx += lastIndex
 
-		sb.WriteString(template[lastIndex:idx])
-		if val, ok := values[match[1:]]; ok { // 去掉 '$' 符号查找 map
-			sb.WriteString(val)
+		if inVar {
+			if char == ' ' || char == ',' || char == '}' || char == '\n' {
+				inVar = false
+				if value, exists := values[varName]; exists {
+					builder.WriteString(value)
+				} else {
+					builder.WriteString("$" + varName)
+				}
+				builder.WriteRune(char)
+			} else {
+				varName += string(char)
+			}
 		} else {
-			sb.WriteString(match) // 若 map 中不存在该变量，则保留原变量
+			builder.WriteRune(char)
 		}
-		lastIndex = idx + len(match)
 	}
 
-	// 写入最后一部分
-	sb.WriteString(template[lastIndex:])
-	return sb.String()
+	// 处理最后一个变量
+	if inVar {
+		if value, exists := values[varName]; exists {
+			builder.WriteString(value)
+		} else {
+			builder.WriteString("$" + varName)
+		}
+	}
+
+	return builder.String()
 }
 
-// 方案2：使用 strings.NewReplacer
-func replaceVariablesReplacer(template string, values map[string]string) string {
-	// 创建一个长度为变量数量两倍的 slice，用于 strings.NewReplacer
+func replaceTemplateWithReplacer(template string, values map[string]string) string {
 	replacements := make([]string, 0, len(values)*2)
 	for key, value := range values {
 		replacements = append(replacements, "$"+key, value)
 	}
-
-	// 使用 strings.NewReplacer 创建替换器
 	replacer := strings.NewReplacer(replacements...)
-
-	// 执行替换操作
 	return replacer.Replace(template)
 }
 
-func replaceVars(template string, data map[string]string) string {
-	// Convert template string to byte slice
-	tplBytes := []byte(template)
-
-	// Compile the regular expression
-	re := regexp.MustCompile(`\$(\w+)`)
-
-	// Find all matches of the regular expression
-	matches := re.FindAllIndex(tplBytes, -1)
-
-	// Create a new byte slice to construct the replaced template
-	newTplBytes := make([]byte, len(tplBytes))
-	n := 0 // Index for the new byte slice
-
-	// Iterate over the matches
-	for _, match := range matches {
-		// Extract the variable name from the match
-		varName := string(tplBytes[match[1]:match[2]])
-
-		// Check if the variable name exists in the data map
-		if value, ok := data[varName]; ok {
-			// Convert the value to a byte slice
-			valueBytes := []byte(value)
-
-			// Copy the value bytes to the new byte slice
-			copy(newTplBytes[n:], valueBytes)
-			n += len(valueBytes)
-		} else {
-			// If the variable name doesn't exist, use the original substring
-			copy(newTplBytes[n:], tplBytes[match[1]:match[2]])
-			n += len(tplBytes[match[1]:match[2]])
-		}
-
-		// Copy the remaining characters from the template string
-		copy(newTplBytes[n:], tplBytes[match[2]:])
-		n += len(tplBytes[match[2]:])
-	}
-
-	// Convert the new byte slice to a string and return it
-	return string(newTplBytes[:n])
-}
-
-// 基准测试：replaceVariablesRegex
-func BenchmarkReplaceVariablesRegex(b *testing.B) {
+func BenchmarkReplaceTemplate(b *testing.B) {
+	template := `{"time":"$time",
+							"remote_addr":"$remote_addr",
+							"request":"$request_method $request_uri $request_protocol",
+							"req_body":"$request_body",
+							"status":$status,
+							"upstream_addr":"$upstream_addr",
+							"upstream_status":$upstream_status,
+							"x_forwarded_for":"$header_X-Forwarded-For",
+							"duration":$duration,
+							"upstream_duration":$upstream_duration}`
 	values := map[string]string{
-		"time":                   "2024-05-20T15:04:05Z07:00",
-		"remote_addr":            "127.0.0.1",
-		"request":                "GET / HTTP/1.1",
+		"time":                   "2024-06-03T17:17:46Z",
+		"remote_addr":            "192.168.1.1",
+		"request_method":         "GET",
+		"request_uri":            "/index.html",
+		"request_protocol":       "HTTP/1.1",
+		"request_body":           "",
 		"status":                 "200",
-		"request_body":           "some body",
-		"upstream_addr":          "192.168.0.1",
-		"upstream_status":        "502",
-		"http_x_forwarded_for":   "10.0.0.1",
-		"request_time":           "0.123",
-		"upstream_response_time": "0.456",
+		"upstream_addr":          "10.0.0.1:80",
+		"upstream_status":        "200",
+		"header_X-Forwarded-For": "203.0.113.1",
+		"duration":               "0.123",
+		"upstream_duration":      "0.456",
 	}
 
 	for i := 0; i < b.N; i++ {
-		replaceVariablesRegex(template, values)
+		_ = replaceTemplate(template, values)
 	}
 }
 
-// 基准测试：replaceVariablesReplacer
-func BenchmarkReplaceVariablesReplacer(b *testing.B) {
+func BenchmarkReplaceTemplateWithReplacer(b *testing.B) {
+	template := `{"time":"$time",
+							"remote_addr":"$remote_addr",
+							"request":"$request_method $request_uri $request_protocol",
+							"req_body":"$request_body",
+							"status":$status,
+							"upstream_addr":"$upstream_addr",
+							"upstream_status":$upstream_status,
+							"x_forwarded_for":"$header_X-Forwarded-For",
+							"duration":$duration,
+							"upstream_duration":$upstream_duration}`
 	values := map[string]string{
-		"time":                   "2024-05-20T15:04:05Z07:00",
-		"remote_addr":            "127.0.0.1",
-		"request":                "GET / HTTP/1.1",
+		"time":                   "2024-06-03T17:17:46Z",
+		"remote_addr":            "192.168.1.1",
+		"request_method":         "GET",
+		"request_uri":            "/index.html",
+		"request_protocol":       "HTTP/1.1",
+		"request_body":           "",
 		"status":                 "200",
-		"request_body":           "some body",
-		"upstream_addr":          "192.168.0.1",
-		"upstream_status":        "502",
-		"http_x_forwarded_for":   "10.0.0.1",
-		"request_time":           "0.123",
-		"upstream_response_time": "0.456",
+		"upstream_addr":          "10.0.0.1:80",
+		"upstream_status":        "200",
+		"header_X-Forwarded-For": "203.0.113.1",
+		"duration":               "0.123",
+		"upstream_duration":      "0.456",
 	}
 
 	for i := 0; i < b.N; i++ {
-		replaceVariablesReplacer(template, values)
-	}
-}
-
-func BenchmarkGoogleReplacer(b *testing.B) {
-	values := map[string]string{
-		"time":                   "2024-05-20T15:04:05Z07:00",
-		"remote_addr":            "127.0.0.1",
-		"request":                "GET / HTTP/1.1",
-		"status":                 "200",
-		"request_body":           "some body",
-		"upstream_addr":          "192.168.0.1",
-		"upstream_status":        "502",
-		"http_x_forwarded_for":   "10.0.0.1",
-		"request_time":           "0.123",
-		"upstream_response_time": "0.456",
-	}
-
-	for i := 0; i < b.N; i++ {
-		replaceVars(template, values)
+		_ = replaceTemplateWithReplacer(template, values)
 	}
 }
 
@@ -219,7 +188,8 @@ var testData = `{
 	"price": "25000",
 	"size": "0.0001",
 	"side": "sell",
-	"user_id": 1
+	"user_id": 1,
+	"text": "你好"
 }`
 
 func escapeJSONStringBuilder(s string) string {
@@ -254,6 +224,39 @@ func escapeJSONStringBuilder(s string) string {
 		i++
 	}
 	return b.String()
+}
+
+// escapeJSON escapes special characters in a JSON string
+func escapeJSON4(input string) string {
+	var builder strings.Builder
+	for _, char := range input {
+		switch char {
+		case '\\':
+			builder.WriteString("\\\\")
+		case '"':
+			builder.WriteString("\\\"")
+		case '\b':
+			builder.WriteString("\\b")
+		case '\f':
+			builder.WriteString("\\f")
+		case '\n':
+			builder.WriteString("\\n")
+		case '\r':
+			builder.WriteString("\\r")
+		case '\t':
+			builder.WriteString("\\t")
+		default:
+			if char < 0x20 {
+				builder.WriteString("\\u")
+				builder.WriteString("00")
+				builder.WriteString(strings.ToUpper(string("0123456789ABCDEF"[char>>4])))
+				builder.WriteString(strings.ToUpper(string("0123456789ABCDEF"[char&0xF])))
+			} else {
+				builder.WriteRune(char)
+			}
+		}
+	}
+	return builder.String()
 }
 
 func escapeJSONBytePool(s string) string {
@@ -329,7 +332,7 @@ func sonicEscape(i string) string {
 }
 
 func TestEscapeJSON1(t *testing.T) {
-	fmt.Println(sonicEscape(testData))
+	fmt.Println(escapeJSON(testData))
 }
 
 func BenchmarkEscapeJSONStringBuilder(b *testing.B) {
@@ -338,14 +341,66 @@ func BenchmarkEscapeJSONStringBuilder(b *testing.B) {
 	}
 }
 
-func BenchmarkEscapeJSONBytePool(b *testing.B) {
+func BenchmarkEscapeJSON4(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_ = escapeJSONBytePool(testData)
+		_ = escapeJSON(testData)
 	}
 }
 
 func BenchmarkEscapeJSON1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = sonicEscape(testData)
+	}
+}
+
+func BenchmarkDirectWrite(b *testing.B) {
+	logFile, err := os.Create("direct_write.log")
+	if err != nil {
+		b.Fatalf("Failed to create log file: %v", err)
+	}
+	defer logFile.Close()
+
+	writer := bufio.NewWriterSize(logFile, 4096)
+	defer writer.Flush()
+
+	for i := 0; i < b.N; i++ {
+		_, err := writer.WriteString(`{"time":"2024-06-04T11:32:38", "remote_addr":"127.0.0.1", "request":"POST /spot/orders?a=b HTTP/1.1", "req_body":""{\"market\":\"BTC_USDT\",\"base\":\"BTC\",\"quote\":\"USDT\",\"type\":\"limit\",\"price\":\"25000\",\"size\":\"0.0001\",\"side\":\"sell\",\"user_id\":1,\"text\":\"你好世界\"}"", "status":200, "upstream_addr":"127.0.0.1:8000", "upstream_status":200, "x_forwarded_for":"", "duration":0.00039, "upstream_duration":0.000264}` + "\n")
+		if err != nil {
+			b.Fatalf("Failed to write log entry: %v", err)
+		}
+	}
+}
+
+func BenchmarkBatchWrite(b *testing.B) {
+
+	logFile, err := os.Create("batch_write.log")
+	if err != nil {
+		b.Fatalf("Failed to create log file: %v", err)
+	}
+	defer logFile.Close()
+
+	writer := bufio.NewWriterSize(logFile, 4096)
+	defer writer.Flush()
+
+	batchSize := 100
+	buffer := make([]string, 0, batchSize)
+
+	for i := 0; i < b.N; i++ {
+		buffer = append(buffer, `{"time":"2024-06-04T11:32:38", "remote_addr":"127.0.0.1", "request":"POST /spot/orders?a=b HTTP/1.1", "req_body":""{\"market\":\"BTC_USDT\",\"base\":\"BTC\",\"quote\":\"USDT\",\"type\":\"limit\",\"price\":\"25000\",\"size\":\"0.0001\",\"side\":\"sell\",\"user_id\":1,\"text\":\"你好世界\"}"", "status":200, "upstream_addr":"127.0.0.1:8000", "upstream_status":200, "x_forwarded_for":"", "duration":0.00039, "upstream_duration":0.000264}`)
+		if len(buffer) >= batchSize {
+			_, err := writer.WriteString(strings.Join(buffer, "\n"))
+			if err != nil {
+				b.Fatalf("Failed to write log entry: %v", err)
+			}
+			buffer = buffer[:0]
+		}
+	}
+
+	// Flush remaining entries in buffer
+	if len(buffer) > 0 {
+		_, err := writer.WriteString(strings.Join(buffer, "\n"))
+		if err != nil {
+			b.Fatalf("Failed to write log entry: %v", err)
+		}
 	}
 }

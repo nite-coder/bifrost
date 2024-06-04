@@ -11,7 +11,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/bytedance/sonic"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
 	"github.com/valyala/bytebufferpool"
@@ -20,7 +19,7 @@ import (
 type LoggerTracer struct {
 	opts      domain.AccessLogOptions
 	matchVars []string
-	logChan   chan string
+	logChan   chan []string
 	logFile   *os.File
 	writer    *bufio.Writer
 }
@@ -50,7 +49,7 @@ func NewLoggerTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
 
 	tracer := &LoggerTracer{
 		opts:      opts,
-		logChan:   make(chan string, 1000000),
+		logChan:   make(chan []string, 1000000),
 		matchVars: parseVariables(opts.Template),
 		logFile:   logFile,
 		writer:    writer,
@@ -66,10 +65,14 @@ func NewLoggerTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
 			case entry, ok := <-t.logChan:
 				if !ok {
 					// Channel closed, flush remaining data
-					writer.Flush()
+					_ = writer.Flush()
+					_ = t.logFile.Sync()
 					return
 				}
-				_, _ = writer.WriteString(entry)
+
+				replacer := strings.NewReplacer(entry...)
+				result := replacer.Replace(opts.Template)
+				_, _ = writer.WriteString(result)
 			case <-flushTimer.C:
 				_ = writer.Flush()
 				_ = t.logFile.Sync()
@@ -85,8 +88,7 @@ func (t *LoggerTracer) Start(ctx context.Context, c *app.RequestContext) context
 }
 
 func (t *LoggerTracer) Finish(ctx context.Context, c *app.RequestContext) {
-	replacer := t.buildReplacer(c)
-	result := replacer.Replace(t.opts.Template)
+	result := t.buildReplacer(c)
 	t.logChan <- result
 }
 
@@ -97,7 +99,7 @@ func (t *LoggerTracer) Shutdown() {
 	t.logFile.Close()
 }
 
-func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
+func (t *LoggerTracer) buildReplacer(c *app.RequestContext) []string {
 	replacements := make([]string, 0, len(t.matchVars)*2)
 
 	for _, matchVal := range t.matchVars {
@@ -241,9 +243,7 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) *strings.Replacer {
 		}
 	}
 
-	replacer := strings.NewReplacer(replacements...)
-
-	return replacer
+	return replacements
 }
 
 func escape(s string, escapeType domain.EscapeType) string {
@@ -282,15 +282,28 @@ func escapeString(s string) string {
 }
 
 // escapeJSON function to escape characters for JSON strings
-func escapeJSON(s string) string {
-	b, err := sonic.Marshal(s)
-	if err != nil {
-		return s
+func escapeJSON(comp string) string {
+	for i := 0; i < len(comp); i++ {
+		if !isSafePathKeyChar(comp[i]) {
+			ncomp := make([]byte, len(comp)+1)
+			copy(ncomp, comp[:i])
+			ncomp = ncomp[:i]
+			for ; i < len(comp); i++ {
+				if !isSafePathKeyChar(comp[i]) {
+					ncomp = append(ncomp, '\\')
+				}
+				ncomp = append(ncomp, comp[i])
+			}
+			return string(ncomp)
+		}
 	}
+	return comp
+}
 
-	buf := bytebufferpool.Get()
-	defer bytebufferpool.Put(buf)
-
-	_, _ = buf.Write(b)
-	return buf.String()
+// isSafePathKeyChar returns true if the input character is safe for not
+// needing escaping.
+func isSafePathKeyChar(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+		(c >= '0' && c <= '9') || c <= ' ' || c > '~' || c == '_' ||
+		c == '-' || c == ':'
 }
