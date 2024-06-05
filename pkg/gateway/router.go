@@ -5,6 +5,7 @@ import (
 	"errors"
 	"http-benchmark/pkg/domain"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -59,6 +60,7 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		ctx.SetHandlers(middleware)
 		ctx.Next(c)
 		ctx.Abort()
+		return
 	}
 
 	// prefix
@@ -68,6 +70,7 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			ctx.SetHandlers(route.middleware)
 			ctx.Next(c)
 			ctx.Abort()
+			return
 		}
 	}
 
@@ -78,6 +81,7 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			ctx.SetHandlers(route.middleware)
 			ctx.Next(c)
 			ctx.Abort()
+			return
 		}
 	}
 
@@ -136,6 +140,11 @@ func (r *Router) AddRoute(route domain.RouteOptions, middlewares ...app.HandlerF
 		}
 
 		r.prefixRoutes = append(r.prefixRoutes, prefixRoute)
+
+		sort.SliceStable(r.prefixRoutes, func(i, j int) bool {
+			return len(r.prefixRoutes[i].prefixPath) > len(r.prefixRoutes[j].prefixPath)
+		})
+
 		return nil
 	}
 

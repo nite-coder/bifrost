@@ -331,8 +331,24 @@ func sonicEscape(i string) string {
 	return buf.String()
 }
 
+func escapeJSON2(s string) string {
+	var escaped bytes.Buffer
+	escaped.Grow(len(s) + len(s)/4) // 预先分配足够大的缓冲区
+	last := 0
+	for i := 0; i < len(s); i++ {
+		if !isSafePathKeyChar(s[i]) {
+			escaped.WriteString(s[last:i])
+			escaped.WriteByte('\\')
+			escaped.WriteByte(s[i])
+			last = i + 1
+		}
+	}
+	escaped.WriteString(s[last:])
+	return escaped.String()
+}
+
 func TestEscapeJSON1(t *testing.T) {
-	fmt.Println(escapeJSON(testData))
+	fmt.Println(escapeJSON2(testData))
 }
 
 func BenchmarkEscapeJSONStringBuilder(b *testing.B) {
@@ -341,15 +357,15 @@ func BenchmarkEscapeJSONStringBuilder(b *testing.B) {
 	}
 }
 
-func BenchmarkEscapeJSON4(b *testing.B) {
+func BenchmarkEscapeJSON2(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_ = escapeJSON(testData)
+		_ = escapeJSON2(testData)
 	}
 }
 
 func BenchmarkEscapeJSON1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_ = sonicEscape(testData)
+		_ = escapeJSON(testData)
 	}
 }
 

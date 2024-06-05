@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"http-benchmark/pkg/domain"
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -55,5 +56,107 @@ func BenchmarkFind(b *testing.B) {
 				router.ServeHTTP(context.Background(), req)
 			}
 		})
+	}
+}
+
+// Mock handler function for testing
+func mockHandler(c context.Context, ctx *app.RequestContext) {
+	ctx.WriteString("btc mock handler")
+}
+
+// Test prefix matching
+func TestPrefixMatching(t *testing.T) {
+	router := NewRouter()
+
+	// Add prefix route
+	router.add("GET", "/market/btc*", mockHandler)
+
+	testCases := []struct {
+		path           string
+		expectedResult bool
+	}{
+		{"/market/btcusdt/cool", true},
+		{"/market/btc/usdt/caaa", true},
+		{"/market/btc_usdt/hey", true},
+		{"/market/btc", true},
+		{"/market/eth", false},
+	}
+
+	for _, tc := range testCases {
+		handlers := router.find("GET", tc.path)
+		if (handlers != nil) != tc.expectedResult {
+			t.Errorf("Expected %v for path %s, but got %v", tc.expectedResult, tc.path, handlers != nil)
+		}
+	}
+}
+
+// Test exact matching
+func TestExactMatching(t *testing.T) {
+	router := NewRouter()
+
+	// Add exact route
+	router.add("GET", "/market/btc", mockHandler)
+
+	testCases := []struct {
+		path           string
+		expectedResult bool
+	}{
+		{"/market/btc", true},
+		{"/market/btcusdt/cool", false},
+		{"/market/btc/usdt/caaa", false},
+		{"/market/btc_usdt/hey", false},
+		{"/market/eth", false},
+	}
+
+	for _, tc := range testCases {
+		handlers := router.find("GET", tc.path)
+		if (handlers != nil) != tc.expectedResult {
+			t.Errorf("Expected %v for path %s, but got %v", tc.expectedResult, tc.path, handlers != nil)
+		}
+	}
+}
+
+// Test prefix and exact matching priority
+func TestPrefixAndExactMatchingPriority(t *testing.T) {
+	router := NewRouter()
+
+	// Add prefix and exact routes
+	router.AddRoute(domain.RouteOptions{
+		Match: "/market/btc*",
+	}, mockHandler)
+
+	router.AddRoute(domain.RouteOptions{
+		Match: "/market/usdt_hello*",
+	}, mockHandler)
+
+	router.AddRoute(domain.RouteOptions{
+		Match: "/market/eth_usdt*",
+	}, mockHandler)
+
+	router.AddRoute(domain.RouteOptions{Match: "/market/btc"}, func(c context.Context, ctx *app.RequestContext) {
+		ctx.WriteString("exact handler")
+	})
+
+	testCases := []struct {
+		path           string
+		expectedResult string
+	}{
+		{"/market/btc", "exact handler"},
+		{"/market/btcusdt/cool", "btc mock handler"},
+		{"/market/btc/usdt/caaa", "btc mock handler"},
+		{"/market/btc_usdt/hey", "btc mock handler"},
+		{"/market/eth", ""},
+	}
+
+	for _, tc := range testCases {
+		req := &app.RequestContext{}
+		req.URI().SetPath(tc.path)
+		router.ServeHTTP(context.Background(), req)
+		result := string(req.Response.Body())
+
+		if result != tc.expectedResult {
+			t.Errorf("Expected %v for path %s, but got %v", tc.expectedResult, tc.path, result)
+		}
+
 	}
 }
