@@ -1,10 +1,15 @@
 import http from 'k6/http';
 
 
-export const options = {}
+export const options = {
+    stages: [
+        { duration: '1s', target: 500 }, 
+        { duration: '30s', target: 500 }, 
+    ],
+};
 
 export default function () {
-    const url = 'http://localhost:8300/spot/orders?a=b';
+    const url = 'http://localhost:8001/spot/orders?a=b';
 
     const payload = JSON.stringify({
         "market": "BTC_USDT",
