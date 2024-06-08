@@ -13,6 +13,11 @@ type Options struct {
 
 type BifrostOptions struct {
 	Logging LoggingOtions `yaml:"logging" json:"logging"`
+	Metrics MetricOptions `yaml:"metrics" json:"metrics"`
+}
+
+type MetricOptions struct {
+	Prometheus PrometheusOptions `yaml:"prometheus" json:"prometheus"`
 }
 
 type LoggingOtions struct {
@@ -20,6 +25,13 @@ type LoggingOtions struct {
 	Level   string `yaml:"level" json:"level"`
 	Handler string `yaml:"handler" json:"handler"`
 	Output  string `yaml:"output" json:"output"`
+}
+
+type PrometheusOptions struct {
+	Enabled bool      `yaml:"enabled" json:"enabled"`
+	Bind    string    `yaml:"bind" json:"bind"`
+	Path    string    `yaml:"path" json:"path"`
+	Buckets []float64 `yaml:"buckets" json:"buckets"`
 }
 
 type EntryOptions struct {

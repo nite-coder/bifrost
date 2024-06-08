@@ -1,9 +1,10 @@
-package gateway
+package accesslog
 
 import (
 	"bufio"
 	"context"
 	"http-benchmark/pkg/domain"
+	"log/slog"
 	"net"
 	"os"
 	"strconv"
@@ -24,7 +25,7 @@ type LoggerTracer struct {
 	writer    *bufio.Writer
 }
 
-func NewLoggerTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
+func NewTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
 	if opts.TimeFormat == "" {
 		opts.TimeFormat = time.RFC3339
 	}
@@ -89,7 +90,12 @@ func (t *LoggerTracer) Start(ctx context.Context, c *app.RequestContext) context
 
 func (t *LoggerTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	result := t.buildReplacer(c)
-	t.logChan <- result
+
+	select {
+	case t.logChan <- result:
+	case <-time.After(1 * time.Second):
+		slog.Info("access log queue is full", "length", len(t.logChan))
+	}
 }
 
 func (t *LoggerTracer) Shutdown() {
@@ -101,6 +107,8 @@ func (t *LoggerTracer) Shutdown() {
 
 func (t *LoggerTracer) buildReplacer(c *app.RequestContext) []string {
 	replacements := make([]string, 0, len(t.matchVars)*2)
+
+	info := c.GetTraceInfo().Stats()
 
 	for _, matchVal := range t.matchVars {
 		switch matchVal {
@@ -214,6 +222,10 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) []string {
 			dur := time.Since(httpStart.Time()).Microseconds()
 			duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
 			replacements = append(replacements, domain.DURATION, duration)
+		case domain.RECEIVED_SIZE:
+			replacements = append(replacements, domain.RECEIVED_SIZE, strconv.Itoa(info.RecvSize()))
+		case domain.SEND_SIZE:
+			replacements = append(replacements, domain.SEND_SIZE, strconv.Itoa(info.SendSize()))
 		default:
 
 			if strings.HasPrefix(matchVal, "$upstream_header_") {

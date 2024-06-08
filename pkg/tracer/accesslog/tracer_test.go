@@ -1,4 +1,4 @@
-package gateway
+package accesslog
 
 import (
 	"bufio"
@@ -418,5 +418,23 @@ func BenchmarkBatchWrite(b *testing.B) {
 		if err != nil {
 			b.Fatalf("Failed to write log entry: %v", err)
 		}
+	}
+}
+
+const STR = "/api/v1/spot/orders"
+const PREFIX = "/api/v1/spot/"
+
+var STR_B = []byte(STR)
+var PREFIX_B = []byte(PREFIX)
+
+func BenchmarkStrHasPrefix(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		strings.HasPrefix(STR, PREFIX)
+	}
+}
+
+func BenchmarkBytHasPrefix(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		bytes.HasPrefix(STR_B, PREFIX_B)
 	}
 }

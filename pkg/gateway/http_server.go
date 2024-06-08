@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/tracer/accesslog"
 	"io"
 	"log/slog"
 	"net"
@@ -15,6 +16,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
+	"github.com/cloudwego/hertz/pkg/common/tracer"
 	"github.com/hertz-contrib/pprof"
 	"golang.org/x/sys/unix"
 
@@ -27,7 +29,7 @@ type HTTPServer struct {
 	server    *server.Hertz
 }
 
-func NewHTTPServer(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options) (*HTTPServer, error) {
+func NewHTTPServer(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options, tracers []tracer.Tracer) (*HTTPServer, error) {
 
 	//gopool.SetCap(20000)
 
@@ -52,11 +54,11 @@ func NewHTTPServer(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Opti
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		server.WithSenseClientDisconnection(true),
-		// server.WithTracer(prometheus.NewServerTracer("", "/metrics",
-		// 	prometheus.WithEnableGoCollector(true),
-		// 	prometheus.WithDisableServer(false),
-		// )),
 		withDefaultServerHeader(true),
+	}
+
+	for _, tracer := range tracers {
+		hzOpts = append(hzOpts, server.WithTracer(tracer))
 	}
 
 	if entry.ReusePort {
@@ -72,9 +74,9 @@ func NewHTTPServer(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Opti
 		}))
 	}
 
-	var accessLogTracer *LoggerTracer
+	var accessLogTracer *accesslog.LoggerTracer
 	if entry.AccessLog.Enabled {
-		accessLogTracer, err = NewLoggerTracer(entry.AccessLog)
+		accessLogTracer, err = accesslog.NewTracer(entry.AccessLog)
 		if err != nil {
 			return nil, err
 		}
@@ -255,7 +257,7 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 	if err != nil {
 		return nil, err
 	}
-	initMiddleware := newInitMiddleware(logger)
+	initMiddleware := newInitMiddleware(entry.ID, logger)
 	engine.Use(initMiddleware.ServeHTTP)
 
 	for _, middleware := range entry.Middlewares {

@@ -4,18 +4,13 @@ import (
 	"fmt"
 	"http-benchmark/pkg/domain"
 	"http-benchmark/pkg/provider/file"
+	"http-benchmark/pkg/tracer/prometheus"
 	"log/slog"
-	"regexp"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/common/tracer"
 	"github.com/rs/dnscache"
-)
-
-var (
-	reIsVariable = regexp.MustCompile(`\$\w+(-\w+)*`)
-	spaceByte    = []byte{byte(' ')}
-	questionByte = []byte{byte('?')}
 )
 
 type Bifrost struct {
@@ -52,6 +47,23 @@ func Load(opts domain.Options) (*Bifrost, error) {
 	}
 	slog.SetDefault(logger)
 
+	tracers := []tracer.Tracer{}
+
+	// prometheus tracer
+	if opts.Bifrost.Metrics.Prometheus.Enabled {
+		promOpts := []prometheus.Option{
+			prometheus.WithEnableGoCollector(true),
+			prometheus.WithDisableServer(false),
+		}
+
+		if len(opts.Bifrost.Metrics.Prometheus.Buckets) > 0 {
+			promOpts = append(promOpts, prometheus.WithHistogramBuckets(opts.Bifrost.Metrics.Prometheus.Buckets))
+		}
+
+		promTracer := prometheus.NewTracer(":9091", "/metrics", promOpts...)
+		tracers = append(tracers, promTracer)
+	}
+
 	httpServers := map[string]*HTTPServer{}
 	for _, entry := range opts.Entries {
 
@@ -68,7 +80,7 @@ func Load(opts domain.Options) (*Bifrost, error) {
 			return nil, fmt.Errorf("http server '%s' already exists", entry.ID)
 		}
 
-		httpServer, err := NewHTTPServer(bifrsot, entry, opts)
+		httpServer, err := NewHTTPServer(bifrsot, entry, opts, tracers)
 		if err != nil {
 			return nil, err
 		}

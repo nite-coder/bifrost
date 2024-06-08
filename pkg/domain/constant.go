@@ -1,9 +1,11 @@
 package domain
 
 const (
+	ENTRY_ID           = "$entry_id"
 	REMOTE_ADDR        = "$remote_addr"
 	TIME               = "$time"
-	BYTE_SENT          = "$bytes_sent" // the number of bytes sent to a client
+	RECEIVED_SIZE      = "$received_size"
+	SEND_SIZE          = "$send_size"
 	STATUS             = "$status"
 	REQUEST            = "$request"
 	REQUEST_PROTOCOL   = "$request_protocol"
@@ -11,7 +13,6 @@ const (
 	REQUEST_URI        = "$request_uri"
 	REQUEST_PATH       = "$request_path"
 	REQUEST_BODY       = "$request_body"
-	REQUEST_LENGTH     = "$request_length" // request length (including request line, header, and request body)
 	DURATION           = "$duration"
 	LOG_TIME           = "$log_time"
 	UPSTREAM_URI       = "$upstream_uri"

@@ -21,11 +21,14 @@ go test -benchmem -run=^$ -coverprofile=/tmp/vscode-go0xlfMt/go-code-cover -benc
 go test -benchmem -run=^$ -coverprofile=/tmp/vscode-go0xlfMt/go-code-cover -bench ^BenchmarkEscapeJSONBytePool$ http-benchmark/pkg/gateway -v
 go test -benchmem -run=^$ -coverprofile=/tmp/vscode-go0xlfMt/go-code-cover -bench ^BenchmarkEscapeJSON1$ http-benchmark/pkg/gateway -v
 
-go test -benchmem -run=^$ -bench ^BenchmarkEscapeJSON1$ http-benchmark/pkg/gateway -v
-go test -benchmem -run=^$ -bench ^BenchmarkEscapeJSON4$ http-benchmark/pkg/gateway -v
+go test -benchmem -run=^$ -bench ^BenchmarkStrHasPrefix$ http-benchmark/pkg/gateway -v
+go test -benchmem -run=^$ -bench ^BenchmarkBytHasPrefix$ http-benchmark/pkg/gateway -v
 
 
 netstat -ant | grep 8001 | grep ESTABLISHED| wc -l
 
 
 go tool pprof -http=0.0.0.0:4231 cpu.prof
+
+
+curl 'http://localhost:9091/metrics'

@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"http-benchmark/pkg/domain"
 	"http-benchmark/pkg/log"
 	"log/slog"
 
@@ -9,12 +10,14 @@ import (
 )
 
 type initMiddleware struct {
-	logger *slog.Logger
+	logger  *slog.Logger
+	entryID string
 }
 
-func newInitMiddleware(logger *slog.Logger) *initMiddleware {
+func newInitMiddleware(entryID string, logger *slog.Logger) *initMiddleware {
 	return &initMiddleware{
-		logger: logger,
+		logger:  logger,
+		entryID: entryID,
 	}
 }
 
@@ -23,7 +26,8 @@ func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		ctx.Set("X-Forwarded-For", ctx.Request.Header.Get("X-Forwarded-For"))
 	}
 
-	
+	ctx.Set(domain.ENTRY_ID, m.entryID)
+
 	c = log.NewContext(c, m.logger)
 	ctx.Next(c)
 }
