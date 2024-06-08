@@ -1,4 +1,4 @@
-package gateway
+package log
 
 import (
 	"http-benchmark/pkg/domain"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func newLogger(opts domain.LoggingOtions) (*slog.Logger, error) {
+func NewLogger(opts domain.LoggingOtions) (*slog.Logger, error) {
 	var err error
 
 	logOptions := &slog.HandlerOptions{}

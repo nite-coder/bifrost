@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/log"
 	"http-benchmark/pkg/tracer/accesslog"
 	"io"
 	"log/slog"
@@ -253,7 +254,7 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 	}
 
 	// init middlewares
-	logger, err := newLogger(entry.Logging)
+	logger, err := log.NewLogger(entry.Logging)
 	if err != nil {
 		return nil, err
 	}

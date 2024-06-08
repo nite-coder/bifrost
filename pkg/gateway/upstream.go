@@ -140,6 +140,8 @@ func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	done := make(chan bool)
 
 	gopool.CtxGo(c, func() {
+		ctx.Set(domain.UPSTREAM, u.opts.ID)
+
 		var proxy *ReverseProxy
 		switch u.opts.Strategy {
 		case domain.RoundRobinStrategy:

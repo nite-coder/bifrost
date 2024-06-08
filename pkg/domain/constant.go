@@ -15,6 +15,7 @@ const (
 	REQUEST_BODY       = "$request_body"
 	DURATION           = "$duration"
 	LOG_TIME           = "$log_time"
+	UPSTREAM           = "$upstream"
 	UPSTREAM_URI       = "$upstream_uri"
 	UPSTREAM_METHOD    = "$upstream_method"
 	UPSTREAM_PROTOCOL  = "$upstream_protocol"

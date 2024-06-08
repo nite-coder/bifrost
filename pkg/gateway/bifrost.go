@@ -3,6 +3,7 @@ package gateway
 import (
 	"fmt"
 	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/log"
 	"http-benchmark/pkg/provider/file"
 	"http-benchmark/pkg/tracer/prometheus"
 	"log/slog"
@@ -41,7 +42,7 @@ func Load(opts domain.Options) (*Bifrost, error) {
 		slog.Info("refresh dns resolver")
 	}()
 
-	logger, err := newLogger(opts.Bifrost.Logging)
+	logger, err := log.NewLogger(opts.Observability.Logging)
 	if err != nil {
 		return nil, err
 	}
@@ -50,14 +51,14 @@ func Load(opts domain.Options) (*Bifrost, error) {
 	tracers := []tracer.Tracer{}
 
 	// prometheus tracer
-	if opts.Bifrost.Metrics.Prometheus.Enabled {
+	if opts.Observability.Metrics.Prometheus.Enabled {
 		promOpts := []prometheus.Option{
 			prometheus.WithEnableGoCollector(true),
 			prometheus.WithDisableServer(false),
 		}
 
-		if len(opts.Bifrost.Metrics.Prometheus.Buckets) > 0 {
-			promOpts = append(promOpts, prometheus.WithHistogramBuckets(opts.Bifrost.Metrics.Prometheus.Buckets))
+		if len(opts.Observability.Metrics.Prometheus.Buckets) > 0 {
+			promOpts = append(promOpts, prometheus.WithHistogramBuckets(opts.Observability.Metrics.Prometheus.Buckets))
 		}
 
 		promTracer := prometheus.NewTracer(":9091", "/metrics", promOpts...)

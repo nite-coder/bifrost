@@ -3,15 +3,15 @@ package domain
 import "time"
 
 type Options struct {
-	Bifrost     BifrostOptions     `yaml:"bifrost" json:"bifrost"`
-	Entries     []EntryOptions     `yaml:"entries" json:"entries"`
-	Routes      []RouteOptions     `yaml:"routes" json:"routes"`
-	Middlewares []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
-	Upstreams   []UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
-	Transports  []TransportOptions `yaml:"transports" json:"transports"`
+	Observability ObservabilityOptions `yaml:"observability" json:"observability"`
+	Entries       []EntryOptions       `yaml:"entries" json:"entries"`
+	Routes        []RouteOptions       `yaml:"routes" json:"routes"`
+	Middlewares   []MiddlwareOptions   `yaml:"middlewares" json:"middlewares"`
+	Upstreams     []UpstreamOptions    `yaml:"upstreams" json:"upstreams"`
+	Transports    []TransportOptions   `yaml:"transports" json:"transports"`
 }
 
-type BifrostOptions struct {
+type ObservabilityOptions struct {
 	Logging LoggingOtions `yaml:"logging" json:"logging"`
 	Metrics MetricOptions `yaml:"metrics" json:"metrics"`
 }

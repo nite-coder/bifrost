@@ -29,6 +29,9 @@ func (p *FileProvider) Open(path string) (domain.Options, error) {
 		return opts, fmt.Errorf("file: yaml unmarshal failed. err: %w", err)
 	}
 
+
+
+	
 	return opts, nil
 }
 
