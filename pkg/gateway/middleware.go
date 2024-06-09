@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"http-benchmark/pkg/domain"
 	"http-benchmark/pkg/log"
 	"log/slog"
@@ -30,4 +31,19 @@ func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 	c = log.NewContext(c, m.logger)
 	ctx.Next(c)
+}
+
+type CreateMiddlewareHandler func(param map[string]any) (app.HandlerFunc, error)
+
+var middlewareFactory map[string]CreateMiddlewareHandler = make(map[string]CreateMiddlewareHandler)
+
+func RegisterMiddleware(kind string, handler CreateMiddlewareHandler) error {
+
+	if _, found := middlewareFactory[kind]; found {
+		return fmt.Errorf("middleware handler '%s' already exists", kind)
+	}
+
+	middlewareFactory[kind] = handler
+
+	return nil
 }

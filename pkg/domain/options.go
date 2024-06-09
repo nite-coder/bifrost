@@ -3,12 +3,23 @@ package domain
 import "time"
 
 type Options struct {
-	Observability ObservabilityOptions `yaml:"observability" json:"observability"`
-	Entries       []EntryOptions       `yaml:"entries" json:"entries"`
-	Routes        []RouteOptions       `yaml:"routes" json:"routes"`
-	Middlewares   []MiddlwareOptions   `yaml:"middlewares" json:"middlewares"`
-	Upstreams     []UpstreamOptions    `yaml:"upstreams" json:"upstreams"`
-	Transports    []TransportOptions   `yaml:"transports" json:"transports"`
+	Providers     Provider                    `yaml:"providers" json:"providers"`
+	Observability ObservabilityOptions        `yaml:"observability" json:"observability"`
+	Entries       map[string]EntryOptions     `yaml:"entries" json:"entries"`
+	Routes        map[string]RouteOptions     `yaml:"routes" json:"routes"`
+	Middlewares   map[string]MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
+	Upstreams     map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
+	Transports    map[string]TransportOptions `yaml:"transports" json:"transports"`
+}
+
+type Provider struct {
+	File FileProviderOptions `yaml:"file" json:"file"`
+}
+
+type FileProviderOptions struct {
+	Enabled bool     `yaml:"enabled" json:"enabled"`
+	Path    []string `yaml:"path" json:"path"`
+	Watch   bool     `yaml:"watch" json:"watch"`
 }
 
 type ObservabilityOptions struct {
@@ -35,7 +46,7 @@ type PrometheusOptions struct {
 }
 
 type EntryOptions struct {
-	ID           string             `yaml:"id" json:"id"`
+	ID           string             `yaml:"-" json:"-"`
 	Bind         string             `yaml:"bind" json:"bind"`
 	ReusePort    bool               `yaml:"reuse_port" json:"reuse_port"`
 	ReadTimeout  time.Duration      `yaml:"read_timeout" json:"read_timeout"`
@@ -57,7 +68,7 @@ const (
 type AccessLogOptions struct {
 	Enabled    bool          `yaml:"enabled" json:"enabled"`
 	BufferSize int           `yaml:"buffer_size" json:"buffer_size"`
-	FilePath   string        `yaml:"file_path" json:"file_path"`
+	Output     string        `yaml:"output" json:"output"`
 	Template   string        `yaml:"template" json:"template"`
 	TimeFormat string        `yaml:"time_format" json:"time_format"`
 	Escape     EscapeType    `yaml:"escape" json:"escape"`
@@ -65,7 +76,7 @@ type AccessLogOptions struct {
 }
 
 type MiddlwareOptions struct {
-	ID     string         `yaml:"id" json:"id"`
+	ID     string         `yaml:"-" json:"-"`
 	Kind   string         `yaml:"kind" json:"kind"`
 	Params map[string]any `yaml:"params" json:"params"`
 	Link   string         `yaml:"link" json:"link"`
@@ -86,14 +97,14 @@ type BackendServerOptions struct {
 }
 
 type UpstreamOptions struct {
-	ID              string                 `yaml:"id" json:"id"`
+	ID              string                 `yaml:"-" json:"-"`
 	ClientTransport string                 `yaml:"client_transport" json:"client_transport"`
 	Strategy        UpstreamStrategy       `yaml:"strategy" json:"strategy"`
 	Servers         []BackendServerOptions `yaml:"servers" json:"servers"`
 }
 
 type TransportOptions struct {
-	ID                  string         `yaml:"id" json:"id"`
+	ID                  string         `yaml:"-" json:"-"`
 	InsecureSkipVerify  *bool          `yaml:"insecure_skip_verify" json:"insecure_skip_verify"`
 	MaxConnWaitTimeout  *time.Duration `yaml:"max_conn_wait_timeout" json:"max_conn_wait_timeout"`
 	MaxIdleConnsPerHost *int           `yaml:"max_idle_conns_per_host" json:"max_idle_conns_per_host"`
@@ -104,7 +115,7 @@ type TransportOptions struct {
 }
 
 type RouteOptions struct {
-	ID          string             `yaml:"id" json:"id"`
+	ID          string             `yaml:"-" json:"-"`
 	Match       string             `yaml:"match" json:"match"`
 	Methods     []string           `yaml:"methods" json:"methods"`
 	Entries     []string           `yaml:"entries" json:"entries"`

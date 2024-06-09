@@ -2,12 +2,13 @@ import http from 'k6/http';
 
 
 export const options = {
-    stages: [
-        {
+    scenarios: {
+        contacts: {
+            executor: 'constant-vus',
+            vus: 500,
             duration: '10s',
-            target: 500,
         },
-    ],
+    },
 };
 
 export default function () {

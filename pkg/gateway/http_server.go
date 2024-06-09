@@ -25,9 +25,10 @@ import (
 )
 
 type HTTPServer struct {
-	entryOpts domain.EntryOptions
-	switcher  *switcher
-	server    *server.Hertz
+	entryOpts       domain.EntryOptions
+	switcher        *switcher
+	server          *server.Hertz
+	accesslogTracer *accesslog.LoggerTracer
 }
 
 func NewHTTPServer(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options, tracers []tracer.Tracer) (*HTTPServer, error) {
@@ -75,6 +76,10 @@ func NewHTTPServer(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Opti
 		}))
 	}
 
+	httpServer := &HTTPServer{
+		entryOpts: entry,
+	}
+
 	var accessLogTracer *accesslog.LoggerTracer
 	if entry.AccessLog.Enabled {
 		accessLogTracer, err = accesslog.NewTracer(entry.AccessLog)
@@ -82,6 +87,8 @@ func NewHTTPServer(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Opti
 			return nil, err
 		}
 		hzOpts = append(hzOpts, server.WithTracer(accessLogTracer))
+
+		httpServer.accesslogTracer = accessLogTracer
 	}
 
 	h := server.Default(hzOpts...)
@@ -96,11 +103,8 @@ func NewHTTPServer(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Opti
 
 	h.Use(switcher.ServeHTTP)
 
-	httpServer := &HTTPServer{
-		entryOpts: entry,
-		switcher:  switcher,
-		server:    h,
-	}
+	httpServer.switcher = switcher
+	httpServer.server = h
 
 	return httpServer, nil
 }
@@ -122,11 +126,13 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 
 	// middlewares
 	middlewares := map[string]app.HandlerFunc{}
-	for _, middlewareOpts := range opts.Middlewares {
+	for id, middlewareOpts := range opts.Middlewares {
 
-		if len(middlewareOpts.ID) == 0 {
+		if len(id) == 0 {
 			return nil, fmt.Errorf("middleware id can't be empty")
 		}
+
+		middlewareOpts.ID = id
 
 		if len(middlewareOpts.Kind) == 0 {
 			return nil, fmt.Errorf("middleware kind can't be empty")
@@ -147,11 +153,13 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 
 	// transports
 	transports := map[string]*domain.TransportOptions{}
-	for _, transportOpts := range opts.Transports {
+	for id, transportOpts := range opts.Transports {
 
-		if len(transportOpts.ID) == 0 {
+		if len(id) == 0 {
 			return nil, fmt.Errorf("transport id can't be empty")
 		}
+
+		transportOpts.ID = id
 
 		_, found := transports[transportOpts.ID]
 		if found {
@@ -163,11 +171,13 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 
 	// upstreams
 	upstreams := map[string]*Upstream{}
-	for _, upstreamOpts := range opts.Upstreams {
+	for id, upstreamOpts := range opts.Upstreams {
 
-		if len(upstreamOpts.ID) == 0 {
+		if len(id) == 0 {
 			return nil, fmt.Errorf("upstream id can't be empty")
 		}
+
+		upstreamOpts.ID = id
 
 		_, found := upstreams[upstreamOpts.ID]
 		if found {
@@ -193,7 +203,9 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 	// routes
 	router := NewRouter()
 
-	for _, routeOpts := range opts.Routes {
+	for routeID, routeOpts := range opts.Routes {
+
+		routeOpts.ID = routeID
 
 		if len(routeOpts.Entries) > 0 && !slices.Contains(routeOpts.Entries, entry.ID) {
 			continue

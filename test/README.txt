@@ -7,8 +7,8 @@ curl -i --request POST '<http://localhost:80/place_order>'
 curl -o default.pgo 'http://localhost:8001/debug/pprof/profile?seconds=30'
 
 
-k6 run place_order.js
-k6 run create_order.js
+k6 run qps.js
+k6 run vus.js
 
 
 go test -benchmem -run=^$ -coverprofile=/tmp/vscode-go0xlfMt/go-code-cover -bench ^BenchmarkStringBuilder$ http-benchmark/pkg/gateway -v

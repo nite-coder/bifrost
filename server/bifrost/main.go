@@ -17,7 +17,8 @@ func main() {
 
 	bifrost, err := gateway.LoadFromConfig("./config.yaml")
 	if err != nil {
-		slog.Error("load config error", "error", err)
+		slog.Error("fail to load config", "error", err)
+		return
 	}
 
 	bifrost.Run()

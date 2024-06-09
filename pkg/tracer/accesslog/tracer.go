@@ -33,9 +33,17 @@ func NewTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
 	words := strings.Fields(opts.Template)
 	opts.Template = strings.Join(words, " ") + "\n"
 
-	logFile, err := os.OpenFile(opts.FilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, err
+	var err error
+	var logFile *os.File
+
+	switch opts.Output {
+	case "stderr", "":
+		logFile = os.Stderr
+	default:
+		logFile, err = os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if opts.BufferSize <= 0 {
@@ -248,6 +256,13 @@ func (t *LoggerTracer) buildReplacer(c *app.RequestContext) []string {
 				headerVal = c.Request.Header.Get(headerVal)
 				headerVal = escape(headerVal, t.opts.Escape)
 				replacements = append(replacements, matchVal, headerVal)
+				continue
+			}
+
+			val, found := c.Get(matchVal)
+			if found {
+				s, _ := val.(string)
+				replacements = append(replacements, matchVal, s)
 				continue
 			}
 
