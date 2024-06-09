@@ -176,6 +176,7 @@ func main() {
 	h.GET("/order_book", orderBookHandler)
 	h.DELETE("cancel_order", cancelOrderHandler)
 	h.POST("/long", longHandler)
+	h.GET("/dynamic_upstream", findUpstreamHandler)
 
 	h.Spin()
 }
@@ -208,4 +209,9 @@ func longHandler(c context.Context, ctx *app.RequestContext) {
 	time.Sleep(10 * time.Second)
 	ctx.SetContentType("text/plain; charset=utf8")
 	ctx.String(200, "hello")
+}
+
+func findUpstreamHandler(c context.Context, ctx *app.RequestContext) {
+	ctx.SetContentType("text/plain; charset=utf8")
+	ctx.String(200, "find upstream")
 }

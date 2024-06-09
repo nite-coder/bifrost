@@ -69,6 +69,10 @@ func (p *FileProvider) Open() ([]*ContentInfo, error) {
 func (p *FileProvider) Watch() error {
 	var err error
 
+	if len(p.opts.Path) == 0 {
+		return nil
+	}
+
 	p.watcher, err = fsnotify.NewWatcher()
 	if err != nil {
 		return err
@@ -141,20 +145,18 @@ func (p *FileProvider) addWatch(path string) error {
 		if err != nil {
 			return err
 		}
-		if info.IsDir() {
-			return p.watcher.Add(filePath)
-		}
-		return nil
+
+		return p.watcher.Add(filePath)
 	})
 }
 
 func removeDuplicates(strings []string) []string {
-	seen := make(map[string]struct{})
+	seen := make(map[string]bool)
 	result := []string{}
 
 	for _, str := range strings {
 		if _, found := seen[str]; !found {
-			seen[str] = struct{}{}
+			seen[str] = true
 			result = append(result, str)
 		}
 	}

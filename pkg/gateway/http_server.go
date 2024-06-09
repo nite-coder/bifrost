@@ -215,9 +215,26 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 			return nil, fmt.Errorf("route match can't be empty")
 		}
 
-		upstream, ok := upstreams[routeOpts.Upstream]
-		if !ok {
-			return nil, fmt.Errorf("upstream '%s' was not found in '%s' route", routeOpts.Upstream, routeOpts.Match)
+		if len(routeOpts.Upstream) == 0 {
+			return nil, fmt.Errorf("route upstream can't be empty")
+		}
+
+		var upstreamFunc app.HandlerFunc
+
+		if routeOpts.Upstream[0] == '$' {
+			dynamicUpstream := &DynamicUpstream{
+				upstreams: upstreams,
+				name:      routeOpts.Upstream,
+			}
+
+			upstreamFunc = dynamicUpstream.ServeHTTP
+		} else {
+			upstream, ok := upstreams[routeOpts.Upstream]
+			if !ok {
+				return nil, fmt.Errorf("upstream '%s' was not found in '%s' route", routeOpts.Upstream, routeOpts.ID)
+			}
+
+			upstreamFunc = upstream.ServeHTTP
 		}
 
 		routeMiddlewares := make([]app.HandlerFunc, 0)
@@ -226,7 +243,7 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 			if len(middleware.Link) > 0 {
 				val, found := middlewares[middleware.Link]
 				if !found {
-					return nil, fmt.Errorf("middleware '%s' was not found in route: '%s'", middleware.Link, routeOpts.Match)
+					return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", middleware.Link, routeOpts.ID)
 				}
 
 				routeMiddlewares = append(routeMiddlewares, val)
@@ -250,7 +267,7 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 			routeMiddlewares = append(routeMiddlewares, m)
 		}
 
-		routeMiddlewares = append(routeMiddlewares, upstream.ServeHTTP)
+		routeMiddlewares = append(routeMiddlewares, upstreamFunc)
 
 		err := router.AddRoute(routeOpts, routeMiddlewares...)
 		if err != nil {

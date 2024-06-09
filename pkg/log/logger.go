@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"http-benchmark/pkg/domain"
 	"io"
 	"log/slog"
@@ -19,14 +20,14 @@ func NewLogger(opts domain.LoggingOtions) (*slog.Logger, error) {
 	switch level {
 	case "debug":
 		logOptions.Level = slog.LevelDebug
-	case "info":
+	case "info", "":
 		logOptions.Level = slog.LevelInfo
 	case "warn":
 		logOptions.Level = slog.LevelWarn
 	case "error":
 		logOptions.Level = slog.LevelError
 	default:
-		logOptions.Level = slog.LevelError
+		return nil, fmt.Errorf("invalid log level: %s", level)
 	}
 
 	var writer io.Writer

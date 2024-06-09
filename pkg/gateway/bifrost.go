@@ -37,14 +37,10 @@ func (b *Bifrost) Run() {
 }
 
 func Load(opts domain.Options) (*Bifrost, error) {
-
 	// validate
-	if len(opts.Entries) == 0 {
-		return nil, fmt.Errorf("no entry found")
-	}
-
-	if len(opts.Routes) == 0 {
-		return nil, fmt.Errorf("no route found")
+	err := validateOptions(opts)
+	if err != nil {
+		return nil, err
 	}
 
 	bifrsot := &Bifrost{
@@ -113,7 +109,10 @@ func Load(opts domain.Options) (*Bifrost, error) {
 }
 
 func LoadFromConfig(path string) (*Bifrost, error) {
-	reloadCh := make(chan bool)
+
+	if !fileExist(path) {
+		return nil, fmt.Errorf("config file not found, path: %s", path)
+	}
 
 	// main config file
 	fileProviderOpts := domain.FileProviderOptions{
@@ -151,14 +150,6 @@ func LoadFromConfig(path string) (*Bifrost, error) {
 				return nil, fmt.Errorf(errMsg)
 			}
 		}
-
-		defer func() {
-			fileProvider.OnChanged = func() error {
-				reloadCh <- true
-				return nil
-			}
-			_ = fileProvider.Watch()
-		}()
 	}
 
 	bifrost, err := Load(mainOpts)
@@ -166,11 +157,21 @@ func LoadFromConfig(path string) (*Bifrost, error) {
 		return nil, err
 	}
 
+	reloadCh := make(chan bool)
 	bifrost.fileProvider = fileProvider
 	bifrost.configPath = path
 	bifrost.onReload = reload
 	bifrost.reloadCh = reloadCh
-	bifrost.watch()
+
+	if mainOpts.Providers.File.Watch {
+		fileProvider.Add(path)
+		fileProvider.OnChanged = func() error {
+			reloadCh <- true
+			return nil
+		}
+		_ = fileProvider.Watch()
+		bifrost.watch()
+	}
 
 	return bifrost, nil
 }
@@ -181,13 +182,15 @@ func (b *Bifrost) watch() {
 			<-b.reloadCh
 			err := b.onReload(b)
 			if err != nil {
-				slog.Error("fail to reload bifrost", "error", err)
+				slog.Error("bifrost: fail to reload config", "error", err)
 			}
 		}
 	}()
 }
 
 func reload(bifrost *Bifrost) error {
+	slog.Info("bifrost: reloading...")
+
 	// main config file
 	fileProviderOpts := domain.FileProviderOptions{
 		Path: []string{bifrost.configPath},
@@ -228,6 +231,8 @@ func reload(bifrost *Bifrost) error {
 
 	isReload := false
 	for key, entryOpts := range mainOpts.Entries {
+		entryOpts.ID = key
+
 		engine, err := NewEngine(bifrost, entryOpts, mainOpts)
 		if err != nil {
 			return err

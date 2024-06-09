@@ -3,6 +3,7 @@ package gateway
 import (
 	"fmt"
 	"http-benchmark/pkg/domain"
+	"os"
 
 	"gopkg.in/yaml.v3"
 )
@@ -10,7 +11,9 @@ import (
 func parseContent(content string) (domain.Options, error) {
 	result := domain.Options{}
 
-	err := yaml.Unmarshal([]byte(content), &result)
+	b := []byte(content)
+
+	err := yaml.Unmarshal(b, &result)
 	if err != nil {
 		return result, err
 	}
@@ -87,4 +90,38 @@ func mergedOptions(mainOpts domain.Options, content string) (domain.Options, err
 	}
 
 	return mainOpts, nil
+}
+
+func fileExist(file string) bool {
+	_, err := os.Stat(file)
+	if err != nil {
+		if os.IsExist(err) {
+			return true
+		}
+		if os.IsNotExist(err) {
+			return false
+		}
+		return false
+	}
+	return true
+}
+
+func validateOptions(opts domain.Options) error {
+	if len(opts.Entries) == 0 {
+		return fmt.Errorf("no entry found")
+	}
+
+	if len(opts.Routes) == 0 {
+		return fmt.Errorf("no route found")
+	}
+
+	for routeID, route := range opts.Routes {
+		for _, entry := range route.Entries {
+			if _, found := opts.Entries[entry]; !found {
+				return fmt.Errorf("entry '%s' is invalid in '%s' route section", entry, routeID)
+			}
+		}
+	}
+
+	return nil
 }
