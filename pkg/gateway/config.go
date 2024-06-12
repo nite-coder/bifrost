@@ -44,49 +44,49 @@ func mergedOptions(mainOpts domain.Options, content string) (domain.Options, err
 		mainOpts.Upstreams = make(map[string]domain.UpstreamOptions)
 	}
 
-	if mainOpts.Transports == nil {
-		mainOpts.Transports = make(map[string]domain.TransportOptions)
+	if mainOpts.Services == nil {
+		mainOpts.Services = make(map[string]domain.ServiceOptions)
 	}
 
 	for k, v := range otherOpts.Entries {
 
 		if _, found := mainOpts.Entries[k]; found {
-			return mainOpts, fmt.Errorf("entry '%s' already exists", k)
+			return mainOpts, fmt.Errorf("entry '%s' is duplicate", k)
 		}
 
 		mainOpts.Entries[k] = v
 	}
 
-	for k, v := range otherOpts.Routes {
-		if _, found := mainOpts.Routes[k]; found {
-			return mainOpts, fmt.Errorf("route '%s' already exists", k)
-		}
-
-		mainOpts.Routes[k] = v
-	}
-
 	for k, v := range otherOpts.Middlewares {
 		if _, found := mainOpts.Middlewares[k]; found {
-			return mainOpts, fmt.Errorf("middleware '%s' already exists", k)
+			return mainOpts, fmt.Errorf("middleware '%s' is duplicate", k)
 		}
 
 		mainOpts.Middlewares[k] = v
 	}
 
+	for k, v := range otherOpts.Services {
+		if _, found := mainOpts.Services[k]; found {
+			return mainOpts, fmt.Errorf("service '%s' is duplicate", k)
+		}
+
+		mainOpts.Services[k] = v
+	}
+
+	for k, v := range otherOpts.Routes {
+		if _, found := mainOpts.Routes[k]; found {
+			return mainOpts, fmt.Errorf("route '%s' is duplicates", k)
+		}
+
+		mainOpts.Routes[k] = v
+	}
+
 	for k, v := range otherOpts.Upstreams {
 		if _, found := mainOpts.Upstreams[k]; found {
-			return mainOpts, fmt.Errorf("upstream '%s' already exists", k)
+			return mainOpts, fmt.Errorf("upstream '%s' is duplicate", k)
 		}
 
 		mainOpts.Upstreams[k] = v
-	}
-
-	for k, v := range otherOpts.Transports {
-		if _, found := mainOpts.Transports[k]; found {
-			return mainOpts, fmt.Errorf("transport '%s' already exists", k)
-		}
-
-		mainOpts.Transports[k] = v
 	}
 
 	return mainOpts, nil
@@ -120,6 +120,13 @@ func validateOptions(opts domain.Options) error {
 			if _, found := opts.Entries[entry]; !found {
 				return fmt.Errorf("entry '%s' is invalid in '%s' route section", entry, routeID)
 			}
+		}
+	}
+
+	for upstreamID, _ := range opts.Upstreams {
+
+		if upstreamID[0] == '$' {
+			return fmt.Errorf("upstream '%s' is invalid.  name can't start with '$", upstreamID)
 		}
 	}
 

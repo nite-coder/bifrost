@@ -8,8 +8,8 @@ type Options struct {
 	Entries       map[string]EntryOptions     `yaml:"entries" json:"entries"`
 	Routes        map[string]RouteOptions     `yaml:"routes" json:"routes"`
 	Middlewares   map[string]MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
+	Services      map[string]ServiceOptions   `yaml:"services" json:"services"`
 	Upstreams     map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
-	Transports    map[string]TransportOptions `yaml:"transports" json:"transports"`
 }
 
 type Provider struct {
@@ -91,34 +91,51 @@ const (
 	WeightedStrategy   UpstreamStrategy = "weighted"
 )
 
-type BackendServerOptions struct {
-	URL    string `yaml:"url" json:"url"`
+type TargetOptions struct {
+	Target string `yaml:"target" json:"target"`
 	Weight int    `yaml:"weight" json:"weight"`
 }
 
 type UpstreamOptions struct {
-	ID              string                 `yaml:"-" json:"-"`
-	ClientTransport string                 `yaml:"client_transport" json:"client_transport"`
-	Strategy        UpstreamStrategy       `yaml:"strategy" json:"strategy"`
-	Servers         []BackendServerOptions `yaml:"servers" json:"servers"`
-}
-
-type TransportOptions struct {
-	ID                  string         `yaml:"-" json:"-"`
-	InsecureSkipVerify  *bool          `yaml:"insecure_skip_verify" json:"insecure_skip_verify"`
-	MaxConnWaitTimeout  *time.Duration `yaml:"max_conn_wait_timeout" json:"max_conn_wait_timeout"`
-	MaxIdleConnsPerHost *int           `yaml:"max_idle_conns_per_host" json:"max_idle_conns_per_host"`
-	KeepAlive           *bool          `yaml:"keep_alive" json:"keep_alive"`
-	ReadTimeout         *time.Duration `yaml:"read_timeout" json:"read_timeout"`
-	WriteTimeout        *time.Duration `yaml:"write_timeout" json:"write_timeout"`
-	DailTimeout         *time.Duration `yaml:"dail_timeout" json:"dail_timeout"`
+	ID                  string           `yaml:"-" json:"-"`
+	Strategy            UpstreamStrategy `yaml:"strategy" json:"strategy"`
+	Targets             []TargetOptions  `yaml:"targets" json:"targets"`
+	InsecureSkipVerify  *bool            `yaml:"insecure_skip_verify" json:"insecure_skip_verify"`
+	MaxConnWaitTimeout  *time.Duration   `yaml:"max_conn_wait_timeout" json:"max_conn_wait_timeout"`
+	MaxIdleConnsPerHost *int             `yaml:"max_idle_conns_per_host" json:"max_idle_conns_per_host"`
+	KeepAlive           *bool            `yaml:"keep_alive" json:"keep_alive"`
+	ReadTimeout         *time.Duration   `yaml:"read_timeout" json:"read_timeout"`
+	WriteTimeout        *time.Duration   `yaml:"write_timeout" json:"write_timeout"`
+	DailTimeout         *time.Duration   `yaml:"dail_timeout" json:"dail_timeout"`
 }
 
 type RouteOptions struct {
 	ID          string             `yaml:"-" json:"-"`
-	Match       string             `yaml:"match" json:"match"`
+	Path        string             `yaml:"path" json:"path"`
 	Methods     []string           `yaml:"methods" json:"methods"`
 	Entries     []string           `yaml:"entries" json:"entries"`
 	Middlewares []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
-	Upstream    string             `yaml:"upstream" json:"upstream"`
+	ServiceID   string             `yaml:"service_id" json:"service_id"`
+}
+
+type Protocol string
+
+const (
+	ProtocolHTTP  Protocol = "http"
+	ProtocolHTTPS Protocol = "https"
+)
+
+type ServiceOptions struct {
+	ID                  string             `yaml:"-" json:"-"`
+	TLSVerify           bool               `yaml:"tls_verify" json:"tls_verify"`
+	MaxConnWaitTimeout  *time.Duration     `yaml:"max_conn_wait_timeout" json:"max_conn_wait_timeout"`
+	MaxIdleConnsPerHost *int               `yaml:"max_idle_conns_per_host" json:"max_idle_conns_per_host"`
+	ReadTimeout         *time.Duration     `yaml:"read_timeout" json:"read_timeout"`
+	WriteTimeout        *time.Duration     `yaml:"write_timeout" json:"write_timeout"`
+	DailTimeout         *time.Duration     `yaml:"dail_timeout" json:"dail_timeout"`
+	Protocol            Protocol           `yaml:"protocol" json:"protocol"`
+	Host                string             `yaml:"host" json:"host"`
+	Port                int32              `yaml:"port" json:"port"`
+	Path                string             `yaml:"path" json:"path"`
+	Middlewares         []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
 }

@@ -316,7 +316,7 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		)
 
 		if err.Error() == "timeout" {
-			ctx.Set("upstream_timeout", true)
+			ctx.Set("target_timeout", true)
 		}
 
 		r.getErrorHandler()(ctx, err)

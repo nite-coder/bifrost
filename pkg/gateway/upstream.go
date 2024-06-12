@@ -5,22 +5,15 @@ import (
 	"crypto/tls"
 	"fmt"
 	"http-benchmark/pkg/domain"
-	"http-benchmark/pkg/log"
-	"log/slog"
 	"math"
 	"net"
-	"net/url"
 	"strconv"
-	"strings"
 	"sync/atomic"
 	"time"
 
-	"github.com/bytedance/gopkg/util/gopool"
-	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/rs/dnscache"
-	"github.com/valyala/bytebufferpool"
 )
 
 type Upstream struct {
@@ -40,43 +33,37 @@ var defaultClientOptions = []config.ClientOption{
 	client.WithKeepAlive(true),
 }
 
-func NewUpstream(bifrost *Bifrost, opts domain.UpstreamOptions, transportOptions *domain.TransportOptions) (*Upstream, error) {
+func NewUpstream(bifrost *Bifrost, serviceOpts domain.ServiceOptions, opts domain.UpstreamOptions) (*Upstream, error) {
 
 	if len(opts.ID) == 0 {
 		return nil, fmt.Errorf("upstream id can't be empty")
 	}
 
-	if len(opts.Servers) == 0 {
-		return nil, fmt.Errorf("upstream servers can't be empty. upstream id: %s", opts.ID)
+	if len(opts.Targets) == 0 {
+		return nil, fmt.Errorf("targets can't be empty. upstream id: %s", opts.ID)
 	}
 
+	// direct proxy
 	clientOpts := defaultClientOptions
 
-	if len(opts.ClientTransport) > 0 && transportOptions != nil {
-		if transportOptions.DailTimeout != nil {
-			clientOpts = append(clientOpts, client.WithDialTimeout(*transportOptions.DailTimeout))
-		}
+	if opts.DailTimeout != nil {
+		clientOpts = append(clientOpts, client.WithDialTimeout(*opts.DailTimeout))
+	}
 
-		if transportOptions.ReadTimeout != nil {
-			clientOpts = append(clientOpts, client.WithClientReadTimeout(*transportOptions.ReadTimeout))
-		}
+	if opts.ReadTimeout != nil {
+		clientOpts = append(clientOpts, client.WithClientReadTimeout(*opts.ReadTimeout))
+	}
 
-		if transportOptions.WriteTimeout != nil {
-			clientOpts = append(clientOpts, client.WithWriteTimeout(*transportOptions.WriteTimeout))
-		}
+	if opts.WriteTimeout != nil {
+		clientOpts = append(clientOpts, client.WithWriteTimeout(*opts.WriteTimeout))
+	}
 
-		if transportOptions.MaxConnWaitTimeout != nil {
-			clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(*transportOptions.MaxConnWaitTimeout))
-		}
+	if opts.MaxConnWaitTimeout != nil {
+		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(*opts.MaxConnWaitTimeout))
+	}
 
-		if transportOptions.MaxIdleConnsPerHost != nil {
-			clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*transportOptions.MaxIdleConnsPerHost))
-		}
-
-		if transportOptions.KeepAlive != nil {
-			clientOpts = append(clientOpts, client.WithKeepAlive(*transportOptions.KeepAlive))
-		}
-
+	if opts.MaxIdleConnsPerHost != nil {
+		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*opts.MaxIdleConnsPerHost))
 	}
 
 	upstream := &Upstream{
@@ -84,47 +71,41 @@ func NewUpstream(bifrost *Bifrost, opts domain.UpstreamOptions, transportOptions
 		proxies: make([]*ReverseProxy, 0),
 	}
 
-	for _, server := range opts.Servers {
-		parsedURL, err := url.Parse(server.URL)
+	for _, targetOpts := range opts.Targets {
+
+		targetHost, targetPort, err := net.SplitHostPort(targetOpts.Target)
 		if err != nil {
-			return nil, err
+			targetHost = targetOpts.Target
 		}
 
-		scheme := strings.ToLower(parsedURL.Scheme)
-		if !(scheme == "http" || scheme == "https") {
-			return nil, fmt.Errorf("unsupported scheme: %s", scheme)
-		}
-
-		host, _, err := net.SplitHostPort(parsedURL.Host)
-		if err != nil {
-			host = parsedURL.Host
-		}
 		var dnsResolver dnscache.DNSResolver
-		if !isIP(host) {
-			_, err := bifrost.resolver.LookupHost(context.Background(), host)
+		if allowDNS(targetHost) {
+			_, err := bifrost.resolver.LookupHost(context.Background(), targetHost)
 			if err != nil {
 				return nil, fmt.Errorf("lookup upstream host error: %v", err)
 			}
 			dnsResolver = bifrost.resolver
 		}
 
-		var proxyOpts []config.ClientOption
-		if strings.HasPrefix(server.URL, "https") {
-			skip := true
-
-			if transportOptions != nil && transportOptions.InsecureSkipVerify != nil {
-				skip = *transportOptions.InsecureSkipVerify
+		switch serviceOpts.Protocol {
+		case domain.ProtocolHTTP:
+			if dnsResolver != nil {
+				clientOpts = append(clientOpts, client.WithDialer(newHTTPDialer(dnsResolver)))
 			}
-
-			proxyOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
-				InsecureSkipVerify: skip,
+		case domain.ProtocolHTTPS:
+			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
+				InsecureSkipVerify: serviceOpts.TLSVerify,
 			}))
-		} else {
-			proxyOpts = append(clientOpts, client.WithDialer(newHTTPDialer(dnsResolver)))
 		}
 
-		proxy, err := NewSingleHostReverseProxy(server.URL, proxyOpts...)
-		//proxy.SetSaveOriginResHeader(true)
+		port := targetPort
+		if serviceOpts.Port > 0 {
+			port = strconv.FormatInt(int64(serviceOpts.Port), 10)
+		}
+
+		url := fmt.Sprintf("%s://%s:%s%s", serviceOpts.Protocol, targetHost, port, serviceOpts.Path)
+		proxy, err := NewSingleHostReverseProxy(url, clientOpts...)
+
 		if err != nil {
 			return nil, err
 		}
@@ -132,67 +113,6 @@ func NewUpstream(bifrost *Bifrost, opts domain.UpstreamOptions, transportOptions
 	}
 
 	return upstream, nil
-}
-
-func (u *Upstream) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	logger := log.FromContext(c)
-	defer ctx.Abort()
-	done := make(chan bool)
-
-	gopool.CtxGo(c, func() {
-		ctx.Set(domain.UPSTREAM, u.opts.ID)
-
-		var proxy *ReverseProxy
-		switch u.opts.Strategy {
-		case domain.RoundRobinStrategy:
-			proxy = u.pickupByRoundRobin()
-		case domain.RandomStrategy:
-			u.serveByRandom(c, ctx)
-		default:
-			proxy = u.pickupByRoundRobin()
-		}
-
-		if proxy != nil {
-			startTime := time.Now()
-			proxy.ServeHTTP(c, ctx)
-
-			dur := time.Since(startTime)
-			mic := dur.Microseconds()
-			duration := float64(mic) / 1e6
-			responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
-			ctx.Set(domain.UPSTREAM_DURATION, responseTime)
-
-			if ctx.GetBool("upstream_timeout") {
-				ctx.Response.SetStatusCode(504)
-			} else {
-				ctx.Set(domain.UPSTREAM_STATUS, ctx.Response.StatusCode())
-			}
-		} else {
-			logger.ErrorContext(c, "no proxy found")
-		}
-
-		done <- true
-	})
-
-	select {
-	case <-c.Done():
-		time := time.Now()
-		ctx.Set(domain.CLIENT_CANCELED_AT, time)
-
-		buf := bytebufferpool.Get()
-		defer bytebufferpool.Put(buf)
-
-		buf.Write(ctx.Request.Method())
-		buf.Write(spaceByte)
-		buf.Write(ctx.Request.URI().FullURI())
-		fullURI := buf.String()
-		logger.WarnContext(c, "client cancel the request",
-			slog.String("full_uri", fullURI),
-		)
-		<-done
-		ctx.Response.SetStatusCode(499)
-	case <-done:
-	}
 }
 
 func (u *Upstream) pickupByRoundRobin() *ReverseProxy {
@@ -205,9 +125,11 @@ func (u *Upstream) pickupByRoundRobin() *ReverseProxy {
 	return proxy
 }
 
-func (u *Upstream) serveByRandom(c context.Context, ctx *app.RequestContext) {
-}
+func allowDNS(str string) bool {
 
-func isIP(str string) bool {
-	return net.ParseIP(str) != nil
+	if str == "localhost" {
+		return false
+	}
+
+	return net.ParseIP(str) == nil
 }

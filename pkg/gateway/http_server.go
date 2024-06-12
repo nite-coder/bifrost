@@ -151,53 +151,26 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 		middlewares[middlewareOpts.ID] = m
 	}
 
-	// transports
-	transports := map[string]*domain.TransportOptions{}
-	for id, transportOpts := range opts.Transports {
+	// services
+	services := map[string]*Service{}
+	for id, serviceOpts := range opts.Services {
 
 		if len(id) == 0 {
-			return nil, fmt.Errorf("transport id can't be empty")
+			return nil, fmt.Errorf("service id can't be empty")
 		}
 
-		transportOpts.ID = id
+		serviceOpts.ID = id
 
-		_, found := transports[transportOpts.ID]
+		_, found := services[serviceOpts.ID]
 		if found {
-			return nil, fmt.Errorf("transport '%s' already exists", transportOpts.ID)
+			return nil, fmt.Errorf("service '%s' already exists", serviceOpts.ID)
 		}
 
-		transports[transportOpts.ID] = &transportOpts
-	}
-
-	// upstreams
-	upstreams := map[string]*Upstream{}
-	for id, upstreamOpts := range opts.Upstreams {
-
-		if len(id) == 0 {
-			return nil, fmt.Errorf("upstream id can't be empty")
-		}
-
-		upstreamOpts.ID = id
-
-		_, found := upstreams[upstreamOpts.ID]
-		if found {
-			return nil, fmt.Errorf("upstream '%s' already exists", upstreamOpts.ID)
-		}
-
-		var transportOpts *domain.TransportOptions
-		if len(upstreamOpts.ClientTransport) > 0 {
-
-			transportOpts, found = transports[upstreamOpts.ClientTransport]
-			if !found {
-				return nil, fmt.Errorf("transport '%s' was not found in '%s' upstream", upstreamOpts.ClientTransport, upstreamOpts.ID)
-			}
-		}
-
-		upstream, err := NewUpstream(bifrost, upstreamOpts, transportOpts)
+		service, err := newService(bifrost, &serviceOpts, opts.Upstreams)
 		if err != nil {
 			return nil, err
 		}
-		upstreams[upstreamOpts.ID] = upstream
+		services[serviceOpts.ID] = service
 	}
 
 	// routes
@@ -211,30 +184,17 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 			continue
 		}
 
-		if len(routeOpts.Match) == 0 {
+		if len(routeOpts.Path) == 0 {
 			return nil, fmt.Errorf("route match can't be empty")
 		}
 
-		if len(routeOpts.Upstream) == 0 {
-			return nil, fmt.Errorf("route upstream can't be empty")
+		if len(routeOpts.ServiceID) == 0 {
+			return nil, fmt.Errorf("route service_id can't be empty")
 		}
 
-		var upstreamFunc app.HandlerFunc
-
-		if routeOpts.Upstream[0] == '$' {
-			dynamicUpstream := &DynamicUpstream{
-				upstreams: upstreams,
-				name:      routeOpts.Upstream,
-			}
-
-			upstreamFunc = dynamicUpstream.ServeHTTP
-		} else {
-			upstream, ok := upstreams[routeOpts.Upstream]
-			if !ok {
-				return nil, fmt.Errorf("upstream '%s' was not found in '%s' route", routeOpts.Upstream, routeOpts.ID)
-			}
-
-			upstreamFunc = upstream.ServeHTTP
+		service, found := services[routeOpts.ServiceID]
+		if !found {
+			return nil, fmt.Errorf("service_id '%s' was not found in route: %s", routeOpts.ServiceID, routeOpts.ID)
 		}
 
 		routeMiddlewares := make([]app.HandlerFunc, 0)
@@ -251,23 +211,23 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 			}
 
 			if len(middleware.Kind) == 0 {
-				return nil, fmt.Errorf("middleware kind can't be empty in route: '%s'", routeOpts.Match)
+				return nil, fmt.Errorf("middleware kind can't be empty in route: '%s'", routeOpts.Path)
 			}
 
 			handler, found := middlewareFactory[middleware.Kind]
 			if !found {
-				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", middleware.Kind, routeOpts.Match)
+				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", middleware.Kind, routeOpts.Path)
 			}
 
 			m, err := handler(middleware.Params)
 			if err != nil {
-				return nil, fmt.Errorf("create middleware handler '%s' failed in route: '%s'", middleware.Kind, routeOpts.Match)
+				return nil, fmt.Errorf("create middleware handler '%s' failed in route: '%s'", middleware.Kind, routeOpts.Path)
 			}
 
 			routeMiddlewares = append(routeMiddlewares, m)
 		}
 
-		routeMiddlewares = append(routeMiddlewares, upstreamFunc)
+		routeMiddlewares = append(routeMiddlewares, service.ServeHTTP)
 
 		err := router.AddRoute(routeOpts, routeMiddlewares...)
 		if err != nil {

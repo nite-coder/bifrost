@@ -1,6 +1,6 @@
 k6 run --vus=100 --iterations=100000 place_order.js
 
-k6 run --vus=500 --duration 10s create_order.js
+k6 run --vus=500 --duration 10s vus.js
 
 curl -i --request POST '<http://localhost:80/place_order>'
 
