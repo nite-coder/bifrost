@@ -9,10 +9,11 @@ export const options = {
             duration: '10s',
         },
     },
+    insecureSkipTLSVerify: true
 };
 
 export default function () {
-    const url = 'http://localhost:8001/spot/orders?a=b';
+    const url = 'https://127.0.0.1:8001/spot/orders?a=b';
 
     const payload = JSON.stringify({
         "market": "BTC_USDT",
@@ -35,5 +36,6 @@ export default function () {
         timeout: '1s'
     };
 
-    http.post(url, payload, params);
+    let resp = http.post(url, payload, params);
+    //console.log(resp.proto);
 }

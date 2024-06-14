@@ -119,8 +119,17 @@ func NewSingleHostReverseProxy(target string, options ...config.ClientOption) (*
 		Target:     target,
 		targetHost: addr.Host,
 		director: func(req *protocol.Request) {
+			req.Header.SetProtocol("HTTP/1.1")
+
+			switch addr.Scheme {
+			case "http":
+				req.SetIsTLS(false)
+			case "https":
+				req.SetIsTLS(true)
+			}
+
 			req.SetRequestURI(b2s(JoinURLPath(req, target)))
-			req.Header.SetHostBytes(req.URI().Host())
+			//req.Header.SetHostBytes(req.URI().Host())
 		},
 	}
 

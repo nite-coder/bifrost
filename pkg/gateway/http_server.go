@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"http-benchmark/pkg/domain"
 	"http-benchmark/pkg/log"
@@ -9,15 +10,21 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"os"
 	"slices"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
+
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
+
+	configHTTP2 "github.com/hertz-contrib/http2/config"
+	"github.com/hertz-contrib/http2/factory"
 	"github.com/hertz-contrib/pprof"
 	"golang.org/x/sys/unix"
 
@@ -31,11 +38,11 @@ type HTTPServer struct {
 	accesslogTracer *accesslog.LoggerTracer
 }
 
-func NewHTTPServer(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options, tracers []tracer.Tracer) (*HTTPServer, error) {
+func NewHTTPServer(bifrost *Bifrost, entryOpts domain.EntryOptions, opts domain.Options, tracers []tracer.Tracer) (*HTTPServer, error) {
 
 	//gopool.SetCap(20000)
 
-	engine, err := NewEngine(bifrost, entry, opts)
+	engine, err := NewEngine(bifrost, entryOpts, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -49,21 +56,22 @@ func NewHTTPServer(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Opti
 	hlog.SetSilentMode(true)
 
 	hzOpts := []config.Option{
-		server.WithHostPorts(entry.Bind),
-		server.WithIdleTimeout(entry.IdleTimeout),
-		server.WithReadTimeout(entry.ReadTimeout),
-		server.WithWriteTimeout(entry.WriteTimeout),
+		server.WithHostPorts(entryOpts.Bind),
+		server.WithIdleTimeout(entryOpts.IdleTimeout),
+		server.WithReadTimeout(entryOpts.ReadTimeout),
+		server.WithWriteTimeout(entryOpts.WriteTimeout),
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		server.WithSenseClientDisconnection(true),
 		withDefaultServerHeader(true),
+		server.WithALPN(true),
 	}
 
 	for _, tracer := range tracers {
 		hzOpts = append(hzOpts, server.WithTracer(tracer))
 	}
 
-	if entry.ReusePort {
+	if entryOpts.ReusePort {
 		hzOpts = append(hzOpts, server.WithListenConfig(&net.ListenConfig{
 			Control: func(network, address string, c syscall.RawConn) error {
 				return c.Control(func(fd uintptr) {
@@ -76,13 +84,52 @@ func NewHTTPServer(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Opti
 		}))
 	}
 
+	var tlsConfig *tls.Config
+	if entryOpts.TLS.Enabled {
+		tlsConfig = &tls.Config{
+			MinVersion:               tls.VersionTLS12,
+			CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256},
+			PreferServerCipherSuites: true,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+			},
+		}
+
+		if entryOpts.TLS.CertPEM == "" {
+			return nil, fmt.Errorf("cert_pem can't be empty")
+		}
+
+		if entryOpts.TLS.KeyPEM == "" {
+			return nil, fmt.Errorf("key_pem can't be empty")
+		}
+
+		certPEM, err := os.ReadFile(entryOpts.TLS.CertPEM)
+		if err != nil {
+			return nil, err
+		}
+
+		keyPEM, err := os.ReadFile(entryOpts.TLS.KeyPEM)
+		if err != nil {
+			return nil, err
+		}
+
+		cert, err := tls.X509KeyPair(certPEM, keyPEM)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
+		hzOpts = append(hzOpts, server.WithTLS(tlsConfig))
+	}
+
 	httpServer := &HTTPServer{
-		entryOpts: entry,
+		entryOpts: entryOpts,
 	}
 
 	var accessLogTracer *accesslog.LoggerTracer
-	if entry.AccessLog.Enabled {
-		accessLogTracer, err = accesslog.NewTracer(entry.AccessLog)
+	if entryOpts.AccessLog.Enabled {
+		accessLogTracer, err = accesslog.NewTracer(entryOpts.AccessLog)
 		if err != nil {
 			return nil, err
 		}
@@ -92,6 +139,16 @@ func NewHTTPServer(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Opti
 	}
 
 	h := server.Default(hzOpts...)
+
+	if entryOpts.TLS.Enabled && entryOpts.TLS.HTTP2 {
+		// register http2 server factory
+		h.AddProtocol("h2", factory.NewServerFactory(
+			configHTTP2.WithReadTimeout(time.Minute),
+			configHTTP2.WithDisableKeepAlive(false)))
+
+		tlsConfig.NextProtos = append(tlsConfig.NextProtos, "h2")
+	}
+
 	h.OnShutdown = append(h.OnShutdown, func(ctx context.Context) {
 		if accessLogTracer != nil {
 			accessLogTracer.Shutdown()

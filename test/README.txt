@@ -2,6 +2,8 @@ k6 run --vus=100 --iterations=100000 place_order.js
 
 k6 run --vus=500 --duration 10s vus.js
 
+k6 run --vus=1 --iterations=1 vus.js
+
 curl -i --request POST '<http://localhost:80/place_order>'
 
 curl -o default.pgo 'http://localhost:8001/debug/pprof/profile?seconds=30'
@@ -32,3 +34,11 @@ go tool pprof -http=0.0.0.0:4231 cpu.prof
 
 
 curl 'http://localhost:9091/metrics'
+
+
+curl --insecure --http2 --request POST 'https://bifrost.io:443/spot/orders'
+curl --insecure -I --http1.1 --request POST 'https://bifrost.io:443/spot/orders'
+
+curl --insecure --request POST 'https://bifrost.io:443/spot/orders'
+
+

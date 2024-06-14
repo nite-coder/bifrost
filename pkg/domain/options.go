@@ -48,6 +48,7 @@ type PrometheusOptions struct {
 type EntryOptions struct {
 	ID           string             `yaml:"-" json:"-"`
 	Bind         string             `yaml:"bind" json:"bind"`
+	TLS          TLSOptions         `yaml:"tls" json:"tls"`
 	ReusePort    bool               `yaml:"reuse_port" json:"reuse_port"`
 	ReadTimeout  time.Duration      `yaml:"read_timeout" json:"read_timeout"`
 	WriteTimeout time.Duration      `yaml:"write_timeout" json:"write_timeout"`
@@ -138,4 +139,11 @@ type ServiceOptions struct {
 	Port                int32              `yaml:"port" json:"port"`
 	Path                string             `yaml:"path" json:"path"`
 	Middlewares         []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
+}
+
+type TLSOptions struct {
+	Enabled bool   `yaml:"enabled" json:"enabled"`
+	CertPEM string `yaml:"cert_pem" json:"cert_pem"`
+	KeyPEM  string `yaml:"key_pem" json:"key_pem"`
+	HTTP2   bool   `yaml:"http2" json:"http2"`
 }
