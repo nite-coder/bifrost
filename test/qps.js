@@ -12,6 +12,7 @@ export const options = {
             maxVUs: 700,
         },
     },
+    summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(75)', 'p(95)', 'p(99)', 'count'],
 }
 
 export default function () {

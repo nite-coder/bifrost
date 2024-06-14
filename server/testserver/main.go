@@ -7,7 +7,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
-	"github.com/cloudwego/netpoll"
 )
 
 func WithDefaultServerHeader(disable bool) config.Option {
@@ -153,7 +152,6 @@ func main() {
 	orderResp = []byte(order)
 	orderbookResp = []byte(orderbook)
 
-	_ = netpoll.SetNumLoops(2)
 	opts := []config.Option{
 		server.WithHostPorts(port),
 		server.WithIdleTimeout(time.Second * 60),
@@ -169,7 +167,7 @@ func main() {
 	// 	//fmt.Println("futures/usdt/orders")
 	// })
 	h.POST("/", echoHandler)
-	h.POST("/spot/order", placeOrderHandler)
+	h.Any("/spot/order", placeOrderHandler)
 	h.POST("/spot/orders", placeOrderHandler)
 	h.POST("/futures/usdt/orders", placeOrderHandler)
 	h.POST("/options/orders", placeOrderHandler)

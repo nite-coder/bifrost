@@ -126,92 +126,94 @@ func checkRegexpRoute(prefixSetting routeSetting, method, path string) bool {
 var upperLetterReg = regexp.MustCompile("^[A-Z]+$")
 
 // AddRoute adds a static route
-func (r *Router) AddRoute(route domain.RouteOptions, middlewares ...app.HandlerFunc) error {
+func (r *Router) AddRoute(routeOpts domain.RouteOptions, middlewares ...app.HandlerFunc) error {
 	var err error
 
-	// check prefix
-	if strings.HasSuffix(route.Path, "*") {
-		prefixPath := strings.TrimSpace(route.Path[:len(route.Path)-1])
+	for _, path := range routeOpts.Paths {
+		// check prefix match
+		if strings.HasSuffix(path, "*") {
+			prefixPath := strings.TrimSpace(path[:len(path)-1])
 
-		prefixRoute := routeSetting{
-			prefixPath: prefixPath,
-			route:      &route,
-			middleware: middlewares,
-		}
+			prefixRoute := routeSetting{
+				prefixPath: prefixPath,
+				route:      &routeOpts,
+				middleware: middlewares,
+			}
 
-		r.prefixRoutes = append(r.prefixRoutes, prefixRoute)
+			r.prefixRoutes = append(r.prefixRoutes, prefixRoute)
 
-		sort.SliceStable(r.prefixRoutes, func(i, j int) bool {
-			return len(r.prefixRoutes[i].prefixPath) > len(r.prefixRoutes[j].prefixPath)
-		})
+			sort.SliceStable(r.prefixRoutes, func(i, j int) bool {
+				return len(r.prefixRoutes[i].prefixPath) > len(r.prefixRoutes[j].prefixPath)
+			})
 
-		return nil
-	}
-
-	// regexp
-	if route.Path[:1] == "~" {
-		expr := strings.TrimSpace(route.Path[1:])
-		regx, err := regexp.Compile(expr)
-		if err != nil {
-			return err
+			return nil
 		}
 
-		prefixRoute := routeSetting{
-			regex:      regx,
-			route:      &route,
-			middleware: middlewares,
+		// regexp match
+		if path[:1] == "~" {
+			expr := strings.TrimSpace(path[1:])
+			regx, err := regexp.Compile(expr)
+			if err != nil {
+				return err
+			}
+
+			prefixRoute := routeSetting{
+				regex:      regx,
+				route:      &routeOpts,
+				middleware: middlewares,
+			}
+
+			r.regexpRoutes = append(r.regexpRoutes, prefixRoute)
+			return nil
 		}
 
-		r.regexpRoutes = append(r.regexpRoutes, prefixRoute)
-		return nil
-	}
+		if len(routeOpts.Methods) == 0 {
+			err = r.add(GET, path, middlewares...)
+			if err != nil {
+				return err
+			}
+			err = r.add(POST, path, middlewares...)
+			if err != nil {
+				return err
+			}
+			err = r.add(PUT, path, middlewares...)
+			if err != nil {
+				return err
+			}
+			err = r.add(DELETE, path, middlewares...)
+			if err != nil {
+				return err
+			}
+			err = r.add(PATCH, path, middlewares...)
+			if err != nil {
+				return err
+			}
+			err = r.add(CONNECT, path, middlewares...)
+			if err != nil {
+				return err
+			}
+			err = r.add(HEAD, path, middlewares...)
+			if err != nil {
+				return err
+			}
+			err = r.add(TRACE, path, middlewares...)
+			if err != nil {
+				return err
+			}
+			err = r.add(OPTIONS, path, middlewares...)
+			if err != nil {
+				return err
+			}
+		}
 
-	if len(route.Methods) == 0 {
-		err = r.add(GET, route.Path, middlewares...)
-		if err != nil {
-			return err
-		}
-		err = r.add(POST, route.Path, middlewares...)
-		if err != nil {
-			return err
-		}
-		err = r.add(PUT, route.Path, middlewares...)
-		if err != nil {
-			return err
-		}
-		err = r.add(DELETE, route.Path, middlewares...)
-		if err != nil {
-			return err
-		}
-		err = r.add(PATCH, route.Path, middlewares...)
-		if err != nil {
-			return err
-		}
-		err = r.add(CONNECT, route.Path, middlewares...)
-		if err != nil {
-			return err
-		}
-		err = r.add(HEAD, route.Path, middlewares...)
-		if err != nil {
-			return err
-		}
-		err = r.add(TRACE, route.Path, middlewares...)
-		if err != nil {
-			return err
-		}
-		err = r.add(OPTIONS, route.Path, middlewares...)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, method := range route.Methods {
-		if matches := upperLetterReg.MatchString(method); !matches {
-			panic("http method " + method + " is not valid")
-		}
-		err = r.add(method, route.Path, middlewares...)
-		if err != nil {
-			return err
+		for _, method := range routeOpts.Methods {
+			if matches := upperLetterReg.MatchString(method); !matches {
+				panic("http method " + method + " is not valid")
+			}
+			err = r.add(method, path, middlewares...)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

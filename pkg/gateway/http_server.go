@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"http-benchmark/pkg/domain"
 	"http-benchmark/pkg/log"
-	"http-benchmark/pkg/tracer/accesslog"
 	"io"
 	"log/slog"
 	"net"
@@ -32,16 +31,14 @@ import (
 )
 
 type HTTPServer struct {
-	entryOpts       domain.EntryOptions
-	switcher        *switcher
-	server          *server.Hertz
-	accesslogTracer *accesslog.LoggerTracer
+	entryOpts domain.EntryOptions
+	switcher  *switcher
+	server    *server.Hertz
 }
 
-func NewHTTPServer(bifrost *Bifrost, entryOpts domain.EntryOptions, opts domain.Options, tracers []tracer.Tracer) (*HTTPServer, error) {
+func newHTTPServer(bifrost *Bifrost, entryOpts domain.EntryOptions, opts domain.Options, tracers []tracer.Tracer) (*HTTPServer, error) {
 
 	//gopool.SetCap(20000)
-
 	engine, err := NewEngine(bifrost, entryOpts, opts)
 	if err != nil {
 		return nil, err
@@ -58,8 +55,6 @@ func NewHTTPServer(bifrost *Bifrost, entryOpts domain.EntryOptions, opts domain.
 	hzOpts := []config.Option{
 		server.WithHostPorts(entryOpts.Bind),
 		server.WithIdleTimeout(entryOpts.IdleTimeout),
-		server.WithReadTimeout(entryOpts.ReadTimeout),
-		server.WithWriteTimeout(entryOpts.WriteTimeout),
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		server.WithSenseClientDisconnection(true),
@@ -127,17 +122,6 @@ func NewHTTPServer(bifrost *Bifrost, entryOpts domain.EntryOptions, opts domain.
 		entryOpts: entryOpts,
 	}
 
-	var accessLogTracer *accesslog.LoggerTracer
-	if entryOpts.AccessLog.Enabled {
-		accessLogTracer, err = accesslog.NewTracer(entryOpts.AccessLog)
-		if err != nil {
-			return nil, err
-		}
-		hzOpts = append(hzOpts, server.WithTracer(accessLogTracer))
-
-		httpServer.accesslogTracer = accessLogTracer
-	}
-
 	h := server.Default(hzOpts...)
 
 	if entryOpts.TLS.Enabled && entryOpts.TLS.HTTP2 {
@@ -150,9 +134,9 @@ func NewHTTPServer(bifrost *Bifrost, entryOpts domain.EntryOptions, opts domain.
 	}
 
 	h.OnShutdown = append(h.OnShutdown, func(ctx context.Context) {
-		if accessLogTracer != nil {
-			accessLogTracer.Shutdown()
-		}
+		// if accessLogTracer != nil {
+		// 	accessLogTracer.Shutdown()
+		// }
 
 	})
 
@@ -241,7 +225,7 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 			continue
 		}
 
-		if len(routeOpts.Path) == 0 {
+		if len(routeOpts.Paths) == 0 {
 			return nil, fmt.Errorf("route match can't be empty")
 		}
 
@@ -268,17 +252,17 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 			}
 
 			if len(middleware.Kind) == 0 {
-				return nil, fmt.Errorf("middleware kind can't be empty in route: '%s'", routeOpts.Path)
+				return nil, fmt.Errorf("middleware kind can't be empty in route: '%s'", routeOpts.Paths)
 			}
 
 			handler, found := middlewareFactory[middleware.Kind]
 			if !found {
-				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", middleware.Kind, routeOpts.Path)
+				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", middleware.Kind, routeOpts.Paths)
 			}
 
 			m, err := handler(middleware.Params)
 			if err != nil {
-				return nil, fmt.Errorf("create middleware handler '%s' failed in route: '%s'", middleware.Kind, routeOpts.Path)
+				return nil, fmt.Errorf("create middleware handler '%s' failed in route: '%s'", middleware.Kind, routeOpts.Paths)
 			}
 
 			routeMiddlewares = append(routeMiddlewares, m)

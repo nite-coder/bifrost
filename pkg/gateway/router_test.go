@@ -122,18 +122,20 @@ func TestPrefixAndExactMatchingPriority(t *testing.T) {
 
 	// Add prefix and exact routes
 	router.AddRoute(domain.RouteOptions{
-		Path: "/market/btc*",
+		Paths: []string{"/market/btc*"},
 	}, mockHandler)
 
 	router.AddRoute(domain.RouteOptions{
-		Path: "/market/usdt_hello*",
+		Paths: []string{"/market/usdt_hello*"},
 	}, mockHandler)
 
 	router.AddRoute(domain.RouteOptions{
-		Path: "/market/eth_usdt*",
+		Paths: []string{"/market/eth_usdt*"},
 	}, mockHandler)
 
-	router.AddRoute(domain.RouteOptions{Path: "/market/btc"}, func(c context.Context, ctx *app.RequestContext) {
+	router.AddRoute(domain.RouteOptions{
+		Paths: []string{"/market/btc"},
+	}, func(c context.Context, ctx *app.RequestContext) {
 		ctx.WriteString("exact handler")
 	})
 

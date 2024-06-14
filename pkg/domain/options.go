@@ -18,13 +18,14 @@ type Provider struct {
 
 type FileProviderOptions struct {
 	Enabled bool     `yaml:"enabled" json:"enabled"`
-	Path    []string `yaml:"path" json:"path"`
+	Paths   []string `yaml:"paths" json:"paths"`
 	Watch   bool     `yaml:"watch" json:"watch"`
 }
 
 type ObservabilityOptions struct {
-	Logging LoggingOtions `yaml:"logging" json:"logging"`
-	Metrics MetricOptions `yaml:"metrics" json:"metrics"`
+	Logging    LoggingOtions               `yaml:"logging" json:"logging"`
+	AccessLogs map[string]AccessLogOptions `yaml:"access_logs" json:"access_logs"`
+	Metrics    MetricOptions               `yaml:"metrics" json:"metrics"`
 }
 
 type MetricOptions struct {
@@ -46,16 +47,14 @@ type PrometheusOptions struct {
 }
 
 type EntryOptions struct {
-	ID           string             `yaml:"-" json:"-"`
-	Bind         string             `yaml:"bind" json:"bind"`
-	TLS          TLSOptions         `yaml:"tls" json:"tls"`
-	ReusePort    bool               `yaml:"reuse_port" json:"reuse_port"`
-	ReadTimeout  time.Duration      `yaml:"read_timeout" json:"read_timeout"`
-	WriteTimeout time.Duration      `yaml:"write_timeout" json:"write_timeout"`
-	IdleTimeout  time.Duration      `yaml:"idle_timeout" json:"idle_timeout"`
-	Middlewares  []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
-	Logging      LoggingOtions      `yaml:"logging" json:"logging"`
-	AccessLog    AccessLogOptions   `yaml:"access_log" json:"access_log"`
+	ID          string             `yaml:"-" json:"-"`
+	Bind        string             `yaml:"bind" json:"bind"`
+	TLS         TLSOptions         `yaml:"tls" json:"tls"`
+	ReusePort   bool               `yaml:"reuse_port" json:"reuse_port"`
+	IdleTimeout time.Duration      `yaml:"idle_timeout" json:"idle_timeout"`
+	Middlewares []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
+	Logging     LoggingOtions      `yaml:"logging" json:"logging"`
+	AccessLogID string             `yaml:"access_log_id" json:"access_log_id"`
 }
 
 type EscapeType string
@@ -112,7 +111,7 @@ type UpstreamOptions struct {
 
 type RouteOptions struct {
 	ID          string             `yaml:"-" json:"-"`
-	Path        string             `yaml:"path" json:"path"`
+	Paths       []string           `yaml:"paths" json:"paths"`
 	Methods     []string           `yaml:"methods" json:"methods"`
 	Entries     []string           `yaml:"entries" json:"entries"`
 	Middlewares []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`

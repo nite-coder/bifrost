@@ -17,7 +17,7 @@ import (
 	"github.com/valyala/bytebufferpool"
 )
 
-type LoggerTracer struct {
+type Tracer struct {
 	opts      domain.AccessLogOptions
 	matchVars []string
 	logChan   chan []string
@@ -25,7 +25,7 @@ type LoggerTracer struct {
 	writer    *bufio.Writer
 }
 
-func NewTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
+func NewTracer(opts domain.AccessLogOptions) (*Tracer, error) {
 	if opts.TimeFormat == "" {
 		opts.TimeFormat = time.RFC3339
 	}
@@ -56,7 +56,7 @@ func NewTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
 		opts.Flush = 1 * time.Second
 	}
 
-	tracer := &LoggerTracer{
+	tracer := &Tracer{
 		opts:      opts,
 		logChan:   make(chan []string, 1000000),
 		matchVars: parseVariables(opts.Template),
@@ -64,7 +64,7 @@ func NewTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
 		writer:    writer,
 	}
 
-	go func(t *LoggerTracer) {
+	go func(t *Tracer) {
 		flushTimer := time.NewTimer(opts.Flush)
 
 		for {
@@ -92,11 +92,11 @@ func NewTracer(opts domain.AccessLogOptions) (*LoggerTracer, error) {
 	return tracer, nil
 }
 
-func (t *LoggerTracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
+func (t *Tracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
 	return ctx
 }
 
-func (t *LoggerTracer) Finish(ctx context.Context, c *app.RequestContext) {
+func (t *Tracer) Finish(ctx context.Context, c *app.RequestContext) {
 	result := t.buildReplacer(c)
 
 	select {
@@ -106,14 +106,14 @@ func (t *LoggerTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	}
 }
 
-func (t *LoggerTracer) Shutdown() {
+func (t *Tracer) Shutdown() {
 	close(t.logChan)
 	t.writer.Flush()
 	_ = t.logFile.Sync()
 	t.logFile.Close()
 }
 
-func (t *LoggerTracer) buildReplacer(c *app.RequestContext) []string {
+func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 	replacements := make([]string, 0, len(t.matchVars)*2)
 
 	info := c.GetTraceInfo().Stats()

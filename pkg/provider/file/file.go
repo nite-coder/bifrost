@@ -29,19 +29,19 @@ func NewProvider(opts domain.FileProviderOptions) *FileProvider {
 }
 
 func (p *FileProvider) Reset() {
-	p.opts.Path = p.opts.Path[:0]
+	p.opts.Paths = p.opts.Paths[:0]
 }
 
 func (p *FileProvider) Add(path string) {
-	p.opts.Path = append(p.opts.Path, path)
+	p.opts.Paths = append(p.opts.Paths, path)
 }
 
 func (p *FileProvider) Open() ([]*ContentInfo, error) {
-	p.opts.Path = removeDuplicates(p.opts.Path)
+	p.opts.Paths = removeDuplicates(p.opts.Paths)
 
 	var contents []*ContentInfo
 
-	for _, path := range p.opts.Path {
+	for _, path := range p.opts.Paths {
 		err := filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -69,7 +69,7 @@ func (p *FileProvider) Open() ([]*ContentInfo, error) {
 func (p *FileProvider) Watch() error {
 	var err error
 
-	if len(p.opts.Path) == 0 {
+	if len(p.opts.Paths) == 0 {
 		return nil
 	}
 
@@ -101,7 +101,7 @@ func (p *FileProvider) Watch() error {
 					isUpdate = true
 				case event.Op&fsnotify.Remove == fsnotify.Remove:
 					// Some editors will remove the path from the watch list when the event is triggered, so we need to re-add it
-					for _, path := range p.opts.Path {
+					for _, path := range p.opts.Paths {
 						err := p.addWatch(path)
 						if err != nil {
 							slog.Error("file watcher error", "error:", err)
@@ -130,7 +130,7 @@ func (p *FileProvider) Watch() error {
 		}
 	}(p.watcher)
 
-	for _, path := range p.opts.Path {
+	for _, path := range p.opts.Paths {
 		err := p.addWatch(path)
 		if err != nil {
 			return err

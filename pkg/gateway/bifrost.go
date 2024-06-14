@@ -5,6 +5,7 @@ import (
 	"http-benchmark/pkg/domain"
 	"http-benchmark/pkg/log"
 	"http-benchmark/pkg/provider/file"
+	"http-benchmark/pkg/tracer/accesslog"
 	"http-benchmark/pkg/tracer/prometheus"
 	"log/slog"
 	"time"
@@ -80,8 +81,27 @@ func Load(opts domain.Options) (*Bifrost, error) {
 		tracers = append(tracers, promTracer)
 	}
 
-	for id, entry := range opts.Entries {
+	// access log
+	accessLogTracers := map[string]*accesslog.Tracer{}
+	if len(opts.Observability.AccessLogs) > 0 {
 
+		for id, accessLogOptions := range opts.Observability.AccessLogs {
+			if !accessLogOptions.Enabled {
+				continue
+			}
+
+			accessLogTracer, err := accesslog.NewTracer(accessLogOptions)
+			if err != nil {
+				return nil, err
+			}
+
+			if accessLogTracer != nil {
+				accessLogTracers[id] = accessLogTracer
+			}
+		}
+	}
+
+	for id, entry := range opts.Entries {
 		if id == "" {
 			return nil, fmt.Errorf("http server id can't be empty")
 		}
@@ -97,7 +117,19 @@ func Load(opts domain.Options) (*Bifrost, error) {
 			return nil, fmt.Errorf("http server '%s' already exists", id)
 		}
 
-		httpServer, err := NewHTTPServer(bifrsot, entry, opts, tracers)
+		if len(entry.AccessLogID) > 0 {
+			_, found := opts.Observability.AccessLogs[entry.AccessLogID]
+			if !found {
+				return nil, fmt.Errorf("access log '%s' was not found in entry '%s'", entry.AccessLogID, entry.ID)
+			}
+
+			accessLogTracer, found := accessLogTracers[entry.AccessLogID]
+			if found {
+				tracers = append(tracers, accessLogTracer)
+			}
+		}
+
+		httpServer, err := newHTTPServer(bifrsot, entry, opts, tracers)
 		if err != nil {
 			return nil, err
 		}
@@ -116,7 +148,7 @@ func LoadFromConfig(path string) (*Bifrost, error) {
 
 	// main config file
 	fileProviderOpts := domain.FileProviderOptions{
-		Path: []string{path},
+		Paths: []string{path},
 	}
 
 	fileProvider := file.NewProvider(fileProviderOpts)
@@ -133,8 +165,8 @@ func LoadFromConfig(path string) (*Bifrost, error) {
 	fileProvider.Reset()
 
 	// file provider
-	if mainOpts.Providers.File.Enabled && len(mainOpts.Providers.File.Path) > 0 {
-		for _, content := range mainOpts.Providers.File.Path {
+	if mainOpts.Providers.File.Enabled && len(mainOpts.Providers.File.Paths) > 0 {
+		for _, content := range mainOpts.Providers.File.Paths {
 			fileProvider.Add(content)
 		}
 
@@ -193,7 +225,7 @@ func reload(bifrost *Bifrost) error {
 
 	// main config file
 	fileProviderOpts := domain.FileProviderOptions{
-		Path: []string{bifrost.configPath},
+		Paths: []string{bifrost.configPath},
 	}
 
 	fileProvider := file.NewProvider(fileProviderOpts)
@@ -210,8 +242,8 @@ func reload(bifrost *Bifrost) error {
 	fileProvider.Reset()
 
 	// file provider
-	if mainOpts.Providers.File.Enabled && len(mainOpts.Providers.File.Path) > 0 {
-		for _, content := range mainOpts.Providers.File.Path {
+	if mainOpts.Providers.File.Enabled && len(mainOpts.Providers.File.Paths) > 0 {
+		for _, content := range mainOpts.Providers.File.Paths {
 			fileProvider.Add(content)
 		}
 
