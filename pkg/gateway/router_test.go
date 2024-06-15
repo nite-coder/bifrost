@@ -2,7 +2,7 @@ package gateway
 
 import (
 	"context"
-	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/config"
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -10,7 +10,7 @@ import (
 )
 
 func TestRouters(t *testing.T) {
-	r := NewRouter()
+	r := newRouter()
 
 	err := r.add(POST, "/spot/orders", nil)
 	assert.NoError(t, err)
@@ -32,7 +32,7 @@ func dummyHandler(c context.Context, ctx *app.RequestContext) {
 
 // BenchmarkFind benchmarks the find function
 func BenchmarkFind(b *testing.B) {
-	router := NewRouter()
+	router := newRouter()
 	router.add(POST, "/spot/orders", dummyHandler)
 	router.add(POST, "/spot2/orders", dummyHandler)
 	router.add(POST, "/spot3/orders", dummyHandler)
@@ -66,7 +66,7 @@ func mockHandler(c context.Context, ctx *app.RequestContext) {
 
 // Test prefix matching
 func TestPrefixMatching(t *testing.T) {
-	router := NewRouter()
+	router := newRouter()
 
 	// Add prefix route
 	router.add("GET", "/market/btc*", mockHandler)
@@ -92,7 +92,7 @@ func TestPrefixMatching(t *testing.T) {
 
 // Test exact matching
 func TestExactMatching(t *testing.T) {
-	router := NewRouter()
+	router := newRouter()
 
 	// Add exact route
 	router.add("GET", "/market/btc", mockHandler)
@@ -118,22 +118,22 @@ func TestExactMatching(t *testing.T) {
 
 // Test prefix and exact matching priority
 func TestPrefixAndExactMatchingPriority(t *testing.T) {
-	router := NewRouter()
+	router := newRouter()
 
 	// Add prefix and exact routes
-	router.AddRoute(domain.RouteOptions{
+	router.AddRoute(config.RouteOptions{
 		Paths: []string{"/market/btc*"},
 	}, mockHandler)
 
-	router.AddRoute(domain.RouteOptions{
+	router.AddRoute(config.RouteOptions{
 		Paths: []string{"/market/usdt_hello*"},
 	}, mockHandler)
 
-	router.AddRoute(domain.RouteOptions{
+	router.AddRoute(config.RouteOptions{
 		Paths: []string{"/market/eth_usdt*"},
 	}, mockHandler)
 
-	router.AddRoute(domain.RouteOptions{
+	router.AddRoute(config.RouteOptions{
 		Paths: []string{"/market/btc"},
 	}, func(c context.Context, ctx *app.RequestContext) {
 		ctx.WriteString("exact handler")

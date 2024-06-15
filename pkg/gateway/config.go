@@ -2,14 +2,14 @@ package gateway
 
 import (
 	"fmt"
-	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/config"
 	"os"
 
 	"gopkg.in/yaml.v3"
 )
 
-func parseContent(content string) (domain.Options, error) {
-	result := domain.Options{}
+func parseContent(content string) (config.Options, error) {
+	result := config.Options{}
 
 	b := []byte(content)
 
@@ -21,7 +21,7 @@ func parseContent(content string) (domain.Options, error) {
 	return result, nil
 }
 
-func mergedOptions(mainOpts domain.Options, content string) (domain.Options, error) {
+func mergedOptions(mainOpts config.Options, content string) (config.Options, error) {
 
 	otherOpts, err := parseContent(content)
 	if err != nil {
@@ -29,23 +29,23 @@ func mergedOptions(mainOpts domain.Options, content string) (domain.Options, err
 	}
 
 	if mainOpts.Entries == nil {
-		mainOpts.Entries = make(map[string]domain.EntryOptions)
+		mainOpts.Entries = make(map[string]config.EntryOptions)
 	}
 
 	if mainOpts.Routes == nil {
-		mainOpts.Routes = make(map[string]domain.RouteOptions)
+		mainOpts.Routes = make(map[string]config.RouteOptions)
 	}
 
 	if mainOpts.Middlewares == nil {
-		mainOpts.Middlewares = make(map[string]domain.MiddlwareOptions)
+		mainOpts.Middlewares = make(map[string]config.MiddlwareOptions)
 	}
 
 	if mainOpts.Upstreams == nil {
-		mainOpts.Upstreams = make(map[string]domain.UpstreamOptions)
+		mainOpts.Upstreams = make(map[string]config.UpstreamOptions)
 	}
 
 	if mainOpts.Services == nil {
-		mainOpts.Services = make(map[string]domain.ServiceOptions)
+		mainOpts.Services = make(map[string]config.ServiceOptions)
 	}
 
 	for k, v := range otherOpts.Entries {
@@ -106,7 +106,7 @@ func fileExist(file string) bool {
 	return true
 }
 
-func validateOptions(opts domain.Options) error {
+func validateOptions(opts config.Options) error {
 	if len(opts.Entries) == 0 {
 		return fmt.Errorf("no entry found")
 	}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"http-benchmark/pkg/domain"
+	config1 "http-benchmark/pkg/config"
 	"math"
 	"net"
 	"strconv"
@@ -17,7 +17,7 @@ import (
 )
 
 type Upstream struct {
-	opts    domain.UpstreamOptions
+	opts    config1.UpstreamOptions
 	proxies []*ReverseProxy
 	index   atomic.Uint64
 }
@@ -33,7 +33,7 @@ var defaultClientOptions = []config.ClientOption{
 	client.WithKeepAlive(true),
 }
 
-func NewUpstream(bifrost *Bifrost, serviceOpts domain.ServiceOptions, opts domain.UpstreamOptions) (*Upstream, error) {
+func NewUpstream(bifrost *Bifrost, serviceOpts config1.ServiceOptions, opts config1.UpstreamOptions) (*Upstream, error) {
 
 	if len(opts.ID) == 0 {
 		return nil, fmt.Errorf("upstream id can't be empty")
@@ -88,11 +88,11 @@ func NewUpstream(bifrost *Bifrost, serviceOpts domain.ServiceOptions, opts domai
 		}
 
 		switch serviceOpts.Protocol {
-		case domain.ProtocolHTTP:
+		case config1.ProtocolHTTP:
 			if dnsResolver != nil {
 				clientOpts = append(clientOpts, client.WithDialer(newHTTPDialer(dnsResolver)))
 			}
-		case domain.ProtocolHTTPS:
+		case config1.ProtocolHTTPS:
 			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
 				InsecureSkipVerify: serviceOpts.TLSVerify,
 			}))
@@ -104,7 +104,7 @@ func NewUpstream(bifrost *Bifrost, serviceOpts domain.ServiceOptions, opts domai
 		}
 
 		url := fmt.Sprintf("%s://%s:%s%s", serviceOpts.Protocol, targetHost, port, serviceOpts.Path)
-		proxy, err := NewSingleHostReverseProxy(url, clientOpts...)
+		proxy, err := NewSingleHostReverseProxy(url, bifrost.opts.Observability.Tracing.Enabled, clientOpts...)
 
 		if err != nil {
 			return nil, err
@@ -125,11 +125,16 @@ func (u *Upstream) pickupByRoundRobin() *ReverseProxy {
 	return proxy
 }
 
-func allowDNS(str string) bool {
+func allowDNS(address string) bool {
 
-	if str == "localhost" {
+	ip := net.ParseIP(address)
+	if ip != nil {
 		return false
 	}
 
-	return net.ParseIP(str) == nil
+	if address == "localhost" || address == "[::1]" {
+		return false
+	}
+
+	return true
 }

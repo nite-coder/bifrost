@@ -3,7 +3,7 @@ package gateway
 import (
 	"context"
 	"errors"
-	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/config"
 	"regexp"
 	"sort"
 	"strings"
@@ -21,7 +21,7 @@ type node struct {
 type routeSetting struct {
 	regex      *regexp.Regexp
 	prefixPath string
-	route      *domain.RouteOptions
+	route      *config.RouteOptions
 	middleware []app.HandlerFunc
 }
 
@@ -38,8 +38,8 @@ type Router struct {
 	regexpRoutes []routeSetting
 }
 
-// NewRouter creates and returns a new router
-func NewRouter() *Router {
+// newRouter creates and returns a new router
+func newRouter() *Router {
 	r := &Router{
 		tree:         make(map[string]*node),
 		prefixRoutes: make([]routeSetting, 0),
@@ -126,7 +126,7 @@ func checkRegexpRoute(prefixSetting routeSetting, method, path string) bool {
 var upperLetterReg = regexp.MustCompile("^[A-Z]+$")
 
 // AddRoute adds a static route
-func (r *Router) AddRoute(routeOpts domain.RouteOptions, middlewares ...app.HandlerFunc) error {
+func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.HandlerFunc) error {
 	var err error
 
 	for _, path := range routeOpts.Paths {

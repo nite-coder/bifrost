@@ -3,7 +3,7 @@ package gateway
 import (
 	"context"
 	"fmt"
-	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"http-benchmark/pkg/middleware/addprefix"
 	"http-benchmark/pkg/middleware/replacepath"
@@ -13,6 +13,7 @@ import (
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type initMiddleware struct {
@@ -28,13 +29,23 @@ func newInitMiddleware(entryID string, logger *slog.Logger) *initMiddleware {
 }
 
 func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+	logger := m.logger
+
 	if len(ctx.Request.Header.Get("X-Forwarded-For")) > 0 {
 		ctx.Set("X-Forwarded-For", ctx.Request.Header.Get("X-Forwarded-For"))
 	}
 
-	ctx.Set(domain.ENTRY_ID, m.entryID)
+	spanCtx := trace.SpanContextFromContext(c)
+	if spanCtx.HasTraceID() {
+		traceID := spanCtx.TraceID().String()
+		ctx.Set(config.TRACE_ID, traceID)
 
-	c = log.NewContext(c, m.logger)
+		logger = logger.With(slog.String("trace_id", traceID))
+	}
+
+	ctx.Set(config.ENTRY_ID, m.entryID)
+
+	c = log.NewContext(c, logger)
 	ctx.Next(c)
 }
 

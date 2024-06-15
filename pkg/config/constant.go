@@ -1,4 +1,4 @@
-package domain
+package config
 
 const (
 	ENTRY_ID           = "$entry_id"
@@ -24,6 +24,7 @@ const (
 	UPSTREAM_DURATION  = "$upstream_duration"
 	UPSTREAM_STATUS    = "$upstream_status"
 	CLIENT_CANCELED_AT = "$client_canceled_at"
+	TRACE_ID           = "$trace_id"
 
 	B  = 1
 	KB = 1024 * B

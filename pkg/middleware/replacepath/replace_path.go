@@ -2,7 +2,7 @@ package replacepath
 
 import (
 	"context"
-	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/config"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -25,9 +25,9 @@ func NewMiddleware(newPath string) *ReplacePathMiddleware {
 
 func (m *ReplacePathMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	path := string(ctx.Request.Path())
-	_, found := ctx.Get(domain.REQUEST_PATH)
+	_, found := ctx.Get(config.REQUEST_PATH)
 	if !found {
-		ctx.Set(domain.REQUEST_PATH, path)
+		ctx.Set(config.REQUEST_PATH, path)
 	}
 
 	ctx.Request.Header.Set("X-Replaced-Path", path)

@@ -3,7 +3,7 @@ package accesslog
 import (
 	"bufio"
 	"context"
-	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/config"
 	"log/slog"
 	"net"
 	"os"
@@ -18,14 +18,14 @@ import (
 )
 
 type Tracer struct {
-	opts      domain.AccessLogOptions
+	opts      config.AccessLogOptions
 	matchVars []string
 	logChan   chan []string
 	logFile   *os.File
 	writer    *bufio.Writer
 }
 
-func NewTracer(opts domain.AccessLogOptions) (*Tracer, error) {
+func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 	if opts.TimeFormat == "" {
 		opts.TimeFormat = time.RFC3339
 	}
@@ -120,15 +120,15 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 
 	for _, matchVal := range t.matchVars {
 		switch matchVal {
-		case domain.TIME:
+		case config.TIME:
 			httpStart := c.GetTraceInfo().Stats().GetEvent(stats.HTTPStart)
 			if httpStart == nil {
 				continue
 			}
 
 			startTime := httpStart.Time()
-			replacements = append(replacements, domain.TIME, startTime.Format(t.opts.TimeFormat))
-		case domain.REMOTE_ADDR:
+			replacements = append(replacements, config.TIME, startTime.Format(t.opts.TimeFormat))
+		case config.REMOTE_ADDR:
 			var ip string
 			switch addr := c.RemoteAddr().(type) {
 			case *net.UDPAddr:
@@ -136,14 +136,14 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			case *net.TCPAddr:
 				ip = addr.IP.String()
 			}
-			replacements = append(replacements, domain.REMOTE_ADDR, ip)
-		case domain.REQUEST_METHOD:
-			replacements = append(replacements, domain.REQUEST_METHOD, b2s(c.Request.Method()))
-		case domain.REQUEST_URI:
+			replacements = append(replacements, config.REMOTE_ADDR, ip)
+		case config.REQUEST_METHOD:
+			replacements = append(replacements, config.REQUEST_METHOD, b2s(c.Request.Method()))
+		case config.REQUEST_URI:
 			buf := bytebufferpool.Get()
 			defer bytebufferpool.Put(buf)
 
-			val, found := c.Get(domain.REQUEST_PATH)
+			val, found := c.Get(config.REQUEST_PATH)
 			if found {
 				path, ok := val.(string)
 				if ok {
@@ -153,7 +153,7 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 						_, _ = buf.Write(c.Request.QueryString())
 					}
 
-					replacements = append(replacements, domain.REQUEST_URI, buf.String())
+					replacements = append(replacements, config.REQUEST_URI, buf.String())
 				}
 				continue
 			}
@@ -163,33 +163,33 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 				_, _ = buf.Write(questionByte)
 				_, _ = buf.Write(c.Request.QueryString())
 			}
-			replacements = append(replacements, domain.REQUEST_URI, buf.String())
+			replacements = append(replacements, config.REQUEST_URI, buf.String())
 
-		case domain.REQUEST_PATH:
-			val, found := c.Get(domain.REQUEST_PATH)
+		case config.REQUEST_PATH:
+			val, found := c.Get(config.REQUEST_PATH)
 			if found {
 				b, ok := val.([]byte)
 				if ok {
-					replacements = append(replacements, domain.REQUEST_PATH, b2s(b))
+					replacements = append(replacements, config.REQUEST_PATH, b2s(b))
 					continue
 				} else {
-					replacements = append(replacements, domain.REQUEST_PATH, "")
+					replacements = append(replacements, config.REQUEST_PATH, "")
 				}
 				continue
 			}
-			replacements = append(replacements, domain.REQUEST_PATH, b2s(c.Request.Path()))
-		case domain.REQUEST_PROTOCOL:
-			replacements = append(replacements, domain.REQUEST_PROTOCOL, c.Request.Header.GetProtocol())
-		case domain.REQUEST_BODY:
+			replacements = append(replacements, config.REQUEST_PATH, b2s(c.Request.Path()))
+		case config.REQUEST_PROTOCOL:
+			replacements = append(replacements, config.REQUEST_PROTOCOL, c.Request.Header.GetProtocol())
+		case config.REQUEST_BODY:
 			body := escape(b2s(c.Request.Body()), t.opts.Escape)
-			replacements = append(replacements, domain.REQUEST_BODY, body)
-		case domain.STATUS:
-			replacements = append(replacements, domain.STATUS, strconv.Itoa(c.Response.StatusCode()))
-		case domain.UPSTREAM_PROTOCOL:
-			replacements = append(replacements, domain.UPSTREAM_PROTOCOL, c.Request.Header.GetProtocol())
-		case domain.UPSTREAM_METHOD:
-			replacements = append(replacements, domain.UPSTREAM_METHOD, b2s(c.Request.Method()))
-		case domain.UPSTREAM_URI:
+			replacements = append(replacements, config.REQUEST_BODY, body)
+		case config.STATUS:
+			replacements = append(replacements, config.STATUS, strconv.Itoa(c.Response.StatusCode()))
+		case config.UPSTREAM_PROTOCOL:
+			replacements = append(replacements, config.UPSTREAM_PROTOCOL, c.Request.Header.GetProtocol())
+		case config.UPSTREAM_METHOD:
+			replacements = append(replacements, config.UPSTREAM_METHOD, b2s(c.Request.Method()))
+		case config.UPSTREAM_URI:
 			buf := bytebufferpool.Get()
 			defer bytebufferpool.Put(buf)
 
@@ -200,40 +200,40 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 				_, _ = buf.Write(c.Request.QueryString())
 			}
 
-			replacements = append(replacements, domain.UPSTREAM_URI, buf.String())
-		case domain.UPSTREAM_PATH:
-			replacements = append(replacements, domain.UPSTREAM_PATH, b2s(c.Request.Path()))
-		case domain.UPSTREAM_ADDR:
-			addr := c.GetString(domain.UPSTREAM_ADDR)
-			replacements = append(replacements, domain.UPSTREAM_ADDR, addr)
-		case domain.UPSTREAM_STATUS:
-			code := c.GetInt(domain.UPSTREAM_STATUS)
-			replacements = append(replacements, domain.UPSTREAM_STATUS, strconv.Itoa(code))
-		case domain.UPSTREAM_DURATION:
-			replacements = append(replacements, domain.UPSTREAM_DURATION, c.GetString(domain.UPSTREAM_DURATION))
-		case domain.DURATION:
+			replacements = append(replacements, config.UPSTREAM_URI, buf.String())
+		case config.UPSTREAM_PATH:
+			replacements = append(replacements, config.UPSTREAM_PATH, b2s(c.Request.Path()))
+		case config.UPSTREAM_ADDR:
+			addr := c.GetString(config.UPSTREAM_ADDR)
+			replacements = append(replacements, config.UPSTREAM_ADDR, addr)
+		case config.UPSTREAM_STATUS:
+			code := c.GetInt(config.UPSTREAM_STATUS)
+			replacements = append(replacements, config.UPSTREAM_STATUS, strconv.Itoa(code))
+		case config.UPSTREAM_DURATION:
+			replacements = append(replacements, config.UPSTREAM_DURATION, c.GetString(config.UPSTREAM_DURATION))
+		case config.DURATION:
 			httpStart := c.GetTraceInfo().Stats().GetEvent(stats.HTTPStart)
 			if httpStart == nil {
 				continue
 			}
 
-			val, found := c.Get(domain.CLIENT_CANCELED_AT)
+			val, found := c.Get(config.CLIENT_CANCELED_AT)
 
 			if found {
 				cancelTime := val.(time.Time)
 				dur := cancelTime.Sub(httpStart.Time()).Microseconds()
 				duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
-				replacements = append(replacements, domain.DURATION, duration)
+				replacements = append(replacements, config.DURATION, duration)
 				continue
 			}
 
 			dur := time.Since(httpStart.Time()).Microseconds()
 			duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
-			replacements = append(replacements, domain.DURATION, duration)
-		case domain.RECEIVED_SIZE:
-			replacements = append(replacements, domain.RECEIVED_SIZE, strconv.Itoa(info.RecvSize()))
-		case domain.SEND_SIZE:
-			replacements = append(replacements, domain.SEND_SIZE, strconv.Itoa(info.SendSize()))
+			replacements = append(replacements, config.DURATION, duration)
+		case config.RECEIVED_SIZE:
+			replacements = append(replacements, config.RECEIVED_SIZE, strconv.Itoa(info.RecvSize()))
+		case config.SEND_SIZE:
+			replacements = append(replacements, config.SEND_SIZE, strconv.Itoa(info.SendSize()))
 		default:
 
 			if strings.HasPrefix(matchVal, "$upstream_header_") {
@@ -273,17 +273,17 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 	return replacements
 }
 
-func escape(s string, escapeType domain.EscapeType) string {
+func escape(s string, escapeType config.EscapeType) string {
 	if len(s) == 0 {
 		return s
 	}
 
 	switch escapeType {
-	case domain.DefaultEscape:
+	case config.DefaultEscape:
 		s = escapeString(s)
-	case domain.JSONEscape:
+	case config.JSONEscape:
 		s = escapeJSON(s)
-	case domain.NoneEscape:
+	case config.NoneEscape:
 		return s
 	}
 

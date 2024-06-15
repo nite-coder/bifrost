@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"http-benchmark/pkg/domain"
+	config1 "http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"io"
 	"log/slog"
@@ -24,6 +24,8 @@ import (
 
 	configHTTP2 "github.com/hertz-contrib/http2/config"
 	"github.com/hertz-contrib/http2/factory"
+	"github.com/hertz-contrib/obs-opentelemetry/provider"
+	"github.com/hertz-contrib/obs-opentelemetry/tracing"
 	"github.com/hertz-contrib/pprof"
 	"golang.org/x/sys/unix"
 
@@ -31,14 +33,25 @@ import (
 )
 
 type HTTPServer struct {
-	entryOpts domain.EntryOptions
+	entryOpts config1.EntryOptions
 	switcher  *switcher
 	server    *server.Hertz
 }
 
-func newHTTPServer(bifrost *Bifrost, entryOpts domain.EntryOptions, opts domain.Options, tracers []tracer.Tracer) (*HTTPServer, error) {
+func newHTTPServer(bifrost *Bifrost, entryOpts config1.EntryOptions, opts config1.Options, tracers []tracer.Tracer) (*HTTPServer, error) {
 
 	//gopool.SetCap(20000)
+
+	hzOpts := []config.Option{
+		server.WithHostPorts(entryOpts.Bind),
+		server.WithIdleTimeout(entryOpts.IdleTimeout),
+		server.WithDisableDefaultDate(true),
+		server.WithDisablePrintRoute(true),
+		server.WithSenseClientDisconnection(true),
+		withDefaultServerHeader(true),
+		server.WithALPN(true),
+	}
+
 	engine, err := NewEngine(bifrost, entryOpts, opts)
 	if err != nil {
 		return nil, err
@@ -52,15 +65,7 @@ func newHTTPServer(bifrost *Bifrost, entryOpts domain.EntryOptions, opts domain.
 	hlog.SetLogger(logger)
 	hlog.SetSilentMode(true)
 
-	hzOpts := []config.Option{
-		server.WithHostPorts(entryOpts.Bind),
-		server.WithIdleTimeout(entryOpts.IdleTimeout),
-		server.WithDisableDefaultDate(true),
-		server.WithDisablePrintRoute(true),
-		server.WithSenseClientDisconnection(true),
-		withDefaultServerHeader(true),
-		server.WithALPN(true),
-	}
+	hzOpts = append(hzOpts, engine.options...)
 
 	for _, tracer := range tracers {
 		hzOpts = append(hzOpts, server.WithTracer(tracer))
@@ -157,13 +162,15 @@ func (s *HTTPServer) Run() {
 
 type Engine struct {
 	ID              string
-	opts            domain.Options
+	opts            config1.Options
 	handlers        app.HandlersChain
 	middlewares     app.HandlersChain
 	notFoundHandler app.HandlerFunc
+
+	options []config.Option
 }
 
-func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options) (*Engine, error) {
+func NewEngine(bifrost *Bifrost, entry config1.EntryOptions, opts config1.Options) (*Engine, error) {
 
 	// middlewares
 	middlewares := map[string]app.HandlerFunc{}
@@ -215,7 +222,7 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 	}
 
 	// routes
-	router := NewRouter()
+	router := newRouter()
 
 	for routeID, routeOpts := range opts.Routes {
 
@@ -281,6 +288,21 @@ func NewEngine(bifrost *Bifrost, entry domain.EntryOptions, opts domain.Options)
 		opts:            opts,
 		handlers:        make([]app.HandlerFunc, 0),
 		notFoundHandler: nil,
+		options:         make([]config.Option, 0),
+	}
+
+	// tracing
+	if opts.Observability.Tracing.Enabled {
+
+		provider.NewOpenTelemetryProvider(
+			provider.WithEnableMetrics(false),
+			provider.WithServiceName("bifrost"),
+		)
+
+		tracer, cfg := tracing.NewServerTracer()
+		engine.options = append(engine.options, tracer)
+		tracingServerMiddleware := tracing.ServerMiddleware(cfg)
+		engine.Use(tracingServerMiddleware)
 	}
 
 	// init middlewares

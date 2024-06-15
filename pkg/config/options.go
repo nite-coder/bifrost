@@ -1,4 +1,4 @@
-package domain
+package config
 
 import "time"
 
@@ -26,6 +26,7 @@ type ObservabilityOptions struct {
 	Logging    LoggingOtions               `yaml:"logging" json:"logging"`
 	AccessLogs map[string]AccessLogOptions `yaml:"access_logs" json:"access_logs"`
 	Metrics    MetricOptions               `yaml:"metrics" json:"metrics"`
+	Tracing    TracingOptions              `yaml:"tracing" json:"tracing"`
 }
 
 type MetricOptions struct {
@@ -44,6 +45,24 @@ type PrometheusOptions struct {
 	Bind    string    `yaml:"bind" json:"bind"`
 	Path    string    `yaml:"path" json:"path"`
 	Buckets []float64 `yaml:"buckets" json:"buckets"`
+}
+
+type TracingOptions struct {
+	Enabled bool        `yaml:"enabled" json:"enabled"`
+	OTLP    OTLPOptions `yaml:"otlp" json:"otlp"`
+}
+
+type OTLPOptions struct {
+	HTTP OTLPHTTPOptions `yaml:"http" json:"http"`
+	GRPC OTLPGRPCOptions `yaml:"grpc" json:"grpc"`
+}
+
+type OTLPHTTPOptions struct {
+	Endpoint string `yaml:"endpoint" json:"endpoint"`
+}
+
+type OTLPGRPCOptions struct {
+	Endpoint string `yaml:"endpoint" json:"endpoint"`
 }
 
 type EntryOptions struct {

@@ -2,14 +2,14 @@ package log
 
 import (
 	"fmt"
-	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/config"
 	"io"
 	"log/slog"
 	"os"
 	"strings"
 )
 
-func NewLogger(opts domain.LoggingOtions) (*slog.Logger, error) {
+func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 	var err error
 
 	logOptions := &slog.HandlerOptions{}

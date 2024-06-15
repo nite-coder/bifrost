@@ -16,7 +16,7 @@ func WithDefaultServerHeader(disable bool) config.Option {
 }
 
 const (
-	port        = ":8000"
+	bind        = ":8000"
 	actionQuery = "action"
 	order       = `{
 		"id": "1852454420",
@@ -153,7 +153,7 @@ func main() {
 	orderbookResp = []byte(orderbook)
 
 	opts := []config.Option{
-		server.WithHostPorts(port),
+		server.WithHostPorts(bind),
 		server.WithIdleTimeout(time.Second * 60),
 		server.WithReadTimeout(time.Second * 3),
 		server.WithWriteTimeout(time.Second * 3),

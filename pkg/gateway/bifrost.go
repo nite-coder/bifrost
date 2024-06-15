@@ -2,7 +2,7 @@ package gateway
 
 import (
 	"fmt"
-	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"http-benchmark/pkg/provider/file"
 	"http-benchmark/pkg/tracer/accesslog"
@@ -18,6 +18,7 @@ type reloadFunc func(bifrost *Bifrost) error
 
 type Bifrost struct {
 	configPath   string
+	opts         config.Options
 	fileProvider *file.FileProvider
 	httpServers  map[string]*HTTPServer
 	resolver     *dnscache.Resolver
@@ -37,7 +38,7 @@ func (b *Bifrost) Run() {
 	}
 }
 
-func Load(opts domain.Options) (*Bifrost, error) {
+func Load(opts config.Options) (*Bifrost, error) {
 	// validate
 	err := validateOptions(opts)
 	if err != nil {
@@ -47,6 +48,7 @@ func Load(opts domain.Options) (*Bifrost, error) {
 	bifrsot := &Bifrost{
 		resolver:    &dnscache.Resolver{},
 		httpServers: make(map[string]*HTTPServer),
+		opts:        opts,
 	}
 
 	go func() {
@@ -147,7 +149,7 @@ func LoadFromConfig(path string) (*Bifrost, error) {
 	}
 
 	// main config file
-	fileProviderOpts := domain.FileProviderOptions{
+	fileProviderOpts := config.FileProviderOptions{
 		Paths: []string{path},
 	}
 
@@ -224,7 +226,7 @@ func reload(bifrost *Bifrost) error {
 	slog.Info("bifrost: reloading...")
 
 	// main config file
-	fileProviderOpts := domain.FileProviderOptions{
+	fileProviderOpts := config.FileProviderOptions{
 		Paths: []string{bifrost.configPath},
 	}
 

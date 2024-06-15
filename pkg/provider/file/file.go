@@ -1,7 +1,7 @@
 package file
 
 import (
-	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/config"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -17,12 +17,12 @@ type ContentInfo struct {
 	Path    string
 }
 type FileProvider struct {
-	opts      domain.FileProviderOptions
+	opts      config.FileProviderOptions
 	watcher   *fsnotify.Watcher
 	OnChanged ChangeFunc
 }
 
-func NewProvider(opts domain.FileProviderOptions) *FileProvider {
+func NewProvider(opts config.FileProviderOptions) *FileProvider {
 	return &FileProvider{
 		opts: opts,
 	}

@@ -2,7 +2,7 @@ package prometheus
 
 import (
 	"context"
-	"http-benchmark/pkg/domain"
+	config1 "http-benchmark/pkg/config"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -30,7 +30,7 @@ const (
 func genLabels(ctx *app.RequestContext) prom.Labels {
 	labels := make(prom.Labels)
 
-	entryID := ctx.GetString(domain.ENTRY_ID)
+	entryID := ctx.GetString(config1.ENTRY_ID)
 	labels[labelEntry] = defaultValIfEmpty(entryID, unknownLabelValue)
 	labels[labelMethod] = defaultValIfEmpty(string(ctx.Request.Method()), unknownLabelValue)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(ctx.Response.Header.StatusCode()), unknownLabelValue)
@@ -58,7 +58,7 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	}
 
 	info := c.GetTraceInfo().Stats()
-	entryID := c.GetString(domain.ENTRY_ID)
+	entryID := c.GetString(config1.ENTRY_ID)
 
 	httpStart := info.GetEvent(stats.HTTPStart)
 	httpFinish := info.GetEvent(stats.HTTPFinish)

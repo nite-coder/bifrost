@@ -27,7 +27,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"http-benchmark/pkg/domain"
+	config1 "http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"log/slog"
 	"net"
@@ -41,6 +41,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	hertztracing "github.com/hertz-contrib/obs-opentelemetry/tracing"
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -112,7 +113,7 @@ var hopHeaders = []string{
 // Note: if no config.ClientOption is passed it will use the default global client.Client instance.
 // When passing config.ClientOption it will initialize a local client.Client instance.
 // Using ReverseProxy.SetClient if there is need for shared customized client.Client instance.
-func NewSingleHostReverseProxy(target string, options ...config.ClientOption) (*ReverseProxy, error) {
+func NewSingleHostReverseProxy(target string, tracingEnabled bool, options ...config.ClientOption) (*ReverseProxy, error) {
 	addr, _ := url.Parse(target)
 
 	r := &ReverseProxy{
@@ -135,6 +136,9 @@ func NewSingleHostReverseProxy(target string, options ...config.ClientOption) (*
 
 	if len(options) != 0 {
 		c, err := client.NewClient(options...)
+		if tracingEnabled {
+			c.Use(hertztracing.ClientMiddleware())
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -243,7 +247,7 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	req := &ctx.Request
 	resp := &ctx.Response
 
-	ctx.Set(domain.UPSTREAM_ADDR, r.targetHost)
+	ctx.Set(config1.UPSTREAM_ADDR, r.targetHost)
 
 	// save tmp resp header
 	respTmpHeader := respTmpHeaderPool.Get().(map[string][]string)

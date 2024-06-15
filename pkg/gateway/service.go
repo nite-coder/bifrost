@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"http-benchmark/pkg/domain"
+	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"log/slog"
 	"strconv"
@@ -19,14 +19,14 @@ import (
 
 type Service struct {
 	bifrost           *Bifrost
-	options           domain.ServiceOptions
+	options           config.ServiceOptions
 	upstreams         map[string]*Upstream
 	proxy             *ReverseProxy
 	upstream          *Upstream
 	isDynamicUpstream bool
 }
 
-func newService(bifrost *Bifrost, opts *domain.ServiceOptions, upstreamOptions map[string]domain.UpstreamOptions) (*Service, error) {
+func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions map[string]config.UpstreamOptions) (*Service, error) {
 
 	svc := &Service{
 		bifrost:   bifrost,
@@ -40,7 +40,7 @@ func newService(bifrost *Bifrost, opts *domain.ServiceOptions, upstreamOptions m
 	}
 
 	if len(opts.Protocol) == 0 {
-		opts.Protocol = domain.ProtocolHTTP
+		opts.Protocol = config.ProtocolHTTP
 	}
 
 	// dynamic service
@@ -96,23 +96,21 @@ func newService(bifrost *Bifrost, opts *domain.ServiceOptions, upstreamOptions m
 	}
 
 	switch opts.Protocol {
-	case domain.ProtocolHTTP:
+	case config.ProtocolHTTP:
 		if dnsResolver != nil {
 			clientOpts = append(clientOpts, client.WithDialer(newHTTPDialer(dnsResolver)))
 		}
-	case domain.ProtocolHTTPS:
+	case config.ProtocolHTTPS:
 		clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
 			InsecureSkipVerify: opts.TLSVerify,
 		}))
 	}
 
 	url := fmt.Sprintf("%s://%s:%d%s", opts.Protocol, opts.Host, opts.Port, opts.Path)
-	proxy, err := NewSingleHostReverseProxy(url, clientOpts...)
+	proxy, err := NewSingleHostReverseProxy(url, bifrost.opts.Observability.Tracing.Enabled, clientOpts...)
 	if err != nil {
 		return nil, err
 	}
-
-	slog.Debug("service is running direct mode", slog.String("service_id", opts.ID))
 
 	svc.proxy = proxy
 	return svc, nil
@@ -148,9 +146,9 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 		proxy := svc.proxy
 		if svc.upstream != nil && proxy == nil {
-			ctx.Set(domain.UPSTREAM, svc.upstream.opts.ID)
+			ctx.Set(config.UPSTREAM, svc.upstream.opts.ID)
 			switch svc.upstream.opts.Strategy {
-			case domain.RoundRobinStrategy, "":
+			case config.RoundRobinStrategy, "":
 				proxy = svc.upstream.pickupByRoundRobin()
 			}
 		}
@@ -168,19 +166,19 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		mic := dur.Microseconds()
 		duration := float64(mic) / 1e6
 		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
-		ctx.Set(domain.UPSTREAM_DURATION, responseTime)
+		ctx.Set(config.UPSTREAM_DURATION, responseTime)
 
 		if ctx.GetBool("target_timeout") {
 			ctx.Response.SetStatusCode(504)
 		} else {
-			ctx.Set(domain.UPSTREAM_STATUS, ctx.Response.StatusCode())
+			ctx.Set(config.UPSTREAM_STATUS, ctx.Response.StatusCode())
 		}
 	})
 
 	select {
 	case <-c.Done():
 		time := time.Now()
-		ctx.Set(domain.CLIENT_CANCELED_AT, time)
+		ctx.Set(config.CLIENT_CANCELED_AT, time)
 
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
