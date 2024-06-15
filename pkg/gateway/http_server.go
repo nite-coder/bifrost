@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	config1 "http-benchmark/pkg/config"
+	bifrostConfig "http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"io"
 	"log/slog"
@@ -33,12 +33,12 @@ import (
 )
 
 type HTTPServer struct {
-	entryOpts config1.EntryOptions
+	entryOpts bifrostConfig.EntryOptions
 	switcher  *switcher
 	server    *server.Hertz
 }
 
-func newHTTPServer(bifrost *Bifrost, entryOpts config1.EntryOptions, opts config1.Options, tracers []tracer.Tracer) (*HTTPServer, error) {
+func newHTTPServer(bifrost *Bifrost, entryOpts bifrostConfig.EntryOptions, opts bifrostConfig.Options, tracers []tracer.Tracer) (*HTTPServer, error) {
 
 	//gopool.SetCap(20000)
 
@@ -162,7 +162,7 @@ func (s *HTTPServer) Run() {
 
 type Engine struct {
 	ID              string
-	opts            config1.Options
+	opts            bifrostConfig.Options
 	handlers        app.HandlersChain
 	middlewares     app.HandlersChain
 	notFoundHandler app.HandlerFunc
@@ -170,7 +170,7 @@ type Engine struct {
 	options []config.Option
 }
 
-func NewEngine(bifrost *Bifrost, entry config1.EntryOptions, opts config1.Options) (*Engine, error) {
+func NewEngine(bifrost *Bifrost, entry bifrostConfig.EntryOptions, opts bifrostConfig.Options) (*Engine, error) {
 
 	// middlewares
 	middlewares := map[string]app.HandlerFunc{}

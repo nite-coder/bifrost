@@ -21,7 +21,7 @@ func parseContent(content string) (config.Options, error) {
 	return result, nil
 }
 
-func mergedOptions(mainOpts config.Options, content string) (config.Options, error) {
+func mergeOptions(mainOpts config.Options, content string) (config.Options, error) {
 
 	otherOpts, err := parseContent(content)
 	if err != nil {

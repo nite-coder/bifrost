@@ -153,9 +153,7 @@ type ServiceOptions struct {
 	WriteTimeout        *time.Duration     `yaml:"write_timeout" json:"write_timeout"`
 	DailTimeout         *time.Duration     `yaml:"dail_timeout" json:"dail_timeout"`
 	Protocol            Protocol           `yaml:"protocol" json:"protocol"`
-	Host                string             `yaml:"host" json:"host"`
-	Port                int32              `yaml:"port" json:"port"`
-	Path                string             `yaml:"path" json:"path"`
+	Url                 string             `yaml:"url" json:"url"`
 	Middlewares         []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
 }
 

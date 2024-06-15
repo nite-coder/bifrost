@@ -7,7 +7,7 @@ import (
 	config1 "http-benchmark/pkg/config"
 	"math"
 	"net"
-	"strconv"
+	"net/url"
 	"sync/atomic"
 	"time"
 
@@ -30,6 +30,7 @@ var defaultClientOptions = []config.ClientOption{
 	client.WithDialTimeout(10 * time.Second),
 	client.WithClientReadTimeout(10 * time.Second),
 	client.WithWriteTimeout(10 * time.Second),
+	client.WithMaxIdleConnDuration(120 * time.Second),
 	client.WithKeepAlive(true),
 }
 
@@ -98,12 +99,17 @@ func NewUpstream(bifrost *Bifrost, serviceOpts config1.ServiceOptions, opts conf
 			}))
 		}
 
-		port := targetPort
-		if serviceOpts.Port > 0 {
-			port = strconv.FormatInt(int64(serviceOpts.Port), 10)
+		addr, err := url.Parse(serviceOpts.Url)
+		if err != nil {
+			return nil, err
 		}
 
-		url := fmt.Sprintf("%s://%s:%s%s", serviceOpts.Protocol, targetHost, port, serviceOpts.Path)
+		port := targetPort
+		if len(addr.Port()) > 0 {
+			port = addr.Port()
+		}
+
+		url := fmt.Sprintf("%s://%s:%s%s", serviceOpts.Protocol, targetHost, port, addr.Path)
 		proxy, err := NewSingleHostReverseProxy(url, bifrost.opts.Observability.Tracing.Enabled, clientOpts...)
 
 		if err != nil {

@@ -27,7 +27,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	config1 "http-benchmark/pkg/config"
+	bifrostConfig "http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"log/slog"
 	"net"
@@ -247,7 +247,7 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	req := &ctx.Request
 	resp := &ctx.Response
 
-	ctx.Set(config1.UPSTREAM_ADDR, r.targetHost)
+	ctx.Set(bifrostConfig.UPSTREAM_ADDR, r.targetHost)
 
 	// save tmp resp header
 	respTmpHeader := respTmpHeaderPool.Get().(map[string][]string)

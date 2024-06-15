@@ -38,7 +38,84 @@ func (b *Bifrost) Run() {
 	}
 }
 
+func LoadFromConfig(path string) (*Bifrost, error) {
+	return loadFromConfig(path, false)
+}
+
+func loadFromConfig(path string, isReload bool) (*Bifrost, error) {
+	if !fileExist(path) {
+		return nil, fmt.Errorf("config file not found, path: %s", path)
+	}
+
+	// main config file
+	fileProviderOpts := config.FileProviderOptions{
+		Paths: []string{path},
+	}
+
+	fileProvider := file.NewProvider(fileProviderOpts)
+
+	cInfo, err := fileProvider.Open()
+	if err != nil {
+		return nil, err
+	}
+
+	mainOpts, err := parseContent(cInfo[0].Content)
+	if err != nil {
+		return nil, err
+	}
+	fileProvider.Reset()
+
+	// file provider
+	if mainOpts.Providers.File.Enabled && len(mainOpts.Providers.File.Paths) > 0 {
+		for _, content := range mainOpts.Providers.File.Paths {
+			fileProvider.Add(content)
+		}
+
+		cInfo, err = fileProvider.Open()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, c := range cInfo {
+			mainOpts, err = mergeOptions(mainOpts, c.Content)
+			if err != nil {
+				errMsg := fmt.Sprintf("path: %s, error: %s", c.Path, err.Error())
+				return nil, fmt.Errorf(errMsg)
+			}
+		}
+	}
+
+	bifrost, err := load(mainOpts, isReload)
+	if err != nil {
+		return nil, err
+	}
+
+	if !isReload {
+		reloadCh := make(chan bool)
+		bifrost.fileProvider = fileProvider
+		bifrost.configPath = path
+		bifrost.onReload = reload
+		bifrost.reloadCh = reloadCh
+
+		if mainOpts.Providers.File.Watch {
+			fileProvider.Add(path)
+			fileProvider.OnChanged = func() error {
+				reloadCh <- true
+				return nil
+			}
+			_ = fileProvider.Watch()
+			bifrost.watch()
+		}
+	}
+
+	return bifrost, nil
+}
+
 func Load(opts config.Options) (*Bifrost, error) {
+	return load(opts, false)
+}
+
+func load(opts config.Options, isReload bool) (*Bifrost, error) {
 	// validate
 	err := validateOptions(opts)
 	if err != nil {
@@ -60,6 +137,7 @@ func Load(opts config.Options) (*Bifrost, error) {
 		slog.Info("refresh dns resolver")
 	}()
 
+	// system logger
 	logger, err := log.NewLogger(opts.Observability.Logging)
 	if err != nil {
 		return nil, err
@@ -69,7 +147,7 @@ func Load(opts config.Options) (*Bifrost, error) {
 	tracers := []tracer.Tracer{}
 
 	// prometheus tracer
-	if opts.Observability.Metrics.Prometheus.Enabled {
+	if opts.Observability.Metrics.Prometheus.Enabled && !isReload {
 		promOpts := []prometheus.Option{
 			prometheus.WithEnableGoCollector(true),
 			prometheus.WithDisableServer(false),
@@ -85,7 +163,7 @@ func Load(opts config.Options) (*Bifrost, error) {
 
 	// access log
 	accessLogTracers := map[string]*accesslog.Tracer{}
-	if len(opts.Observability.AccessLogs) > 0 {
+	if len(opts.Observability.AccessLogs) > 0 && !isReload {
 
 		for id, accessLogOptions := range opts.Observability.AccessLogs {
 			if !accessLogOptions.Enabled {
@@ -142,76 +220,15 @@ func Load(opts config.Options) (*Bifrost, error) {
 	return bifrsot, nil
 }
 
-func LoadFromConfig(path string) (*Bifrost, error) {
-
-	if !fileExist(path) {
-		return nil, fmt.Errorf("config file not found, path: %s", path)
-	}
-
-	// main config file
-	fileProviderOpts := config.FileProviderOptions{
-		Paths: []string{path},
-	}
-
-	fileProvider := file.NewProvider(fileProviderOpts)
-
-	cInfo, err := fileProvider.Open()
-	if err != nil {
-		return nil, err
-	}
-
-	mainOpts, err := parseContent(cInfo[0].Content)
-	if err != nil {
-		return nil, err
-	}
-	fileProvider.Reset()
-
-	// file provider
-	if mainOpts.Providers.File.Enabled && len(mainOpts.Providers.File.Paths) > 0 {
-		for _, content := range mainOpts.Providers.File.Paths {
-			fileProvider.Add(content)
-		}
-
-		cInfo, err = fileProvider.Open()
-		if err != nil {
-			return nil, err
-		}
-
-		for _, c := range cInfo {
-			mainOpts, err = mergedOptions(mainOpts, c.Content)
-			if err != nil {
-				errMsg := fmt.Sprintf("path: %s, error: %s", c.Path, err.Error())
-				return nil, fmt.Errorf(errMsg)
-			}
-		}
-	}
-
-	bifrost, err := Load(mainOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	reloadCh := make(chan bool)
-	bifrost.fileProvider = fileProvider
-	bifrost.configPath = path
-	bifrost.onReload = reload
-	bifrost.reloadCh = reloadCh
-
-	if mainOpts.Providers.File.Watch {
-		fileProvider.Add(path)
-		fileProvider.OnChanged = func() error {
-			reloadCh <- true
-			return nil
-		}
-		_ = fileProvider.Watch()
-		bifrost.watch()
-	}
-
-	return bifrost, nil
-}
-
 func (b *Bifrost) watch() {
 	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				slog.Error("bifrost: unknown error when reload config", "error", err)
+			}
+			b.watch()
+		}()
+
 		for {
 			<-b.reloadCh
 			err := b.onReload(b)
@@ -225,63 +242,22 @@ func (b *Bifrost) watch() {
 func reload(bifrost *Bifrost) error {
 	slog.Info("bifrost: reloading...")
 
-	// main config file
-	fileProviderOpts := config.FileProviderOptions{
-		Paths: []string{bifrost.configPath},
-	}
-
-	fileProvider := file.NewProvider(fileProviderOpts)
-
-	cInfo, err := fileProvider.Open()
+	newBifrost, err := loadFromConfig(bifrost.configPath, true)
 	if err != nil {
 		return err
 	}
 
-	mainOpts, err := parseContent(cInfo[0].Content)
-	if err != nil {
-		return err
-	}
-	fileProvider.Reset()
+	isReloaded := false
 
-	// file provider
-	if mainOpts.Providers.File.Enabled && len(mainOpts.Providers.File.Paths) > 0 {
-		for _, content := range mainOpts.Providers.File.Paths {
-			fileProvider.Add(content)
-		}
-
-		cInfo, err = fileProvider.Open()
-		if err != nil {
-			return err
-		}
-
-		for _, c := range cInfo {
-			mainOpts, err = mergedOptions(mainOpts, c.Content)
-			if err != nil {
-				errMsg := fmt.Sprintf("path: %s, error: %s", c.Path, err.Error())
-				return fmt.Errorf(errMsg)
-			}
+	for id, server := range bifrost.httpServers {
+		newServer, found := newBifrost.httpServers[id]
+		if found && server.entryOpts.Bind == newServer.entryOpts.Bind {
+			server.switcher.SetEngine(newServer.switcher.Engine())
+			isReloaded = true
 		}
 	}
 
-	isReload := false
-	for key, entryOpts := range mainOpts.Entries {
-		entryOpts.ID = key
-
-		engine, err := NewEngine(bifrost, entryOpts, mainOpts)
-		if err != nil {
-			return err
-		}
-
-		server, found := bifrost.httpServers[key]
-		if found && server.entryOpts.Bind == entryOpts.Bind {
-			server.switcher.SetEngine(engine)
-			isReload = true
-		}
-	}
-
-	if isReload {
-		slog.Info("bifrost is reload")
-	}
+	slog.Info("bifrost is reloaded successfully", "isReloaded", isReloaded)
 
 	return nil
 }

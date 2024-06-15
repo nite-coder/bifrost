@@ -7,6 +7,7 @@ import (
 	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"log/slog"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -18,12 +19,12 @@ import (
 )
 
 type Service struct {
-	bifrost           *Bifrost
-	options           config.ServiceOptions
-	upstreams         map[string]*Upstream
-	proxy             *ReverseProxy
-	upstream          *Upstream
-	isDynamicUpstream bool
+	bifrost         *Bifrost
+	options         config.ServiceOptions
+	upstreams       map[string]*Upstream
+	proxy           *ReverseProxy
+	upstream        *Upstream
+	dynamicUpstream string
 }
 
 func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions map[string]config.UpstreamOptions) (*Service, error) {
@@ -34,9 +35,16 @@ func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions m
 		upstreams: make(map[string]*Upstream),
 	}
 
+	addr, err := url.Parse(opts.Url)
+	if err != nil {
+		return nil, err
+	}
+
+	host := addr.Hostname()
+
 	// validate
-	if len(opts.Host) == 0 {
-		return nil, fmt.Errorf("service host can't be empty")
+	if len(host) == 0 {
+		return nil, fmt.Errorf("service host can't be empty. service_id: %s", opts.ID)
 	}
 
 	if len(opts.Protocol) == 0 {
@@ -44,15 +52,15 @@ func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions m
 	}
 
 	// dynamic service
-	if opts.Host[0] == '$' {
-		svc.isDynamicUpstream = true
+	if host[0] == '$' {
+		svc.dynamicUpstream = host
 		return svc, nil
 	}
 
 	// exist upstream
-	upstreamOpts, found := upstreamOptions[opts.Host]
+	upstreamOpts, found := upstreamOptions[host]
 	if found {
-		upstreamOpts.ID = opts.Host
+		upstreamOpts.ID = host
 
 		upstream, err := NewUpstream(bifrost, svc.options, upstreamOpts)
 		if err != nil {
@@ -87,8 +95,8 @@ func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions m
 	}
 
 	var dnsResolver dnscache.DNSResolver
-	if allowDNS(opts.Host) {
-		_, err := bifrost.resolver.LookupHost(context.Background(), opts.Host)
+	if allowDNS(host) {
+		_, err := bifrost.resolver.LookupHost(context.Background(), host)
 		if err != nil {
 			return nil, fmt.Errorf("lookup service host error: %v", err)
 		}
@@ -106,7 +114,12 @@ func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions m
 		}))
 	}
 
-	url := fmt.Sprintf("%s://%s:%d%s", opts.Protocol, opts.Host, opts.Port, opts.Path)
+	url := fmt.Sprintf("%s://%s%s", addr.Scheme, host, addr.Path)
+
+	if addr.Port() != "" {
+		url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, host, addr.Port(), addr.Path)
+	}
+
 	proxy, err := NewSingleHostReverseProxy(url, bifrost.opts.Observability.Tracing.Enabled, clientOpts...)
 	if err != nil {
 		return nil, err
@@ -126,8 +139,8 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			done <- true
 		}()
 
-		if svc.isDynamicUpstream {
-			upstreamName := ctx.GetString(svc.options.Host)
+		if len(svc.dynamicUpstream) > 0 {
+			upstreamName := ctx.GetString(svc.dynamicUpstream)
 
 			if len(upstreamName) == 0 {
 				logger.Warn("upstream is not found", slog.String("name", upstreamName))
