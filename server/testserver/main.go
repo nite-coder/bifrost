@@ -176,6 +176,16 @@ func main() {
 	h.POST("/long", longHandler)
 	h.GET("/dynamic_upstream", findUpstreamHandler)
 
+	h.GET("/users/:user_id/orders", func(c context.Context, ctx *app.RequestContext) {
+		userID := ctx.Param("user_id")
+		ctx.String(200, "orders:"+userID)
+	})
+
+	h.GET("/users/:name/orders1", func(c context.Context, ctx *app.RequestContext) {
+		name := ctx.Param("name")
+		ctx.String(200, "order1:"+name)
+	})
+
 	h.Spin()
 }
 

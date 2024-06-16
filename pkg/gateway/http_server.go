@@ -222,7 +222,14 @@ func NewEngine(bifrost *Bifrost, entry bifrostConfig.EntryOptions, opts bifrostC
 	}
 
 	// routes
-	router := newRouter(false)
+	isHostEnabled := false
+	for _, routeOpts := range opts.Routes {
+		if len(routeOpts.Hosts) > 0 {
+			isHostEnabled = true
+			break
+		}
+	}
+	router := newRouter(isHostEnabled)
 
 	for routeID, routeOpts := range opts.Routes {
 

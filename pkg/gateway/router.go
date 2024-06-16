@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"http-benchmark/pkg/config"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -13,9 +14,10 @@ import (
 
 // node represents a node in the Trie
 type node struct {
-	path     string           // Path name of the node
-	children map[string]*node // Child nodes, indexed by path name
-	handler  *methodHandler   // Handler functions
+	path               string           // Path name of the node
+	children           map[string]*node // Child nodes, indexed by path name
+	parameterizedChild *node
+	handler            *methodHandler // Handler functions
 }
 
 type routeSetting struct {
@@ -67,6 +69,13 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 	// prefix
 	for _, route := range r.prefixRoutes {
+		if len(route.route.Hosts) > 0 {
+			host := b2s(ctx.Host())
+			if !slices.Contains(route.route.Hosts, host) {
+				continue
+			}
+		}
+
 		if checkPrefixRoute(route, method, path) {
 			ctx.SetIndex(-1)
 			ctx.SetHandlers(route.middleware)
@@ -78,6 +87,14 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 	// regexp
 	for _, route := range r.regexpRoutes {
+
+		if len(route.route.Hosts) > 0 {
+			host := b2s(ctx.Host())
+			if !slices.Contains(route.route.Hosts, host) {
+				continue
+			}
+		}
+
 		if checkRegexpRoute(route, method, path) {
 			ctx.SetIndex(-1)
 			ctx.SetHandlers(route.middleware)
@@ -132,8 +149,9 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 	var err error
 
 	for _, path := range routeOpts.Paths {
+		first := path[:1]
 		// check prefix match
-		if strings.HasSuffix(path, "*") {
+		if first == "/" && strings.HasSuffix(path, "*") {
 			prefixPath := strings.TrimSpace(path[:len(path)-1])
 
 			prefixRoute := routeSetting{
@@ -152,7 +170,7 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 		}
 
 		// regexp match
-		if path[:1] == "~" {
+		if first == "~" {
 			expr := strings.TrimSpace(path[1:])
 			regx, err := regexp.Compile(expr)
 			if err != nil {
@@ -169,52 +187,68 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 			return nil
 		}
 
-		if len(routeOpts.Methods) == 0 {
-			err = r.add(GET, path, middlewares...)
-			if err != nil {
-				return err
-			}
-			err = r.add(POST, path, middlewares...)
-			if err != nil {
-				return err
-			}
-			err = r.add(PUT, path, middlewares...)
-			if err != nil {
-				return err
-			}
-			err = r.add(DELETE, path, middlewares...)
-			if err != nil {
-				return err
-			}
-			err = r.add(PATCH, path, middlewares...)
-			if err != nil {
-				return err
-			}
-			err = r.add(CONNECT, path, middlewares...)
-			if err != nil {
-				return err
-			}
-			err = r.add(HEAD, path, middlewares...)
-			if err != nil {
-				return err
-			}
-			err = r.add(TRACE, path, middlewares...)
-			if err != nil {
-				return err
-			}
-			err = r.add(OPTIONS, path, middlewares...)
-			if err != nil {
-				return err
-			}
+		// static route
+		if first != "/" {
+			return fmt.Errorf("router: '%s' is invalid path.  Path needs to begin with '/'", path)
+		}
+		hosts := routeOpts.Hosts
+		if len(hosts) == 0 {
+			hosts = []string{"/:host"}
 		}
 
-		for _, method := range routeOpts.Methods {
-			if matches := upperLetterReg.MatchString(method); !matches {
-				panic("http method " + method + " is not valid")
+		for _, host := range hosts {
+
+			if r.isHostEnabled {
+				path = fmt.Sprintf("/%s%s", host, path)
 			}
-			err = r.add(method, path, middlewares...)
-			if err != nil {
-				return err
+
+			if len(routeOpts.Methods) == 0 {
+				err = r.add(GET, path, middlewares...)
+				if err != nil {
+					return err
+				}
+				err = r.add(POST, path, middlewares...)
+				if err != nil {
+					return err
+				}
+				err = r.add(PUT, path, middlewares...)
+				if err != nil {
+					return err
+				}
+				err = r.add(DELETE, path, middlewares...)
+				if err != nil {
+					return err
+				}
+				err = r.add(PATCH, path, middlewares...)
+				if err != nil {
+					return err
+				}
+				err = r.add(CONNECT, path, middlewares...)
+				if err != nil {
+					return err
+				}
+				err = r.add(HEAD, path, middlewares...)
+				if err != nil {
+					return err
+				}
+				err = r.add(TRACE, path, middlewares...)
+				if err != nil {
+					return err
+				}
+				err = r.add(OPTIONS, path, middlewares...)
+				if err != nil {
+					return err
+				}
+			}
+
+			for _, method := range routeOpts.Methods {
+				if matches := upperLetterReg.MatchString(method); !matches {
+					panic("http method " + method + " is not valid")
+				}
+				err = r.add(method, path, middlewares...)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -242,22 +276,39 @@ func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) 
 	}
 
 	// Split the path and traverse the nodes
-	pathArray := strings.Split(path, "/")
-	for _, element := range pathArray {
-		if len(element) == 0 {
+	parts := strings.Split(path, "/")
+	for _, part := range parts {
+		if len(part) == 0 {
 			continue
 		}
 
-		// Find if the current node's children contain a node with the same name
-		childNode := currentNode.findChildByName(element)
-
-		// If not found, create a new node
-		if childNode == nil {
-			childNode = newNode(element)
-			currentNode.addChild(childNode)
+		isParameter := len(part) > 0 && part[0] == ':'
+		if len(part) == 0 {
+			continue
 		}
 
-		currentNode = childNode
+		if isParameter {
+			var childNode *node
+			if currentNode.parameterizedChild != nil {
+				childNode = currentNode.parameterizedChild
+			} else {
+				childNode = newNode(part)
+				currentNode.parameterizedChild = childNode
+			}
+			currentNode = childNode
+		} else {
+			// Find if the current node's children contain a node with the same name
+			childNode := currentNode.findChildByName(part)
+
+			// If not found, create a new node
+			if childNode == nil {
+				childNode = newNode(part)
+				currentNode.addChild(childNode)
+			}
+
+			currentNode = childNode
+		}
+
 	}
 
 	// Add handler functions to the final node
@@ -302,6 +353,10 @@ func (r *Router) find(method string, path string) []app.HandlerFunc {
 		childNode := currentNode.findChildByName(segment)
 
 		// If no matching node is found, return nil
+		if childNode == nil {
+			childNode = currentNode.parameterizedChild
+		}
+
 		if childNode == nil {
 			return nil
 		}
