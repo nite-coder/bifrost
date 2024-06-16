@@ -32,18 +32,20 @@ type methodHandler struct {
 
 // Router struct contains the Trie and handler chain
 type Router struct {
-	tree map[string]*node // Root node of the Trie, indexed by HTTP method
+	isHostEnabled bool
+	tree          *node // Root node of the Trie
 
 	prefixRoutes []routeSetting
 	regexpRoutes []routeSetting
 }
 
 // newRouter creates and returns a new router
-func newRouter() *Router {
+func newRouter(isHostEnabled bool) *Router {
 	r := &Router{
-		tree:         make(map[string]*node),
-		prefixRoutes: make([]routeSetting, 0),
-		regexpRoutes: make([]routeSetting, 0),
+		isHostEnabled: isHostEnabled,
+		tree:          newNode("/"),
+		prefixRoutes:  make([]routeSetting, 0),
+		regexpRoutes:  make([]routeSetting, 0),
 	}
 
 	return r
@@ -231,12 +233,7 @@ func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) 
 		path = path[1:]
 	}
 
-	// Ensure the Trie root node for the HTTP method exists
-	if _, ok := r.tree[method]; !ok {
-		r.tree[method] = newNode("/")
-	}
-
-	currentNode := r.tree[method]
+	currentNode := r.tree
 
 	// If the path is the root path, add handler functions directly
 	if path == "" {
@@ -273,13 +270,7 @@ func (r *Router) find(method string, path string) []app.HandlerFunc {
 	// Ensure the path is valid and sanitized
 	path = sanitizeUrl(path)
 
-	// Check if the Trie root node for the HTTP method exists
-	rootNode, ok := r.tree[method]
-	if !ok {
-		return nil
-	}
-
-	currentNode := rootNode
+	currentNode := r.tree
 
 	// If the path is the root path, return the handler functions directly
 	if path == "/" {

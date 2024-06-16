@@ -9,22 +9,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Mock handler function for testing
-func mockHandler(c context.Context, ctx *app.RequestContext) {
+func exactkHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(201)
 }
 
-func exactkHandler(c context.Context, ctx *app.RequestContext) {
-	ctx.SetStatusCode(204)
+func prefixHandler(c context.Context, ctx *app.RequestContext) {
+	ctx.SetStatusCode(202)
 }
 
-// Test exact matching
+func regexkHandler(c context.Context, ctx *app.RequestContext) {
+	ctx.SetStatusCode(203)
+}
+
 func TestRoutes(t *testing.T) {
-	router := newRouter()
+	router := newRouter(false)
 
 	err := router.AddRoute(config.RouteOptions{
 		Paths: []string{"/market/btc*"},
-	}, mockHandler)
+	}, prefixHandler)
 	assert.NoError(t, err)
 
 	err = router.AddRoute(config.RouteOptions{
@@ -34,41 +36,123 @@ func TestRoutes(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = router.AddRoute(config.RouteOptions{
-		Paths: []string{"~/futures/(btc|usdt|eth)"},
-	}, mockHandler)
+		Paths: []string{"~/market/(btc|usdt|eth)$"},
+		Hosts: []string{"abc.com"},
+	}, regexkHandler)
 	assert.NoError(t, err)
 
 	err = router.AddRoute(config.RouteOptions{
 		Paths: []string{"orders"},
-	}, mockHandler)
+	}, nil)
 	assert.Error(t, err)
 
 	testCases := []struct {
 		method         string
+		host           string
 		path           string
 		expectedResult int
 	}{
-		{"POST", "/spot/order", 204},
-		{"GET", "/market/btc", 204},
+		{"POST", "abc.com", "/spot/order", 201},
+		{"GET", "abc.com", "/market/btc", 201},
 
-		{"PUT", "/market/btcusdt/cool", 201},
-		{"GET", "/market/btc/", 201},
+		{"PUT", "abc.com", "/market/btcusdt/cool", 202},
+		{"GET", "abc.com", "/market/btc/", 202},
 
-		{"DELETE", "/futures/eth/orders", 201},
+		{"DELETE", "abc.com", "/market/eth", 203},
 
-		{"PATCH", "/market/eth", 200},
+		{"DELETE", "abc.com", "/market/eth/orders", 200}, // not found
 	}
 
 	for _, tc := range testCases {
 		c := &app.RequestContext{}
 		c.Request.SetMethod(tc.method)
 		c.Request.URI().SetPath(tc.path)
+		c.Request.SetHost(tc.host)
 
 		router.ServeHTTP(context.Background(), c)
 		statusCode := c.Response.StatusCode()
 
 		if statusCode != tc.expectedResult {
 			t.Errorf("Expected %v for path %s, but got %v", tc.expectedResult, tc.path, statusCode)
+		}
+	}
+}
+
+func loadStaticRouter() *Router {
+	router := newRouter(false)
+	_ = router.add("GET", "/", exactkHandler)
+	_ = router.add("GET", "/foo", exactkHandler)
+	_ = router.add("GET", "/foo/bar/baz/qux/quux", exactkHandler)
+	_ = router.add("GET", "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred", exactkHandler)
+	return router
+}
+
+func BenchmarkStaticRoot(b *testing.B) {
+	router := loadStaticRouter()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	benchmark(b, router, "GET", "/foo")
+}
+
+func BenchmarkStatic1(b *testing.B) {
+	router := loadStaticRouter()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	benchmark(b, router, "GET", "/foo")
+}
+
+func BenchmarkStatic5(b *testing.B) {
+	router := loadStaticRouter()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	benchmark(b, router, "GET", "/foo/bar/baz/qux/quux")
+}
+
+func BenchmarkStatic10(b *testing.B) {
+	router := loadStaticRouter()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	benchmark(b, router, "GET", "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred")
+}
+
+func benchmark(b *testing.B, router *Router, method, path string) {
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		handlers := router.find(method, path)
+		if len(handlers) != 1 {
+			b.Errorf("Expected 1 handler, got %d", len(handlers))
+		}
+	}
+}
+
+func setupMap() map[string]*node {
+	m := make(map[string]*node)
+	// for i := 0; i < 50; i++ {
+	// 	key := fmt.Sprintf("futures%d", i)
+	// 	m[key] = &node{}
+	// }
+	m[""] = &node{}
+	return m
+}
+
+func BenchmarkMapLookup(b *testing.B) {
+	m := setupMap()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, found := m[""]
+		if !found {
+			b.Errorf("key not found")
 		}
 	}
 }

@@ -222,7 +222,7 @@ func NewEngine(bifrost *Bifrost, entry bifrostConfig.EntryOptions, opts bifrostC
 	}
 
 	// routes
-	router := newRouter()
+	router := newRouter(false)
 
 	for routeID, routeOpts := range opts.Routes {
 
