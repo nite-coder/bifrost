@@ -2,7 +2,7 @@ package gateway
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"http-benchmark/pkg/config"
 	"regexp"
 	"sort"
@@ -223,7 +223,7 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 // add adds a static route
 func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) error {
 	if len(path) == 0 || path[0] != '/' {
-		return errors.New("router: invalid path")
+		return fmt.Errorf("router: '%s' is invalid path.  Path needs to begin with '/'", path)
 	}
 
 	// Remove leading slash

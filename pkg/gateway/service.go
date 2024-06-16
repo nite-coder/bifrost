@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bytedance/gopkg/util/gopool"
@@ -62,7 +63,7 @@ func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions m
 	if found {
 		upstreamOpts.ID = host
 
-		upstream, err := NewUpstream(bifrost, svc.options, upstreamOpts)
+		upstream, err := newUpstream(bifrost, svc.options, upstreamOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -103,12 +104,12 @@ func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions m
 		dnsResolver = bifrost.resolver
 	}
 
-	switch opts.Protocol {
-	case config.ProtocolHTTP:
+	switch strings.ToLower(addr.Scheme) {
+	case "http":
 		if dnsResolver != nil {
 			clientOpts = append(clientOpts, client.WithDialer(newHTTPDialer(dnsResolver)))
 		}
-	case config.ProtocolHTTPS:
+	case "https":
 		clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
 			InsecureSkipVerify: opts.TLSVerify,
 		}))
@@ -120,7 +121,7 @@ func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions m
 		url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, host, addr.Port(), addr.Path)
 	}
 
-	proxy, err := NewSingleHostReverseProxy(url, bifrost.opts.Observability.Tracing.Enabled, clientOpts...)
+	proxy, err := newSingleHostReverseProxy(url, bifrost.opts.Observability.Tracing.Enabled, 0, clientOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +163,11 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			ctx.Set(config.UPSTREAM, svc.upstream.opts.ID)
 			switch svc.upstream.opts.Strategy {
 			case config.RoundRobinStrategy, "":
-				proxy = svc.upstream.pickupByRoundRobin()
+				proxy = svc.upstream.roundRobin()
+			case config.WeightedStrategy:
+				proxy = svc.upstream.weighted()
+			case config.RandomStrategy:
+				proxy = svc.upstream.random()
 			}
 		}
 
@@ -207,5 +212,4 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		ctx.Response.SetStatusCode(499)
 	case <-done:
 	}
-
 }

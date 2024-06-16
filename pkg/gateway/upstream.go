@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	config1 "http-benchmark/pkg/config"
+	bifrostConfig "http-benchmark/pkg/config"
 	"math"
+	"math/rand"
 	"net"
 	"net/url"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -17,9 +19,11 @@ import (
 )
 
 type Upstream struct {
-	opts    config1.UpstreamOptions
-	proxies []*ReverseProxy
-	index   atomic.Uint64
+	opts        bifrostConfig.UpstreamOptions
+	proxies     []*ReverseProxy
+	counter     atomic.Uint64
+	totalWeight int
+	rng         *rand.Rand
 }
 
 var defaultClientOptions = []config.ClientOption{
@@ -34,7 +38,7 @@ var defaultClientOptions = []config.ClientOption{
 	client.WithKeepAlive(true),
 }
 
-func NewUpstream(bifrost *Bifrost, serviceOpts config1.ServiceOptions, opts config1.UpstreamOptions) (*Upstream, error) {
+func newUpstream(bifrost *Bifrost, serviceOpts bifrostConfig.ServiceOptions, opts bifrostConfig.UpstreamOptions) (*Upstream, error) {
 
 	if len(opts.ID) == 0 {
 		return nil, fmt.Errorf("upstream id can't be empty")
@@ -47,32 +51,39 @@ func NewUpstream(bifrost *Bifrost, serviceOpts config1.ServiceOptions, opts conf
 	// direct proxy
 	clientOpts := defaultClientOptions
 
-	if opts.DailTimeout != nil {
-		clientOpts = append(clientOpts, client.WithDialTimeout(*opts.DailTimeout))
+	if serviceOpts.DailTimeout != nil {
+		clientOpts = append(clientOpts, client.WithDialTimeout(*serviceOpts.DailTimeout))
 	}
 
-	if opts.ReadTimeout != nil {
-		clientOpts = append(clientOpts, client.WithClientReadTimeout(*opts.ReadTimeout))
+	if serviceOpts.ReadTimeout != nil {
+		clientOpts = append(clientOpts, client.WithClientReadTimeout(*serviceOpts.ReadTimeout))
 	}
 
-	if opts.WriteTimeout != nil {
-		clientOpts = append(clientOpts, client.WithWriteTimeout(*opts.WriteTimeout))
+	if serviceOpts.WriteTimeout != nil {
+		clientOpts = append(clientOpts, client.WithWriteTimeout(*serviceOpts.WriteTimeout))
 	}
 
-	if opts.MaxConnWaitTimeout != nil {
-		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(*opts.MaxConnWaitTimeout))
+	if serviceOpts.MaxConnWaitTimeout != nil {
+		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(*serviceOpts.MaxConnWaitTimeout))
 	}
 
-	if opts.MaxIdleConnsPerHost != nil {
-		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*opts.MaxIdleConnsPerHost))
+	if serviceOpts.MaxIdleConnsPerHost != nil {
+		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*serviceOpts.MaxIdleConnsPerHost))
 	}
 
 	upstream := &Upstream{
 		opts:    opts,
 		proxies: make([]*ReverseProxy, 0),
+		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 
 	for _, targetOpts := range opts.Targets {
+
+		if opts.Strategy == bifrostConfig.WeightedStrategy && targetOpts.Weight == 0 {
+			return nil, fmt.Errorf("weight can't be 0. upstream id: %s, target: %s", opts.ID, targetOpts.Target)
+		}
+
+		upstream.totalWeight += targetOpts.Weight
 
 		targetHost, targetPort, err := net.SplitHostPort(targetOpts.Target)
 		if err != nil {
@@ -88,20 +99,20 @@ func NewUpstream(bifrost *Bifrost, serviceOpts config1.ServiceOptions, opts conf
 			dnsResolver = bifrost.resolver
 		}
 
-		switch serviceOpts.Protocol {
-		case config1.ProtocolHTTP:
-			if dnsResolver != nil {
-				clientOpts = append(clientOpts, client.WithDialer(newHTTPDialer(dnsResolver)))
-			}
-		case config1.ProtocolHTTPS:
-			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
-				InsecureSkipVerify: serviceOpts.TLSVerify,
-			}))
-		}
-
 		addr, err := url.Parse(serviceOpts.Url)
 		if err != nil {
 			return nil, err
+		}
+
+		switch strings.ToLower(addr.Scheme) {
+		case "http":
+			if dnsResolver != nil {
+				clientOpts = append(clientOpts, client.WithDialer(newHTTPDialer(dnsResolver)))
+			}
+		case "https":
+			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
+				InsecureSkipVerify: serviceOpts.TLSVerify,
+			}))
 		}
 
 		port := targetPort
@@ -110,7 +121,7 @@ func NewUpstream(bifrost *Bifrost, serviceOpts config1.ServiceOptions, opts conf
 		}
 
 		url := fmt.Sprintf("%s://%s:%s%s", serviceOpts.Protocol, targetHost, port, addr.Path)
-		proxy, err := NewSingleHostReverseProxy(url, bifrost.opts.Observability.Tracing.Enabled, clientOpts...)
+		proxy, err := newSingleHostReverseProxy(url, bifrost.opts.Observability.Tracing.Enabled, targetOpts.Weight, clientOpts...)
 
 		if err != nil {
 			return nil, err
@@ -118,17 +129,44 @@ func NewUpstream(bifrost *Bifrost, serviceOpts config1.ServiceOptions, opts conf
 		upstream.proxies = append(upstream.proxies, proxy)
 	}
 
+	if opts.Strategy == bifrostConfig.RoundRobinStrategy {
+		go func() {
+			ticker := time.NewTicker(1 * time.Minute)
+			for range ticker.C {
+				upstream.counter.Store(0)
+			}
+		}()
+	}
+
 	return upstream, nil
 }
 
-func (u *Upstream) pickupByRoundRobin() *ReverseProxy {
+func (u *Upstream) roundRobin() *ReverseProxy {
 	if len(u.proxies) == 1 {
 		return u.proxies[0]
 	}
 
-	index := u.index.Add(1)
+	index := u.counter.Add(1)
 	proxy := u.proxies[(int(index)-1)%len(u.proxies)]
 	return proxy
+}
+
+func (u *Upstream) weighted() *ReverseProxy {
+	randomWeight := u.rng.Intn(u.totalWeight)
+
+	for _, proxy := range u.proxies {
+		randomWeight -= proxy.weight
+		if randomWeight < 0 {
+			return proxy
+		}
+	}
+
+	return nil
+}
+
+func (u *Upstream) random() *ReverseProxy {
+	selectedIndex := u.rng.Intn(len(u.proxies))
+	return u.proxies[selectedIndex]
 }
 
 func allowDNS(address string) bool {

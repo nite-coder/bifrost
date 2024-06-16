@@ -104,7 +104,6 @@ type MiddlwareOptions struct {
 type UpstreamStrategy string
 
 const (
-	FirstStrategy      UpstreamStrategy = "first"
 	RandomStrategy     UpstreamStrategy = "random"
 	RoundRobinStrategy UpstreamStrategy = "round_robin"
 	WeightedStrategy   UpstreamStrategy = "weighted"
@@ -116,32 +115,26 @@ type TargetOptions struct {
 }
 
 type UpstreamOptions struct {
-	ID                  string           `yaml:"-" json:"-"`
-	Strategy            UpstreamStrategy `yaml:"strategy" json:"strategy"`
-	Targets             []TargetOptions  `yaml:"targets" json:"targets"`
-	InsecureSkipVerify  *bool            `yaml:"insecure_skip_verify" json:"insecure_skip_verify"`
-	MaxConnWaitTimeout  *time.Duration   `yaml:"max_conn_wait_timeout" json:"max_conn_wait_timeout"`
-	MaxIdleConnsPerHost *int             `yaml:"max_idle_conns_per_host" json:"max_idle_conns_per_host"`
-	KeepAlive           *bool            `yaml:"keep_alive" json:"keep_alive"`
-	ReadTimeout         *time.Duration   `yaml:"read_timeout" json:"read_timeout"`
-	WriteTimeout        *time.Duration   `yaml:"write_timeout" json:"write_timeout"`
-	DailTimeout         *time.Duration   `yaml:"dail_timeout" json:"dail_timeout"`
+	ID       string           `yaml:"-" json:"-"`
+	Strategy UpstreamStrategy `yaml:"strategy" json:"strategy"`
+	Targets  []TargetOptions  `yaml:"targets" json:"targets"`
 }
 
 type RouteOptions struct {
-	ID          string             `yaml:"-" json:"-"`
-	Paths       []string           `yaml:"paths" json:"paths"`
-	Methods     []string           `yaml:"methods" json:"methods"`
-	Entries     []string           `yaml:"entries" json:"entries"`
-	Middlewares []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
-	ServiceID   string             `yaml:"service_id" json:"service_id"`
+	ID          string              `yaml:"-" json:"-"`
+	Hosts       []string            `yaml:"hosts" json:"hosts"`
+	Methods     []string            `yaml:"methods" json:"methods"`
+	Paths       []string            `yaml:"paths" json:"paths"`
+	Headers     map[string][]string `yaml:"headers" json:"headers"`
+	Entries     []string            `yaml:"entries" json:"entries"`
+	Middlewares []MiddlwareOptions  `yaml:"middlewares" json:"middlewares"`
+	ServiceID   string              `yaml:"service_id" json:"service_id"`
 }
 
 type Protocol string
 
 const (
-	ProtocolHTTP  Protocol = "http"
-	ProtocolHTTPS Protocol = "https"
+	ProtocolHTTP Protocol = "http"
 )
 
 type ServiceOptions struct {

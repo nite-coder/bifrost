@@ -6,7 +6,7 @@ export const options = {
         contacts: {
             executor: 'constant-vus',
             vus: 500,
-            duration: '120s',
+            duration: '10s',
         },
     },
     insecureSkipTLSVerify: true,
@@ -14,7 +14,7 @@ export const options = {
 };
 
 export default function () {
-    const url = 'http://127.0.0.1:80/spot/orders?a=b';
+    const url = 'http://127.0.0.1:8001/spot/orders?a=b';
 
     const payload = JSON.stringify({
         "market": "BTC_USDT",

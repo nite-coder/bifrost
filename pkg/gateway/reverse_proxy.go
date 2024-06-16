@@ -83,6 +83,8 @@ type ReverseProxy struct {
 	errorHandler func(*app.RequestContext, error)
 
 	targetHost string
+
+	weight int
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -102,18 +104,18 @@ var hopHeaders = []string{
 	"Upgrade",
 }
 
-// NewSingleHostReverseProxy returns a new ReverseProxy that routes
+// newSingleHostReverseProxy returns a new ReverseProxy that routes
 // URLs to the scheme, host, and base path provided in target. If the
 // target's path is "/base" and the incoming request was for "/dir",
 // the target request will be for /base/dir.
-// NewSingleHostReverseProxy does not rewrite the Host header.
+// newSingleHostReverseProxy does not rewrite the Host header.
 // To rewrite Host headers, use ReverseProxy directly with a custom
 // director policy.
 //
 // Note: if no config.ClientOption is passed it will use the default global client.Client instance.
 // When passing config.ClientOption it will initialize a local client.Client instance.
 // Using ReverseProxy.SetClient if there is need for shared customized client.Client instance.
-func NewSingleHostReverseProxy(target string, tracingEnabled bool, options ...config.ClientOption) (*ReverseProxy, error) {
+func newSingleHostReverseProxy(target string, tracingEnabled bool, weight int, options ...config.ClientOption) (*ReverseProxy, error) {
 	addr, _ := url.Parse(target)
 
 	r := &ReverseProxy{
@@ -132,6 +134,7 @@ func NewSingleHostReverseProxy(target string, tracingEnabled bool, options ...co
 			req.SetRequestURI(b2s(JoinURLPath(req, target)))
 			//req.Header.SetHostBytes(req.URI().Host())
 		},
+		weight: weight,
 	}
 
 	if len(options) != 0 {
