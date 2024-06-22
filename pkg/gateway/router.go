@@ -8,6 +8,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
 )
@@ -67,16 +68,16 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		return
 	}
 
-	// prefix
-	for _, route := range r.prefixRoutes {
+	// regexp
+	for _, route := range r.regexpRoutes {
 		if len(route.route.Hosts) > 0 {
-			host := b2s(ctx.Host())
-			if !slices.Contains(route.route.Hosts, host) {
+			host := getHost(ctx)
+			if !slices.Contains(route.route.Hosts, host()) {
 				continue
 			}
 		}
 
-		if checkPrefixRoute(route, method, path) {
+		if checkRegexpRoute(route, method, path) {
 			ctx.SetIndex(-1)
 			ctx.SetHandlers(route.middleware)
 			ctx.Next(c)
@@ -85,17 +86,16 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		}
 	}
 
-	// regexp
-	for _, route := range r.regexpRoutes {
-
+	// prefix
+	for _, route := range r.prefixRoutes {
 		if len(route.route.Hosts) > 0 {
-			host := b2s(ctx.Host())
-			if !slices.Contains(route.route.Hosts, host) {
+			host := getHost(ctx)
+			if !slices.Contains(route.route.Hosts, host()) {
 				continue
 			}
 		}
 
-		if checkRegexpRoute(route, method, path) {
+		if checkPrefixRoute(route, method, path) {
 			ctx.SetIndex(-1)
 			ctx.SetHandlers(route.middleware)
 			ctx.Next(c)
@@ -318,14 +318,20 @@ func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) 
 
 // find searches the Trie for handler functions matching the route
 func (r *Router) find(method string, path string) []app.HandlerFunc {
-	// Ensure the path is valid and sanitized
-	path = sanitizeUrl(path)
+	if path == "" || path[0] != '/' {
+		path = "/"
+	}
 
 	currentNode := r.tree
 
 	// If the path is the root path, return the handler functions directly
 	if path == "/" {
 		return currentNode.findHandler(method)
+	}
+
+	// Remove leading slash
+	if len(path) > 1 {
+		path = path[1:]
 	}
 
 	// Traverse the path segments
@@ -353,7 +359,7 @@ func (r *Router) find(method string, path string) []app.HandlerFunc {
 		childNode := currentNode.findChildByName(segment)
 
 		// If no matching node is found, return nil
-		if childNode == nil {
+		if childNode == nil && currentNode.parameterizedChild != nil {
 			childNode = currentNode.parameterizedChild
 		}
 
@@ -412,36 +418,16 @@ func (n *node) findHandler(method string) []app.HandlerFunc {
 	return nil
 }
 
-// Regular expression to match valid URL paths
-var validPathRegex = regexp.MustCompile(`^/[^/]+(/[^/]+)*$`)
+func getHost(ctx *app.RequestContext) func() string {
+	var (
+		host string
+		once sync.Once
+	)
 
-// sanitizeUrl cleans the path
-func sanitizeUrl(path string) string {
-	if validPathRegex.MatchString(path) {
-		return path
+	return func() string {
+		once.Do(func() {
+			host = string(ctx.Request.Host())
+		})
+		return host
 	}
-
-	// If the path is not valid, return the default path
-	return "/"
 }
-
-const (
-	// CONNECT HTTP method
-	CONNECT = "CONNECT"
-	// DELETE HTTP method
-	DELETE = "DELETE"
-	// GET HTTP method
-	GET = "GET"
-	// HEAD HTTP method
-	HEAD = "HEAD"
-	// OPTIONS HTTP method
-	OPTIONS = "OPTIONS"
-	// PATCH HTTP method
-	PATCH = "PATCH"
-	// POST HTTP method
-	POST = "POST"
-	// PUT HTTP method
-	PUT = "PUT"
-	// TRACE HTTP method
-	TRACE = "TRACE"
-)

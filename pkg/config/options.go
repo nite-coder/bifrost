@@ -70,6 +70,7 @@ type EntryOptions struct {
 	Bind        string             `yaml:"bind" json:"bind"`
 	TLS         TLSOptions         `yaml:"tls" json:"tls"`
 	ReusePort   bool               `yaml:"reuse_port" json:"reuse_port"`
+	HTTP2       bool               `yaml:"http2" json:"http2"`
 	IdleTimeout time.Duration      `yaml:"idle_timeout" json:"idle_timeout"`
 	Middlewares []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
 	Logging     LoggingOtions      `yaml:"logging" json:"logging"`
@@ -154,5 +155,4 @@ type TLSOptions struct {
 	Enabled bool   `yaml:"enabled" json:"enabled"`
 	CertPEM string `yaml:"cert_pem" json:"cert_pem"`
 	KeyPEM  string `yaml:"key_pem" json:"key_pem"`
-	HTTP2   bool   `yaml:"http2" json:"http2"`
 }

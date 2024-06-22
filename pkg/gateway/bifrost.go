@@ -18,11 +18,12 @@ type reloadFunc func(bifrost *Bifrost) error
 
 type Bifrost struct {
 	configPath   string
-	opts         config.Options
+	opts         *config.Options
 	fileProvider *file.FileProvider
 	httpServers  map[string]*HTTPServer
 	resolver     *dnscache.Resolver
 	reloadCh     chan bool
+	stopCh       chan bool
 	onReload     reloadFunc
 }
 
@@ -36,6 +37,15 @@ func (b *Bifrost) Run() {
 		go server.Run()
 		i++
 	}
+}
+
+func (b *Bifrost) stop() {
+	b.stopCh <- true
+}
+
+func (b *Bifrost) Shutdown() {
+	b.stop()
+
 }
 
 func LoadFromConfig(path string) (*Bifrost, error) {
@@ -125,16 +135,24 @@ func load(opts config.Options, isReload bool) (*Bifrost, error) {
 	bifrsot := &Bifrost{
 		resolver:    &dnscache.Resolver{},
 		httpServers: make(map[string]*HTTPServer),
-		opts:        opts,
+		opts:        &opts,
+		stopCh:      make(chan bool),
+		reloadCh:    make(chan bool),
 	}
 
 	go func() {
-		t := time.NewTicker(60 * time.Minute)
+		t := time.NewTimer(1 * time.Hour)
 		defer t.Stop()
-		for range t.C {
-			bifrsot.resolver.Refresh(true)
+
+		for {
+			select {
+			case <-t.C:
+				bifrsot.resolver.Refresh(true)
+				slog.Info("refresh dns cache successfully")
+			case <-bifrsot.stopCh:
+				return
+			}
 		}
-		slog.Info("refresh dns resolver")
 	}()
 
 	// system logger
@@ -209,7 +227,7 @@ func load(opts config.Options, isReload bool) (*Bifrost, error) {
 			}
 		}
 
-		httpServer, err := newHTTPServer(bifrsot, entry, opts, tracers)
+		httpServer, err := newHTTPServer(bifrsot, entry, tracers)
 		if err != nil {
 			return nil, err
 		}
@@ -225,15 +243,19 @@ func (b *Bifrost) watch() {
 		defer func() {
 			if err := recover(); err != nil {
 				slog.Error("bifrost: unknown error when reload config", "error", err)
+				b.watch()
 			}
-			b.watch()
 		}()
 
 		for {
-			<-b.reloadCh
-			err := b.onReload(b)
-			if err != nil {
-				slog.Error("bifrost: fail to reload config", "error", err)
+			select {
+			case <-b.reloadCh:
+				err := b.onReload(b)
+				if err != nil {
+					slog.Error("bifrost: fail to reload config", "error", err)
+				}
+			case <-b.stopCh:
+				return
 			}
 		}
 	}()
@@ -246,6 +268,9 @@ func reload(bifrost *Bifrost) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		newBifrost.stop()
+	}()
 
 	isReloaded := false
 

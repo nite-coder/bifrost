@@ -6,7 +6,7 @@ k6 run --vus=1 --iterations=1 vus.js
 
 curl -i --request POST '<http://localhost:80/place_order>'
 
-curl -o default.pgo 'http://localhost:8001/debug/pprof/profile?seconds=30'
+curl -o default.pgo 'http://localhost:8001/debug/pprof/profile?seconds=60'
 
 
 k6 run qps.js
@@ -41,4 +41,6 @@ curl --insecure -I --http1.1 --request POST 'https://bifrost.io:443/spot/orders'
 
 curl --insecure --request POST 'https://bifrost.io:443/spot/orders'
 
-
+curl -v --http2 --request POST 'http://localhost:8001/spot/orders'
+curl -v --http2-prior-knowledge --request POST 'http://localhost:8001/spot/orders'
+curl -v --http1.1 --request POST 'http://localhost:8001/spot/orders'

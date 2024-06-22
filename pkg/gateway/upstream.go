@@ -131,9 +131,16 @@ func newUpstream(bifrost *Bifrost, serviceOpts bifrostConfig.ServiceOptions, opt
 
 	if opts.Strategy == bifrostConfig.RoundRobinStrategy {
 		go func() {
-			ticker := time.NewTicker(1 * time.Minute)
-			for range ticker.C {
-				upstream.counter.Store(0)
+			t := time.NewTimer(5 * time.Minute)
+			defer t.Stop()
+
+			for {
+				select {
+				case <-bifrost.stopCh:
+					return
+				case <-t.C:
+					upstream.counter.Store(0)
+				}
 			}
 		}()
 	}

@@ -8,6 +8,27 @@ var (
 	spaceByte = []byte{byte(' ')}
 )
 
+const (
+	// CONNECT HTTP method
+	CONNECT = "CONNECT"
+	// DELETE HTTP method
+	DELETE = "DELETE"
+	// GET HTTP method
+	GET = "GET"
+	// HEAD HTTP method
+	HEAD = "HEAD"
+	// OPTIONS HTTP method
+	OPTIONS = "OPTIONS"
+	// PATCH HTTP method
+	PATCH = "PATCH"
+	// POST HTTP method
+	POST = "POST"
+	// PUT HTTP method
+	PUT = "PUT"
+	// TRACE HTTP method
+	TRACE = "TRACE"
+)
+
 // b2s converts byte slice to a string without memory allocation.
 // See https://groups.google.com/forum/#!msg/Golang-Nuts/ENgbUzYvCuU/90yGx7GUAgAJ .
 func b2s(b []byte) string {

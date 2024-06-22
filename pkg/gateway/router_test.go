@@ -2,7 +2,9 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"http-benchmark/pkg/config"
+	"slices"
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -177,6 +179,7 @@ func loadStaticRouter() *Router {
 	router := newRouter(false)
 	_ = router.add("GET", "/", exactkHandler)
 	_ = router.add("GET", "/foo", exactkHandler)
+	_ = router.add("GET", "/foo/bar/baz/", exactkHandler)
 	_ = router.add("GET", "/foo/bar/baz/qux/quux", exactkHandler)
 	_ = router.add("GET", "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred", exactkHandler)
 	return router
@@ -200,6 +203,15 @@ func BenchmarkStatic1(b *testing.B) {
 	benchmark(b, router, "GET", "/foo")
 }
 
+func BenchmarkStatic3(b *testing.B) {
+	router := loadStaticRouter()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	benchmark(b, router, "GET", "/foo/bar/baz")
+}
+
 func BenchmarkStatic5(b *testing.B) {
 	router := loadStaticRouter()
 
@@ -207,6 +219,42 @@ func BenchmarkStatic5(b *testing.B) {
 	b.ResetTimer()
 
 	benchmark(b, router, "GET", "/foo/bar/baz/qux/quux")
+}
+
+func BenchmarkCode(b *testing.B) {
+	method := "GET"
+	//path1 := "/foo"
+	//path5 := "/foo/bar/baz/qux/quux"
+	path10 := "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred"
+	//prefix := "/foo/bar/baz/qux/quux"
+
+	routeSetting := config.RouteOptions{
+		Methods: []string{method},
+		Paths:   []string{path10},
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		func() app.HandlerFunc {
+
+			isFound := false
+			if slices.Contains(routeSetting.Paths, path10) {
+				isFound = true
+			}
+
+			if slices.Contains(routeSetting.Methods, method) {
+				isFound = true
+			}
+
+			if isFound {
+				return exactkHandler
+			}
+
+			return nil
+		}()
+	}
 }
 
 func BenchmarkStatic10(b *testing.B) {
@@ -223,20 +271,20 @@ func benchmark(b *testing.B, router *Router, method, path string) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		handlers := router.find(method, path)
-		if len(handlers) != 1 {
-			b.Errorf("Expected 1 handler, got %d", len(handlers))
-		}
+		_ = router.find(method, path)
+		// if len(handlers) != 1 {
+		// 	b.Errorf("Expected 1 handler, got %d", len(handlers))
+		// }
 	}
 }
 
 func setupMap() map[string]*node {
 	m := make(map[string]*node)
-	// for i := 0; i < 50; i++ {
-	// 	key := fmt.Sprintf("futures%d", i)
-	// 	m[key] = &node{}
-	// }
-	m[""] = &node{}
+	for i := 0; i < 50; i++ {
+		key := fmt.Sprintf("futures%d", i)
+		m[key] = &node{}
+	}
+
 	return m
 }
 

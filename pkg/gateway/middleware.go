@@ -64,6 +64,37 @@ func RegisterMiddleware(kind string, handler CreateMiddlewareHandler) error {
 	return nil
 }
 
+func loadMiddlewares(opts map[string]config.MiddlwareOptions) (map[string]app.HandlerFunc, error) {
+	
+	middlewares := map[string]app.HandlerFunc{}
+	for id, middlewareOpts := range opts {
+
+		if len(id) == 0 {
+			return nil, fmt.Errorf("middleware id can't be empty")
+		}
+
+		middlewareOpts.ID = id
+
+		if len(middlewareOpts.Kind) == 0 {
+			return nil, fmt.Errorf("middleware kind can't be empty")
+		}
+
+		handler, found := middlewareFactory[middlewareOpts.Kind]
+		if !found {
+			return nil, fmt.Errorf("middleware handler '%s' was not found", middlewareOpts.Kind)
+		}
+
+		m, err := handler(middlewareOpts.Params)
+		if err != nil {
+			return nil, err
+		}
+
+		middlewares[middlewareOpts.ID] = m
+	}
+
+	return middlewares, nil
+}
+
 func init() {
 	_ = RegisterMiddleware("strip_prefix", func(params map[string]any) (app.HandlerFunc, error) {
 		val := params["prefixes"].([]any)

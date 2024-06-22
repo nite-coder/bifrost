@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/netpoll"
 )
 
 type FindMyHome struct {
@@ -18,9 +19,17 @@ func (f *FindMyHome) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	ctx.Set("$home", "default")
 }
 
-func main() {
+var bifrost *gateway.Bifrost
 
-	err := gateway.RegisterMiddleware("find_upstream", func(param map[string]any) (app.HandlerFunc, error) {
+func main() {
+	defer func() {
+		bifrost.Shutdown()
+	}()
+
+	var err error
+	_ = netpoll.DisableGopool()
+
+	err = gateway.RegisterMiddleware("find_upstream", func(param map[string]any) (app.HandlerFunc, error) {
 		m := FindMyHome{}
 		return m.ServeHTTP, nil
 	})
@@ -28,7 +37,7 @@ func main() {
 		panic(err)
 	}
 
-	bifrost, err := gateway.LoadFromConfig("./config.yaml")
+	bifrost, err = gateway.LoadFromConfig("./config.yaml")
 	if err != nil {
 		slog.Error("fail to start bifrost", "error", err)
 		return

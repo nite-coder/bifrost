@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/rs/dnscache"
@@ -26,14 +25,51 @@ type Service struct {
 	proxy           *ReverseProxy
 	upstream        *Upstream
 	dynamicUpstream string
+	middlewares     []app.HandlerFunc
+}
+
+func loadServices(bifrost *Bifrost, middlewares map[string]app.HandlerFunc) (map[string]*Service, error) {
+	services := map[string]*Service{}
+	for id, serviceOpts := range bifrost.opts.Services {
+
+		if len(id) == 0 {
+			return nil, fmt.Errorf("service id can't be empty")
+		}
+
+		serviceOpts.ID = id
+
+		_, found := services[serviceOpts.ID]
+		if found {
+			return nil, fmt.Errorf("service '%s' already exists", serviceOpts.ID)
+		}
+
+		service, err := newService(bifrost, &serviceOpts, bifrost.opts.Upstreams)
+		if err != nil {
+			return nil, err
+		}
+		services[serviceOpts.ID] = service
+
+		if len(serviceOpts.Middlewares) > 0 {
+			for _, middlewareOpts := range serviceOpts.Middlewares {
+				middleware, found := middlewares[middlewareOpts.ID]
+				if !found {
+					return nil, fmt.Errorf("middleware '%s' not found", middlewareOpts)
+				}
+				service.middlewares = append(service.middlewares, middleware)
+			}
+		}
+	}
+
+	return services, nil
 }
 
 func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions map[string]config.UpstreamOptions) (*Service, error) {
 
 	svc := &Service{
-		bifrost:   bifrost,
-		options:   *opts,
-		upstreams: make(map[string]*Upstream),
+		bifrost:     bifrost,
+		options:     *opts,
+		upstreams:   make(map[string]*Upstream),
+		middlewares: make([]app.HandlerFunc, 0),
 	}
 
 	addr, err := url.Parse(opts.Url)
@@ -135,9 +171,13 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	defer ctx.Abort()
 	done := make(chan bool)
 
-	gopool.CtxGo(c, func() {
+	go func() {
 		defer func() {
 			done <- true
+			if r := recover(); r != nil {
+				logger.ErrorContext(c, "proxy panic recovered", slog.Any("panic", r))
+				ctx.Abort()
+			}
 		}()
 
 		if len(svc.dynamicUpstream) > 0 {
@@ -191,7 +231,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		} else {
 			ctx.Set(config.UPSTREAM_STATUS, ctx.Response.StatusCode())
 		}
-	})
+	}()
 
 	select {
 	case <-c.Done():
