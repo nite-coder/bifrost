@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"http-benchmark/pkg/config"
-	bifrostConfig "http-benchmark/pkg/config"
 	"regexp"
 	"slices"
 	"sort"
@@ -44,7 +43,7 @@ type Router struct {
 	regexpRoutes []routeSetting
 }
 
-func loadRouter(bifrost *Bifrost, entry bifrostConfig.EntryOptions, services map[string]*Service, middlewares map[string]app.HandlerFunc) (*Router, error) {
+func loadRouter(bifrost *Bifrost, entry config.EntryOptions, services map[string]*Service, middlewares map[string]app.HandlerFunc) (*Router, error) {
 	isHostEnabled := false
 	for _, routeOpts := range bifrost.opts.Routes {
 		if len(routeOpts.Hosts) > 0 {

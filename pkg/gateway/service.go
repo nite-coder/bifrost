@@ -171,7 +171,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	defer ctx.Abort()
 	done := make(chan bool)
 
-	go func() {
+	runTask(c, func() {
 		defer func() {
 			done <- true
 			if r := recover(); r != nil {
@@ -231,7 +231,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		} else {
 			ctx.Set(config.UPSTREAM_STATUS, ctx.Response.StatusCode())
 		}
-	}()
+	})
 
 	select {
 	case <-c.Done():

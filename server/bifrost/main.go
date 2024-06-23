@@ -7,7 +7,6 @@ import (
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/netpoll"
 )
 
 type FindMyHome struct {
@@ -27,7 +26,7 @@ func main() {
 	}()
 
 	var err error
-	_ = netpoll.DisableGopool()
+	_ = gateway.DisableGopool()
 
 	err = gateway.RegisterMiddleware("find_upstream", func(param map[string]any) (app.HandlerFunc, error) {
 		m := FindMyHome{}
