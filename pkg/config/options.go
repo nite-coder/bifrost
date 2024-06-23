@@ -3,13 +3,16 @@ package config
 import "time"
 
 type Options struct {
-	Providers     Provider                    `yaml:"providers" json:"providers"`
-	Observability ObservabilityOptions        `yaml:"observability" json:"observability"`
-	Entries       map[string]EntryOptions     `yaml:"entries" json:"entries"`
-	Routes        map[string]RouteOptions     `yaml:"routes" json:"routes"`
-	Middlewares   map[string]MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
-	Services      map[string]ServiceOptions   `yaml:"services" json:"services"`
-	Upstreams     map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
+	Providers   Provider                    `yaml:"providers" json:"providers"`
+	Logging     LoggingOtions               `yaml:"logging" json:"logging"`
+	AccessLogs  map[string]AccessLogOptions `yaml:"access_logs" json:"access_logs"`
+	Metrics     MetricOptions               `yaml:"metrics" json:"metrics"`
+	Tracing     TracingOptions              `yaml:"tracing" json:"tracing"`
+	Entries     map[string]EntryOptions     `yaml:"entries" json:"entries"`
+	Routes      map[string]RouteOptions     `yaml:"routes" json:"routes"`
+	Middlewares map[string]MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
+	Services    map[string]ServiceOptions   `yaml:"services" json:"services"`
+	Upstreams   map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
 }
 
 type Provider struct {
@@ -20,13 +23,6 @@ type FileProviderOptions struct {
 	Enabled bool     `yaml:"enabled" json:"enabled"`
 	Paths   []string `yaml:"paths" json:"paths"`
 	Watch   bool     `yaml:"watch" json:"watch"`
-}
-
-type ObservabilityOptions struct {
-	Logging    LoggingOtions               `yaml:"logging" json:"logging"`
-	AccessLogs map[string]AccessLogOptions `yaml:"access_logs" json:"access_logs"`
-	Metrics    MetricOptions               `yaml:"metrics" json:"metrics"`
-	Tracing    TracingOptions              `yaml:"tracing" json:"tracing"`
 }
 
 type MetricOptions struct {
@@ -151,8 +147,11 @@ type ServiceOptions struct {
 	Middlewares         []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
 }
 
+
+
 type TLSOptions struct {
-	Enabled bool   `yaml:"enabled" json:"enabled"`
-	CertPEM string `yaml:"cert_pem" json:"cert_pem"`
-	KeyPEM  string `yaml:"key_pem" json:"key_pem"`
+	Enabled    bool   `yaml:"enabled" json:"enabled"`
+	MinVersion string `yaml:"min_version" json:"min_version"`
+	CertPEM    string `yaml:"cert_pem" json:"cert_pem"`
+	KeyPEM     string `yaml:"key_pem" json:"key_pem"`
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	bifrostConfig "http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
-	"slices"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/config"
@@ -23,7 +22,7 @@ type Engine struct {
 	options []config.Option
 }
 
-func newEngine(bifrost *Bifrost, entry bifrostConfig.EntryOptions) (*Engine, error) {
+func newEngine(bifrost *Bifrost, entryOpts bifrostConfig.EntryOptions) (*Engine, error) {
 
 	// middlewares
 	middlewares, err := loadMiddlewares(bifrost.opts.Middlewares)
@@ -38,72 +37,9 @@ func newEngine(bifrost *Bifrost, entry bifrostConfig.EntryOptions) (*Engine, err
 	}
 
 	// routes
-	isHostEnabled := false
-	for _, routeOpts := range bifrost.opts.Routes {
-		if len(routeOpts.Hosts) > 0 {
-			isHostEnabled = true
-			break
-		}
-	}
-	router := newRouter(isHostEnabled)
-
-	for routeID, routeOpts := range bifrost.opts.Routes {
-
-		routeOpts.ID = routeID
-
-		if len(routeOpts.Entries) > 0 && !slices.Contains(routeOpts.Entries, entry.ID) {
-			continue
-		}
-
-		if len(routeOpts.Paths) == 0 {
-			return nil, fmt.Errorf("route match can't be empty")
-		}
-
-		if len(routeOpts.ServiceID) == 0 {
-			return nil, fmt.Errorf("route service_id can't be empty")
-		}
-
-		service, found := services[routeOpts.ServiceID]
-		if !found {
-			return nil, fmt.Errorf("service_id '%s' was not found in route: %s", routeOpts.ServiceID, routeOpts.ID)
-		}
-
-		routeMiddlewares := make([]app.HandlerFunc, 0)
-
-		for _, middleware := range routeOpts.Middlewares {
-			if len(middleware.Link) > 0 {
-				val, found := middlewares[middleware.Link]
-				if !found {
-					return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", middleware.Link, routeOpts.ID)
-				}
-
-				routeMiddlewares = append(routeMiddlewares, val)
-				continue
-			}
-
-			if len(middleware.Kind) == 0 {
-				return nil, fmt.Errorf("middleware kind can't be empty in route: '%s'", routeOpts.Paths)
-			}
-
-			handler, found := middlewareFactory[middleware.Kind]
-			if !found {
-				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", middleware.Kind, routeOpts.Paths)
-			}
-
-			m, err := handler(middleware.Params)
-			if err != nil {
-				return nil, fmt.Errorf("create middleware handler '%s' failed in route: '%s'", middleware.Kind, routeOpts.Paths)
-			}
-
-			routeMiddlewares = append(routeMiddlewares, m)
-		}
-
-		routeMiddlewares = append(routeMiddlewares, service.ServeHTTP)
-
-		err := router.AddRoute(routeOpts, routeMiddlewares...)
-		if err != nil {
-			return nil, err
-		}
+	router, err := loadRouter(bifrost, entryOpts, services, middlewares)
+	if err != nil {
+		return nil, err
 	}
 
 	// engine
@@ -115,7 +51,7 @@ func newEngine(bifrost *Bifrost, entry bifrostConfig.EntryOptions) (*Engine, err
 	}
 
 	// tracing
-	if bifrost.opts.Observability.Tracing.Enabled {
+	if bifrost.opts.Tracing.Enabled {
 
 		provider.NewOpenTelemetryProvider(
 			provider.WithEnableMetrics(false),
@@ -129,19 +65,20 @@ func newEngine(bifrost *Bifrost, entry bifrostConfig.EntryOptions) (*Engine, err
 	}
 
 	// init middlewares
-	logger, err := log.NewLogger(entry.Logging)
+	logger, err := log.NewLogger(entryOpts.Logging)
 	if err != nil {
 		return nil, err
 	}
-	initMiddleware := newInitMiddleware(entry.ID, logger)
+	initMiddleware := newInitMiddleware(entryOpts.ID, logger)
 	engine.Use(initMiddleware.ServeHTTP)
 
-	for _, middleware := range entry.Middlewares {
+	// set entry's middlewares
+	for _, middleware := range entryOpts.Middlewares {
 
 		if len(middleware.Link) > 0 {
 			val, found := middlewares[middleware.Link]
 			if !found {
-				return nil, fmt.Errorf("middleware '%s' was not found in entry id: '%s'", middleware.Link, entry.ID)
+				return nil, fmt.Errorf("middleware '%s' was not found in entry id: '%s'", middleware.Link, entryOpts.ID)
 			}
 
 			engine.Use(val)
@@ -149,12 +86,12 @@ func newEngine(bifrost *Bifrost, entry bifrostConfig.EntryOptions) (*Engine, err
 		}
 
 		if len(middleware.Kind) == 0 {
-			return nil, fmt.Errorf("middleware kind can't be empty in entry id: '%s'", entry.ID)
+			return nil, fmt.Errorf("middleware kind can't be empty in entry id: '%s'", entryOpts.ID)
 		}
 
 		handler, found := middlewareFactory[middleware.Kind]
 		if !found {
-			return nil, fmt.Errorf("middleware handler '%s' was not found in entry id: '%s'", middleware.Kind, entry.ID)
+			return nil, fmt.Errorf("middleware handler '%s' was not found in entry id: '%s'", middleware.Kind, entryOpts.ID)
 		}
 
 		m, err := handler(middleware.Params)

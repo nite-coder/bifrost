@@ -1,7 +1,10 @@
 package gateway
 
-import "fmt"
+import (
+	"errors"
+)
 
 var (
-	ErrConfigNotFound = fmt.Errorf("config not found")
+	ErrConfigNotFound = errors.New("config not found")
+	ErrAlreadyExists  = errors.New("already exists")
 )

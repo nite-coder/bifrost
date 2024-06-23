@@ -27,6 +27,28 @@ func notFoundHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(404)
 }
 
+func TestDuplicateHTTPMethods(t *testing.T) {
+	router := newRouter(false)
+
+	err := router.AddRoute(config.RouteOptions{
+		Methods: []string{"GET", "POST"},
+		Paths:   []string{"/foo"},
+	}, exactkHandler)
+	assert.NoError(t, err)
+
+	err = router.AddRoute(config.RouteOptions{
+		Methods: []string{"GET"},
+		Paths:   []string{"/foo"},
+	}, exactkHandler)
+	assert.ErrorIs(t, err, ErrAlreadyExists)
+
+	err = router.AddRoute(config.RouteOptions{
+		Methods: []string{},
+		Paths:   []string{"/foo"},
+	}, exactkHandler)
+	assert.NoError(t, err)
+}
+
 func TestRoutes(t *testing.T) {
 	router := newRouter(false)
 
@@ -36,7 +58,7 @@ func TestRoutes(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = router.AddRoute(config.RouteOptions{
-		Paths:   []string{"/spot/order", "/market/btc"},
+		Paths:   []string{"/spot/order", "/market/dot"},
 		Methods: []string{"POST", "GET"},
 	}, exactkHandler)
 	assert.NoError(t, err)
@@ -59,10 +81,10 @@ func TestRoutes(t *testing.T) {
 		expectedResult int
 	}{
 		{"POST", "abc.com", "/spot/order", 201},
-		{"GET", "abc.com", "/market/btc", 201},
+		{"GET", "abc.com", "/market/dot", 201},
 
 		{"PUT", "abc.com", "/market/btcusdt/cool", 202},
-		{"GET", "abc.com", "/market/btc/", 202},
+		{"GET", "abc.com", "/market/btc", 203},
 
 		{"DELETE", "abc.com", "/market/eth", 203},
 
@@ -272,9 +294,6 @@ func benchmark(b *testing.B, router *Router, method, path string) {
 
 	for i := 0; i < b.N; i++ {
 		_ = router.find(method, path)
-		// if len(handlers) != 1 {
-		// 	b.Errorf("Expected 1 handler, got %d", len(handlers))
-		// }
 	}
 }
 

@@ -121,7 +121,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts bifrostConfig.ServiceOptions, opt
 		}
 
 		url := fmt.Sprintf("%s://%s:%s%s", serviceOpts.Protocol, targetHost, port, addr.Path)
-		proxy, err := newSingleHostReverseProxy(url, bifrost.opts.Observability.Tracing.Enabled, targetOpts.Weight, clientOpts...)
+		proxy, err := newSingleHostReverseProxy(url, bifrost.opts.Tracing.Enabled, targetOpts.Weight, clientOpts...)
 
 		if err != nil {
 			return nil, err

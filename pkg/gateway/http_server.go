@@ -79,7 +79,7 @@ func newHTTPServer(bifrost *Bifrost, entryOpts bifrostConfig.EntryOptions, trace
 	var tlsConfig *tls.Config
 	if entryOpts.TLS.Enabled {
 		tlsConfig = &tls.Config{
-			MinVersion:               tls.VersionTLS12,
+			MinVersion:               tls.VersionTLS13,
 			CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256},
 			PreferServerCipherSuites: true,
 			CipherSuites: []uint16{

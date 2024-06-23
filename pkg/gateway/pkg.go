@@ -5,7 +5,8 @@ import (
 )
 
 var (
-	spaceByte = []byte{byte(' ')}
+	spaceByte   = []byte{byte(' ')}
+	httpMethods = []string{CONNECT, DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT, TRACE}
 )
 
 const (

@@ -2,8 +2,10 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"http-benchmark/pkg/config"
+	bifrostConfig "http-benchmark/pkg/config"
 	"regexp"
 	"slices"
 	"sort"
@@ -40,6 +42,78 @@ type Router struct {
 
 	prefixRoutes []routeSetting
 	regexpRoutes []routeSetting
+}
+
+func loadRouter(bifrost *Bifrost, entry bifrostConfig.EntryOptions, services map[string]*Service, middlewares map[string]app.HandlerFunc) (*Router, error) {
+	isHostEnabled := false
+	for _, routeOpts := range bifrost.opts.Routes {
+		if len(routeOpts.Hosts) > 0 {
+			isHostEnabled = true
+			break
+		}
+	}
+	router := newRouter(isHostEnabled)
+
+	for routeID, routeOpts := range bifrost.opts.Routes {
+
+		routeOpts.ID = routeID
+
+		if len(routeOpts.Entries) > 0 && !slices.Contains(routeOpts.Entries, entry.ID) {
+			continue
+		}
+
+		if len(routeOpts.Paths) == 0 {
+			return nil, fmt.Errorf("route match can't be empty")
+		}
+
+		if len(routeOpts.ServiceID) == 0 {
+			return nil, fmt.Errorf("route service_id can't be empty")
+		}
+
+		service, found := services[routeOpts.ServiceID]
+		if !found {
+			return nil, fmt.Errorf("service_id '%s' was not found in route: %s", routeOpts.ServiceID, routeOpts.ID)
+		}
+
+		routeMiddlewares := make([]app.HandlerFunc, 0)
+
+		for _, middleware := range routeOpts.Middlewares {
+			if len(middleware.Link) > 0 {
+				val, found := middlewares[middleware.Link]
+				if !found {
+					return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", middleware.Link, routeOpts.ID)
+				}
+
+				routeMiddlewares = append(routeMiddlewares, val)
+				continue
+			}
+
+			if len(middleware.Kind) == 0 {
+				return nil, fmt.Errorf("middleware kind can't be empty in route: '%s'", routeOpts.Paths)
+			}
+
+			handler, found := middlewareFactory[middleware.Kind]
+			if !found {
+				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", middleware.Kind, routeOpts.Paths)
+			}
+
+			m, err := handler(middleware.Params)
+			if err != nil {
+				return nil, fmt.Errorf("create middleware handler '%s' failed in route: '%s'", middleware.Kind, routeOpts.Paths)
+			}
+
+			routeMiddlewares = append(routeMiddlewares, m)
+		}
+
+		routeMiddlewares = append(routeMiddlewares, service.ServeHTTP)
+
+		err := router.AddRoute(routeOpts, routeMiddlewares...)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return router, nil
 }
 
 // newRouter creates and returns a new router
@@ -148,6 +222,11 @@ var upperLetterReg = regexp.MustCompile("^[A-Z]+$")
 func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.HandlerFunc) error {
 	var err error
 
+	// validate
+	if len(routeOpts.Paths) == 0 {
+		return errors.New("paths can't be empty")
+	}
+
 	for _, path := range routeOpts.Paths {
 		first := path[:1]
 		// check prefix match
@@ -203,41 +282,11 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 			}
 
 			if len(routeOpts.Methods) == 0 {
-				err = r.add(GET, path, middlewares...)
-				if err != nil {
-					return err
-				}
-				err = r.add(POST, path, middlewares...)
-				if err != nil {
-					return err
-				}
-				err = r.add(PUT, path, middlewares...)
-				if err != nil {
-					return err
-				}
-				err = r.add(DELETE, path, middlewares...)
-				if err != nil {
-					return err
-				}
-				err = r.add(PATCH, path, middlewares...)
-				if err != nil {
-					return err
-				}
-				err = r.add(CONNECT, path, middlewares...)
-				if err != nil {
-					return err
-				}
-				err = r.add(HEAD, path, middlewares...)
-				if err != nil {
-					return err
-				}
-				err = r.add(TRACE, path, middlewares...)
-				if err != nil {
-					return err
-				}
-				err = r.add(OPTIONS, path, middlewares...)
-				if err != nil {
-					return err
+				for _, method := range httpMethods {
+					err = r.add(method, path, middlewares...)
+					if err != nil && !errors.Is(err, ErrAlreadyExists) {
+						return err
+					}
 				}
 			}
 
@@ -261,6 +310,8 @@ func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) 
 	if len(path) == 0 || path[0] != '/' {
 		return fmt.Errorf("router: '%s' is invalid path.  Path needs to begin with '/'", path)
 	}
+
+	originalPath := path
 
 	// Remove leading slash
 	if len(path) > 1 {
@@ -309,6 +360,11 @@ func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) 
 			currentNode = childNode
 		}
 
+	}
+
+	handlers := currentNode.findHandler(method)
+	if len(handlers) > 0 {
+		return fmt.Errorf("router: duplicate route http_method:%s path:%s. %w", method, originalPath, ErrAlreadyExists)
 	}
 
 	// Add handler functions to the final node

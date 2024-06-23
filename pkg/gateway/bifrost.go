@@ -156,7 +156,7 @@ func load(opts config.Options, isReload bool) (*Bifrost, error) {
 	}()
 
 	// system logger
-	logger, err := log.NewLogger(opts.Observability.Logging)
+	logger, err := log.NewLogger(opts.Logging)
 	if err != nil {
 		return nil, err
 	}
@@ -165,14 +165,14 @@ func load(opts config.Options, isReload bool) (*Bifrost, error) {
 	tracers := []tracer.Tracer{}
 
 	// prometheus tracer
-	if opts.Observability.Metrics.Prometheus.Enabled && !isReload {
+	if opts.Metrics.Prometheus.Enabled && !isReload {
 		promOpts := []prometheus.Option{
 			prometheus.WithEnableGoCollector(true),
 			prometheus.WithDisableServer(false),
 		}
 
-		if len(opts.Observability.Metrics.Prometheus.Buckets) > 0 {
-			promOpts = append(promOpts, prometheus.WithHistogramBuckets(opts.Observability.Metrics.Prometheus.Buckets))
+		if len(opts.Metrics.Prometheus.Buckets) > 0 {
+			promOpts = append(promOpts, prometheus.WithHistogramBuckets(opts.Metrics.Prometheus.Buckets))
 		}
 
 		promTracer := prometheus.NewTracer(":9091", "/metrics", promOpts...)
@@ -181,9 +181,9 @@ func load(opts config.Options, isReload bool) (*Bifrost, error) {
 
 	// access log
 	accessLogTracers := map[string]*accesslog.Tracer{}
-	if len(opts.Observability.AccessLogs) > 0 && !isReload {
+	if len(opts.AccessLogs) > 0 && !isReload {
 
-		for id, accessLogOptions := range opts.Observability.AccessLogs {
+		for id, accessLogOptions := range opts.AccessLogs {
 			if !accessLogOptions.Enabled {
 				continue
 			}
@@ -216,7 +216,7 @@ func load(opts config.Options, isReload bool) (*Bifrost, error) {
 		}
 
 		if len(entry.AccessLogID) > 0 {
-			_, found := opts.Observability.AccessLogs[entry.AccessLogID]
+			_, found := opts.AccessLogs[entry.AccessLogID]
 			if !found {
 				return nil, fmt.Errorf("access log '%s' was not found in entry '%s'", entry.AccessLogID, entry.ID)
 			}
