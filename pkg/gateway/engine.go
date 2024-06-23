@@ -75,23 +75,23 @@ func newEngine(bifrost *Bifrost, entryOpts bifrostConfig.EntryOptions) (*Engine,
 	// set entry's middlewares
 	for _, middleware := range entryOpts.Middlewares {
 
-		if len(middleware.Link) > 0 {
-			val, found := middlewares[middleware.Link]
+		if len(middleware.Use) > 0 {
+			val, found := middlewares[middleware.Use]
 			if !found {
-				return nil, fmt.Errorf("middleware '%s' was not found in entry id: '%s'", middleware.Link, entryOpts.ID)
+				return nil, fmt.Errorf("middleware '%s' was not found in entry id: '%s'", middleware.Use, entryOpts.ID)
 			}
 
 			engine.Use(val)
 			continue
 		}
 
-		if len(middleware.Kind) == 0 {
+		if len(middleware.Type) == 0 {
 			return nil, fmt.Errorf("middleware kind can't be empty in entry id: '%s'", entryOpts.ID)
 		}
 
-		handler, found := middlewareFactory[middleware.Kind]
+		handler, found := middlewareFactory[middleware.Type]
 		if !found {
-			return nil, fmt.Errorf("middleware handler '%s' was not found in entry id: '%s'", middleware.Kind, entryOpts.ID)
+			return nil, fmt.Errorf("middleware handler '%s' was not found in entry id: '%s'", middleware.Type, entryOpts.ID)
 		}
 
 		m, err := handler(middleware.Params)

@@ -4,15 +4,16 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	bifrostConfig "http-benchmark/pkg/config"
+	"http-benchmark/pkg/config"
 	"io"
 	"log/slog"
 	"net"
 	"os"
 	"syscall"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/cloudwego/hertz/pkg/common/config"
+	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
 	configHTTP2 "github.com/hertz-contrib/http2/config"
@@ -23,21 +24,49 @@ import (
 )
 
 type HTTPServer struct {
-	entryOpts bifrostConfig.EntryOptions
+	entryOpts config.EntryOptions
 	switcher  *switcher
 	server    *server.Hertz
 }
 
-func newHTTPServer(bifrost *Bifrost, entryOpts bifrostConfig.EntryOptions, tracers []tracer.Tracer) (*HTTPServer, error) {
+func newHTTPServer(bifrost *Bifrost, entryOpts config.EntryOptions, tracers []tracer.Tracer) (*HTTPServer, error) {
 
-	hzOpts := []config.Option{
+	hzOpts := []hzconfig.Option{
 		server.WithHostPorts(entryOpts.Bind),
-		server.WithIdleTimeout(entryOpts.IdleTimeout),
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		server.WithSenseClientDisconnection(true),
+		server.WithReadTimeout(time.Second * 60),
 		withDefaultServerHeader(true),
 		server.WithALPN(true),
+	}
+
+	if entryOpts.Timeout.KeepAliveTimeout.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithIdleTimeout(entryOpts.Timeout.KeepAliveTimeout))
+	}
+
+	if entryOpts.Timeout.IdleTimeout.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithIdleTimeout(entryOpts.Timeout.IdleTimeout))
+	}
+
+	if entryOpts.Timeout.ReadTimeout.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithReadTimeout(entryOpts.Timeout.ReadTimeout))
+	}
+
+	if entryOpts.Timeout.WriteTimeout.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithWriteTimeout(entryOpts.Timeout.WriteTimeout))
+	}
+
+	if entryOpts.Timeout.GracefulTimeOut > 0 {
+		hzOpts = append(hzOpts, server.WithExitWaitTime(entryOpts.Timeout.GracefulTimeOut))
+	}
+
+	if entryOpts.MaxRequestBodySize > 0 {
+		hzOpts = append(hzOpts, server.WithMaxRequestBodySize(entryOpts.MaxRequestBodySize))
+	}
+
+	if entryOpts.ReadBufferSize > 0 {
+		hzOpts = append(hzOpts, server.WithReadBufferSize(entryOpts.ReadBufferSize))
 	}
 
 	engine, err := newEngine(bifrost, entryOpts)
@@ -121,17 +150,23 @@ func newHTTPServer(bifrost *Bifrost, entryOpts bifrostConfig.EntryOptions, trace
 
 	h := server.Default(hzOpts...)
 
-	if entryOpts.HTTP2 && entryOpts.TLS.Enabled {
-		// register http2 server factory
-		h.AddProtocol("h2", factory.NewServerFactory(
-			//configHTTP2.WithReadTimeout(time.Minute),
-			configHTTP2.WithDisableKeepAlive(false)))
+	if entryOpts.HTTP2 {
+		http2opts := []configHTTP2.Option{}
 
-		tlsConfig.NextProtos = append(tlsConfig.NextProtos, "h2")
-	}
+		if entryOpts.Timeout.IdleTimeout.Seconds() > 0 {
+			http2opts = append(http2opts, configHTTP2.WithIdleTimeout(entryOpts.Timeout.IdleTimeout))
+		}
 
-	if entryOpts.HTTP2 && !entryOpts.TLS.Enabled {
-		h.AddProtocol("h2", factory.NewServerFactory())
+		if entryOpts.Timeout.ReadTimeout.Seconds() > 0 {
+			http2opts = append(http2opts, configHTTP2.WithReadTimeout(entryOpts.Timeout.ReadTimeout))
+		}
+
+		if entryOpts.TLS.Enabled {
+			h.AddProtocol("h2", factory.NewServerFactory(http2opts...))
+			tlsConfig.NextProtos = append(tlsConfig.NextProtos, "h2")
+		} else {
+			h.AddProtocol("h2", factory.NewServerFactory(http2opts...))
+		}
 	}
 
 	h.OnShutdown = append(h.OnShutdown, func(ctx context.Context) {

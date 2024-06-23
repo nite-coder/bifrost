@@ -5,9 +5,9 @@ import "time"
 type Options struct {
 	Providers   Provider                    `yaml:"providers" json:"providers"`
 	Logging     LoggingOtions               `yaml:"logging" json:"logging"`
-	AccessLogs  map[string]AccessLogOptions `yaml:"access_logs" json:"access_logs"`
 	Metrics     MetricOptions               `yaml:"metrics" json:"metrics"`
 	Tracing     TracingOptions              `yaml:"tracing" json:"tracing"`
+	AccessLogs  map[string]AccessLogOptions `yaml:"access_logs" json:"access_logs"`
 	Entries     map[string]EntryOptions     `yaml:"entries" json:"entries"`
 	Routes      map[string]RouteOptions     `yaml:"routes" json:"routes"`
 	Middlewares map[string]MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
@@ -62,15 +62,25 @@ type OTLPGRPCOptions struct {
 }
 
 type EntryOptions struct {
-	ID          string             `yaml:"-" json:"-"`
-	Bind        string             `yaml:"bind" json:"bind"`
-	TLS         TLSOptions         `yaml:"tls" json:"tls"`
-	ReusePort   bool               `yaml:"reuse_port" json:"reuse_port"`
-	HTTP2       bool               `yaml:"http2" json:"http2"`
-	IdleTimeout time.Duration      `yaml:"idle_timeout" json:"idle_timeout"`
-	Middlewares []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
-	Logging     LoggingOtions      `yaml:"logging" json:"logging"`
-	AccessLogID string             `yaml:"access_log_id" json:"access_log_id"`
+	ID                 string              `yaml:"-" json:"-"`
+	Bind               string              `yaml:"bind" json:"bind"`
+	TLS                TLSOptions          `yaml:"tls" json:"tls"`
+	ReusePort          bool                `yaml:"reuse_port" json:"reuse_port"`
+	HTTP2              bool                `yaml:"http2" json:"http2"`
+	Middlewares        []MiddlwareOptions  `yaml:"middlewares" json:"middlewares"`
+	Logging            LoggingOtions       `yaml:"logging" json:"logging"`
+	Timeout            EntryTimeoutOptions `yaml:"timeout" json:"timeout"`
+	MaxRequestBodySize int                 `yaml:"max_request_body_size" json:"max_request_body_size"`
+	ReadBufferSize     int                 `yaml:"read_buffer_size" json:"read_buffer_size"`
+	AccessLogID        string              `yaml:"access_log_id" json:"access_log_id"`
+}
+
+type EntryTimeoutOptions struct {
+	GracefulTimeOut  time.Duration `yaml:"graceful_timeout" json:"graceful_timeout"`
+	IdleTimeout      time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
+	KeepAliveTimeout time.Duration `yaml:"keepalive_timeout" json:"keepalive_timeout"`
+	ReadTimeout      time.Duration `yaml:"read_timeout" json:"read_timeout"`
+	WriteTimeout     time.Duration `yaml:"write_timeout" json:"write_timeout"`
 }
 
 type EscapeType string
@@ -93,9 +103,9 @@ type AccessLogOptions struct {
 
 type MiddlwareOptions struct {
 	ID     string         `yaml:"-" json:"-"`
-	Kind   string         `yaml:"kind" json:"kind"`
+	Type   string         `yaml:"type" json:"type"`
 	Params map[string]any `yaml:"params" json:"params"`
-	Link   string         `yaml:"link" json:"link"`
+	Use    string         `yaml:"use" json:"use"`
 }
 
 type UpstreamStrategy string
@@ -135,19 +145,21 @@ const (
 )
 
 type ServiceOptions struct {
-	ID                  string             `yaml:"-" json:"-"`
-	TLSVerify           bool               `yaml:"tls_verify" json:"tls_verify"`
-	MaxConnWaitTimeout  *time.Duration     `yaml:"max_conn_wait_timeout" json:"max_conn_wait_timeout"`
-	MaxIdleConnsPerHost *int               `yaml:"max_idle_conns_per_host" json:"max_idle_conns_per_host"`
-	ReadTimeout         *time.Duration     `yaml:"read_timeout" json:"read_timeout"`
-	WriteTimeout        *time.Duration     `yaml:"write_timeout" json:"write_timeout"`
-	DailTimeout         *time.Duration     `yaml:"dail_timeout" json:"dail_timeout"`
-	Protocol            Protocol           `yaml:"protocol" json:"protocol"`
-	Url                 string             `yaml:"url" json:"url"`
-	Middlewares         []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
+	ID                  string                `yaml:"-" json:"-"`
+	TLSVerify           bool                  `yaml:"tls_verify" json:"tls_verify"`
+	MaxIdleConnsPerHost *int                  `yaml:"max_idle_conns_per_host" json:"max_idle_conns_per_host"`
+	Protocol            Protocol              `yaml:"protocol" json:"protocol"`
+	Url                 string                `yaml:"url" json:"url"`
+	Timeout             ServiceTimeoutOptions `yaml:"timeout" json:"timeout"`
+	Middlewares         []MiddlwareOptions    `yaml:"middlewares" json:"middlewares"`
 }
 
-
+type ServiceTimeoutOptions struct {
+	ReadTimeout        time.Duration `yaml:"read_timeout" json:"read_timeout"`
+	WriteTimeout       time.Duration `yaml:"write_timeout" json:"write_timeout"`
+	DailTimeout        time.Duration `yaml:"dail_timeout" json:"dail_timeout"`
+	MaxConnWaitTimeout time.Duration `yaml:"max_conn_wait_timeout" json:"max_conn_wait_timeout"`
+}
 
 type TLSOptions struct {
 	Enabled    bool   `yaml:"enabled" json:"enabled"`

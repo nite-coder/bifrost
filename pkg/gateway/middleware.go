@@ -65,7 +65,7 @@ func RegisterMiddleware(kind string, handler CreateMiddlewareHandler) error {
 }
 
 func loadMiddlewares(opts map[string]config.MiddlwareOptions) (map[string]app.HandlerFunc, error) {
-	
+
 	middlewares := map[string]app.HandlerFunc{}
 	for id, middlewareOpts := range opts {
 
@@ -75,13 +75,13 @@ func loadMiddlewares(opts map[string]config.MiddlwareOptions) (map[string]app.Ha
 
 		middlewareOpts.ID = id
 
-		if len(middlewareOpts.Kind) == 0 {
+		if len(middlewareOpts.Type) == 0 {
 			return nil, fmt.Errorf("middleware kind can't be empty")
 		}
 
-		handler, found := middlewareFactory[middlewareOpts.Kind]
+		handler, found := middlewareFactory[middlewareOpts.Type]
 		if !found {
-			return nil, fmt.Errorf("middleware handler '%s' was not found", middlewareOpts.Kind)
+			return nil, fmt.Errorf("middleware handler '%s' was not found", middlewareOpts.Type)
 		}
 
 		m, err := handler(middlewareOpts.Params)

@@ -77,28 +77,28 @@ func loadRouter(bifrost *Bifrost, entry config.EntryOptions, services map[string
 		routeMiddlewares := make([]app.HandlerFunc, 0)
 
 		for _, middleware := range routeOpts.Middlewares {
-			if len(middleware.Link) > 0 {
-				val, found := middlewares[middleware.Link]
+			if len(middleware.Use) > 0 {
+				val, found := middlewares[middleware.Use]
 				if !found {
-					return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", middleware.Link, routeOpts.ID)
+					return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", middleware.Use, routeOpts.ID)
 				}
 
 				routeMiddlewares = append(routeMiddlewares, val)
 				continue
 			}
 
-			if len(middleware.Kind) == 0 {
+			if len(middleware.Type) == 0 {
 				return nil, fmt.Errorf("middleware kind can't be empty in route: '%s'", routeOpts.Paths)
 			}
 
-			handler, found := middlewareFactory[middleware.Kind]
+			handler, found := middlewareFactory[middleware.Type]
 			if !found {
-				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", middleware.Kind, routeOpts.Paths)
+				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", middleware.Type, routeOpts.Paths)
 			}
 
 			m, err := handler(middleware.Params)
 			if err != nil {
-				return nil, fmt.Errorf("create middleware handler '%s' failed in route: '%s'", middleware.Kind, routeOpts.Paths)
+				return nil, fmt.Errorf("create middleware handler '%s' failed in route: '%s'", middleware.Type, routeOpts.Paths)
 			}
 
 			routeMiddlewares = append(routeMiddlewares, m)

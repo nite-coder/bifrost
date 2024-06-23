@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	bifrostConfig "http-benchmark/pkg/config"
+	"http-benchmark/pkg/config"
 	"math"
 	"math/rand"
 	"net"
@@ -14,31 +14,33 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/client"
-	"github.com/cloudwego/hertz/pkg/common/config"
+	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/rs/dnscache"
 )
 
 type Upstream struct {
-	opts        bifrostConfig.UpstreamOptions
+	opts        config.UpstreamOptions
 	proxies     []*ReverseProxy
 	counter     atomic.Uint64
 	totalWeight int
 	rng         *rand.Rand
 }
 
-var defaultClientOptions = []config.ClientOption{
-	client.WithNoDefaultUserAgentHeader(true),
-	client.WithDisableHeaderNamesNormalizing(true),
-	client.WithDisablePathNormalizing(true),
-	client.WithMaxConnsPerHost(math.MaxInt),
-	client.WithDialTimeout(10 * time.Second),
-	client.WithClientReadTimeout(10 * time.Second),
-	client.WithWriteTimeout(10 * time.Second),
-	client.WithMaxIdleConnDuration(120 * time.Second),
-	client.WithKeepAlive(true),
+func newDefaultClientOptions() []hzconfig.ClientOption {
+	return []hzconfig.ClientOption{
+		client.WithNoDefaultUserAgentHeader(true),
+		client.WithDisableHeaderNamesNormalizing(true),
+		client.WithDisablePathNormalizing(true),
+		client.WithMaxConnsPerHost(math.MaxInt),
+		client.WithDialTimeout(10 * time.Second),
+		client.WithClientReadTimeout(10 * time.Second),
+		client.WithWriteTimeout(10 * time.Second),
+		client.WithMaxIdleConnDuration(120 * time.Second),
+		client.WithKeepAlive(true),
+	}
 }
 
-func newUpstream(bifrost *Bifrost, serviceOpts bifrostConfig.ServiceOptions, opts bifrostConfig.UpstreamOptions) (*Upstream, error) {
+func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts config.UpstreamOptions) (*Upstream, error) {
 
 	if len(opts.ID) == 0 {
 		return nil, fmt.Errorf("upstream id can't be empty")
@@ -49,22 +51,22 @@ func newUpstream(bifrost *Bifrost, serviceOpts bifrostConfig.ServiceOptions, opt
 	}
 
 	// direct proxy
-	clientOpts := defaultClientOptions
+	clientOpts := newDefaultClientOptions()
 
-	if serviceOpts.DailTimeout != nil {
-		clientOpts = append(clientOpts, client.WithDialTimeout(*serviceOpts.DailTimeout))
+	if serviceOpts.Timeout.DailTimeout > 0 {
+		clientOpts = append(clientOpts, client.WithDialTimeout(serviceOpts.Timeout.DailTimeout))
 	}
 
-	if serviceOpts.ReadTimeout != nil {
-		clientOpts = append(clientOpts, client.WithClientReadTimeout(*serviceOpts.ReadTimeout))
+	if serviceOpts.Timeout.ReadTimeout > 0 {
+		clientOpts = append(clientOpts, client.WithClientReadTimeout(serviceOpts.Timeout.ReadTimeout))
 	}
 
-	if serviceOpts.WriteTimeout != nil {
-		clientOpts = append(clientOpts, client.WithWriteTimeout(*serviceOpts.WriteTimeout))
+	if serviceOpts.Timeout.WriteTimeout > 0 {
+		clientOpts = append(clientOpts, client.WithWriteTimeout(serviceOpts.Timeout.WriteTimeout))
 	}
 
-	if serviceOpts.MaxConnWaitTimeout != nil {
-		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(*serviceOpts.MaxConnWaitTimeout))
+	if serviceOpts.Timeout.MaxConnWaitTimeout > 0 {
+		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(serviceOpts.Timeout.MaxConnWaitTimeout))
 	}
 
 	if serviceOpts.MaxIdleConnsPerHost != nil {
@@ -79,7 +81,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts bifrostConfig.ServiceOptions, opt
 
 	for _, targetOpts := range opts.Targets {
 
-		if opts.Strategy == bifrostConfig.WeightedStrategy && targetOpts.Weight == 0 {
+		if opts.Strategy == config.WeightedStrategy && targetOpts.Weight == 0 {
 			return nil, fmt.Errorf("weight can't be 0. upstream id: %s, target: %s", opts.ID, targetOpts.Target)
 		}
 
@@ -129,7 +131,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts bifrostConfig.ServiceOptions, opt
 		upstream.proxies = append(upstream.proxies, proxy)
 	}
 
-	if opts.Strategy == bifrostConfig.RoundRobinStrategy {
+	if opts.Strategy == config.RoundRobinStrategy {
 		go func() {
 			t := time.NewTimer(5 * time.Minute)
 			defer t.Stop()
