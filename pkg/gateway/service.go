@@ -248,7 +248,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		logger.WarnContext(c, "client cancel the request",
 			slog.String("full_uri", fullURI),
 		)
-		<-done
+
 		ctx.Response.SetStatusCode(499)
 	case <-done:
 	}

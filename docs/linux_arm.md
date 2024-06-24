@@ -1,9 +1,9 @@
-# openresty 
+# Openresty
 
 ## http2
+
   scenarios: (100.00%) 1 scenario, 500 max VUs, 40s max duration (incl. graceful stop):
            * contacts: 500 looping VUs for 10s (gracefulStop: 30s)
-
 
      data_received..................: 346 MB 35 MB/s
      data_sent......................: 84 MB  8.4 MB/s
@@ -22,16 +22,14 @@
      vus............................: 500    min=500       max=500 
      vus_max........................: 500    min=500       max=500 
 
-
-
 ## https1.1
+
   execution: local
      script: vus.js
      output: -
 
   scenarios: (100.00%) 1 scenario, 500 max VUs, 40s max duration (incl. graceful stop):
            * contacts: 500 looping VUs for 10s (gracefulStop: 30s)
-
 
      data_received..................: 432 MB 43 MB/s
      data_sent......................: 158 MB 16 MB/s
@@ -51,13 +49,13 @@
      vus_max........................: 500    min=500        max=500 
 
 ## http1.1
+
   execution: local
      script: vus.js
      output: -
 
   scenarios: (100.00%) 1 scenario, 500 max VUs, 40s max duration (incl. graceful stop):
            * default: 500 looping VUs for 10s (gracefulStop: 30s)
-
 
      data_received..................: 432 MB 43 MB/s
      data_sent......................: 152 MB 15 MB/s
@@ -76,17 +74,16 @@
      vus............................: 500    min=500        max=500 
      vus_max........................: 500    min=500        max=500 
 
-
-# bifrost 
+# Bifrost
 
 ## http2
+
   execution: local
      script: vus.js
      output: -
 
   scenarios: (100.00%) 1 scenario, 500 max VUs, 40s max duration (incl. graceful stop):
            * contacts: 500 looping VUs for 10s (gracefulStop: 30s)
-
 
      data_received..................: 313 MB 31 MB/s
      data_sent......................: 80 MB  7.9 MB/s
@@ -106,13 +103,13 @@
      vus_max........................: 500    min=500        max=500
 
 ## https1.1
+
     execution: local
      script: vus.js
      output: -
 
   scenarios: (100.00%) 1 scenario, 500 max VUs, 40s max duration (incl. graceful stop):
            * contacts: 500 looping VUs for 10s (gracefulStop: 30s)
-
 
      data_received..................: 455 MB 46 MB/s
      data_sent......................: 176 MB 18 MB/s
@@ -132,13 +129,13 @@
      vus_max........................: 500    min=500        max=500 
 
 ## http1.1
+
   execution: local
      script: vus.js
      output: -
 
   scenarios: (100.00%) 1 scenario, 500 max VUs, 40s max duration (incl. graceful stop):
            * default: 500 looping VUs for 10s (gracefulStop: 30s)
-
 
      data_received..................: 483 MB 48 MB/s
      data_sent......................: 180 MB 18 MB/s

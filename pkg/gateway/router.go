@@ -38,9 +38,8 @@ type methodHandler struct {
 type Router struct {
 	isHostEnabled bool
 	tree          *node // Root node of the Trie
-
-	prefixRoutes []routeSetting
-	regexpRoutes []routeSetting
+	prefixRoutes  []routeSetting
+	regexpRoutes  []routeSetting
 }
 
 func loadRouter(bifrost *Bifrost, entry config.EntryOptions, services map[string]*Service, middlewares map[string]app.HandlerFunc) (*Router, error) {

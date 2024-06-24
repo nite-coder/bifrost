@@ -24,7 +24,7 @@ import (
 )
 
 type HTTPServer struct {
-	entryOpts config.EntryOptions
+	entryOpts *config.EntryOptions
 	switcher  *switcher
 	server    *server.Hertz
 }
@@ -37,8 +37,9 @@ func newHTTPServer(bifrost *Bifrost, entryOpts config.EntryOptions, tracers []tr
 		server.WithDisablePrintRoute(true),
 		server.WithSenseClientDisconnection(true),
 		server.WithReadTimeout(time.Second * 60),
-		withDefaultServerHeader(true),
+		server.WithKeepAlive(true),
 		server.WithALPN(true),
+		withDefaultServerHeader(true),
 	}
 
 	if entryOpts.Timeout.KeepAliveTimeout.Seconds() > 0 {
@@ -57,7 +58,7 @@ func newHTTPServer(bifrost *Bifrost, entryOpts config.EntryOptions, tracers []tr
 		hzOpts = append(hzOpts, server.WithWriteTimeout(entryOpts.Timeout.WriteTimeout))
 	}
 
-	if entryOpts.Timeout.GracefulTimeOut > 0 {
+	if entryOpts.Timeout.GracefulTimeOut.Seconds() > 0 {
 		hzOpts = append(hzOpts, server.WithExitWaitTime(entryOpts.Timeout.GracefulTimeOut))
 	}
 
@@ -145,7 +146,7 @@ func newHTTPServer(bifrost *Bifrost, entryOpts config.EntryOptions, tracers []tr
 	}
 
 	httpServer := &HTTPServer{
-		entryOpts: entryOpts,
+		entryOpts: &entryOpts,
 	}
 
 	h := server.Default(hzOpts...)

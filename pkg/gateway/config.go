@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"http-benchmark/pkg/config"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -106,24 +107,47 @@ func fileExist(file string) bool {
 	return true
 }
 
-func validateOptions(opts config.Options) error {
-	if len(opts.Entries) == 0 {
+func validateOptions(mainOpts config.Options) error {
+	if len(mainOpts.Entries) == 0 {
 		return fmt.Errorf("no entry found")
 	}
 
-	if len(opts.Routes) == 0 {
+	if len(mainOpts.Routes) == 0 {
 		return fmt.Errorf("no route found")
 	}
 
-	for routeID, route := range opts.Routes {
+	for id, opts := range mainOpts.AccessLogs {
+		if !opts.Enabled {
+			continue
+		}
+
+		if opts.Template == "" {
+			return fmt.Errorf("access log '%s' template can't be empty", id)
+		}
+
+		if len(opts.TimeFormat) > 0 {
+			_, err := time.Parse(opts.TimeFormat, time.Now().String())
+			if err != nil {
+				return fmt.Errorf("access log '%s' time format is invalid", id)
+			}
+		}
+	}
+
+	for id, opts := range mainOpts.Entries {
+		if opts.Bind == "" {
+			return fmt.Errorf("entry '%s' bind can't be empty", id)
+		}
+	}
+
+	for routeID, route := range mainOpts.Routes {
 		for _, entry := range route.Entries {
-			if _, found := opts.Entries[entry]; !found {
+			if _, found := mainOpts.Entries[entry]; !found {
 				return fmt.Errorf("entry '%s' is invalid in '%s' route section", entry, routeID)
 			}
 		}
 	}
 
-	for upstreamID, _ := range opts.Upstreams {
+	for upstreamID, _ := range mainOpts.Upstreams {
 
 		if upstreamID[0] == '$' {
 			return fmt.Errorf("upstream '%s' is invalid.  name can't start with '$", upstreamID)

@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"http-benchmark/pkg/config"
-	"math"
 	"math/rand"
 	"net"
 	"net/url"
@@ -31,10 +30,9 @@ func newDefaultClientOptions() []hzconfig.ClientOption {
 		client.WithNoDefaultUserAgentHeader(true),
 		client.WithDisableHeaderNamesNormalizing(true),
 		client.WithDisablePathNormalizing(true),
-		client.WithMaxConnsPerHost(math.MaxInt),
 		client.WithDialTimeout(10 * time.Second),
-		client.WithClientReadTimeout(10 * time.Second),
-		client.WithWriteTimeout(10 * time.Second),
+		client.WithClientReadTimeout(60 * time.Second),
+		client.WithWriteTimeout(60 * time.Second),
 		client.WithMaxIdleConnDuration(120 * time.Second),
 		client.WithKeepAlive(true),
 	}
