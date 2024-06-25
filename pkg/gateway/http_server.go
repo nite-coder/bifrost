@@ -177,7 +177,9 @@ func newHTTPServer(bifrost *Bifrost, entryOpts config.EntryOptions, tracers []tr
 
 	})
 
-	pprof.Register(h)
+	if entryOpts.PPROF {
+		pprof.Register(h)
+	}
 
 	h.Use(switcher.ServeHTTP)
 

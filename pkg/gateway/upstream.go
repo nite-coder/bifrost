@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"hash"
+	"hash/fnv"
 	"http-benchmark/pkg/config"
 	"math/rand"
 	"net"
@@ -18,10 +20,11 @@ import (
 )
 
 type Upstream struct {
-	opts        config.UpstreamOptions
+	opts        *config.UpstreamOptions
 	proxies     []*ReverseProxy
 	counter     atomic.Uint64
 	totalWeight int
+	hasher      hash.Hash32
 	rng         *rand.Rand
 }
 
@@ -72,9 +75,10 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 	}
 
 	upstream := &Upstream{
-		opts:    opts,
+		opts:    &opts,
 		proxies: make([]*ReverseProxy, 0),
 		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
+		hasher:  fnv.New32a(),
 	}
 
 	for _, targetOpts := range opts.Targets {
@@ -159,6 +163,10 @@ func (u *Upstream) roundRobin() *ReverseProxy {
 }
 
 func (u *Upstream) weighted() *ReverseProxy {
+	if len(u.proxies) == 1 {
+		return u.proxies[0]
+	}
+
 	randomWeight := u.rng.Intn(u.totalWeight)
 
 	for _, proxy := range u.proxies {
@@ -172,7 +180,23 @@ func (u *Upstream) weighted() *ReverseProxy {
 }
 
 func (u *Upstream) random() *ReverseProxy {
+	if len(u.proxies) == 1 {
+		return u.proxies[0]
+	}
+
 	selectedIndex := u.rng.Intn(len(u.proxies))
+	return u.proxies[selectedIndex]
+}
+
+func (u *Upstream) hasing(key string) *ReverseProxy {
+	if len(u.proxies) == 1 {
+		return u.proxies[0]
+	}
+
+	u.hasher.Write([]byte(key))
+	hashValue := u.hasher.Sum32()
+
+	selectedIndex := int(hashValue) % len(u.proxies)
 	return u.proxies[selectedIndex]
 }
 

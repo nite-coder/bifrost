@@ -72,6 +72,7 @@ type EntryOptions struct {
 	Timeout            EntryTimeoutOptions `yaml:"timeout" json:"timeout"`
 	MaxRequestBodySize int                 `yaml:"max_request_body_size" json:"max_request_body_size"`
 	ReadBufferSize     int                 `yaml:"read_buffer_size" json:"read_buffer_size"`
+	PPROF              bool                `yaml:"pprof" json:"pprof"`
 	AccessLogID        string              `yaml:"access_log_id" json:"access_log_id"`
 }
 
@@ -114,6 +115,7 @@ const (
 	RandomStrategy     UpstreamStrategy = "random"
 	RoundRobinStrategy UpstreamStrategy = "round_robin"
 	WeightedStrategy   UpstreamStrategy = "weighted"
+	HashingStrategy    UpstreamStrategy = "hashing"
 )
 
 type TargetOptions struct {
@@ -124,6 +126,7 @@ type TargetOptions struct {
 type UpstreamOptions struct {
 	ID       string           `yaml:"-" json:"-"`
 	Strategy UpstreamStrategy `yaml:"strategy" json:"strategy"`
+	HashOn   string           `yaml:"hash_on" json:"hash_on"`
 	Targets  []TargetOptions  `yaml:"targets" json:"targets"`
 }
 

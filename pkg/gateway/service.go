@@ -201,6 +201,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		proxy := svc.proxy
 		if svc.upstream != nil && proxy == nil {
 			ctx.Set(config.UPSTREAM, svc.upstream.opts.ID)
+
 			switch svc.upstream.opts.Strategy {
 			case config.RoundRobinStrategy, "":
 				proxy = svc.upstream.roundRobin()
@@ -208,6 +209,10 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 				proxy = svc.upstream.weighted()
 			case config.RandomStrategy:
 				proxy = svc.upstream.random()
+			case config.HashingStrategy:
+				hashon := svc.upstream.opts.HashOn
+				val := ctx.GetString(hashon)
+				proxy = svc.upstream.hasing(val)
 			}
 		}
 

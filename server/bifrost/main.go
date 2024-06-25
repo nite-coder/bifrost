@@ -22,7 +22,9 @@ var bifrost *gateway.Bifrost
 
 func main() {
 	defer func() {
-		bifrost.Shutdown()
+		if bifrost != nil {
+			bifrost.Shutdown()
+		}
 	}()
 
 	var err error

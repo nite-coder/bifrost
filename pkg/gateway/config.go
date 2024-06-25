@@ -147,10 +147,22 @@ func validateOptions(mainOpts config.Options) error {
 		}
 	}
 
-	for upstreamID, _ := range mainOpts.Upstreams {
+	for upstreamID, opts := range mainOpts.Upstreams {
 
 		if upstreamID[0] == '$' {
 			return fmt.Errorf("upstream '%s' is invalid.  name can't start with '$", upstreamID)
+		}
+
+		switch opts.Strategy {
+		case config.WeightedStrategy, config.RandomStrategy, config.HashingStrategy, config.RoundRobinStrategy:
+		case "":
+			return fmt.Errorf("upstream '%s' strategy field can't be empty", upstreamID)
+		default:
+			return fmt.Errorf("upstream '%s' strategy field '%s' is invalid", upstreamID, opts.Strategy)
+		}
+
+		if opts.Strategy == config.HashingStrategy && opts.HashOn == "" {
+			return fmt.Errorf("upstream '%s' hash_on field can't be empty", upstreamID)
 		}
 	}
 
