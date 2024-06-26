@@ -3,26 +3,26 @@ package gateway
 import (
 	"context"
 	"fmt"
-	bifrostConfig "http-benchmark/pkg/config"
+	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/common/config"
+	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/hertz-contrib/obs-opentelemetry/provider"
 	"github.com/hertz-contrib/obs-opentelemetry/tracing"
 )
 
 type Engine struct {
 	ID              string
-	opts            bifrostConfig.Options
+	opts            config.Options
 	handlers        app.HandlersChain
 	middlewares     app.HandlersChain
 	notFoundHandler app.HandlerFunc
 
-	options []config.Option
+	options []hzconfig.Option
 }
 
-func newEngine(bifrost *Bifrost, entryOpts bifrostConfig.EntryOptions) (*Engine, error) {
+func newEngine(bifrost *Bifrost, entryOpts config.EntryOptions) (*Engine, error) {
 
 	// middlewares
 	middlewares, err := loadMiddlewares(bifrost.opts.Middlewares)
@@ -47,7 +47,7 @@ func newEngine(bifrost *Bifrost, entryOpts bifrostConfig.EntryOptions) (*Engine,
 		opts:            *bifrost.opts,
 		handlers:        make([]app.HandlerFunc, 0),
 		notFoundHandler: nil,
-		options:         make([]config.Option, 0),
+		options:         make([]hzconfig.Option, 0),
 	}
 
 	// tracing

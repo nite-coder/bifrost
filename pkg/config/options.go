@@ -3,9 +3,9 @@ package config
 import "time"
 
 type Options struct {
-	Providers   Provider                    `yaml:"providers" json:"providers"`
+	Providers   ProvidersOtions                    `yaml:"providers" json:"providers"`
 	Logging     LoggingOtions               `yaml:"logging" json:"logging"`
-	Metrics     MetricOptions               `yaml:"metrics" json:"metrics"`
+	Metrics     MetricsOptions               `yaml:"metrics" json:"metrics"`
 	Tracing     TracingOptions              `yaml:"tracing" json:"tracing"`
 	AccessLogs  map[string]AccessLogOptions `yaml:"access_logs" json:"access_logs"`
 	Entries     map[string]EntryOptions     `yaml:"entries" json:"entries"`
@@ -15,7 +15,7 @@ type Options struct {
 	Upstreams   map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
 }
 
-type Provider struct {
+type ProvidersOtions struct {
 	File FileProviderOptions `yaml:"file" json:"file"`
 }
 
@@ -25,7 +25,7 @@ type FileProviderOptions struct {
 	Watch   bool     `yaml:"watch" json:"watch"`
 }
 
-type MetricOptions struct {
+type MetricsOptions struct {
 	Prometheus PrometheusOptions `yaml:"prometheus" json:"prometheus"`
 }
 

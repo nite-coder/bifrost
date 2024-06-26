@@ -103,6 +103,7 @@ services:
 upstreams:
   default:
     strategy: "round_robin"
+    hash_on: ""
     targets:
       - target: "127.0.0.1:8000"
         weight: 30

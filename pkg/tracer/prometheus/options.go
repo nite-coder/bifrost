@@ -9,16 +9,16 @@ var defaultBuckets = []float64{0.100000, 0.300000, 1.200000, 5.000000}
 
 // Option opts for monitor prometheus
 type Option interface {
-	apply(cfg *config)
+	apply(cfg *promConfig)
 }
 
-type option func(cfg *config)
+type option func(cfg *promConfig)
 
-func (fn option) apply(cfg *config) {
+func (fn option) apply(cfg *promConfig) {
 	fn(cfg)
 }
 
-type config struct {
+type promConfig struct {
 	buckets            []float64
 	enableGoCollector  bool
 	registry           *prom.Registry
@@ -26,8 +26,8 @@ type config struct {
 	disableServer      bool
 }
 
-func defaultConfig() *config {
-	return &config{
+func defaultConfig() *promConfig {
+	return &promConfig{
 		buckets:           defaultBuckets,
 		enableGoCollector: false,
 		registry:          prom.NewRegistry(),
@@ -37,28 +37,28 @@ func defaultConfig() *config {
 
 // WithEnableGoCollector enable go collector
 func WithEnableGoCollector(enable bool) Option {
-	return option(func(cfg *config) {
+	return option(func(cfg *promConfig) {
 		cfg.enableGoCollector = enable
 	})
 }
 
 // WithGoCollectorRule define your custom go collector rule
 func WithGoCollectorRule(rules ...collectors.GoRuntimeMetricsRule) Option {
-	return option(func(cfg *config) {
+	return option(func(cfg *promConfig) {
 		cfg.runtimeMetricRules = rules
 	})
 }
 
 // WithDisableServer disable prometheus server
 func WithDisableServer(disable bool) Option {
-	return option(func(cfg *config) {
+	return option(func(cfg *promConfig) {
 		cfg.disableServer = disable
 	})
 }
 
 // WithHistogramBuckets define your custom histogram buckets base on your biz
 func WithHistogramBuckets(buckets []float64) Option {
-	return option(func(cfg *config) {
+	return option(func(cfg *promConfig) {
 		if len(buckets) > 0 {
 			cfg.buckets = buckets
 		}
@@ -67,7 +67,7 @@ func WithHistogramBuckets(buckets []float64) Option {
 
 // WithRegistry define your custom registry
 func WithRegistry(registry *prom.Registry) Option {
-	return option(func(cfg *config) {
+	return option(func(cfg *promConfig) {
 		if registry != nil {
 			cfg.registry = registry
 		}
