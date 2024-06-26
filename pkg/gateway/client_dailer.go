@@ -17,12 +17,14 @@ import (
 type httpDialer struct {
 	dialer   network.Dialer
 	resolver dnscache.DNSResolver
+	random   *rand.Rand
 }
 
 func newHTTPDialer(resolver dnscache.DNSResolver) network.Dialer {
 	return &httpDialer{
 		dialer:   netpoll.NewDialer(),
 		resolver: resolver,
+		random:   rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -37,8 +39,7 @@ func (d *httpDialer) DialConnection(n, address string, timeout time.Duration, tl
 			return nil, err
 		}
 
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		randomIndex := r.Intn(len(ips))
+		randomIndex := d.random.Intn(len(ips))
 		address = net.JoinHostPort(ips[randomIndex], port)
 		slog.Debug("http dns resolver info", "host", host, "ip", address)
 	}
@@ -57,12 +58,14 @@ func (d *httpDialer) AddTLS(conn network.Conn, tlsConfig *tls.Config) (network.C
 type httpsDialer struct {
 	dialer   network.Dialer
 	resolver dnscache.DNSResolver
+	random   *rand.Rand
 }
 
 func newHTTPSDialer(resolver dnscache.DNSResolver) network.Dialer {
 	return &httpsDialer{
 		dialer:   standard.NewDialer(),
 		resolver: resolver,
+		random:   rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -77,8 +80,7 @@ func (d *httpsDialer) DialConnection(n, address string, timeout time.Duration, t
 			return nil, err
 		}
 
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		randomIndex := r.Intn(len(ips))
+		randomIndex := d.random.Intn(len(ips))
 		address = net.JoinHostPort(ips[randomIndex], port)
 		slog.Debug("https dns resolver info", "host", host, "ip", address)
 	}

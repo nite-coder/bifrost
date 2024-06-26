@@ -115,12 +115,16 @@ var hopHeaders = []string{
 // Note: if no config.ClientOption is passed it will use the default global client.Client instance.
 // When passing config.ClientOption it will initialize a local client.Client instance.
 // Using ReverseProxy.SetClient if there is need for shared customized client.Client instance.
-func newSingleHostReverseProxy(target string, tracingEnabled bool, weight int, options ... hzconfig.ClientOption) (*ReverseProxy, error) {
-	addr, _ := url.Parse(target)
+func newSingleHostReverseProxy(target string, tracingEnabled bool, weight int, options ...hzconfig.ClientOption) (*ReverseProxy, error) {
+	addr, err := url.Parse(target)
+	if err != nil {
+		return nil, err
+	}
 
 	r := &ReverseProxy{
 		Target:     target,
 		targetHost: addr.Host,
+		weight:     weight,
 		director: func(req *protocol.Request) {
 			req.Header.SetProtocol("HTTP/1.1")
 
@@ -134,7 +138,6 @@ func newSingleHostReverseProxy(target string, tracingEnabled bool, weight int, o
 			req.SetRequestURI(b2s(JoinURLPath(req, target)))
 			//req.Header.SetHostBytes(req.URI().Host())
 		},
-		weight: weight,
 	}
 
 	if len(options) != 0 {
