@@ -126,7 +126,7 @@ func validateOptions(mainOpts config.Options) error {
 		}
 
 		if len(opts.TimeFormat) > 0 {
-			_, err := time.Parse(opts.TimeFormat, time.Now().String())
+			_, err := time.Parse(opts.TimeFormat, time.Now().Format(opts.TimeFormat))
 			if err != nil {
 				return fmt.Errorf("access log '%s' time format is invalid", id)
 			}

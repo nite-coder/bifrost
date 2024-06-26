@@ -27,7 +27,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	bifrostConfig "http-benchmark/pkg/config"
+	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"log/slog"
 	"net"
@@ -38,7 +38,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
-	"github.com/cloudwego/hertz/pkg/common/config"
+	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	hertztracing "github.com/hertz-contrib/obs-opentelemetry/tracing"
@@ -115,7 +115,7 @@ var hopHeaders = []string{
 // Note: if no config.ClientOption is passed it will use the default global client.Client instance.
 // When passing config.ClientOption it will initialize a local client.Client instance.
 // Using ReverseProxy.SetClient if there is need for shared customized client.Client instance.
-func newSingleHostReverseProxy(target string, tracingEnabled bool, weight int, options ...config.ClientOption) (*ReverseProxy, error) {
+func newSingleHostReverseProxy(target string, tracingEnabled bool, weight int, options ... hzconfig.ClientOption) (*ReverseProxy, error) {
 	addr, _ := url.Parse(target)
 
 	r := &ReverseProxy{
@@ -250,7 +250,7 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	req := &ctx.Request
 	resp := &ctx.Response
 
-	ctx.Set(bifrostConfig.UPSTREAM_ADDR, r.targetHost)
+	ctx.Set(config.UPSTREAM_ADDR, r.targetHost)
 
 	// save tmp resp header
 	respTmpHeader := respTmpHeaderPool.Get().(map[string][]string)

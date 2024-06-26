@@ -114,9 +114,12 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 				clientOpts = append(clientOpts, client.WithDialer(newHTTPDialer(dnsResolver)))
 			}
 		case "https":
-			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
-				InsecureSkipVerify: serviceOpts.TLSVerify,
-			}))
+			if dnsResolver != nil {
+				clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
+					InsecureSkipVerify: serviceOpts.TLSVerify,
+				}))
+				clientOpts = append(clientOpts, client.WithDialer(newHTTPSDialer(dnsResolver)))
+			}
 		}
 
 		port := targetPort

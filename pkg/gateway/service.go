@@ -146,9 +146,12 @@ func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions m
 			clientOpts = append(clientOpts, client.WithDialer(newHTTPDialer(dnsResolver)))
 		}
 	case "https":
-		clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
-			InsecureSkipVerify: opts.TLSVerify,
-		}))
+		if dnsResolver != nil {
+			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
+				InsecureSkipVerify: opts.TLSVerify,
+			}))
+			clientOpts = append(clientOpts, client.WithDialer(newHTTPSDialer(dnsResolver)))
+		}
 	}
 
 	url := fmt.Sprintf("%s://%s%s", addr.Scheme, host, addr.Path)
