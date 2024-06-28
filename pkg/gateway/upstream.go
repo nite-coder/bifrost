@@ -108,6 +108,11 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 			return nil, err
 		}
 
+		port := targetPort
+		if len(addr.Port()) > 0 {
+			port = addr.Port()
+		}
+
 		switch strings.ToLower(addr.Scheme) {
 		case "http":
 			if dnsResolver != nil {
@@ -122,12 +127,12 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 			}
 		}
 
-		port := targetPort
-		if len(addr.Port()) > 0 {
-			port = addr.Port()
+		url := fmt.Sprintf("%s://%s%s", addr.Scheme, targetHost, addr.Path)
+
+		if port != "" {
+			url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
 		}
 
-		url := fmt.Sprintf("%s://%s:%s%s", serviceOpts.Protocol, targetHost, port, addr.Path)
 		proxy, err := newSingleHostReverseProxy(url, bifrost.opts.Tracing.Enabled, targetOpts.Weight, clientOpts...)
 
 		if err != nil {

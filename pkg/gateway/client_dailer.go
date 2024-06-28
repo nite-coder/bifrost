@@ -34,6 +34,10 @@ func (d *httpDialer) DialConnection(n, address string, timeout time.Duration, tl
 		if err != nil {
 			return nil, err
 		}
+		if port == "" {
+			port = "80"
+		}
+
 		ips, err := d.resolver.LookupHost(context.Background(), host)
 		if err != nil {
 			return nil, err
@@ -75,6 +79,10 @@ func (d *httpsDialer) DialConnection(n, address string, timeout time.Duration, t
 		if err != nil {
 			return nil, err
 		}
+		if port == "" {
+			port = "443"
+		}
+
 		ips, err := d.resolver.LookupHost(context.Background(), host)
 		if err != nil {
 			return nil, err
