@@ -131,14 +131,12 @@ type UpstreamOptions struct {
 }
 
 type RouteOptions struct {
-	ID          string              `yaml:"-" json:"-"`
-	Hosts       []string            `yaml:"hosts" json:"hosts"`
-	Methods     []string            `yaml:"methods" json:"methods"`
-	Paths       []string            `yaml:"paths" json:"paths"`
-	Headers     map[string][]string `yaml:"headers" json:"headers"`
-	Entries     []string            `yaml:"entries" json:"entries"`
-	Middlewares []MiddlwareOptions  `yaml:"middlewares" json:"middlewares"`
-	ServiceID   string              `yaml:"service_id" json:"service_id"`
+	ID          string             `yaml:"-" json:"-"`
+	Methods     []string           `yaml:"methods" json:"methods"`
+	Paths       []string           `yaml:"paths" json:"paths"`
+	Entries     []string           `yaml:"entries" json:"entries"`
+	Middlewares []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
+	ServiceID   string             `yaml:"service_id" json:"service_id"`
 }
 
 type Protocol string

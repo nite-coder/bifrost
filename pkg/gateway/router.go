@@ -7,7 +7,6 @@ import (
 	"http-benchmark/pkg/config"
 	"regexp"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 
@@ -16,15 +15,24 @@ import (
 
 // node represents a node in the Trie
 type node struct {
-	path               string           // Path name of the node
-	children           map[string]*node // Child nodes, indexed by path name
-	parameterizedChild *node
-	handler            *methodHandler // Handler functions
+	path            string           // Path name of the node
+	children        map[string]*node // Child nodes, indexed by path name
+	handler         *methodHandler   // Handler functions
+	prefixChildren  map[string]*node
+	generalChildren map[string]*node
 }
+
+type nodeType int32
+
+const (
+	nodeTypeExact nodeType = iota
+	nodeTypePrefix
+	nodeTypeGeneral
+	nodeTypeRegex
+)
 
 type routeSetting struct {
 	regex      *regexp.Regexp
-	prefixPath string
 	route      *config.RouteOptions
 	middleware []app.HandlerFunc
 }
@@ -36,21 +44,13 @@ type methodHandler struct {
 
 // Router struct contains the Trie and handler chain
 type Router struct {
-	isHostEnabled bool
-	tree          *node // Root node of the Trie
-	prefixRoutes  []routeSetting
-	regexpRoutes  []routeSetting
+	tree         *node // Root node of the Trie
+	prefixRoutes []routeSetting
+	regexpRoutes []routeSetting
 }
 
 func loadRouter(bifrost *Bifrost, entry config.EntryOptions, services map[string]*Service, middlewares map[string]app.HandlerFunc) (*Router, error) {
-	isHostEnabled := false
-	for _, routeOpts := range bifrost.opts.Routes {
-		if len(routeOpts.Hosts) > 0 {
-			isHostEnabled = true
-			break
-		}
-	}
-	router := newRouter(isHostEnabled)
+	router := newRouter()
 
 	for routeID, routeOpts := range bifrost.opts.Routes {
 
@@ -115,12 +115,11 @@ func loadRouter(bifrost *Bifrost, entry config.EntryOptions, services map[string
 }
 
 // newRouter creates and returns a new router
-func newRouter(isHostEnabled bool) *Router {
+func newRouter() *Router {
 	r := &Router{
-		isHostEnabled: isHostEnabled,
-		tree:          newNode("/"),
-		prefixRoutes:  make([]routeSetting, 0),
-		regexpRoutes:  make([]routeSetting, 0),
+		tree:         newNode("/"),
+		prefixRoutes: make([]routeSetting, 0),
+		regexpRoutes: make([]routeSetting, 0),
 	}
 
 	return r
@@ -130,9 +129,10 @@ func newRouter(isHostEnabled bool) *Router {
 func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	method := b2s(ctx.Method())
 	path := b2s(ctx.Request.Path())
-	middleware := r.find(method, path)
 
-	if len(middleware) > 0 {
+	middleware, isDelay := r.find(method, path)
+
+	if len(middleware) > 0 && !isDelay {
 		ctx.SetIndex(-1)
 		ctx.SetHandlers(middleware)
 		ctx.Next(c)
@@ -140,15 +140,8 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		return
 	}
 
-	// regexp
+	// regexp routes
 	for _, route := range r.regexpRoutes {
-		if len(route.route.Hosts) > 0 {
-			host := getHost(ctx)
-			if !slices.Contains(route.route.Hosts, host()) {
-				continue
-			}
-		}
-
 		if checkRegexpRoute(route, method, path) {
 			ctx.SetIndex(-1)
 			ctx.SetHandlers(route.middleware)
@@ -158,42 +151,15 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		}
 	}
 
-	// prefix
-	for _, route := range r.prefixRoutes {
-		if len(route.route.Hosts) > 0 {
-			host := getHost(ctx)
-			if !slices.Contains(route.route.Hosts, host()) {
-				continue
-			}
-		}
-
-		if checkPrefixRoute(route, method, path) {
-			ctx.SetIndex(-1)
-			ctx.SetHandlers(route.middleware)
-			ctx.Next(c)
-			ctx.Abort()
-			return
-		}
+	// general routes
+	if len(middleware) > 0 {
+		ctx.SetIndex(-1)
+		ctx.SetHandlers(middleware)
+		ctx.Next(c)
+		ctx.Abort()
+		return
 	}
 
-}
-
-func checkPrefixRoute(prefixSetting routeSetting, method, path string) bool {
-	if len(prefixSetting.route.Methods) > 0 {
-		isMethodFound := false
-
-		for _, m := range prefixSetting.route.Methods {
-			if m == method {
-				return true
-			}
-		}
-
-		if !isMethodFound {
-			return false
-		}
-	}
-
-	return strings.HasPrefix(path, prefixSetting.prefixPath)
 }
 
 func checkRegexpRoute(prefixSetting routeSetting, method, path string) bool {
@@ -226,29 +192,15 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 	}
 
 	for _, path := range routeOpts.Paths {
+		path = strings.TrimSpace(path)
 		first := path[:1]
-		// check prefix match
-		if first == "/" && strings.HasSuffix(path, "*") {
-			prefixPath := strings.TrimSpace(path[:len(path)-1])
-
-			prefixRoute := routeSetting{
-				prefixPath: prefixPath,
-				route:      &routeOpts,
-				middleware: middlewares,
-			}
-
-			r.prefixRoutes = append(r.prefixRoutes, prefixRoute)
-
-			sort.SliceStable(r.prefixRoutes, func(i, j int) bool {
-				return len(r.prefixRoutes[i].prefixPath) > len(r.prefixRoutes[j].prefixPath)
-			})
-
-			return nil
-		}
 
 		// regexp match
 		if first == "~" {
 			expr := strings.TrimSpace(path[1:])
+			if len(expr) == 0 {
+				return fmt.Errorf("router: regexp expression route can't be empty in route: '%s'", routeOpts.ID)
+			}
 			regx, err := regexp.Compile(expr)
 			if err != nil {
 				return err
@@ -261,41 +213,48 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 			}
 
 			r.regexpRoutes = append(r.regexpRoutes, prefixRoute)
-			return nil
+			continue
 		}
 
-		// static route
-		if first != "/" {
+		// exact, prefix, general route
+		nodeType := nodeTypeGeneral
+
+		if first == "=" {
+			nodeType = nodeTypeExact
+			path = strings.TrimSpace(path[1:])
+			if len(path) == 0 {
+				return fmt.Errorf("router: exact route can't be empty in route: '%s'", routeOpts.ID)
+			}
+		}
+
+		if len(path) > 2 && path[:2] == "^=" {
+			nodeType = nodeTypePrefix
+			path = strings.TrimSpace(path[2:])
+			if len(path) == 0 {
+				return fmt.Errorf("router: prefix route can't be empty in route: '%s'", routeOpts.ID)
+			}
+		}
+
+		if path[:1] != "/" {
 			return fmt.Errorf("router: '%s' is invalid path.  Path needs to begin with '/'", path)
 		}
-		hosts := routeOpts.Hosts
-		if len(hosts) == 0 {
-			hosts = []string{"/:host"}
-		}
 
-		for _, host := range hosts {
-
-			if r.isHostEnabled {
-				path = fmt.Sprintf("/%s%s", host, path)
-			}
-
-			if len(routeOpts.Methods) == 0 {
-				for _, method := range httpMethods {
-					err = r.add(method, path, middlewares...)
-					if err != nil && !errors.Is(err, ErrAlreadyExists) {
-						return err
-					}
-				}
-			}
-
-			for _, method := range routeOpts.Methods {
-				if matches := upperLetterReg.MatchString(method); !matches {
-					panic("http method " + method + " is not valid")
-				}
-				err = r.add(method, path, middlewares...)
-				if err != nil {
+		if len(routeOpts.Methods) == 0 {
+			for _, method := range httpMethods {
+				err = r.add(method, path, nodeType, middlewares...)
+				if err != nil && !errors.Is(err, ErrAlreadyExists) {
 					return err
 				}
+			}
+		}
+
+		for _, method := range routeOpts.Methods {
+			if matches := upperLetterReg.MatchString(method); !matches {
+				panic("http method " + method + " is not valid")
+			}
+			err = r.add(method, path, nodeType, middlewares...)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -303,60 +262,68 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 	return nil
 }
 
-// add adds a static route
-func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) error {
+// add adds a route to radix tree
+func (r *Router) add(method string, path string, nodeType nodeType, middleware ...app.HandlerFunc) error {
 	if len(path) == 0 || path[0] != '/' {
 		return fmt.Errorf("router: '%s' is invalid path.  Path needs to begin with '/'", path)
 	}
 
 	originalPath := path
+	currentNode := r.tree
+
+	// If the path is the root path, add handler functions directly
+	if path == "/" {
+		if nodeType == nodeTypePrefix || nodeType == nodeTypeGeneral {
+			childNode := currentNode.findChildByName("/", nodeType)
+			if childNode == nil {
+				childNode = newNode("/")
+				currentNode.addChild(childNode, nodeType)
+			}
+
+			currentNode = childNode
+		}
+
+		currentNode.addHandler(method, middleware)
+		return nil
+	}
 
 	// Remove leading slash
 	if len(path) > 1 {
 		path = path[1:]
 	}
 
-	currentNode := r.tree
-
-	// If the path is the root path, add handler functions directly
-	if path == "" {
-		currentNode.addHandler(method, middleware)
-		return nil
-	}
-
 	// Split the path and traverse the nodes
 	parts := strings.Split(path, "/")
-	for _, part := range parts {
+	for idx, part := range parts {
 		if len(part) == 0 {
 			continue
 		}
 
-		isParameter := len(part) > 0 && part[0] == ':'
-		if len(part) == 0 {
-			continue
+		isLast := false
+		if idx == len(parts)-1 {
+			isLast = true
 		}
 
-		if isParameter {
-			var childNode *node
-			if currentNode.parameterizedChild != nil {
-				childNode = currentNode.parameterizedChild
+		// Find if the current node's children contain a node with the same name
+		var childNode *node
+		if isLast && (nodeType == nodeTypePrefix || nodeType == nodeTypeGeneral) {
+			childNode = currentNode.findChildByName(part, nodeType)
+		} else {
+			childNode = currentNode.findChildByName(part, nodeTypeExact)
+		}
+
+		// If not found, create a new node
+		if childNode == nil {
+			if isLast && (nodeType == nodeTypePrefix || nodeType == nodeTypeGeneral) {
+				childNode = newNode(part)
+				currentNode.addChild(childNode, nodeType)
 			} else {
 				childNode = newNode(part)
-				currentNode.parameterizedChild = childNode
+				currentNode.addChild(childNode, nodeTypeExact)
 			}
-			currentNode = childNode
-		} else {
-			// Find if the current node's children contain a node with the same name
-			childNode := currentNode.findChildByName(part)
-
-			// If not found, create a new node
-			if childNode == nil {
-				childNode = newNode(part)
-				currentNode.addChild(childNode)
-			}
-
-			currentNode = childNode
 		}
+
+		currentNode = childNode
 
 	}
 
@@ -370,17 +337,40 @@ func (r *Router) add(method string, path string, middleware ...app.HandlerFunc) 
 	return nil
 }
 
-// find searches the Trie for handler functions matching the route
-func (r *Router) find(method string, path string) []app.HandlerFunc {
+// find searches the Trie for handler functions matching the route, returns the handler functions and whether the handler need to be executed delayedly
+func (r *Router) find(method string, path string) ([]app.HandlerFunc, bool) {
 	if path == "" || path[0] != '/' {
 		path = "/"
 	}
 
 	currentNode := r.tree
+	var prefixHandlers []app.HandlerFunc
+	var generalHandlers []app.HandlerFunc
 
 	// If the path is the root path, return the handler functions directly
 	if path == "/" {
-		return currentNode.findHandler(method)
+		h := currentNode.findHandler(method)
+		if len(h) > 0 {
+			return h, false
+		}
+
+		prefixChildNode := currentNode.matchChildByName("/", nodeTypePrefix)
+		if prefixChildNode != nil {
+			h := prefixChildNode.findHandler(method)
+			if len(h) > 0 {
+				return h, false
+			}
+		}
+
+		generalChildNode := currentNode.matchChildByName("/", nodeTypeGeneral)
+		if generalChildNode != nil {
+			h := generalChildNode.findHandler(method)
+			if len(h) > 0 {
+				return h, true
+			}
+		}
+
+		return nil, false
 	}
 
 	// Remove leading slash
@@ -410,15 +400,27 @@ func (r *Router) find(method string, path string) []app.HandlerFunc {
 		}
 
 		// Find if the current node's children contain a node with the same name
-		childNode := currentNode.findChildByName(segment)
+		childNode := currentNode.matchChildByName(segment, nodeTypeExact)
 
-		// If no matching node is found, return nil
-		if childNode == nil && currentNode.parameterizedChild != nil {
-			childNode = currentNode.parameterizedChild
+		prefixChildNode := currentNode.matchChildByName(segment, nodeTypePrefix)
+		if prefixChildNode != nil {
+			h := prefixChildNode.findHandler(method)
+			if len(h) > 0 {
+				prefixHandlers = h
+			}
+		}
+
+		generalChildNode := currentNode.matchChildByName(segment, nodeTypeGeneral)
+		if generalChildNode != nil {
+			h := generalChildNode.findHandler(method)
+			if len(h) > 0 {
+				generalHandlers = h
+			}
 		}
 
 		if childNode == nil {
-			return nil
+			currentNode = nil
+			break
 		}
 
 		// Move to the child node
@@ -431,28 +433,87 @@ func (r *Router) find(method string, path string) []app.HandlerFunc {
 	}
 
 	// Return handler functions of the final node
-	return currentNode.findHandler(method)
+	if currentNode != nil {
+		h := currentNode.findHandler(method)
+		if len(h) > 0 {
+			return h, false
+		}
+	}
+
+	if len(prefixHandlers) > 0 {
+		return prefixHandlers, false
+	}
+
+	if len(generalHandlers) > 0 {
+		return generalHandlers, true
+	}
+
+	return nil, false
 }
 
 // newNode creates a new node
 func newNode(path string) *node {
 	return &node{
-		path:     path,
-		children: make(map[string]*node),
-		handler:  &methodHandler{handlers: make(map[string][]app.HandlerFunc)},
+		path:            path,
+		children:        make(map[string]*node),
+		handler:         &methodHandler{handlers: make(map[string][]app.HandlerFunc)},
+		prefixChildren:  make(map[string]*node),
+		generalChildren: make(map[string]*node),
 	}
 }
 
 // addChild adds a child node to the current node
-func (n *node) addChild(child *node) {
-	n.children[child.path] = child
+func (n *node) addChild(child *node, nodeType nodeType) {
+	switch nodeType {
+	case nodeTypePrefix:
+		n.prefixChildren[child.path] = child
+	case nodeTypeExact:
+		n.children[child.path] = child
+	case nodeTypeGeneral:
+		n.generalChildren[child.path] = child
+	}
 }
 
 // findChildByName searches for a node with the specified name among the children
-func (n *node) findChildByName(name string) *node {
-	if child, ok := n.children[name]; ok {
-		return child
+func (n *node) findChildByName(name string, nodeType nodeType) *node {
+	switch nodeType {
+	case nodeTypePrefix:
+		if child, ok := n.prefixChildren[name]; ok {
+			return child
+		}
+	case nodeTypeExact:
+		if child, ok := n.children[name]; ok {
+			return child
+		}
+	case nodeTypeGeneral:
+		if child, ok := n.generalChildren[name]; ok {
+			return child
+		}
 	}
+
+	return nil
+}
+
+func (n *node) matchChildByName(name string, nodeType nodeType) *node {
+	switch nodeType {
+	case nodeTypeExact:
+		if child, ok := n.children[name]; ok {
+			return child
+		}
+	case nodeTypePrefix:
+		for _, prefix := range n.prefixChildren {
+			if strings.HasPrefix(name, prefix.path) {
+				return prefix
+			}
+		}
+	case nodeTypeGeneral:
+		for _, general := range n.generalChildren {
+			if strings.HasPrefix(name, general.path) {
+				return general
+			}
+		}
+	}
+
 	return nil
 }
 

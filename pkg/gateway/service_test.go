@@ -18,7 +18,7 @@ const (
 func testServer() {
 	const backendResponse = "I am the backend"
 	const backendStatus = 200
-	r := server.New(server.WithHostPorts("127.0.0.1:9990"))
+	r := server.New(server.WithHostPorts("127.0.0.1:80"))
 
 	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
@@ -40,7 +40,7 @@ func TestServeHTTP(t *testing.T) {
 		opts: &config.Options{
 			Services: map[string]config.ServiceOptions{
 				"testService": {
-					Url: "http://localhost:9990",
+					Url: "http://localhost:80",
 				},
 			},
 			Upstreams: map[string]config.UpstreamOptions{
@@ -48,7 +48,16 @@ func TestServeHTTP(t *testing.T) {
 					ID: "testUpstream",
 					Targets: []config.TargetOptions{
 						{
-							Target: "127.0.0.1:9990",
+							Target: "127.0.0.1:80",
+						},
+					},
+				},
+
+				"test_upstream_no_port": {
+					ID: "test_upstream_no_port",
+					Targets: []config.TargetOptions{
+						{
+							Target: "127.0.0.1",
 						},
 					},
 				},
@@ -62,7 +71,7 @@ func TestServeHTTP(t *testing.T) {
 	service, err := newService(bifrost, bifrost.opts.Services["testService"])
 	assert.NoError(t, err)
 	hzCtx := app.NewContext(0)
-	hzCtx.Request.SetRequestURI("http://localhost:9990/proxy/backend")
+	hzCtx.Request.SetRequestURI("http://localhost:80/proxy/backend")
 	service.ServeHTTP(ctx, hzCtx)
 	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
 
@@ -73,7 +82,15 @@ func TestServeHTTP(t *testing.T) {
 	assert.NoError(t, err)
 
 	hzCtx = app.NewContext(0)
-	hzCtx.Request.SetRequestURI("http://localhost:9990/proxy/backend")
+	hzCtx.Request.SetRequestURI("http://localhost:80/proxy/backend")
+	service.ServeHTTP(ctx, hzCtx)
+	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
+
+	serviceOpts.Url = "http://test_upstream_no_port"
+	service, err = newService(bifrost, serviceOpts)
+	assert.NoError(t, err)
+	hzCtx = app.NewContext(0)
+	hzCtx.Request.SetRequestURI("http://localhost/proxy/backend")
 	service.ServeHTTP(ctx, hzCtx)
 	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
 
@@ -85,7 +102,7 @@ func TestServeHTTP(t *testing.T) {
 
 	hzCtx = app.NewContext(0)
 	hzCtx.Set("$test", "testUpstream")
-	hzCtx.Request.SetRequestURI("http://localhost:9990/proxy/backend")
+	hzCtx.Request.SetRequestURI("http://localhost:80/proxy/backend")
 	service.ServeHTTP(ctx, hzCtx)
 	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
 }

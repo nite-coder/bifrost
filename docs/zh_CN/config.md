@@ -1,4 +1,6 @@
-## 配置文件
+# 配置文件
+
+動態更新目前支持 `routes`, `services`, `upstreams`, `middlewares`
 
 ```yaml
 providers:
@@ -76,7 +78,6 @@ entries:
 
 routes:
   spot-orders:
-    hosts: []
     methods: []
     paths:
       - /spot/orders

@@ -23,12 +23,242 @@ func regexkHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(203)
 }
 
-func notFoundHandler(c context.Context, ctx *app.RequestContext) {
-	ctx.SetStatusCode(404)
+func generalkHandler(c context.Context, ctx *app.RequestContext) {
+	ctx.SetStatusCode(204)
+}
+
+func registerByNodeType(router *Router, nodeType nodeType) *Router {
+	switch nodeType {
+	case nodeTypeExact:
+		_ = router.AddRoute(config.RouteOptions{
+			Paths: []string{"= /market/btc", "= /"},
+		}, exactkHandler)
+	case nodeTypePrefix:
+		_ = router.AddRoute(config.RouteOptions{
+			Paths: []string{"^= /market/btc", "^= /"},
+		}, prefixHandler)
+	case nodeTypeRegex:
+		_ = router.AddRoute(config.RouteOptions{
+			Paths: []string{"~ /market/(btc|usdt|eth)$", "~ ^/$"},
+		}, regexkHandler)
+
+		_ = router.AddRoute(config.RouteOptions{
+			Paths: []string{"~ /market/(btc|usdt|eth)"},
+		}, nil) // test two regexs router order
+	case nodeTypeGeneral:
+		_ = router.AddRoute(config.RouteOptions{
+			Paths: []string{"/market/btc", "/"},
+		}, generalkHandler)
+	}
+
+	return router
+}
+
+func TestRoutePriorityAndRoot(t *testing.T) {
+
+	t.Run("exact match", func(t *testing.T) {
+		nodeTypes := []nodeType{nodeTypeExact, nodeTypePrefix, nodeTypeGeneral, nodeTypeRegex}
+		router := newRouter()
+
+		for _, nodeType := range nodeTypes {
+			router = registerByNodeType(router, nodeType)
+		}
+
+		c := app.NewContext(0)
+		c.Request.SetMethod("POST")
+		c.Request.URI().SetPath("/market/btc")
+
+		router.ServeHTTP(context.Background(), c)
+		statusCode := c.Response.StatusCode()
+
+		if statusCode != 201 {
+			t.Errorf("Expected %v for path %s, but got %v", 201, "/market/btc", statusCode)
+		}
+
+		c.Request.URI().SetPath("/")
+		router.ServeHTTP(context.Background(), c)
+		statusCode = c.Response.StatusCode()
+
+		if statusCode != 201 {
+			t.Errorf("Expected %v for path %s, but got %v", 201, "/", statusCode)
+		}
+	})
+
+	t.Run("prefix match", func(t *testing.T) {
+		nodeTypes := []nodeType{nodeTypePrefix, nodeTypeGeneral, nodeTypeRegex}
+		router := newRouter()
+
+		for _, nodeType := range nodeTypes {
+			router = registerByNodeType(router, nodeType)
+		}
+
+		c := app.NewContext(0)
+		c.Request.SetMethod("POST")
+		c.Request.URI().SetPath("/market/btc")
+
+		router.ServeHTTP(context.Background(), c)
+		statusCode := c.Response.StatusCode()
+
+		if statusCode != 202 {
+			t.Errorf("Expected %v for path %s, but got %v", 202, "/market/btc", statusCode)
+		}
+
+		c.Request.URI().SetPath("/")
+		router.ServeHTTP(context.Background(), c)
+		statusCode = c.Response.StatusCode()
+
+		if statusCode != 202 {
+			t.Errorf("Expected %v for path %s, but got %v", 202, "/", statusCode)
+		}
+	})
+
+	t.Run("regex match", func(t *testing.T) {
+		nodeTypes := []nodeType{nodeTypeGeneral, nodeTypeRegex}
+		router := newRouter()
+
+		for _, nodeType := range nodeTypes {
+			router = registerByNodeType(router, nodeType)
+		}
+
+		c := app.NewContext(0)
+		c.Request.SetMethod("POST")
+		c.Request.URI().SetPath("/market/btc")
+
+		router.ServeHTTP(context.Background(), c)
+		statusCode := c.Response.StatusCode()
+
+		if statusCode != 203 {
+			t.Errorf("Expected %v for path %s, but got %v", 203, "/market/btc", statusCode)
+		}
+
+		c.Request.URI().SetPath("/")
+		router.ServeHTTP(context.Background(), c)
+		statusCode = c.Response.StatusCode()
+
+		if statusCode != 203 {
+			t.Errorf("Expected %v for path %s, but got %v", 203, "/", statusCode)
+		}
+	})
+
+	t.Run("general match", func(t *testing.T) {
+		nodeTypes := []nodeType{nodeTypeGeneral}
+		router := newRouter()
+
+		for _, nodeType := range nodeTypes {
+			router = registerByNodeType(router, nodeType)
+		}
+
+		c := app.NewContext(0)
+		c.Request.SetMethod("POST")
+		c.Request.URI().SetPath("/market/btc")
+
+		router.ServeHTTP(context.Background(), c)
+		statusCode := c.Response.StatusCode()
+
+		if statusCode != 204 {
+			t.Errorf("Expected %v for path %s, but got %v", 204, "/market/btc", statusCode)
+		}
+
+		c.Request.URI().SetPath("/")
+		router.ServeHTTP(context.Background(), c)
+		statusCode = c.Response.StatusCode()
+
+		if statusCode != 204 {
+			t.Errorf("Expected %v for path %s, but got %v", 204, "/", statusCode)
+		}
+	})
+
+}
+
+func TestRootRoute(t *testing.T) {
+
+	router := newRouter()
+
+	_ = router.AddRoute(config.RouteOptions{
+		Paths: []string{"= /"},
+		//Methods: []string{"POST"},
+	}, exactkHandler)
+
+	_ = router.AddRoute(config.RouteOptions{
+		Paths: []string{"^= /"},
+		//Methods: []string{"POST"},
+	}, prefixHandler)
+
+	_ = router.AddRoute(config.RouteOptions{
+		Paths: []string{"/"},
+		//Methods: []string{"POST"},
+	}, generalkHandler)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("POST")
+	c.Request.URI().SetPath("/")
+
+	router.ServeHTTP(context.Background(), c)
+	statusCode := c.Response.StatusCode()
+
+	if statusCode != 201 {
+		t.Errorf("Expected %v for path %s, but got %v", 201, "/", statusCode)
+	}
+}
+
+func TestRoutes(t *testing.T) {
+	router := newRouter()
+
+	err := router.AddRoute(config.RouteOptions{
+		Paths: []string{"^= /market/btc", "^= /spot"},
+	}, prefixHandler)
+	assert.NoError(t, err)
+
+	err = router.AddRoute(config.RouteOptions{
+		Paths:   []string{"= /spot/order"},
+		Methods: []string{"POST", "GET"},
+	}, exactkHandler)
+	assert.NoError(t, err)
+
+	err = router.AddRoute(config.RouteOptions{
+		Paths: []string{"~/market/(btc|usdt|eth)$"},
+	}, regexkHandler)
+	assert.NoError(t, err)
+
+	err = router.AddRoute(config.RouteOptions{
+		Paths: []string{"/market"},
+	}, generalkHandler)
+	assert.NoError(t, err)
+
+	testCases := []struct {
+		method         string
+		host           string
+		path           string
+		expectedResult int
+	}{
+		{"POST", "abc.com", "/spot/order", 201},
+
+		{"GET", "abc.com", "/spot/777", 202},
+		{"PUT", "abc.com", "/market/btcusdt/cool", 202},
+
+		{"GET", "abc.com", "/market/usdt", 203},
+		{"DELETE", "abc.com", "/market/eth", 203},
+
+		{"DELETE", "abc.com", "/market/eth/orders", 204},
+	}
+
+	for _, tc := range testCases {
+		c := &app.RequestContext{}
+		c.Request.SetMethod(tc.method)
+		c.Request.URI().SetPath(tc.path)
+		c.Request.SetHost(tc.host)
+
+		router.ServeHTTP(context.Background(), c)
+		statusCode := c.Response.StatusCode()
+
+		if statusCode != tc.expectedResult {
+			t.Errorf("Expected %v for path %s, but got %v", tc.expectedResult, tc.path, statusCode)
+		}
+	}
 }
 
 func TestDuplicateHTTPMethods(t *testing.T) {
-	router := newRouter(false)
+	router := newRouter()
 
 	err := router.AddRoute(config.RouteOptions{
 		Methods: []string{"GET", "POST"},
@@ -49,161 +279,13 @@ func TestDuplicateHTTPMethods(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestRoutes(t *testing.T) {
-	router := newRouter(false)
-
-	err := router.AddRoute(config.RouteOptions{
-		Paths: []string{"/market/btc*"},
-	}, prefixHandler)
-	assert.NoError(t, err)
-
-	err = router.AddRoute(config.RouteOptions{
-		Paths:   []string{"/spot/order", "/market/dot"},
-		Methods: []string{"POST", "GET"},
-	}, exactkHandler)
-	assert.NoError(t, err)
-
-	err = router.AddRoute(config.RouteOptions{
-		Paths: []string{"~/market/(btc|usdt|eth)$"},
-		Hosts: []string{"abc.com"},
-	}, regexkHandler)
-	assert.NoError(t, err)
-
-	err = router.AddRoute(config.RouteOptions{
-		Paths: []string{"orders"},
-	}, nil)
-	assert.Error(t, err) // invalid path
-
-	testCases := []struct {
-		method         string
-		host           string
-		path           string
-		expectedResult int
-	}{
-		{"POST", "abc.com", "/spot/order", 201},
-		{"GET", "abc.com", "/market/dot", 201},
-
-		{"PUT", "abc.com", "/market/btcusdt/cool", 202},
-		{"GET", "abc.com", "/market/btc", 203},
-
-		{"DELETE", "abc.com", "/market/eth", 203},
-
-		{"DELETE", "abc.com", "/market/eth/orders", 200}, // not found
-	}
-
-	for _, tc := range testCases {
-		c := &app.RequestContext{}
-		c.Request.SetMethod(tc.method)
-		c.Request.URI().SetPath(tc.path)
-		c.Request.SetHost(tc.host)
-
-		router.ServeHTTP(context.Background(), c)
-		statusCode := c.Response.StatusCode()
-
-		if statusCode != tc.expectedResult {
-			t.Errorf("Expected %v for path %s, but got %v", tc.expectedResult, tc.path, statusCode)
-		}
-	}
-}
-
-func TestHostRoutes(t *testing.T) {
-	router := newRouter(true)
-
-	err := router.AddRoute(config.RouteOptions{
-		Paths: []string{"/market/btc*"},
-	}, prefixHandler)
-	assert.NoError(t, err)
-
-	err = router.AddRoute(config.RouteOptions{
-		Paths: []string{"/market/usdt*"},
-		Hosts: []string{"abc.xyz"},
-	}, prefixHandler)
-	assert.NoError(t, err)
-
-	err = router.AddRoute(config.RouteOptions{
-		Paths:   []string{"/spot/order"},
-		Methods: []string{"POST"},
-	}, exactkHandler)
-	assert.NoError(t, err)
-
-	err = router.AddRoute(config.RouteOptions{
-		Paths:   []string{"/market/btc"},
-		Methods: []string{"GET"},
-		Hosts:   []string{"abc.com"},
-	}, exactkHandler)
-	assert.NoError(t, err)
-
-	err = router.AddRoute(config.RouteOptions{
-		Paths: []string{"~/market/(btc|usdt|eth)$"},
-		Hosts: []string{"abc.com"},
-		Headers: map[string][]string{
-			"X-User-ID": {"666"},
-		},
-	}, regexkHandler)
-	assert.NoError(t, err)
-
-	err = router.AddRoute(config.RouteOptions{
-		Paths: []string{"~/regex/(btc|usdt|eth)$"},
-		Hosts: []string{"abc.xyz"},
-	}, regexkHandler)
-	assert.NoError(t, err)
-
-	err = router.AddRoute(config.RouteOptions{
-		Paths: []string{"~/regex/headers"},
-		Headers: map[string][]string{
-			"X-User-ID": {"6667"},
-		},
-	}, regexkHandler)
-	assert.NoError(t, err)
-
-	err = router.AddRoute(config.RouteOptions{
-		Paths: []string{"orders"},
-	}, nil)
-	assert.Error(t, err)
-
-	testCases := []struct {
-		method         string
-		host           string
-		path           string
-		expectedResult int
-	}{
-		{"POST", "abc.com", "/:host/spot/order", 201},
-		{"GET", "abc.com", "/abc.com/market/btc", 201},
-
-		{"PUT", "abc.com", "/market/btcusdt/cool", 202},
-		{"GET", "abc.com", "/market/btc/", 202},        // not found
-		{"GET", "abc.com", "/market/usdt/orders", 200}, // host not match
-
-		{"DELETE", "abc.com", "/market/eth", 203},
-		{"POST", "abc.com", "/regex/headers", 203},
-		{"DELETE", "abc.com", "/regex/btc", 200}, // not found
-
-		{"DELETE", "abc.com", "/market/eth/orders", 200}, // not found
-	}
-
-	for _, tc := range testCases {
-		c := &app.RequestContext{}
-		c.Request.SetMethod(tc.method)
-		c.Request.URI().SetPath(tc.path)
-		c.Request.SetHost(tc.host)
-		c.Request.Header.Set("X-User-ID", "666")
-
-		router.ServeHTTP(context.Background(), c)
-		statusCode := c.Response.StatusCode()
-
-		if statusCode != tc.expectedResult {
-			t.Errorf("Expected %v for path %s, but got %v", tc.expectedResult, tc.path, statusCode)
-		}
-	}
-}
-
 func loadStaticRouter() *Router {
-	router := newRouter(false)
-	_ = router.add("GET", "/", exactkHandler)
-	_ = router.add("GET", "/foo", exactkHandler)
-	_ = router.add("GET", "/foo/bar/baz/", exactkHandler)
-	_ = router.add("GET", "/foo/bar/baz/qux/quux", exactkHandler)
-	_ = router.add("GET", "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred", exactkHandler)
+	router := newRouter()
+	_ = router.add("GET", "/", nodeTypeGeneral, exactkHandler)
+	_ = router.add("GET", "/foo", nodeTypeGeneral, exactkHandler)
+	_ = router.add("GET", "/foo/bar/baz/", nodeTypeGeneral, exactkHandler)
+	_ = router.add("GET", "/foo/bar/baz/qux/quux", nodeTypeGeneral, exactkHandler)
+	_ = router.add("GET", "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred", nodeTypeGeneral, exactkHandler)
 	return router
 }
 
@@ -293,7 +375,7 @@ func benchmark(b *testing.B, router *Router, method, path string) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_ = router.find(method, path)
+		_, _ = router.find(method, path)
 	}
 }
 
