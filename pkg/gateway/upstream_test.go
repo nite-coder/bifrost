@@ -3,67 +3,114 @@ package gateway
 import (
 	"hash/fnv"
 	"math/rand"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestUpstreamHashing(t *testing.T) {
-	// Test when there is only one proxy
-	u := &Upstream{
-		proxies: []*ReverseProxy{
-			{},
+func TestRoundRobin(t *testing.T) {
+	proxy1, _ := newProxy("http://backend1", false, 1)
+	proxy2, _ := newProxy("http://backend2", false, 1)
+	proxy3, _ := newProxy("http://backend3", false, 1)
+
+	upstream := &Upstream{
+		proxies: []*Proxy{
+			proxy1,
+			proxy2,
+			proxy3,
 		},
-		hasher: fnv.New32(),
-	}
-	result := u.hasing("key")
-	if result != u.proxies[0] {
-		t.Errorf("Expected %v, got %v", u.proxies[0], result)
+		counter: atomic.Uint64{},
 	}
 
-	// Test when there are multiple proxies
-	u = &Upstream{
-		proxies: []*ReverseProxy{
-			{},
-			{},
-			{},
-		},
-		hasher: fnv.New32(),
-	}
-	result = u.hasing("key")
-	if result != u.proxies[0] {
-		t.Errorf("Expected %v, got %v", u.proxies[0], result)
-	}
-
-	result = u.hasing("another key")
-	if result != u.proxies[1] {
-		t.Errorf("Expected %v, got %v", u.proxies[1], result)
+	expected := []string{"http://backend1", "http://backend2", "http://backend3"}
+	for _, e := range expected {
+		proxy := upstream.roundRobin()
+		assert.NotNil(t, proxy)
+		assert.Equal(t, e, proxy.target)
 	}
 }
 
-func TestUpstreamRandom(t *testing.T) {
-	// Test when there is only one proxy
-	u := &Upstream{
-		proxies: []*ReverseProxy{
-			{},
+func TestWeighted(t *testing.T) {
+	proxy1, _ := newProxy("http://backend1", false, 1)
+	proxy2, _ := newProxy("http://backend2", false, 2)
+	proxy3, _ := newProxy("http://backend3", false, 3)
+
+	upstream := &Upstream{
+		proxies: []*Proxy{
+			proxy1,
+			proxy2,
+			proxy3,
 		},
-		rng: rand.New(rand.NewSource(time.Now().Unix())),
-	}
-	result := u.random()
-	if result != u.proxies[0] {
-		t.Errorf("Expected %v, got %v", u.proxies[0], result)
+		totalWeight: 6,
+		rng:         rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 
-	// Test when there are multiple proxies
-	u = &Upstream{
-		proxies: []*ReverseProxy{
-			{},
-			{},
-			{},
-		},
-		rng: rand.New(rand.NewSource(time.Now().Unix())),
+	hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
+	for i := 0; i < 6000; i++ {
+		proxy := upstream.weighted()
+		assert.NotNil(t, proxy)
+		hits[proxy.target]++
 	}
-	result = u.random()
-	if result == nil {
-		t.Errorf("Expected a non-nil result")
+
+	// Assert that weight distribution is roughly correct
+	assert.InDelta(t, 1000, hits["http://backend1"], 100)
+	assert.InDelta(t, 2000, hits["http://backend2"], 100)
+	assert.InDelta(t, 3000, hits["http://backend3"], 100)
+}
+
+func TestRandom(t *testing.T) {
+	proxy1, _ := newProxy("http://backend1", false, 1)
+	proxy2, _ := newProxy("http://backend2", false, 1)
+	proxy3, _ := newProxy("http://backend3", false, 1)
+
+	upstream := &Upstream{
+		proxies: []*Proxy{
+			proxy1,
+			proxy2,
+			proxy3,
+		},
+		rng: rand.New(rand.NewSource(time.Now().UnixNano())),
+	}
+
+	hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
+	for i := 0; i < 10000; i++ {
+		proxy := upstream.random()
+		assert.NotNil(t, proxy)
+		hits[proxy.target]++
+	}
+
+	// Assert that each proxy was selected roughly equally
+	assert.InDelta(t, 3333, hits["http://backend1"], 500)
+	assert.InDelta(t, 3333, hits["http://backend2"], 500)
+	assert.InDelta(t, 3333, hits["http://backend3"], 500)
+}
+
+func TestHashing(t *testing.T) {
+	proxy1, _ := newProxy("http://backend1", false, 1)
+	proxy2, _ := newProxy("http://backend2", false, 1)
+	proxy3, _ := newProxy("http://backend3", false, 1)
+
+	upstream := &Upstream{
+		proxies: []*Proxy{
+			proxy1,
+			proxy2,
+			proxy3,
+		},
+		hasher: fnv.New32a(),
+	}
+
+	keys := []string{"key1", "key2", "key3"}
+	expected := map[string]string{
+		"key1": "http://backend3",
+		"key2": "http://backend1",
+		"key3": "http://backend1",
+	}
+
+	for _, key := range keys {
+		proxy := upstream.hasing(key)
+		assert.NotNil(t, proxy)
+		assert.Equal(t, expected[key], proxy.target)
 	}
 }

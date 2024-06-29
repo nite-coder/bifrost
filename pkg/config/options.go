@@ -3,9 +3,9 @@ package config
 import "time"
 
 type Options struct {
-	Providers   ProvidersOtions                    `yaml:"providers" json:"providers"`
+	Providers   ProvidersOtions             `yaml:"providers" json:"providers"`
 	Logging     LoggingOtions               `yaml:"logging" json:"logging"`
-	Metrics     MetricsOptions               `yaml:"metrics" json:"metrics"`
+	Metrics     MetricsOptions              `yaml:"metrics" json:"metrics"`
 	Tracing     TracingOptions              `yaml:"tracing" json:"tracing"`
 	AccessLogs  map[string]AccessLogOptions `yaml:"access_logs" json:"access_logs"`
 	Entries     map[string]EntryOptions     `yaml:"entries" json:"entries"`

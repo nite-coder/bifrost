@@ -21,7 +21,7 @@ import (
 
 type Upstream struct {
 	opts        *config.UpstreamOptions
-	proxies     []*ReverseProxy
+	proxies     []*Proxy
 	counter     atomic.Uint64
 	totalWeight int
 	hasher      hash.Hash32
@@ -39,6 +39,24 @@ func newDefaultClientOptions() []hzconfig.ClientOption {
 		client.WithMaxIdleConnDuration(120 * time.Second),
 		client.WithKeepAlive(true),
 	}
+}
+
+func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[string]*Upstream, error) {
+	upstreams := map[string]*Upstream{}
+
+	for id, upstreamOpts := range bifrost.opts.Upstreams {
+		upstreamOpts.ID = id
+
+		upstream, err := newUpstream(bifrost, serviceOpts, upstreamOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		upstreams[id] = upstream
+
+	}
+
+	return upstreams, nil
 }
 
 func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts config.UpstreamOptions) (*Upstream, error) {
@@ -76,7 +94,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 
 	upstream := &Upstream{
 		opts:    &opts,
-		proxies: make([]*ReverseProxy, 0),
+		proxies: make([]*Proxy, 0),
 		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
 		hasher:  fnv.New32a(),
 	}
@@ -133,7 +151,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 			url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
 		}
 
-		proxy, err := newSingleHostReverseProxy(url, bifrost.opts.Tracing.Enabled, targetOpts.Weight, clientOpts...)
+		proxy, err := newProxy(url, bifrost.opts.Tracing.Enabled, targetOpts.Weight, clientOpts...)
 
 		if err != nil {
 			return nil, err
@@ -160,7 +178,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 	return upstream, nil
 }
 
-func (u *Upstream) roundRobin() *ReverseProxy {
+func (u *Upstream) roundRobin() *Proxy {
 	if len(u.proxies) == 1 {
 		return u.proxies[0]
 	}
@@ -170,7 +188,7 @@ func (u *Upstream) roundRobin() *ReverseProxy {
 	return proxy
 }
 
-func (u *Upstream) weighted() *ReverseProxy {
+func (u *Upstream) weighted() *Proxy {
 	if len(u.proxies) == 1 {
 		return u.proxies[0]
 	}
@@ -187,7 +205,7 @@ func (u *Upstream) weighted() *ReverseProxy {
 	return nil
 }
 
-func (u *Upstream) random() *ReverseProxy {
+func (u *Upstream) random() *Proxy {
 	if len(u.proxies) == 1 {
 		return u.proxies[0]
 	}
@@ -196,7 +214,7 @@ func (u *Upstream) random() *ReverseProxy {
 	return u.proxies[selectedIndex]
 }
 
-func (u *Upstream) hasing(key string) *ReverseProxy {
+func (u *Upstream) hasing(key string) *Proxy {
 	if len(u.proxies) == 1 {
 		return u.proxies[0]
 	}

@@ -45,11 +45,11 @@ import (
 	"github.com/valyala/bytebufferpool"
 )
 
-type ReverseProxy struct {
+type Proxy struct {
 	client *client.Client
 
 	// target is set as a reverse proxy address
-	Target string
+	target string
 
 	// transferTrailer is whether to forward Trailer-related header
 	transferTrailer bool
@@ -104,25 +104,25 @@ var hopHeaders = []string{
 	"Upgrade",
 }
 
-// newSingleHostReverseProxy returns a new ReverseProxy that routes
+// newProxy returns a new ReverseProxy that routes
 // URLs to the scheme, host, and base path provided in target. If the
 // target's path is "/base" and the incoming request was for "/dir",
 // the target request will be for /base/dir.
-// newSingleHostReverseProxy does not rewrite the Host header.
+// newProxy does not rewrite the Host header.
 // To rewrite Host headers, use ReverseProxy directly with a custom
 // director policy.
 //
 // Note: if no config.ClientOption is passed it will use the default global client.Client instance.
 // When passing config.ClientOption it will initialize a local client.Client instance.
 // Using ReverseProxy.SetClient if there is need for shared customized client.Client instance.
-func newSingleHostReverseProxy(target string, tracingEnabled bool, weight int, options ...hzconfig.ClientOption) (*ReverseProxy, error) {
+func newProxy(target string, tracingEnabled bool, weight int, options ...hzconfig.ClientOption) (*Proxy, error) {
 	addr, err := url.Parse(target)
 	if err != nil {
 		return nil, err
 	}
 
-	r := &ReverseProxy{
-		Target:     target,
+	r := &Proxy{
+		target:     target,
 		targetHost: addr.Host,
 		weight:     weight,
 		director: func(req *protocol.Request) {
@@ -239,7 +239,7 @@ func checkTeHeader(header *protocol.RequestHeader) bool {
 	return false
 }
 
-func (r *ReverseProxy) defaultErrorHandler(c *app.RequestContext, _ error) {
+func (r *Proxy) defaultErrorHandler(c *app.RequestContext, _ error) {
 	c.Response.Header.SetStatusCode(consts.StatusBadGateway)
 }
 
@@ -249,7 +249,7 @@ var respTmpHeaderPool = sync.Pool{
 	},
 }
 
-func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+func (r *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	req := &ctx.Request
 	resp := &ctx.Response
 
@@ -376,34 +376,34 @@ func (r *ReverseProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 }
 
 // SetDirector use to customize protocol.Request
-func (r *ReverseProxy) SetDirector(director func(req *protocol.Request)) {
+func (r *Proxy) SetDirector(director func(req *protocol.Request)) {
 	r.director = director
 }
 
 // SetClient use to customize client
-func (r *ReverseProxy) SetClient(client *client.Client) {
+func (r *Proxy) SetClient(client *client.Client) {
 	r.client = client
 }
 
 // SetModifyResponse use to modify response
-func (r *ReverseProxy) SetModifyResponse(mr func(*protocol.Response) error) {
+func (r *Proxy) SetModifyResponse(mr func(*protocol.Response) error) {
 	r.modifyResponse = mr
 }
 
 // SetErrorHandler use to customize error handler
-func (r *ReverseProxy) SetErrorHandler(eh func(c *app.RequestContext, err error)) {
+func (r *Proxy) SetErrorHandler(eh func(c *app.RequestContext, err error)) {
 	r.errorHandler = eh
 }
 
-func (r *ReverseProxy) SetTransferTrailer(b bool) {
+func (r *Proxy) SetTransferTrailer(b bool) {
 	r.transferTrailer = b
 }
 
-func (r *ReverseProxy) SetSaveOriginResHeader(b bool) {
+func (r *Proxy) SetSaveOriginResHeader(b bool) {
 	r.saveOriginResHeader = b
 }
 
-func (r *ReverseProxy) getErrorHandler() func(c *app.RequestContext, err error) {
+func (r *Proxy) getErrorHandler() func(c *app.RequestContext, err error) {
 	if r.errorHandler != nil {
 		return r.errorHandler
 	}

@@ -20,9 +20,9 @@ import (
 
 type Service struct {
 	bifrost         *Bifrost
-	options         config.ServiceOptions
+	options         *config.ServiceOptions
 	upstreams       map[string]*Upstream
-	proxy           *ReverseProxy
+	proxy           *Proxy
 	upstream        *Upstream
 	dynamicUpstream string
 	middlewares     []app.HandlerFunc
@@ -43,7 +43,7 @@ func loadServices(bifrost *Bifrost, middlewares map[string]app.HandlerFunc) (map
 			return nil, fmt.Errorf("service '%s' already exists", serviceOpts.ID)
 		}
 
-		service, err := newService(bifrost, &serviceOpts, bifrost.opts.Upstreams)
+		service, err := newService(bifrost, serviceOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -63,12 +63,17 @@ func loadServices(bifrost *Bifrost, middlewares map[string]app.HandlerFunc) (map
 	return services, nil
 }
 
-func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions map[string]config.UpstreamOptions) (*Service, error) {
+func newService(bifrost *Bifrost, opts config.ServiceOptions) (*Service, error) {
+
+	upstreams, err := loadUpstreams(bifrost, opts)
+	if err != nil {
+		return nil, err
+	}
 
 	svc := &Service{
 		bifrost:     bifrost,
-		options:     *opts,
-		upstreams:   make(map[string]*Upstream),
+		options:     &opts,
+		upstreams:   upstreams,
 		middlewares: make([]app.HandlerFunc, 0),
 	}
 
@@ -95,15 +100,8 @@ func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions m
 	}
 
 	// exist upstream
-	upstreamOpts, found := upstreamOptions[hostname]
+	upstream, found := svc.upstreams[hostname]
 	if found {
-		upstreamOpts.ID = hostname
-
-		upstream, err := newUpstream(bifrost, svc.options, upstreamOpts)
-		if err != nil {
-			return nil, err
-		}
-
 		svc.upstream = upstream
 		return svc, nil
 	}
@@ -159,7 +157,7 @@ func newService(bifrost *Bifrost, opts *config.ServiceOptions, upstreamOptions m
 		url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, hostname, addr.Port(), addr.Path)
 	}
 
-	proxy, err := newSingleHostReverseProxy(url, bifrost.opts.Tracing.Enabled, 0, clientOpts...)
+	proxy, err := newProxy(url, bifrost.opts.Tracing.Enabled, 0, clientOpts...)
 	if err != nil {
 		return nil, err
 	}
