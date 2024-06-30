@@ -45,7 +45,6 @@ type methodHandler struct {
 // Router struct contains the Trie and handler chain
 type Router struct {
 	tree         *node // Root node of the Trie
-	prefixRoutes []routeSetting
 	regexpRoutes []routeSetting
 }
 
@@ -118,7 +117,6 @@ func loadRouter(bifrost *Bifrost, entry config.EntryOptions, services map[string
 func newRouter() *Router {
 	r := &Router{
 		tree:         newNode("/"),
-		prefixRoutes: make([]routeSetting, 0),
 		regexpRoutes: make([]routeSetting, 0),
 	}
 
@@ -130,9 +128,9 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	method := b2s(ctx.Method())
 	path := b2s(ctx.Request.Path())
 
-	middleware, isDelay := r.find(method, path)
+	middleware, isDefered := r.find(method, path)
 
-	if len(middleware) > 0 && !isDelay {
+	if len(middleware) > 0 && !isDefered {
 		ctx.SetIndex(-1)
 		ctx.SetHandlers(middleware)
 		ctx.Next(c)
@@ -162,11 +160,11 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 }
 
-func checkRegexpRoute(prefixSetting routeSetting, method, path string) bool {
-	if len(prefixSetting.route.Methods) > 0 {
+func checkRegexpRoute(setting routeSetting, method string, path string) bool {
+	if len(setting.route.Methods) > 0 {
 		isMethodFound := false
 
-		for _, m := range prefixSetting.route.Methods {
+		for _, m := range setting.route.Methods {
 			if m == method {
 				return true
 			}
@@ -177,12 +175,10 @@ func checkRegexpRoute(prefixSetting routeSetting, method, path string) bool {
 		}
 	}
 
-	return prefixSetting.regex.MatchString(path)
+	return setting.regex.MatchString(path)
 }
 
-var upperLetterReg = regexp.MustCompile("^[A-Z]+$")
-
-// AddRoute adds a static route
+// AddRoute adds a new route
 func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.HandlerFunc) error {
 	var err error
 
@@ -193,10 +189,10 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 
 	for _, path := range routeOpts.Paths {
 		path = strings.TrimSpace(path)
-		first := path[:1]
+		var nodeType nodeType
 
-		// regexp match
-		if first == "~" {
+		switch {
+		case strings.HasPrefix(path, "~"):
 			expr := strings.TrimSpace(path[1:])
 			if len(expr) == 0 {
 				return fmt.Errorf("router: regexp expression route can't be empty in route: '%s'", routeOpts.ID)
@@ -206,37 +202,31 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 				return err
 			}
 
-			prefixRoute := routeSetting{
+			r.regexpRoutes = append(r.regexpRoutes, routeSetting{
 				regex:      regx,
 				route:      &routeOpts,
 				middleware: middlewares,
-			}
-
-			r.regexpRoutes = append(r.regexpRoutes, prefixRoute)
+			})
 			continue
-		}
-
-		// exact, prefix, general route
-		nodeType := nodeTypeGeneral
-
-		if first == "=" {
+		case strings.HasPrefix(path, "="):
 			nodeType = nodeTypeExact
 			path = strings.TrimSpace(path[1:])
 			if len(path) == 0 {
 				return fmt.Errorf("router: exact route can't be empty in route: '%s'", routeOpts.ID)
 			}
-		}
 
-		if len(path) > 2 && path[:2] == "^=" {
+		case strings.HasPrefix(path, "^="):
 			nodeType = nodeTypePrefix
 			path = strings.TrimSpace(path[2:])
 			if len(path) == 0 {
 				return fmt.Errorf("router: prefix route can't be empty in route: '%s'", routeOpts.ID)
 			}
-		}
 
-		if path[:1] != "/" {
-			return fmt.Errorf("router: '%s' is invalid path.  Path needs to begin with '/'", path)
+		default:
+			if !strings.HasPrefix(path, "/") {
+				return fmt.Errorf("router: '%s' is invalid path. Path needs to begin with '/'", path)
+			}
+			nodeType = nodeTypeGeneral
 		}
 
 		if len(routeOpts.Methods) == 0 {
@@ -249,9 +239,11 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 		}
 
 		for _, method := range routeOpts.Methods {
-			if matches := upperLetterReg.MatchString(method); !matches {
-				panic("http method " + method + " is not valid")
+			method := strings.ToUpper(method)
+			if !isValidHTTPMethod(method) {
+				return fmt.Errorf("http method %s is not valid", method)
 			}
+
 			err = r.add(method, path, nodeType, middlewares...)
 			if err != nil {
 				return err
@@ -263,7 +255,7 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 }
 
 // add adds a route to radix tree
-func (r *Router) add(method string, path string, nodeType nodeType, middleware ...app.HandlerFunc) error {
+func (r *Router) add(method, path string, nodeType nodeType, middleware ...app.HandlerFunc) error {
 	if len(path) == 0 || path[0] != '/' {
 		return fmt.Errorf("router: '%s' is invalid path.  Path needs to begin with '/'", path)
 	}
@@ -337,15 +329,14 @@ func (r *Router) add(method string, path string, nodeType nodeType, middleware .
 	return nil
 }
 
-// find searches the Trie for handler functions matching the route, returns the handler functions and whether the handler need to be executed delayedly
+// find searches the Trie for handler functions matching the route, returns the handler functions and whether the handler is deferred (genernal match)
 func (r *Router) find(method string, path string) ([]app.HandlerFunc, bool) {
 	if path == "" || path[0] != '/' {
 		path = "/"
 	}
 
 	currentNode := r.tree
-	var prefixHandlers []app.HandlerFunc
-	var generalHandlers []app.HandlerFunc
+	var prefixHandlers, generalHandlers []app.HandlerFunc
 
 	// If the path is the root path, return the handler functions directly
 	if path == "/" {
