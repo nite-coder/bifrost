@@ -18,6 +18,7 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 	level = strings.ToLower(level)
 
 	switch level {
+	case "none":
 	case "debug":
 		logOptions.Level = slog.LevelDebug
 	case "info", "":
@@ -45,7 +46,7 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 		}
 	}
 
-	if !opts.Enabled {
+	if level == "none" {
 		logOptions.Level = slog.LevelError
 		writer = io.Discard
 	}
@@ -56,10 +57,12 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 	handler = strings.ToLower(handler)
 
 	switch handler {
-	case "text":
+	case "text", "":
 		logHandler = slog.NewTextHandler(writer, logOptions)
-	default:
+	case "json":
 		logHandler = slog.NewJSONHandler(writer, logOptions)
+	default:
+		return nil, fmt.Errorf("handler '%s' is not supported", handler)
 	}
 
 	logger := slog.New(logHandler)

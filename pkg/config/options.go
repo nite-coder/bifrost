@@ -30,7 +30,6 @@ type MetricsOptions struct {
 }
 
 type LoggingOtions struct {
-	Enabled bool   `yaml:"enabled" json:"enabled"`
 	Level   string `yaml:"level" json:"level"`
 	Handler string `yaml:"handler" json:"handler"`
 	Output  string `yaml:"output" json:"output"`

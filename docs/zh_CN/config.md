@@ -24,7 +24,7 @@ metrics:
     buckets: [0.01, 0.03, 0.05, 0.1]
 
 access_logs:
-  my_access_log:
+  my_access_log:  # access log 的名称, 必须是唯一的
     enabled: false
     output: stderr
     buffering_size: 65536

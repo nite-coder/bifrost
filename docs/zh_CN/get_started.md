@@ -17,7 +17,19 @@ func main() {
 1. 建立一個 config.yaml
 
 ```yaml
+entries:
+  extenal:
+    bind: ":8001"
 
+routes:
+  hello:
+    paths:
+      - /spot/orders
+    service_id: default
+
+services:
+  testServer:
+    url: http://localhost:8000
 
 ```
 
