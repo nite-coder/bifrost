@@ -11,9 +11,8 @@ providers:
     watch: true
 
 logging:
-  enabled: true
   handler: text
-  level: debug
+  level: debug    # none, debug, info, warn, error
   output: stderr
 
 metrics:
@@ -62,7 +61,6 @@ entries:
       key_pem: ""
     http2: false
     logging:
-      enabled: false
       level: debug
       handler: text
       output: stderr
@@ -95,6 +93,7 @@ services:
     write_timeout: 5s
     idle_timeout: 5s
     dail_timeout: 5s
+    max_idle_conns_per_host: 1024  # default: 1024
     tls_verify: false
     protocol: http
     url: http://localhost:8000

@@ -4,7 +4,6 @@ go 1.22.0
 
 require (
 	github.com/bytedance/gopkg v0.0.0-20240531030433-5df24c0168e2
-	github.com/bytedance/sonic v1.11.9
 	github.com/cloudwego/hertz v0.9.1
 	github.com/cloudwego/netpoll v0.6.2
 	github.com/fsnotify/fsnotify v1.7.0
@@ -31,6 +30,7 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/go-tagexpr/v2 v2.9.11 // indirect
+	github.com/bytedance/sonic v1.11.9 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

@@ -93,7 +93,7 @@ func newService(bifrost *Bifrost, opts config.ServiceOptions) (*Service, error) 
 		opts.Protocol = config.ProtocolHTTP
 	}
 
-	// dynamic service
+	// dynamic upstream
 	if hostname[0] == '$' {
 		svc.dynamicUpstream = hostname
 		return svc, nil
@@ -184,7 +184,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			upstreamName := ctx.GetString(svc.dynamicUpstream)
 
 			if len(upstreamName) == 0 {
-				logger.Warn("upstream is not found", slog.String("name", upstreamName))
+				logger.Warn("upstream is empty", slog.String("path", b2s(ctx.Request.Path())))
 				ctx.Abort()
 				return
 			}
@@ -257,4 +257,36 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		ctx.Response.SetStatusCode(499)
 	case <-done:
 	}
+}
+
+type DynamicService struct {
+	services map[string]*Service
+	name     string
+}
+
+func newDynamicService(name string, services map[string]*Service) *DynamicService {
+	return &DynamicService{
+		services: services,
+		name:     name,
+	}
+}
+
+func (svc *DynamicService) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+	logger := log.FromContext(c)
+	serviceName := ctx.GetString(svc.name)
+
+	if len(serviceName) == 0 {
+		logger.Error("service name is empty", slog.String("path", b2s(ctx.Request.Path())))
+		ctx.Abort()
+		return
+	}
+
+	service, found := svc.services[serviceName]
+	if !found {
+		logger.Warn("service is not found", slog.String("name", serviceName))
+		ctx.Abort()
+		return
+	}
+
+	service.ServeHTTP(c, ctx)
 }

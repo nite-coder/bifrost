@@ -38,6 +38,7 @@ func newDefaultClientOptions() []hzconfig.ClientOption {
 		client.WithWriteTimeout(60 * time.Second),
 		client.WithMaxIdleConnDuration(120 * time.Second),
 		client.WithKeepAlive(true),
+		client.WithMaxConnsPerHost(1024),
 	}
 }
 
