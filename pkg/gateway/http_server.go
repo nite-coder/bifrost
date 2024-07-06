@@ -24,15 +24,15 @@ import (
 )
 
 type HTTPServer struct {
-	entryOpts *config.EntryOptions
-	switcher  *switcher
-	server    *server.Hertz
+	serverOpts *config.ServerOptions
+	switcher   *switcher
+	server     *server.Hertz
 }
 
-func newHTTPServer(bifrost *Bifrost, entryOpts config.EntryOptions, tracers []tracer.Tracer) (*HTTPServer, error) {
+func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []tracer.Tracer) (*HTTPServer, error) {
 
 	hzOpts := []hzconfig.Option{
-		server.WithHostPorts(entryOpts.Bind),
+		server.WithHostPorts(serverOpts.Bind),
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		server.WithSenseClientDisconnection(true),
@@ -42,35 +42,35 @@ func newHTTPServer(bifrost *Bifrost, entryOpts config.EntryOptions, tracers []tr
 		withDefaultServerHeader(true),
 	}
 
-	if entryOpts.Timeout.KeepAliveTimeout.Seconds() > 0 {
-		hzOpts = append(hzOpts, server.WithIdleTimeout(entryOpts.Timeout.KeepAliveTimeout))
+	if serverOpts.Timeout.KeepAliveTimeout.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithIdleTimeout(serverOpts.Timeout.KeepAliveTimeout))
 	}
 
-	if entryOpts.Timeout.IdleTimeout.Seconds() > 0 {
-		hzOpts = append(hzOpts, server.WithIdleTimeout(entryOpts.Timeout.IdleTimeout))
+	if serverOpts.Timeout.IdleTimeout.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithIdleTimeout(serverOpts.Timeout.IdleTimeout))
 	}
 
-	if entryOpts.Timeout.ReadTimeout.Seconds() > 0 {
-		hzOpts = append(hzOpts, server.WithReadTimeout(entryOpts.Timeout.ReadTimeout))
+	if serverOpts.Timeout.ReadTimeout.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithReadTimeout(serverOpts.Timeout.ReadTimeout))
 	}
 
-	if entryOpts.Timeout.WriteTimeout.Seconds() > 0 {
-		hzOpts = append(hzOpts, server.WithWriteTimeout(entryOpts.Timeout.WriteTimeout))
+	if serverOpts.Timeout.WriteTimeout.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithWriteTimeout(serverOpts.Timeout.WriteTimeout))
 	}
 
-	if entryOpts.Timeout.GracefulTimeOut.Seconds() > 0 {
-		hzOpts = append(hzOpts, server.WithExitWaitTime(entryOpts.Timeout.GracefulTimeOut))
+	if serverOpts.Timeout.GracefulTimeOut.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithExitWaitTime(serverOpts.Timeout.GracefulTimeOut))
 	}
 
-	if entryOpts.MaxRequestBodySize > 0 {
-		hzOpts = append(hzOpts, server.WithMaxRequestBodySize(entryOpts.MaxRequestBodySize))
+	if serverOpts.MaxRequestBodySize > 0 {
+		hzOpts = append(hzOpts, server.WithMaxRequestBodySize(serverOpts.MaxRequestBodySize))
 	}
 
-	if entryOpts.ReadBufferSize > 0 {
-		hzOpts = append(hzOpts, server.WithReadBufferSize(entryOpts.ReadBufferSize))
+	if serverOpts.ReadBufferSize > 0 {
+		hzOpts = append(hzOpts, server.WithReadBufferSize(serverOpts.ReadBufferSize))
 	}
 
-	engine, err := newEngine(bifrost, entryOpts)
+	engine, err := newEngine(bifrost, serverOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -89,11 +89,11 @@ func newHTTPServer(bifrost *Bifrost, entryOpts config.EntryOptions, tracers []tr
 		hzOpts = append(hzOpts, server.WithTracer(tracer))
 	}
 
-	if entryOpts.HTTP2 && !entryOpts.TLS.Enabled {
+	if serverOpts.HTTP2 && !serverOpts.TLS.Enabled {
 		hzOpts = append(hzOpts, server.WithH2C(true))
 	}
 
-	if entryOpts.ReusePort {
+	if serverOpts.ReusePort {
 		hzOpts = append(hzOpts, server.WithListenConfig(&net.ListenConfig{
 			Control: func(network, address string, c syscall.RawConn) error {
 				return c.Control(func(fd uintptr) {
@@ -107,7 +107,7 @@ func newHTTPServer(bifrost *Bifrost, entryOpts config.EntryOptions, tracers []tr
 	}
 
 	var tlsConfig *tls.Config
-	if entryOpts.TLS.Enabled {
+	if serverOpts.TLS.Enabled {
 		tlsConfig = &tls.Config{
 			MinVersion:               tls.VersionTLS13,
 			CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256},
@@ -119,20 +119,20 @@ func newHTTPServer(bifrost *Bifrost, entryOpts config.EntryOptions, tracers []tr
 			},
 		}
 
-		if entryOpts.TLS.CertPEM == "" {
+		if serverOpts.TLS.CertPEM == "" {
 			return nil, fmt.Errorf("cert_pem can't be empty")
 		}
 
-		if entryOpts.TLS.KeyPEM == "" {
+		if serverOpts.TLS.KeyPEM == "" {
 			return nil, fmt.Errorf("key_pem can't be empty")
 		}
 
-		certPEM, err := os.ReadFile(entryOpts.TLS.CertPEM)
+		certPEM, err := os.ReadFile(serverOpts.TLS.CertPEM)
 		if err != nil {
 			return nil, err
 		}
 
-		keyPEM, err := os.ReadFile(entryOpts.TLS.KeyPEM)
+		keyPEM, err := os.ReadFile(serverOpts.TLS.KeyPEM)
 		if err != nil {
 			return nil, err
 		}
@@ -146,23 +146,23 @@ func newHTTPServer(bifrost *Bifrost, entryOpts config.EntryOptions, tracers []tr
 	}
 
 	httpServer := &HTTPServer{
-		entryOpts: &entryOpts,
+		serverOpts: &serverOpts,
 	}
 
 	h := server.Default(hzOpts...)
 
-	if entryOpts.HTTP2 {
+	if serverOpts.HTTP2 {
 		http2opts := []configHTTP2.Option{}
 
-		if entryOpts.Timeout.IdleTimeout.Seconds() > 0 {
-			http2opts = append(http2opts, configHTTP2.WithIdleTimeout(entryOpts.Timeout.IdleTimeout))
+		if serverOpts.Timeout.IdleTimeout.Seconds() > 0 {
+			http2opts = append(http2opts, configHTTP2.WithIdleTimeout(serverOpts.Timeout.IdleTimeout))
 		}
 
-		if entryOpts.Timeout.ReadTimeout.Seconds() > 0 {
-			http2opts = append(http2opts, configHTTP2.WithReadTimeout(entryOpts.Timeout.ReadTimeout))
+		if serverOpts.Timeout.ReadTimeout.Seconds() > 0 {
+			http2opts = append(http2opts, configHTTP2.WithReadTimeout(serverOpts.Timeout.ReadTimeout))
 		}
 
-		if entryOpts.TLS.Enabled {
+		if serverOpts.TLS.Enabled {
 			h.AddProtocol("h2", factory.NewServerFactory(http2opts...))
 			tlsConfig.NextProtos = append(tlsConfig.NextProtos, "h2")
 		} else {
@@ -177,7 +177,7 @@ func newHTTPServer(bifrost *Bifrost, entryOpts config.EntryOptions, tracers []tr
 
 	})
 
-	if entryOpts.PPROF {
+	if serverOpts.PPROF {
 		pprof.Register(h)
 	}
 
@@ -190,7 +190,7 @@ func newHTTPServer(bifrost *Bifrost, entryOpts config.EntryOptions, tracers []tr
 }
 
 func (s *HTTPServer) Run() {
-	slog.Info("starting entry", "id", s.entryOpts.ID, "bind", s.entryOpts.Bind)
+	slog.Info("starting server", "id", s.serverOpts.ID, "bind", s.serverOpts.Bind)
 	s.server.Spin()
 }
 

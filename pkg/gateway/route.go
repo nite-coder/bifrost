@@ -19,14 +19,14 @@ type routeSetting struct {
 	middleware []app.HandlerFunc
 }
 
-func loadRouter(bifrost *Bifrost, entry config.EntryOptions, services map[string]*Service, middlewares map[string]app.HandlerFunc) (*Router, error) {
-	router := newRouter()
+func loadRoute(bifrost *Bifrost, server config.ServerOptions, services map[string]*Service, middlewares map[string]app.HandlerFunc) (*Route, error) {
+	route := newRoute()
 
 	for routeID, routeOpts := range bifrost.opts.Routes {
 
 		routeOpts.ID = routeID
 
-		if len(routeOpts.Entries) > 0 && !slices.Contains(routeOpts.Entries, entry.ID) {
+		if len(routeOpts.Servers) > 0 && !slices.Contains(routeOpts.Servers, server.ID) {
 			continue
 		}
 
@@ -80,21 +80,33 @@ func loadRouter(bifrost *Bifrost, entry config.EntryOptions, services map[string
 			routeMiddlewares = append(routeMiddlewares, service.ServeHTTP)
 		}
 
-		err := router.AddRoute(routeOpts, routeMiddlewares...)
+		err := route.Add(routeOpts, routeMiddlewares...)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return router, nil
+	return route, nil
+}
+
+type Route struct {
+	router       *Router
+	regexpRoutes []routeSetting
+}
+
+func newRoute() *Route {
+	return &Route{
+		router:       newRouter(),
+		regexpRoutes: make([]routeSetting, 0),
+	}
 }
 
 // ServeHTTP implements the http.Handler interface
-func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+func (r *Route) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	method := b2s(ctx.Method())
 	path := b2s(ctx.Request.Path())
 
-	middleware, isDefered := r.find(method, path)
+	middleware, isDefered := r.router.find(method, path)
 
 	if len(middleware) > 0 && !isDefered {
 		ctx.SetIndex(-1)
@@ -126,8 +138,8 @@ func (r *Router) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 }
 
-// AddRoute adds a new route
-func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.HandlerFunc) error {
+// Add adds a new route
+func (r *Route) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFunc) error {
 	var err error
 
 	// validate
@@ -179,7 +191,7 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 
 		if len(routeOpts.Methods) == 0 {
 			for _, method := range httpMethods {
-				err = r.add(method, path, nodeType, middlewares...)
+				err = r.router.add(method, path, nodeType, middlewares...)
 				if err != nil && !errors.Is(err, ErrAlreadyExists) {
 					return err
 				}
@@ -192,7 +204,7 @@ func (r *Router) AddRoute(routeOpts config.RouteOptions, middlewares ...app.Hand
 				return fmt.Errorf("http method %s is not valid", method)
 			}
 
-			err = r.add(method, path, nodeType, middlewares...)
+			err = r.router.add(method, path, nodeType, middlewares...)
 			if err != nil {
 				return err
 			}

@@ -29,8 +29,8 @@ func mergeOptions(mainOpts config.Options, content string) (config.Options, erro
 		return mainOpts, err
 	}
 
-	if mainOpts.Entries == nil {
-		mainOpts.Entries = make(map[string]config.EntryOptions)
+	if mainOpts.Servers == nil {
+		mainOpts.Servers = make(map[string]config.ServerOptions)
 	}
 
 	if mainOpts.Routes == nil {
@@ -49,13 +49,13 @@ func mergeOptions(mainOpts config.Options, content string) (config.Options, erro
 		mainOpts.Services = make(map[string]config.ServiceOptions)
 	}
 
-	for k, v := range otherOpts.Entries {
+	for k, v := range otherOpts.Servers {
 
-		if _, found := mainOpts.Entries[k]; found {
-			return mainOpts, fmt.Errorf("entry '%s' is duplicate", k)
+		if _, found := mainOpts.Servers[k]; found {
+			return mainOpts, fmt.Errorf("server '%s' is duplicate", k)
 		}
 
-		mainOpts.Entries[k] = v
+		mainOpts.Servers[k] = v
 	}
 
 	for k, v := range otherOpts.Middlewares {
@@ -108,8 +108,8 @@ func fileExist(file string) bool {
 }
 
 func validateOptions(mainOpts config.Options) error {
-	if len(mainOpts.Entries) == 0 {
-		return fmt.Errorf("no entry found")
+	if len(mainOpts.Servers) == 0 {
+		return fmt.Errorf("no server found")
 	}
 
 	if len(mainOpts.Routes) == 0 {
@@ -133,16 +133,16 @@ func validateOptions(mainOpts config.Options) error {
 		}
 	}
 
-	for id, opts := range mainOpts.Entries {
+	for id, opts := range mainOpts.Servers {
 		if opts.Bind == "" {
-			return fmt.Errorf("entry '%s' bind can't be empty", id)
+			return fmt.Errorf("server '%s' bind can't be empty", id)
 		}
 	}
 
 	for routeID, route := range mainOpts.Routes {
-		for _, entry := range route.Entries {
-			if _, found := mainOpts.Entries[entry]; !found {
-				return fmt.Errorf("entry '%s' is invalid in '%s' route section", entry, routeID)
+		for _, serverID := range route.Servers {
+			if _, found := mainOpts.Servers[serverID]; !found {
+				return fmt.Errorf("server '%s' is invalid in '%s' route section", serverID, routeID)
 			}
 		}
 	}

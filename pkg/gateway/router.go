@@ -7,13 +7,9 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
-// node represents a node in the Trie
-type node struct {
-	path            string           // Path name of the node
-	children        map[string]*node // Child nodes, indexed by path name
-	handler         *methodHandler   // Handler functions
-	prefixChildren  map[string]*node
-	generalChildren map[string]*node
+// methodHandler contains handler functions for various HTTP methods
+type methodHandler struct {
+	handlers map[string][]app.HandlerFunc // Associates HTTP methods with handler functions
 }
 
 type nodeType int32
@@ -25,22 +21,106 @@ const (
 	nodeTypeRegex
 )
 
-// methodHandler contains handler functions for various HTTP methods
-type methodHandler struct {
-	handlers map[string][]app.HandlerFunc // Associates HTTP methods with handler functions
+// node represents a node in the Trie
+type node struct {
+	path            string           // Path name of the node
+	children        map[string]*node // Child nodes, indexed by path name
+	handler         *methodHandler   // Handler functions
+	prefixChildren  map[string]*node
+	generalChildren map[string]*node
+}
+
+// newNode creates a new node
+func newNode(path string) *node {
+	return &node{
+		path:            path,
+		children:        make(map[string]*node),
+		handler:         &methodHandler{handlers: make(map[string][]app.HandlerFunc)},
+		prefixChildren:  make(map[string]*node),
+		generalChildren: make(map[string]*node),
+	}
+}
+
+// addChild adds a child node to the current node
+func (n *node) addChild(child *node, nodeType nodeType) {
+	switch nodeType {
+	case nodeTypePrefix:
+		n.prefixChildren[child.path] = child
+	case nodeTypeExact:
+		n.children[child.path] = child
+	case nodeTypeGeneral:
+		n.generalChildren[child.path] = child
+	}
+}
+
+// findChildByName searches for a node with the specified name among the children
+func (n *node) findChildByName(name string, nodeType nodeType) *node {
+	switch nodeType {
+	case nodeTypePrefix:
+		if child, ok := n.prefixChildren[name]; ok {
+			return child
+		}
+	case nodeTypeExact:
+		if child, ok := n.children[name]; ok {
+			return child
+		}
+	case nodeTypeGeneral:
+		if child, ok := n.generalChildren[name]; ok {
+			return child
+		}
+	}
+
+	return nil
+}
+
+func (n *node) matchChildByName(name string, nodeType nodeType) *node {
+	switch nodeType {
+	case nodeTypeExact:
+		if child, ok := n.children[name]; ok {
+			return child
+		}
+	case nodeTypePrefix:
+		for _, prefix := range n.prefixChildren {
+			if strings.HasPrefix(name, prefix.path) {
+				return prefix
+			}
+		}
+	case nodeTypeGeneral:
+		for _, general := range n.generalChildren {
+			if strings.HasPrefix(name, general.path) {
+				return general
+			}
+		}
+	}
+
+	return nil
+}
+
+// addHandler adds handler functions to the node
+func (n *node) addHandler(method string, h []app.HandlerFunc) {
+	if n.handler.handlers == nil {
+		n.handler.handlers = make(map[string][]app.HandlerFunc)
+	}
+	n.handler.handlers[method] = h
+}
+
+// findHandler searches for handler functions based on the request method
+func (n *node) findHandler(method string) []app.HandlerFunc {
+	if handlers, ok := n.handler.handlers[method]; ok {
+		return handlers
+	}
+	return nil
 }
 
 // Router struct contains the Trie and handler chain
 type Router struct {
 	tree         *node // Root node of the Trie
-	regexpRoutes []routeSetting
 }
 
 // newRouter creates and returns a new router
 func newRouter() *Router {
 	r := &Router{
 		tree:         newNode("/"),
-		regexpRoutes: make([]routeSetting, 0),
 	}
 
 	return r
@@ -232,86 +312,4 @@ func (r *Router) find(method string, path string) ([]app.HandlerFunc, bool) {
 	}
 
 	return nil, false
-}
-
-// newNode creates a new node
-func newNode(path string) *node {
-	return &node{
-		path:            path,
-		children:        make(map[string]*node),
-		handler:         &methodHandler{handlers: make(map[string][]app.HandlerFunc)},
-		prefixChildren:  make(map[string]*node),
-		generalChildren: make(map[string]*node),
-	}
-}
-
-// addChild adds a child node to the current node
-func (n *node) addChild(child *node, nodeType nodeType) {
-	switch nodeType {
-	case nodeTypePrefix:
-		n.prefixChildren[child.path] = child
-	case nodeTypeExact:
-		n.children[child.path] = child
-	case nodeTypeGeneral:
-		n.generalChildren[child.path] = child
-	}
-}
-
-// findChildByName searches for a node with the specified name among the children
-func (n *node) findChildByName(name string, nodeType nodeType) *node {
-	switch nodeType {
-	case nodeTypePrefix:
-		if child, ok := n.prefixChildren[name]; ok {
-			return child
-		}
-	case nodeTypeExact:
-		if child, ok := n.children[name]; ok {
-			return child
-		}
-	case nodeTypeGeneral:
-		if child, ok := n.generalChildren[name]; ok {
-			return child
-		}
-	}
-
-	return nil
-}
-
-func (n *node) matchChildByName(name string, nodeType nodeType) *node {
-	switch nodeType {
-	case nodeTypeExact:
-		if child, ok := n.children[name]; ok {
-			return child
-		}
-	case nodeTypePrefix:
-		for _, prefix := range n.prefixChildren {
-			if strings.HasPrefix(name, prefix.path) {
-				return prefix
-			}
-		}
-	case nodeTypeGeneral:
-		for _, general := range n.generalChildren {
-			if strings.HasPrefix(name, general.path) {
-				return general
-			}
-		}
-	}
-
-	return nil
-}
-
-// addHandler adds handler functions to the node
-func (n *node) addHandler(method string, h []app.HandlerFunc) {
-	if n.handler.handlers == nil {
-		n.handler.handlers = make(map[string][]app.HandlerFunc)
-	}
-	n.handler.handlers[method] = h
-}
-
-// findHandler searches for handler functions based on the request method
-func (n *node) findHandler(method string) []app.HandlerFunc {
-	if handlers, ok := n.handler.handlers[method]; ok {
-		return handlers
-	}
-	return nil
 }

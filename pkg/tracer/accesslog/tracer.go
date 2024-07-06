@@ -71,7 +71,7 @@ func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 			flushTimer.Reset(opts.Flush)
 
 			select {
-			case entry, ok := <-t.logChan:
+			case server, ok := <-t.logChan:
 				if !ok {
 					// Channel closed, flush remaining data
 					_ = writer.Flush()
@@ -79,7 +79,7 @@ func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 					return
 				}
 
-				replacer := strings.NewReplacer(entry...)
+				replacer := strings.NewReplacer(server...)
 				result := replacer.Replace(opts.Template)
 				_, _ = writer.WriteString(result)
 			case <-flushTimer.C:

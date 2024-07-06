@@ -1,7 +1,7 @@
 package config
 
 const (
-	ENTRY_ID           = "$entry_id"
+	SERVER_ID          = "$server_id"
 	REMOTE_ADDR        = "$remote_addr"
 	TIME               = "$time"
 	RECEIVED_SIZE      = "$received_size"

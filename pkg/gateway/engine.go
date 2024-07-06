@@ -22,7 +22,7 @@ type Engine struct {
 	options []hzconfig.Option
 }
 
-func newEngine(bifrost *Bifrost, entryOpts config.EntryOptions) (*Engine, error) {
+func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, error) {
 
 	// middlewares
 	middlewares, err := loadMiddlewares(bifrost.opts.Middlewares)
@@ -37,7 +37,7 @@ func newEngine(bifrost *Bifrost, entryOpts config.EntryOptions) (*Engine, error)
 	}
 
 	// routes
-	router, err := loadRouter(bifrost, entryOpts, services, middlewares)
+	route, err := loadRoute(bifrost, serverOpts, services, middlewares)
 	if err != nil {
 		return nil, err
 	}
@@ -65,20 +65,20 @@ func newEngine(bifrost *Bifrost, entryOpts config.EntryOptions) (*Engine, error)
 	}
 
 	// init middlewares
-	logger, err := log.NewLogger(entryOpts.Logging)
+	logger, err := log.NewLogger(serverOpts.Logging)
 	if err != nil {
 		return nil, err
 	}
-	initMiddleware := newInitMiddleware(entryOpts.ID, logger)
+	initMiddleware := newInitMiddleware(serverOpts.ID, logger)
 	engine.Use(initMiddleware.ServeHTTP)
 
-	// set entry's middlewares
-	for _, middleware := range entryOpts.Middlewares {
+	// set server's middlewares
+	for _, middleware := range serverOpts.Middlewares {
 
 		if len(middleware.Use) > 0 {
 			val, found := middlewares[middleware.Use]
 			if !found {
-				return nil, fmt.Errorf("middleware '%s' was not found in entry id: '%s'", middleware.Use, entryOpts.ID)
+				return nil, fmt.Errorf("middleware '%s' was not found in server id: '%s'", middleware.Use, serverOpts.ID)
 			}
 
 			engine.Use(val)
@@ -86,12 +86,12 @@ func newEngine(bifrost *Bifrost, entryOpts config.EntryOptions) (*Engine, error)
 		}
 
 		if len(middleware.Type) == 0 {
-			return nil, fmt.Errorf("middleware kind can't be empty in entry id: '%s'", entryOpts.ID)
+			return nil, fmt.Errorf("middleware kind can't be empty in server id: '%s'", serverOpts.ID)
 		}
 
 		handler, found := middlewareFactory[middleware.Type]
 		if !found {
-			return nil, fmt.Errorf("middleware handler '%s' was not found in entry id: '%s'", middleware.Type, entryOpts.ID)
+			return nil, fmt.Errorf("middleware handler '%s' was not found in server id: '%s'", middleware.Type, serverOpts.ID)
 		}
 
 		m, err := handler(middleware.Params)
@@ -102,7 +102,7 @@ func newEngine(bifrost *Bifrost, entryOpts config.EntryOptions) (*Engine, error)
 		engine.Use(m)
 	}
 
-	engine.Use(router.ServeHTTP)
+	engine.Use(route.ServeHTTP)
 
 	return engine, nil
 }

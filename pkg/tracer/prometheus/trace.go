@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	labelEntry      = "entry"
+	labelServer     = "server"
 	labelMethod     = "method"
 	labelPath       = "path"
 	labelStatusCode = "statusCode"
@@ -30,8 +30,8 @@ const (
 func genLabels(ctx *app.RequestContext) prom.Labels {
 	labels := make(prom.Labels)
 
-	entryID := ctx.GetString(config.ENTRY_ID)
-	labels[labelEntry] = defaultValIfEmpty(entryID, unknownLabelValue)
+	serverID := ctx.GetString(config.SERVER_ID)
+	labels[labelServer] = defaultValIfEmpty(serverID, unknownLabelValue)
 	labels[labelMethod] = defaultValIfEmpty(string(ctx.Request.Method()), unknownLabelValue)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(ctx.Response.Header.StatusCode()), unknownLabelValue)
 	labels[labelPath] = defaultValIfEmpty(string(ctx.Request.Path()), unknownLabelValue)
@@ -58,7 +58,7 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	}
 
 	info := c.GetTraceInfo().Stats()
-	entryID := c.GetString(config.ENTRY_ID)
+	serverID := c.GetString(config.SERVER_ID)
 
 	httpStart := info.GetEvent(stats.HTTPStart)
 	httpFinish := info.GetEvent(stats.HTTPFinish)
@@ -70,13 +70,13 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	_ = counterAdd(s.requestTotalCounter, 1, genLabels(c))
 	_ = histogramObserve(s.requestDurationHistogram, cost, genLabels(c))
 
-	entryLabel := make(prom.Labels)
-	entryLabel[labelEntry] = entryID
+	serverLabel := make(prom.Labels)
+	serverLabel[labelServer] = serverID
 	requestSize := info.RecvSize()
 	responseSize := info.SendSize()
 
-	_ = counterAdd(s.requestSizeTotalCounter, requestSize, entryLabel)
-	_ = counterAdd(s.respoonseSizeTotalCounter, responseSize, entryLabel)
+	_ = counterAdd(s.requestSizeTotalCounter, requestSize, serverLabel)
+	_ = counterAdd(s.respoonseSizeTotalCounter, responseSize, serverLabel)
 
 }
 
@@ -103,7 +103,7 @@ func NewTracer(addr, path string, opts ...Option) tracer.Tracer {
 			Name: "bifrost_request_size_total",
 			Help: "the server received request body size, unit byte.",
 		},
-		[]string{labelEntry},
+		[]string{labelServer},
 	)
 	cfg.registry.MustRegister(requestSizeTotalCounter)
 
@@ -112,7 +112,7 @@ func NewTracer(addr, path string, opts ...Option) tracer.Tracer {
 			Name: "bifrost_response_size_total",
 			Help: "the server send response body size, unit byte.",
 		},
-		[]string{labelEntry},
+		[]string{labelServer},
 	)
 	cfg.registry.MustRegister(responseSizeTotalCounter)
 
@@ -121,7 +121,7 @@ func NewTracer(addr, path string, opts ...Option) tracer.Tracer {
 			Name: "bifrost_request_total",
 			Help: "Total number of HTTPs completed by the server, regardless of success or failure.",
 		},
-		[]string{labelEntry, labelMethod, labelStatusCode, labelPath},
+		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
 	)
 	cfg.registry.MustRegister(requestTotalCounter)
 
@@ -131,7 +131,7 @@ func NewTracer(addr, path string, opts ...Option) tracer.Tracer {
 			Help:    "Latency (seconds) of HTTP that had been application-level handled by the server.",
 			Buckets: cfg.buckets,
 		},
-		[]string{labelEntry, labelMethod, labelStatusCode, labelPath},
+		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
 	)
 	cfg.registry.MustRegister(requestDurationHistogram)
 

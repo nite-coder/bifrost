@@ -199,14 +199,14 @@ func load(opts config.Options, isReload bool) (*Bifrost, error) {
 		}
 	}
 
-	for id, entry := range opts.Entries {
+	for id, server := range opts.Servers {
 		if id == "" {
 			return nil, fmt.Errorf("http server id can't be empty")
 		}
 
-		entry.ID = id
+		server.ID = id
 
-		if entry.Bind == "" {
+		if server.Bind == "" {
 			return nil, fmt.Errorf("http server bind can't be empty")
 		}
 
@@ -215,19 +215,19 @@ func load(opts config.Options, isReload bool) (*Bifrost, error) {
 			return nil, fmt.Errorf("http server '%s' already exists", id)
 		}
 
-		if len(entry.AccessLogID) > 0 {
-			_, found := opts.AccessLogs[entry.AccessLogID]
+		if len(server.AccessLogID) > 0 {
+			_, found := opts.AccessLogs[server.AccessLogID]
 			if !found {
-				return nil, fmt.Errorf("access log '%s' was not found in entry '%s'", entry.AccessLogID, entry.ID)
+				return nil, fmt.Errorf("access log '%s' was not found in server '%s'", server.AccessLogID, server.ID)
 			}
 
-			accessLogTracer, found := accessLogTracers[entry.AccessLogID]
+			accessLogTracer, found := accessLogTracers[server.AccessLogID]
 			if found {
 				tracers = append(tracers, accessLogTracer)
 			}
 		}
 
-		httpServer, err := newHTTPServer(bifrsot, entry, tracers)
+		httpServer, err := newHTTPServer(bifrsot, server, tracers)
 		if err != nil {
 			return nil, err
 		}
@@ -274,10 +274,10 @@ func reload(bifrost *Bifrost) error {
 
 	isReloaded := false
 
-	for id, server := range bifrost.httpServers {
+	for id, httpServer := range bifrost.httpServers {
 		newServer, found := newBifrost.httpServers[id]
-		if found && server.entryOpts.Bind == newServer.entryOpts.Bind {
-			server.switcher.SetEngine(newServer.switcher.Engine())
+		if found && httpServer.serverOpts.Bind == newServer.serverOpts.Bind {
+			httpServer.switcher.SetEngine(newServer.switcher.Engine())
 			isReloaded = true
 		}
 	}

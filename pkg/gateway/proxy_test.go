@@ -28,7 +28,10 @@ func init() {
 func TestReverseProxy(t *testing.T) {
 	const backendResponse = "I am the backend"
 	const backendStatus = 404
-	r := server.New(server.WithHostPorts("127.0.0.1:9990"))
+	r := server.New(
+		server.WithHostPorts("127.0.0.1:9990"),
+		server.WithExitWaitTime(1*time.Second),
+	)
 
 	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
 		if ctx.Query("mode") == "hangup" {
@@ -76,6 +79,11 @@ func TestReverseProxy(t *testing.T) {
 	})
 	go r.Spin()
 	time.Sleep(time.Second)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		_ = r.Shutdown(ctx)
+	}()
 
 	cli, _ := client.NewClient()
 	req := protocol.AcquireRequest()
@@ -148,7 +156,10 @@ func TestReverseProxyStripHeadersPresentInConnection(t *testing.T) {
 	// someConnHeader is some arbitrary header to be declared as a hop-by-hop header
 	// in the Request's Connection header.
 	const someConnHeader = "X-Some-Conn-Header"
-	r := server.New(server.WithHostPorts("127.0.0.1:9991"))
+	r := server.New(
+		server.WithHostPorts("127.0.0.1:9991"),
+		server.WithExitWaitTime(1*time.Second),
+	)
 
 	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
 		if c := ctx.Request.Header.Get("Connection"); c != "" {
@@ -177,6 +188,12 @@ func TestReverseProxyStripHeadersPresentInConnection(t *testing.T) {
 	})
 	go r.Spin()
 	time.Sleep(time.Second)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		_ = r.Shutdown(ctx)
+	}()
+
 	cli, _ := client.NewClient()
 	req := protocol.AcquireRequest()
 	resp := protocol.AcquireResponse()
@@ -207,7 +224,10 @@ func TestReverseProxyStripEmptyConnection(t *testing.T) {
 	// someConnHeader is some arbitrary header to be declared as a hop-by-hop header
 	// in the Request's Connection header.
 	const someConnHeader = "X-Some-Conn-Header"
-	r := server.New(server.WithHostPorts("127.0.0.1:9992"))
+	r := server.New(
+		server.WithHostPorts("127.0.0.1:9992"),
+		server.WithExitWaitTime(1*time.Second),
+	)
 
 	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
 		if c := ctx.Request.Header.Get("Connection"); c != "" {
@@ -230,7 +250,9 @@ func TestReverseProxyStripEmptyConnection(t *testing.T) {
 	})
 	go r.Spin()
 	defer func() {
-		_ = r.Shutdown(context.TODO())
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		_ = r.Shutdown(ctx)
 	}()
 
 	time.Sleep(time.Second)
@@ -259,7 +281,10 @@ func TestXForwardedFor(t *testing.T) {
 	const prevForwardedFor = "client ip"
 	const backendResponse = "I am the backend"
 	const backendStatus = 404
-	r := server.New(server.WithHostPorts("127.0.0.1:9993"))
+	r := server.New(
+		server.WithHostPorts("127.0.0.1:9993"),
+		server.WithExitWaitTime(1*time.Second),
+	)
 
 	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
 		if ctx.Request.Header.Get("X-Forwarded-For") == "" {
@@ -277,7 +302,9 @@ func TestXForwardedFor(t *testing.T) {
 	r.GET("/backend", proxy.ServeHTTP)
 	go r.Spin()
 	defer func() {
-		_ = r.Shutdown(context.TODO())
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		_ = r.Shutdown(ctx)
 	}()
 
 	time.Sleep(time.Second)
@@ -307,7 +334,10 @@ var proxyQueryTests = []struct {
 }
 
 func TestReverseProxyQuery(t *testing.T) {
-	r := server.New(server.WithHostPorts("127.0.0.1:9995"))
+	r := server.New(
+		server.WithHostPorts("127.0.0.1:9995"),
+		server.WithExitWaitTime(1*time.Second),
+	)
 
 	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
 		ctx.Response.Header.Set("X-Got-Query", string(ctx.Request.QueryString()))
@@ -338,7 +368,10 @@ func TestReverseProxy_Post(t *testing.T) {
 	const backendStatus = 200
 	requestBody := bytes.Repeat([]byte("a"), 1<<20)
 
-	r := server.New(server.WithHostPorts("127.0.0.1:9996"))
+	r := server.New(
+		server.WithHostPorts("127.0.0.1:9996"),
+		server.WithExitWaitTime(1*time.Second),
+	)
 
 	r.POST("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
 		sluproxy := ctx.Request.Body()
@@ -355,7 +388,9 @@ func TestReverseProxy_Post(t *testing.T) {
 	go r.Spin()
 	time.Sleep(time.Second)
 	defer func() {
-		_ = r.Shutdown(context.TODO())
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		_ = r.Shutdown(ctx)
 	}()
 	cli, _ := client.NewClient()
 	req := protocol.AcquireRequest()

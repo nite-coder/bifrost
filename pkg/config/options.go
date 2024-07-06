@@ -3,19 +3,19 @@ package config
 import "time"
 
 type Options struct {
-	Providers   ProvidersOtions             `yaml:"providers" json:"providers"`
+	Providers   ProviderOtions              `yaml:"providers" json:"providers"`
 	Logging     LoggingOtions               `yaml:"logging" json:"logging"`
 	Metrics     MetricsOptions              `yaml:"metrics" json:"metrics"`
 	Tracing     TracingOptions              `yaml:"tracing" json:"tracing"`
 	AccessLogs  map[string]AccessLogOptions `yaml:"access_logs" json:"access_logs"`
-	Entries     map[string]EntryOptions     `yaml:"entries" json:"entries"`
+	Servers     map[string]ServerOptions    `yaml:"servers" json:"servers"`
 	Routes      map[string]RouteOptions     `yaml:"routes" json:"routes"`
 	Middlewares map[string]MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
 	Services    map[string]ServiceOptions   `yaml:"services" json:"services"`
 	Upstreams   map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
 }
 
-type ProvidersOtions struct {
+type ProviderOtions struct {
 	File FileProviderOptions `yaml:"file" json:"file"`
 }
 
@@ -60,22 +60,22 @@ type OTLPGRPCOptions struct {
 	Endpoint string `yaml:"endpoint" json:"endpoint"`
 }
 
-type EntryOptions struct {
-	ID                 string              `yaml:"-" json:"-"`
-	Bind               string              `yaml:"bind" json:"bind"`
-	TLS                TLSOptions          `yaml:"tls" json:"tls"`
-	ReusePort          bool                `yaml:"reuse_port" json:"reuse_port"`
-	HTTP2              bool                `yaml:"http2" json:"http2"`
-	Middlewares        []MiddlwareOptions  `yaml:"middlewares" json:"middlewares"`
-	Logging            LoggingOtions       `yaml:"logging" json:"logging"`
-	Timeout            EntryTimeoutOptions `yaml:"timeout" json:"timeout"`
-	MaxRequestBodySize int                 `yaml:"max_request_body_size" json:"max_request_body_size"`
-	ReadBufferSize     int                 `yaml:"read_buffer_size" json:"read_buffer_size"`
-	PPROF              bool                `yaml:"pprof" json:"pprof"`
-	AccessLogID        string              `yaml:"access_log_id" json:"access_log_id"`
+type ServerOptions struct {
+	ID                 string               `yaml:"-" json:"-"`
+	Bind               string               `yaml:"bind" json:"bind"`
+	TLS                TLSOptions           `yaml:"tls" json:"tls"`
+	ReusePort          bool                 `yaml:"reuse_port" json:"reuse_port"`
+	HTTP2              bool                 `yaml:"http2" json:"http2"`
+	Middlewares        []MiddlwareOptions   `yaml:"middlewares" json:"middlewares"`
+	Logging            LoggingOtions        `yaml:"logging" json:"logging"`
+	Timeout            ServerTimeoutOptions `yaml:"timeout" json:"timeout"`
+	MaxRequestBodySize int                  `yaml:"max_request_body_size" json:"max_request_body_size"`
+	ReadBufferSize     int                  `yaml:"read_buffer_size" json:"read_buffer_size"`
+	PPROF              bool                 `yaml:"pprof" json:"pprof"`
+	AccessLogID        string               `yaml:"access_log_id" json:"access_log_id"`
 }
 
-type EntryTimeoutOptions struct {
+type ServerTimeoutOptions struct {
 	GracefulTimeOut  time.Duration `yaml:"graceful_timeout" json:"graceful_timeout"`
 	IdleTimeout      time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
 	KeepAliveTimeout time.Duration `yaml:"keepalive_timeout" json:"keepalive_timeout"`
@@ -133,7 +133,7 @@ type RouteOptions struct {
 	ID          string             `yaml:"-" json:"-"`
 	Methods     []string           `yaml:"methods" json:"methods"`
 	Paths       []string           `yaml:"paths" json:"paths"`
-	Entries     []string           `yaml:"entries" json:"entries"`
+	Servers     []string           `yaml:"servers" json:"servers"`
 	Middlewares []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
 	ServiceID   string             `yaml:"service_id" json:"service_id"`
 }

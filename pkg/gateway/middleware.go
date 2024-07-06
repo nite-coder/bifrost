@@ -18,13 +18,13 @@ import (
 
 type initMiddleware struct {
 	logger  *slog.Logger
-	entryID string
+	serverID string
 }
 
-func newInitMiddleware(entryID string, logger *slog.Logger) *initMiddleware {
+func newInitMiddleware(serverID string, logger *slog.Logger) *initMiddleware {
 	return &initMiddleware{
 		logger:  logger,
-		entryID: entryID,
+		serverID: serverID,
 	}
 }
 
@@ -43,7 +43,7 @@ func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		logger = logger.With(slog.String("trace_id", traceID))
 	}
 
-	ctx.Set(config.ENTRY_ID, m.entryID)
+	ctx.Set(config.SERVER_ID, m.serverID)
 
 	c = log.NewContext(c, logger)
 	ctx.Next(c)
