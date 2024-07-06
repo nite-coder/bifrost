@@ -51,7 +51,7 @@ tracing:
       endpoint: localhost:4317
       insecure: true
 
-entries:
+servers:
   extenal:
     bind: ":80"
     reuse_port: true

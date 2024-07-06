@@ -168,7 +168,7 @@ func main() {
 	// })
 	h.POST("/", echoHandler)
 	h.Any("/spot/order", placeOrderHandler)
-	h.POST("/spot/orders", placeOrderHandler)
+	h.Any("/spot/orders", placeOrderHandler)
 	h.Any("/api/v1/spot/orders", placeOrderHandler)
 	h.POST("/futures/usdt/orders", placeOrderHandler)
 	h.POST("/options/orders", placeOrderHandler)

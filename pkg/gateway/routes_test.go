@@ -25,7 +25,7 @@ func generalkHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(204)
 }
 
-func registerByNodeType(route *Route, nodeType nodeType) *Route {
+func registerByNodeType(route *Routes, nodeType nodeType) *Routes {
 	switch nodeType {
 	case nodeTypeExact:
 		_ = route.Add(config.RouteOptions{
@@ -56,7 +56,7 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 
 	t.Run("exact match", func(t *testing.T) {
 		nodeTypes := []nodeType{nodeTypeExact, nodeTypePrefix, nodeTypeGeneral, nodeTypeRegex}
-		route := newRoute()
+		route := newRoutes()
 
 		for _, nodeType := range nodeTypes {
 			route = registerByNodeType(route, nodeType)
@@ -84,7 +84,7 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 
 	t.Run("prefix match", func(t *testing.T) {
 		nodeTypes := []nodeType{nodeTypePrefix, nodeTypeGeneral, nodeTypeRegex}
-		route := newRoute()
+		route := newRoutes()
 
 		for _, nodeType := range nodeTypes {
 			route = registerByNodeType(route, nodeType)
@@ -112,7 +112,7 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 
 	t.Run("regex match", func(t *testing.T) {
 		nodeTypes := []nodeType{nodeTypeGeneral, nodeTypeRegex}
-		route := newRoute()
+		route := newRoutes()
 
 		for _, nodeType := range nodeTypes {
 			route = registerByNodeType(route, nodeType)
@@ -140,7 +140,7 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 
 	t.Run("general match", func(t *testing.T) {
 		nodeTypes := []nodeType{nodeTypeGeneral}
-		route := newRoute()
+		route := newRoutes()
 
 		for _, nodeType := range nodeTypes {
 			route = registerByNodeType(route, nodeType)
@@ -169,7 +169,7 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 }
 
 func TestRootRoute(t *testing.T) {
-	route := newRoute()
+	route := newRoutes()
 
 	_ = route.Add(config.RouteOptions{
 		Paths: []string{"= /"},
@@ -199,7 +199,7 @@ func TestRootRoute(t *testing.T) {
 }
 
 func TestRoutes(t *testing.T) {
-	route := newRoute()
+	route := newRoutes()
 
 	err := route.Add(config.RouteOptions{
 		Paths: []string{"^= /market/btc", "^= /spot"},
@@ -255,7 +255,7 @@ func TestRoutes(t *testing.T) {
 }
 
 func TestDuplicateHTTPMethods(t *testing.T) {
-	route := newRoute()
+	route := newRoutes()
 
 	err := route.Add(config.RouteOptions{
 		Methods: []string{"GET", "POST"},
@@ -275,5 +275,3 @@ func TestDuplicateHTTPMethods(t *testing.T) {
 	}, exactkHandler)
 	assert.NoError(t, err)
 }
-
-

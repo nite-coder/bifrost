@@ -37,7 +37,7 @@ func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, erro
 	}
 
 	// routes
-	route, err := loadRoute(bifrost, serverOpts, services, middlewares)
+	route, err := loadRoutes(bifrost, serverOpts, services, middlewares)
 	if err != nil {
 		return nil, err
 	}

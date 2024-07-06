@@ -19,8 +19,8 @@ type routeSetting struct {
 	middleware []app.HandlerFunc
 }
 
-func loadRoute(bifrost *Bifrost, server config.ServerOptions, services map[string]*Service, middlewares map[string]app.HandlerFunc) (*Route, error) {
-	route := newRoute()
+func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[string]*Service, middlewares map[string]app.HandlerFunc) (*Routes, error) {
+	route := newRoutes()
 
 	for routeID, routeOpts := range bifrost.opts.Routes {
 
@@ -31,11 +31,11 @@ func loadRoute(bifrost *Bifrost, server config.ServerOptions, services map[strin
 		}
 
 		if len(routeOpts.Paths) == 0 {
-			return nil, fmt.Errorf("route match can't be empty")
+			return nil, fmt.Errorf("paths can't be empty in route: '%s'", routeOpts.ID)
 		}
 
 		if len(routeOpts.ServiceID) == 0 {
-			return nil, fmt.Errorf("route service_id can't be empty")
+			return nil, fmt.Errorf("service_id can't be empty in route: '%s'", routeOpts.ID)
 		}
 
 		routeMiddlewares := make([]app.HandlerFunc, 0)
@@ -89,20 +89,20 @@ func loadRoute(bifrost *Bifrost, server config.ServerOptions, services map[strin
 	return route, nil
 }
 
-type Route struct {
+type Routes struct {
 	router       *Router
 	regexpRoutes []routeSetting
 }
 
-func newRoute() *Route {
-	return &Route{
+func newRoutes() *Routes {
+	return &Routes{
 		router:       newRouter(),
 		regexpRoutes: make([]routeSetting, 0),
 	}
 }
 
 // ServeHTTP implements the http.Handler interface
-func (r *Route) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+func (r *Routes) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	method := b2s(ctx.Method())
 	path := b2s(ctx.Request.Path())
 
@@ -139,7 +139,7 @@ func (r *Route) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 }
 
 // Add adds a new route
-func (r *Route) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFunc) error {
+func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFunc) error {
 	var err error
 
 	// validate
