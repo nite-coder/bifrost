@@ -3,17 +3,12 @@ package accesslog
 import (
 	"regexp"
 	"sort"
-	"unsafe"
 )
 
 var (
 	reIsVariable = regexp.MustCompile(`\$\w+(-\w+)*`)
 	questionByte = []byte{byte('?')}
 )
-
-func b2s(b []byte) string {
-	return unsafe.String(unsafe.SliceData(b), len(b))
-}
 
 type byLengthAndContent []string
 

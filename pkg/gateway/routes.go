@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 type routeSetting struct {
@@ -103,8 +104,8 @@ func newRoutes() *Routes {
 
 // ServeHTTP implements the http.Handler interface
 func (r *Routes) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	method := b2s(ctx.Method())
-	path := b2s(ctx.Request.Path())
+	method := cast.B2S(ctx.Method())
+	path := cast.B2S(ctx.Request.Path())
 
 	middleware, isDefered := r.router.find(method, path)
 

@@ -14,6 +14,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
+	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -138,7 +139,7 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			}
 			replacements = append(replacements, config.REMOTE_ADDR, ip)
 		case config.REQUEST_METHOD:
-			replacements = append(replacements, config.REQUEST_METHOD, b2s(c.Request.Method()))
+			replacements = append(replacements, config.REQUEST_METHOD, cast.B2S(c.Request.Method()))
 		case config.REQUEST_URI:
 			buf := bytebufferpool.Get()
 			defer bytebufferpool.Put(buf)
@@ -170,25 +171,25 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			if found {
 				b, ok := val.([]byte)
 				if ok {
-					replacements = append(replacements, config.REQUEST_PATH, b2s(b))
+					replacements = append(replacements, config.REQUEST_PATH, cast.B2S(b))
 					continue
 				} else {
 					replacements = append(replacements, config.REQUEST_PATH, "")
 				}
 				continue
 			}
-			replacements = append(replacements, config.REQUEST_PATH, b2s(c.Request.Path()))
+			replacements = append(replacements, config.REQUEST_PATH, cast.B2S(c.Request.Path()))
 		case config.REQUEST_PROTOCOL:
 			replacements = append(replacements, config.REQUEST_PROTOCOL, c.Request.Header.GetProtocol())
 		case config.REQUEST_BODY:
-			body := escape(b2s(c.Request.Body()), t.opts.Escape)
+			body := escape(cast.B2S(c.Request.Body()), t.opts.Escape)
 			replacements = append(replacements, config.REQUEST_BODY, body)
 		case config.STATUS:
 			replacements = append(replacements, config.STATUS, strconv.Itoa(c.Response.StatusCode()))
 		case config.UPSTREAM_PROTOCOL:
 			replacements = append(replacements, config.UPSTREAM_PROTOCOL, c.Request.Header.GetProtocol())
 		case config.UPSTREAM_METHOD:
-			replacements = append(replacements, config.UPSTREAM_METHOD, b2s(c.Request.Method()))
+			replacements = append(replacements, config.UPSTREAM_METHOD, cast.B2S(c.Request.Method()))
 		case config.UPSTREAM_URI:
 			buf := bytebufferpool.Get()
 			defer bytebufferpool.Put(buf)
@@ -202,7 +203,7 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 
 			replacements = append(replacements, config.UPSTREAM_URI, buf.String())
 		case config.UPSTREAM_PATH:
-			replacements = append(replacements, config.UPSTREAM_PATH, b2s(c.Request.Path()))
+			replacements = append(replacements, config.UPSTREAM_PATH, cast.B2S(c.Request.Path()))
 		case config.UPSTREAM_ADDR:
 			addr := c.GetString(config.UPSTREAM_ADDR)
 			replacements = append(replacements, config.UPSTREAM_ADDR, addr)

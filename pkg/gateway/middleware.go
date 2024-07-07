@@ -6,6 +6,7 @@ import (
 	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"http-benchmark/pkg/middleware/addprefix"
+	"http-benchmark/pkg/middleware/headers"
 	"http-benchmark/pkg/middleware/prommetric"
 	"http-benchmark/pkg/middleware/replacepath"
 	"http-benchmark/pkg/middleware/replacepathregex"
@@ -14,6 +15,7 @@ import (
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/nite-coder/blackbear/pkg/cast"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -147,6 +149,45 @@ func init() {
 		}
 
 		m := prommetric.New(path)
+		return m.ServeHTTP, nil
+	})
+
+	_ = RegisterMiddleware("headers", func(param map[string]any) (app.HandlerFunc, error) {
+		requestHeader := map[string]string{}
+		val, found := param["request_headers"]
+		if found {
+			headers, ok := val.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("request_headers is not set or request_headers is invalid")
+			}
+
+			for k, v := range headers {
+				val, err := cast.ToString(v)
+				if err != nil {
+					continue
+				}
+				requestHeader[k] = val
+			}
+		}
+
+		respHeader := map[string]string{}
+		val, found = param["response_headers"]
+		if found {
+			headers, ok := val.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("response_headers is not set or response_headers is invalid")
+			}
+
+			for k, v := range headers {
+				val, err := cast.ToString(v)
+				if err != nil {
+					continue
+				}
+				respHeader[k] = val
+			}
+		}
+
+		m := headers.NewMiddleware(requestHeader, respHeader)
 		return m.ServeHTTP, nil
 	})
 

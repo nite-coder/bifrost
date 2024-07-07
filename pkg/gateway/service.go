@@ -14,6 +14,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
+	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/rs/dnscache"
 	"github.com/valyala/bytebufferpool"
 )
@@ -184,7 +185,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			upstreamName := ctx.GetString(svc.dynamicUpstream)
 
 			if len(upstreamName) == 0 {
-				logger.Warn("upstream is empty", slog.String("path", b2s(ctx.Request.Path())))
+				logger.Warn("upstream is empty", slog.String("path", cast.B2S(ctx.Request.Path())))
 				ctx.Abort()
 				return
 			}
@@ -276,7 +277,7 @@ func (svc *DynamicService) ServeHTTP(c context.Context, ctx *app.RequestContext)
 	serviceName := ctx.GetString(svc.name)
 
 	if len(serviceName) == 0 {
-		logger.Error("service name is empty", slog.String("path", b2s(ctx.Request.Path())))
+		logger.Error("service name is empty", slog.String("path", cast.B2S(ctx.Request.Path())))
 		ctx.Abort()
 		return
 	}

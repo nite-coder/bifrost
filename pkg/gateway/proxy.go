@@ -42,6 +42,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	hertztracing "github.com/hertz-contrib/obs-opentelemetry/tracing"
+	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -135,7 +136,7 @@ func newProxy(target string, tracingEnabled bool, weight int, options ...hzconfi
 				req.SetIsTLS(true)
 			}
 
-			req.SetRequestURI(b2s(JoinURLPath(req, target)))
+			req.SetRequestURI(cast.B2S(JoinURLPath(req, target)))
 			//req.Header.SetHostBytes(req.URI().Host())
 		},
 	}
@@ -203,10 +204,10 @@ func JoinURLPath(req *protocol.Request, target string) (path []byte) {
 // See RFC 7230, section 6.1
 func removeRequestConnHeaders(c *app.RequestContext) {
 	c.Request.Header.VisitAll(func(k, v []byte) {
-		if b2s(k) == "Connection" {
-			for _, sf := range strings.Split(b2s(v), ",") {
+		if cast.B2S(k) == "Connection" {
+			for _, sf := range strings.Split(cast.B2S(v), ",") {
 				if sf = textproto.TrimString(sf); sf != "" {
-					c.Request.Header.DelBytes(s2b(sf))
+					c.Request.Header.DelBytes(cast.S2B(sf))
 				}
 			}
 		}
@@ -217,10 +218,10 @@ func removeRequestConnHeaders(c *app.RequestContext) {
 // See RFC 7230, section 6.1
 func removeResponseConnHeaders(c *app.RequestContext) {
 	c.Response.Header.VisitAll(func(k, v []byte) {
-		if b2s(k) == "Connection" {
-			for _, sf := range strings.Split(b2s(v), ",") {
+		if cast.B2S(k) == "Connection" {
+			for _, sf := range strings.Split(cast.B2S(v), ",") {
 				if sf = textproto.TrimString(sf); sf != "" {
-					c.Response.Header.DelBytes(s2b(sf))
+					c.Response.Header.DelBytes(cast.S2B(sf))
 				}
 			}
 		}
@@ -287,7 +288,7 @@ func (r *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		if r.transferTrailer && h == "Trailer" {
 			continue
 		}
-		req.Header.DelBytes(s2b(h))
+		req.Header.DelBytes(cast.S2B(h))
 	}
 
 	// Check if 'trailers' exists in te header, If exists, add an additional Te header
@@ -361,7 +362,7 @@ func (r *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		if r.transferTrailer && h == "Trailer" {
 			continue
 		}
-		resp.Header.DelBytes(s2b(h))
+		resp.Header.DelBytes(cast.S2B(h))
 	}
 
 	if r.modifyResponse == nil {
