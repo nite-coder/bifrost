@@ -18,8 +18,6 @@ logging:
 metrics:
   prometheus:
     enabled: false
-    bind: ":9091"
-    path: /metrics
     buckets: [0.01, 0.03, 0.05, 0.1]
 
 access_logs:

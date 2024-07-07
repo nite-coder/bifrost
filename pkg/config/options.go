@@ -37,8 +37,6 @@ type LoggingOtions struct {
 
 type PrometheusOptions struct {
 	Enabled bool      `yaml:"enabled" json:"enabled"`
-	Bind    string    `yaml:"bind" json:"bind"`
-	Path    string    `yaml:"path" json:"path"`
 	Buckets []float64 `yaml:"buckets" json:"buckets"`
 }
 

@@ -3,18 +3,12 @@ package prometheus
 import (
 	"context"
 	"http-benchmark/pkg/config"
-	"log/slog"
-	"net/http"
 	"strconv"
-
-	"github.com/cloudwego/hertz/pkg/common/hlog"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
 	prom "github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
 const (
@@ -81,21 +75,11 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 }
 
 // NewTracer provides tracer for server access, addr and path is the scrape_configs for prometheus server.
-func NewTracer(addr, path string, opts ...Option) tracer.Tracer {
+func NewTracer(opts ...Option) tracer.Tracer {
 	cfg := defaultConfig()
 
 	for _, opts := range opts {
 		opts.apply(cfg)
-	}
-
-	if !cfg.disableServer {
-		http.Handle(path, promhttp.HandlerFor(cfg.registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}))
-		go func() {
-			slog.Info("starting prometheus server", "addr", addr)
-			if err := http.ListenAndServe(addr, nil); err != nil {
-				hlog.Fatal("bifrost: Unable to start a promhttp server, err: " + err.Error())
-			}
-		}()
 	}
 
 	requestSizeTotalCounter := prom.NewCounterVec(
@@ -105,7 +89,7 @@ func NewTracer(addr, path string, opts ...Option) tracer.Tracer {
 		},
 		[]string{labelServer},
 	)
-	cfg.registry.MustRegister(requestSizeTotalCounter)
+	prom.MustRegister(requestSizeTotalCounter)
 
 	responseSizeTotalCounter := prom.NewCounterVec(
 		prom.CounterOpts{
@@ -114,7 +98,7 @@ func NewTracer(addr, path string, opts ...Option) tracer.Tracer {
 		},
 		[]string{labelServer},
 	)
-	cfg.registry.MustRegister(responseSizeTotalCounter)
+	prom.MustRegister(responseSizeTotalCounter)
 
 	requestTotalCounter := prom.NewCounterVec(
 		prom.CounterOpts{
@@ -123,7 +107,7 @@ func NewTracer(addr, path string, opts ...Option) tracer.Tracer {
 		},
 		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
 	)
-	cfg.registry.MustRegister(requestTotalCounter)
+	prom.MustRegister(requestTotalCounter)
 
 	requestDurationHistogram := prom.NewHistogramVec(
 		prom.HistogramOpts{
@@ -133,11 +117,7 @@ func NewTracer(addr, path string, opts ...Option) tracer.Tracer {
 		},
 		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
 	)
-	cfg.registry.MustRegister(requestDurationHistogram)
-
-	if cfg.enableGoCollector {
-		cfg.registry.MustRegister(collectors.NewGoCollector(collectors.WithGoCollectorRuntimeMetrics(cfg.runtimeMetricRules...)))
-	}
+	prom.MustRegister(requestDurationHistogram)
 
 	return &serverTracer{
 		requestSizeTotalCounter:   requestSizeTotalCounter,

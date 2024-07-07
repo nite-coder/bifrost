@@ -1,7 +1,6 @@
 package prometheus
 
 import (
-	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
@@ -21,7 +20,6 @@ func (fn option) apply(cfg *promConfig) {
 type promConfig struct {
 	buckets            []float64
 	enableGoCollector  bool
-	registry           *prom.Registry
 	runtimeMetricRules []collectors.GoRuntimeMetricsRule
 	disableServer      bool
 }
@@ -30,7 +28,6 @@ func defaultConfig() *promConfig {
 	return &promConfig{
 		buckets:           defaultBuckets,
 		enableGoCollector: false,
-		registry:          prom.NewRegistry(),
 		disableServer:     false,
 	}
 }
@@ -61,15 +58,6 @@ func WithHistogramBuckets(buckets []float64) Option {
 	return option(func(cfg *promConfig) {
 		if len(buckets) > 0 {
 			cfg.buckets = buckets
-		}
-	})
-}
-
-// WithRegistry define your custom registry
-func WithRegistry(registry *prom.Registry) Option {
-	return option(func(cfg *promConfig) {
-		if registry != nil {
-			cfg.registry = registry
 		}
 	})
 }

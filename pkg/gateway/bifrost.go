@@ -166,16 +166,13 @@ func load(opts config.Options, isReload bool) (*Bifrost, error) {
 
 	// prometheus tracer
 	if opts.Metrics.Prometheus.Enabled && !isReload {
-		promOpts := []prometheus.Option{
-			prometheus.WithEnableGoCollector(true),
-			prometheus.WithDisableServer(false),
-		}
+		promOpts := []prometheus.Option{}
 
 		if len(opts.Metrics.Prometheus.Buckets) > 0 {
 			promOpts = append(promOpts, prometheus.WithHistogramBuckets(opts.Metrics.Prometheus.Buckets))
 		}
 
-		promTracer := prometheus.NewTracer(":9091", "/metrics", promOpts...)
+		promTracer := prometheus.NewTracer(promOpts...)
 		tracers = append(tracers, promTracer)
 	}
 

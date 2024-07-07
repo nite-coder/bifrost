@@ -6,6 +6,7 @@ import (
 	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"http-benchmark/pkg/middleware/addprefix"
+	"http-benchmark/pkg/middleware/prommetric"
 	"http-benchmark/pkg/middleware/replacepath"
 	"http-benchmark/pkg/middleware/replacepathregex"
 	"http-benchmark/pkg/middleware/stripprefix"
@@ -17,13 +18,13 @@ import (
 )
 
 type initMiddleware struct {
-	logger  *slog.Logger
+	logger   *slog.Logger
 	serverID string
 }
 
 func newInitMiddleware(serverID string, logger *slog.Logger) *initMiddleware {
 	return &initMiddleware{
-		logger:  logger,
+		logger:   logger,
 		serverID: serverID,
 	}
 }
@@ -76,17 +77,17 @@ func loadMiddlewares(opts map[string]config.MiddlwareOptions) (map[string]app.Ha
 		middlewareOpts.ID = id
 
 		if len(middlewareOpts.Type) == 0 {
-			return nil, fmt.Errorf("middleware kind can't be empty")
+			return nil, fmt.Errorf("middleware type can't be empty")
 		}
 
 		handler, found := middlewareFactory[middlewareOpts.Type]
 		if !found {
-			return nil, fmt.Errorf("middleware handler '%s' was not found", middlewareOpts.Type)
+			return nil, fmt.Errorf("middleware type '%s' was not found", middlewareOpts.Type)
 		}
 
 		m, err := handler(middlewareOpts.Params)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("middleware type '%s' params is invalid. error: %w", middlewareOpts.Type, err)
 		}
 
 		middlewares[middlewareOpts.ID] = m
@@ -109,21 +110,43 @@ func init() {
 	})
 
 	_ = RegisterMiddleware("add_prefix", func(params map[string]any) (app.HandlerFunc, error) {
-		prefix := params["prefix"].(string)
+		prefix, ok := params["prefix"].(string)
+		if !ok {
+			return nil, fmt.Errorf("prefix is not set or prefix is invalid")
+		}
 		m := addprefix.NewMiddleware(prefix)
 		return m.ServeHTTP, nil
 	})
 
 	_ = RegisterMiddleware("replace_path", func(params map[string]any) (app.HandlerFunc, error) {
-		newPath := params["path"].(string)
+		newPath, ok := params["path"].(string)
+		if !ok {
+			return nil, fmt.Errorf("path is not set or path is invalid")
+		}
 		m := replacepath.NewMiddleware(newPath)
 		return m.ServeHTTP, nil
 	})
 
 	_ = RegisterMiddleware("replace_path_regex", func(params map[string]any) (app.HandlerFunc, error) {
-		regex := params["regex"].(string)
-		replacement := params["replacement"].(string)
+		regex, ok := params["regex"].(string)
+		if !ok {
+			return nil, fmt.Errorf("regex is not set or regex is invalid")
+		}
+		replacement, ok := params["replacement"].(string)
+		if !ok {
+			return nil, fmt.Errorf("replacement is not set or replacement is invalid")
+		}
 		m := replacepathregex.NewMiddleware(regex, replacement)
+		return m.ServeHTTP, nil
+	})
+
+	_ = RegisterMiddleware("prom_metric", func(param map[string]any) (app.HandlerFunc, error) {
+		path, ok := param["path"].(string)
+		if !ok {
+			return nil, fmt.Errorf("path is not set or path is invalid")
+		}
+
+		m := prommetric.New(path)
 		return m.ServeHTTP, nil
 	})
 
@@ -131,4 +154,5 @@ func init() {
 		m := timinglogger.NewMiddleware()
 		return m.ServeHTTP, nil
 	})
+
 }

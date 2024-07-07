@@ -86,17 +86,17 @@ func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, erro
 		}
 
 		if len(middleware.Type) == 0 {
-			return nil, fmt.Errorf("middleware kind can't be empty in server id: '%s'", serverOpts.ID)
+			return nil, fmt.Errorf("middleware type can't be empty in server id: '%s'", serverOpts.ID)
 		}
 
 		handler, found := middlewareFactory[middleware.Type]
 		if !found {
-			return nil, fmt.Errorf("middleware handler '%s' was not found in server id: '%s'", middleware.Type, serverOpts.ID)
+			return nil, fmt.Errorf("middleware type '%s' was not found in server id: '%s'", middleware.Type, serverOpts.ID)
 		}
 
 		m, err := handler(middleware.Params)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("middleware type '%s' params is invalid in server id: '%s'. error: %w", middleware.Type, serverOpts.ID, err)
 		}
 
 		engine.Use(m)
