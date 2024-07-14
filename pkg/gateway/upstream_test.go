@@ -11,9 +11,9 @@ import (
 )
 
 func TestRoundRobin(t *testing.T) {
-	proxy1, _ := newProxy("http://backend1", false, 1)
-	proxy2, _ := newProxy("http://backend2", false, 1)
-	proxy3, _ := newProxy("http://backend3", false, 1)
+	proxy1, _ := newReverseProxy("http://backend1", false, 1)
+	proxy2, _ := newReverseProxy("http://backend2", false, 1)
+	proxy3, _ := newReverseProxy("http://backend3", false, 1)
 
 	upstream := &Upstream{
 		proxies: []*Proxy{
@@ -33,9 +33,9 @@ func TestRoundRobin(t *testing.T) {
 }
 
 func TestWeighted(t *testing.T) {
-	proxy1, _ := newProxy("http://backend1", false, 1)
-	proxy2, _ := newProxy("http://backend2", false, 2)
-	proxy3, _ := newProxy("http://backend3", false, 3)
+	proxy1, _ := newReverseProxy("http://backend1", false, 1)
+	proxy2, _ := newReverseProxy("http://backend2", false, 2)
+	proxy3, _ := newReverseProxy("http://backend3", false, 3)
 
 	upstream := &Upstream{
 		proxies: []*Proxy{
@@ -61,9 +61,9 @@ func TestWeighted(t *testing.T) {
 }
 
 func TestRandom(t *testing.T) {
-	proxy1, _ := newProxy("http://backend1", false, 1)
-	proxy2, _ := newProxy("http://backend2", false, 1)
-	proxy3, _ := newProxy("http://backend3", false, 1)
+	proxy1, _ := newReverseProxy("http://backend1", false, 1)
+	proxy2, _ := newReverseProxy("http://backend2", false, 1)
+	proxy3, _ := newReverseProxy("http://backend3", false, 1)
 
 	upstream := &Upstream{
 		proxies: []*Proxy{
@@ -88,9 +88,9 @@ func TestRandom(t *testing.T) {
 }
 
 func TestHashing(t *testing.T) {
-	proxy1, _ := newProxy("http://backend1", false, 1)
-	proxy2, _ := newProxy("http://backend2", false, 1)
-	proxy3, _ := newProxy("http://backend3", false, 1)
+	proxy1, _ := newReverseProxy("http://backend1", false, 1)
+	proxy2, _ := newReverseProxy("http://backend2", false, 1)
+	proxy3, _ := newReverseProxy("http://backend3", false, 1)
 
 	upstream := &Upstream{
 		proxies: []*Proxy{

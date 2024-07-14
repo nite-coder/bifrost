@@ -1,26 +1,3 @@
-/*
- *	Copyright 2023 CloudWeGo Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * Copyright 2011 The Go Authors. All rights reserved.
- * Use of this source code is governed by a BSD-style
- * license that can be found in the LICENSE file.
- *
- * This file may have been modified by CloudWeGo Authors. All CloudWeGo
- * Modifications are Copyright 2023 CloudWeGo Authors.
- */
-
 package gateway
 
 import (
@@ -105,18 +82,18 @@ var hopHeaders = []string{
 	"Upgrade",
 }
 
-// newProxy returns a new ReverseProxy that routes
+// newReverseProxy returns a new ReverseProxy that routes
 // URLs to the scheme, host, and base path provided in target. If the
 // target's path is "/base" and the incoming request was for "/dir",
 // the target request will be for /base/dir.
-// newProxy does not rewrite the Host header.
+// newReverseProxy does not rewrite the Host header.
 // To rewrite Host headers, use ReverseProxy directly with a custom
 // director policy.
 //
 // Note: if no config.ClientOption is passed it will use the default global client.Client instance.
 // When passing config.ClientOption it will initialize a local client.Client instance.
 // Using ReverseProxy.SetClient if there is need for shared customized client.Client instance.
-func newProxy(target string, tracingEnabled bool, weight int, options ...hzconfig.ClientOption) (*Proxy, error) {
+func newReverseProxy(target string, tracingEnabled bool, weight int, options ...hzconfig.ClientOption) (*Proxy, error) {
 	addr, err := url.Parse(target)
 	if err != nil {
 		return nil, err
@@ -250,17 +227,17 @@ var respTmpHeaderPool = sync.Pool{
 	},
 }
 
-func (r *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	req := &ctx.Request
-	resp := &ctx.Response
+func (p *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+	outReq := &ctx.Request
+	outResp := &ctx.Response
 
-	ctx.Set(config.UPSTREAM_ADDR, r.targetHost)
+	ctx.Set(config.UPSTREAM_ADDR, p.targetHost)
 
 	// save tmp resp header
 	respTmpHeader := respTmpHeaderPool.Get().(map[string][]string)
-	if r.saveOriginResHeader {
-		resp.Header.SetNoDefaultContentType(true)
-		resp.Header.VisitAll(func(key, value []byte) {
+	if p.saveOriginResHeader {
+		outResp.Header.SetNoDefaultContentType(true)
+		outResp.Header.VisitAll(func(key, value []byte) {
 			keyStr := string(key)
 			valueStr := string(value)
 			if _, ok := respTmpHeader[keyStr]; !ok {
@@ -270,14 +247,19 @@ func (r *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			}
 		})
 	}
-	if r.director != nil {
-		r.director(&ctx.Request)
+	if p.director != nil {
+		p.director(&ctx.Request)
 	}
-	req.Header.ResetConnectionClose()
+	outReq.Header.ResetConnectionClose()
 
 	hasTeTrailer := false
-	if r.transferTrailer {
-		hasTeTrailer = checkTeHeader(&req.Header)
+	if p.transferTrailer {
+		hasTeTrailer = checkTeHeader(&outReq.Header)
+	}
+
+	reqUpType := upgradeReqType(&outReq.Header)
+	if !IsASCIIPrint(reqUpType) { // We know reqUpType is ASCII, it's checked by the caller.
+		p.getErrorHandler()(ctx, fmt.Errorf("backend tried to switch to invalid protocol %q", reqUpType))
 	}
 
 	removeRequestConnHeaders(ctx)
@@ -285,20 +267,20 @@ func (r *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	// important is "Connection" because we want a persistent
 	// connection, regardless of what the client sent to us.
 	for _, h := range hopHeaders {
-		if r.transferTrailer && h == "Trailer" {
+		if p.transferTrailer && h == "Trailer" {
 			continue
 		}
-		req.Header.DelBytes(cast.S2B(h))
+		outReq.Header.DelBytes(cast.S2B(h))
 	}
 
 	// Check if 'trailers' exists in te header, If exists, add an additional Te header
-	if r.transferTrailer && hasTeTrailer {
-		req.Header.Set("Te", "trailers")
+	if p.transferTrailer && hasTeTrailer {
+		outReq.Header.Set("Te", "trailers")
 	}
 
 	// prepare request(replace headers and some URL host)
 	if ip, _, err := net.SplitHostPort(ctx.RemoteAddr().String()); err == nil {
-		tmp := req.Header.Peek("X-Forwarded-For")
+		tmp := outReq.Header.Peek("X-Forwarded-For")
 
 		if len(tmp) > 0 {
 			buf := bytebufferpool.Get()
@@ -310,23 +292,61 @@ func (r *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			ip = buf.String()
 		}
 		if tmp == nil || string(tmp) != "" {
-			req.Header.Set("X-Forwarded-For", ip)
+			outReq.Header.Set("X-Forwarded-For", ip)
 		}
 	}
 
-	fn := client.Do
-	if r.client != nil {
-		fn = r.client.Do
+	var err error
+	// After stripping all the hop-by-hop connection headers above, add back any
+	// necessary for protocol upgrades, such as for websockets.
+	if reqUpType != "" {
+		outCtx := ctx.Copy()
+
+		outReq = &outCtx.Request
+		outResp = &outCtx.Response
+
+		outReq.Header.Set("Connection", "Upgrade")
+		outReq.Header.Set("Upgrade", reqUpType)
+
+		err = p.roundTrip(c, ctx, outReq, outResp)
+		if err != nil {
+			buf := bytebufferpool.Get()
+			defer bytebufferpool.Put(buf)
+
+			buf.Write(outReq.Method())
+			buf.Write(spaceByte)
+			buf.Write(outReq.URI().FullURI())
+			uri := buf.String()
+
+			logger := log.FromContext(c)
+			logger.ErrorContext(c, "sent upstream error",
+				slog.String("error", err.Error()),
+				slog.String("upstream", uri),
+			)
+
+			if err.Error() == "timeout" {
+				ctx.Set("target_timeout", true)
+			}
+
+			p.getErrorHandler()(ctx, err)
+			return
+		}
+		return
 	}
 
-	err := fn(c, req, resp)
+	fn := client.Do
+	if p.client != nil {
+		fn = p.client.Do
+	}
+
+	err = fn(c, outReq, outResp)
 	if err != nil {
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
 
-		buf.Write(req.Method())
+		buf.Write(outReq.Method())
 		buf.Write(spaceByte)
-		buf.Write(req.URI().FullURI())
+		buf.Write(outReq.URI().FullURI())
 		uri := buf.String()
 
 		logger := log.FromContext(c)
@@ -339,14 +359,14 @@ func (r *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			ctx.Set("target_timeout", true)
 		}
 
-		r.getErrorHandler()(ctx, err)
+		p.getErrorHandler()(ctx, err)
 		return
 	}
 
 	// add tmp resp header
 	for key, hs := range respTmpHeader {
 		for _, h := range hs {
-			resp.Header.Add(key, h)
+			outResp.Header.Add(key, h)
 		}
 	}
 
@@ -359,19 +379,19 @@ func (r *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	removeResponseConnHeaders(ctx)
 
 	for _, h := range hopHeaders {
-		if r.transferTrailer && h == "Trailer" {
+		if p.transferTrailer && h == "Trailer" {
 			continue
 		}
-		resp.Header.DelBytes(cast.S2B(h))
+		outResp.Header.DelBytes(cast.S2B(h))
 	}
 
-	if r.modifyResponse == nil {
+	if p.modifyResponse == nil {
 		return
 	}
 
-	err = r.modifyResponse(resp)
+	err = p.modifyResponse(outResp)
 	if err != nil {
-		r.getErrorHandler()(ctx, err)
+		p.getErrorHandler()(ctx, err)
 	}
 
 }

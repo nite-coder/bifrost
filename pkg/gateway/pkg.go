@@ -35,3 +35,14 @@ func isValidHTTPMethod(method string) bool {
 		return false
 	}
 }
+
+// IsASCIIPrint returns whether s is ASCII and printable according to
+// https://tools.ietf.org/html/rfc20#section-4.2.
+func IsASCIIPrint(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] < ' ' || s[i] > '~' {
+			return false
+		}
+	}
+	return true
+}

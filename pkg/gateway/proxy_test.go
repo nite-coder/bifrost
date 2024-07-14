@@ -69,7 +69,7 @@ func TestReverseProxy(t *testing.T) {
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
 	})
 
-	proxy, err := newProxy("http://127.0.0.1:9990/proxy", false, 1)
+	proxy, err := newReverseProxy("http://127.0.0.1:9990/proxy", false, 1)
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
 	}
@@ -178,7 +178,7 @@ func TestReverseProxyStripHeadersPresentInConnection(t *testing.T) {
 		ctx.Data(200, "application/json", []byte(backendResponse))
 	})
 
-	proxy, err := newProxy("http://127.0.0.1:9991/proxy", false, 1)
+	proxy, err := newReverseProxy("http://127.0.0.1:9991/proxy", false, 1)
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
 	}
@@ -241,7 +241,7 @@ func TestReverseProxyStripEmptyConnection(t *testing.T) {
 		ctx.Response.Header.Set(someConnHeader, "should be deleted")
 		ctx.Data(200, "application/json", []byte(backendResponse))
 	})
-	proxy, err := newProxy("http://127.0.0.1:9992/proxy", false, 1)
+	proxy, err := newReverseProxy("http://127.0.0.1:9992/proxy", false, 1)
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
 	}
@@ -295,7 +295,7 @@ func TestXForwardedFor(t *testing.T) {
 		}
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
 	})
-	proxy, err := newProxy("http://127.0.0.1:9993/proxy", false, 1)
+	proxy, err := newReverseProxy("http://127.0.0.1:9993/proxy", false, 1)
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
 	}
@@ -345,7 +345,7 @@ func TestReverseProxyQuery(t *testing.T) {
 	})
 
 	for i, tt := range proxyQueryTests {
-		proxy, _ := newProxy("http://127.0.0.1:9995/proxy"+tt.baseSuffix, false, 1)
+		proxy, _ := newReverseProxy("http://127.0.0.1:9995/proxy"+tt.baseSuffix, false, 1)
 		r.GET("/backend", proxy.ServeHTTP)
 		go r.Spin()
 		defer func() {
@@ -383,7 +383,7 @@ func TestReverseProxy_Post(t *testing.T) {
 		}
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
 	})
-	proxy, _ := newProxy("http://127.0.0.1:9996/proxy", false, 1)
+	proxy, _ := newReverseProxy("http://127.0.0.1:9996/proxy", false, 1)
 	r.POST("/backend", proxy.ServeHTTP)
 	go r.Spin()
 	time.Sleep(time.Second)

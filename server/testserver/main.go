@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
+	"github.com/hertz-contrib/websocket"
 )
 
 func WithDefaultServerHeader(disable bool) config.Option {
@@ -162,7 +164,7 @@ func main() {
 		WithDefaultServerHeader(true),
 	}
 	h := server.New(opts...)
-
+	h.NoHijackConnPool = true
 	// h.Use(func(c context.Context, ctx *app.RequestContext) {
 	// 	//fmt.Println("futures/usdt/orders")
 	// })
@@ -176,6 +178,7 @@ func main() {
 	h.DELETE("cancel_order", cancelOrderHandler)
 	h.POST("/long", longHandler)
 	h.GET("/dynamic_upstream", findUpstreamHandler)
+	h.GET("/websocket", wssHandler)
 
 	h.GET("/users/:user_id/orders", func(c context.Context, ctx *app.RequestContext) {
 		userID := ctx.Param("user_id")
@@ -223,4 +226,34 @@ func longHandler(c context.Context, ctx *app.RequestContext) {
 func findUpstreamHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetContentType("text/plain; charset=utf8")
 	ctx.String(200, "find upstream")
+}
+
+var upgrader = websocket.HertzUpgrader{
+	CheckOrigin: func(r *app.RequestContext) bool {
+		return true
+	},
+} // use default options
+
+func wssHandler(c context.Context, ctx *app.RequestContext) {
+	err := upgrader.Upgrade(ctx, func(conn *websocket.Conn) {
+		for {
+			_, _, err := conn.ReadMessage()
+			if err != nil {
+				//slog.ErrorContext(c, "read err:", "error", err)
+				break
+			}
+			//slog.Info("recv", "msg", string(msg))
+
+			err = conn.WriteMessage(websocket.TextMessage, orderResp)
+			if err != nil {
+				//slog.ErrorContext(c, "write err:", "error", err)
+				break
+			}
+		}
+	})
+
+	if err != nil {
+		slog.ErrorContext(c, "upgrade err:", "error", err)
+		return
+	}
 }
