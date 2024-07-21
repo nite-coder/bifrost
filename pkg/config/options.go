@@ -139,8 +139,11 @@ type RouteOptions struct {
 type Protocol string
 
 const (
-	ProtocolHTTP Protocol = "http"
+	ProtocolHTTP  Protocol = "http"
+	ProtocolHTTP2 Protocol = "http2"
 )
+
+
 
 type ServiceOptions struct {
 	ID                  string                `yaml:"-" json:"-"`

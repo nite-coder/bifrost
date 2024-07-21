@@ -188,7 +188,7 @@ func TestRootRoute(t *testing.T) {
 
 	c := app.NewContext(0)
 	c.Request.SetMethod("POST")
-	c.Request.URI().SetPath("/")
+	c.Request.URI().SetPath("/eee/sdss")
 
 	route.ServeHTTP(context.Background(), c)
 	statusCode := c.Response.StatusCode()

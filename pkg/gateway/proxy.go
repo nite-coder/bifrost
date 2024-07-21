@@ -18,12 +18,32 @@ import (
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+
+	http2Config "github.com/hertz-contrib/http2/config"
+	"github.com/hertz-contrib/http2/factory"
 	hertztracing "github.com/hertz-contrib/obs-opentelemetry/tracing"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
 )
 
+// TrailerPrefix is a magic prefix for [ResponseWriter.Header] map keys
+// that, if present, signals that the map entry is actually for
+// the response trailers, and not the response headers. The prefix
+// is stripped after the ServeHTTP call finishes and the values are
+// sent in the trailers.
+//
+// This mechanism is intended only for trailers that are not known
+// prior to the headers being written. If the set of trailers is fixed
+// or known before the header is written, the normal Go trailers mechanism
+// is preferred:
+//
+//	https://pkg.go.dev/net/http#ResponseWriter
+//	https://pkg.go.dev/net/http#example-ResponseWriter-Trailers
+const TrailerPrefix = "Trailer:"
+
 type Proxy struct {
+	options *proxyOptions
+
 	client *client.Client
 
 	// target is set as a reverse proxy address
@@ -32,26 +52,12 @@ type Proxy struct {
 	// transferTrailer is whether to forward Trailer-related header
 	transferTrailer bool
 
-	// saveOriginResponse is whether to save the original response header
-	saveOriginResHeader bool
-
 	// director must be a function which modifies the request
 	// into a new request. Its response is then redirected
 	// back to the original client unmodified.
 	// director must not access the provided Request
 	// after returning.
 	director func(*protocol.Request)
-
-	// modifyResponse is an optional function that modifies the
-	// Response from the backend. It is called if the backend
-	// returns a response at all, with any HTTP status code.
-	// If the backend is unreachable, the optional errorHandler is
-	// called without any call to modifyResponse.
-	//
-	// If modifyResponse returns an error, errorHandler is called
-	// with its error value. If errorHandler is nil, its default
-	// implementation is used.
-	modifyResponse func(*protocol.Response) error
 
 	// errorHandler is an optional function that handles errors
 	// reaching the backend or errors from modifyResponse.
@@ -63,6 +69,12 @@ type Proxy struct {
 	targetHost string
 
 	weight int
+}
+
+type proxyOptions struct {
+	target   string
+	protocol config.Protocol
+	weight   int
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -82,29 +94,50 @@ var hopHeaders = []string{
 	"Upgrade",
 }
 
-// newReverseProxy returns a new ReverseProxy that routes
-// URLs to the scheme, host, and base path provided in target. If the
-// target's path is "/base" and the incoming request was for "/dir",
-// the target request will be for /base/dir.
-// newReverseProxy does not rewrite the Host header.
-// To rewrite Host headers, use ReverseProxy directly with a custom
-// director policy.
-//
-// Note: if no config.ClientOption is passed it will use the default global client.Client instance.
-// When passing config.ClientOption it will initialize a local client.Client instance.
-// Using ReverseProxy.SetClient if there is need for shared customized client.Client instance.
-func newReverseProxy(target string, tracingEnabled bool, weight int, options ...hzconfig.ClientOption) (*Proxy, error) {
-	addr, err := url.Parse(target)
+type clientOptions struct {
+	isTracingEnabled bool
+	http2            bool
+	hzOptions        []hzconfig.ClientOption
+}
+
+func newClient(opts clientOptions) (*client.Client, error) {
+
+	c, err := client.NewClient(opts.hzOptions...)
+	if err != nil {
+		return nil, err
+	}
+
+	if opts.http2 {
+		c.SetClientFactory(factory.NewClientFactory(http2Config.WithAllowHTTP(true)))
+	}
+
+	if opts.isTracingEnabled {
+		c.Use(hertztracing.ClientMiddleware())
+	}
+
+	return c, nil
+}
+
+func newReverseProxy(opts proxyOptions, client *client.Client) (*Proxy, error) {
+	addr, err := url.Parse(opts.target)
 	if err != nil {
 		return nil, err
 	}
 
 	r := &Proxy{
-		target:     target,
-		targetHost: addr.Host,
-		weight:     weight,
+		transferTrailer: true,
+		options:         &opts,
+		target:          opts.target,
+		targetHost:      addr.Host,
+		weight:          opts.weight,
 		director: func(req *protocol.Request) {
-			req.Header.SetProtocol("HTTP/1.1")
+
+			switch opts.protocol {
+			case config.ProtocolHTTP2:
+				req.Header.SetProtocol("HTTP/2.0")
+			case config.ProtocolHTTP:
+				req.Header.SetProtocol("HTTP/1.1")
+			}
 
 			switch addr.Scheme {
 			case "http":
@@ -113,68 +146,13 @@ func newReverseProxy(target string, tracingEnabled bool, weight int, options ...
 				req.SetIsTLS(true)
 			}
 
-			req.SetRequestURI(cast.B2S(JoinURLPath(req, target)))
+			req.SetRequestURI(cast.B2S(JoinURLPath(req, opts.target)))
 			//req.Header.SetHostBytes(req.URI().Host())
 		},
+		client: client,
 	}
 
-	if len(options) != 0 {
-		c, err := client.NewClient(options...)
-		if tracingEnabled {
-			c.Use(hertztracing.ClientMiddleware())
-		}
-		if err != nil {
-			return nil, err
-		}
-		r.client = c
-	}
 	return r, nil
-}
-
-func JoinURLPath(req *protocol.Request, target string) (path []byte) {
-	aslash := req.URI().Path()[0] == '/'
-	var bslash bool
-	if strings.HasPrefix(target, "http") {
-		// absolute path
-		bslash = strings.HasSuffix(target, "/")
-	} else {
-		// default redirect to local
-		bslash = strings.HasPrefix(target, "/")
-		if bslash {
-			target = fmt.Sprintf("%s%s", req.Host(), target)
-		} else {
-			target = fmt.Sprintf("%s/%s", req.Host(), target)
-		}
-		bslash = strings.HasSuffix(target, "/")
-	}
-
-	targetQuery := strings.Split(target, "?")
-	buffer := bytebufferpool.Get()
-	defer bytebufferpool.Put(buffer)
-
-	_, _ = buffer.WriteString(targetQuery[0])
-	switch {
-	case aslash && bslash:
-		_, _ = buffer.Write(req.URI().Path()[1:])
-	case !aslash && !bslash:
-		_, _ = buffer.Write([]byte{'/'})
-		_, _ = buffer.Write(req.URI().Path())
-	default:
-		_, _ = buffer.Write(req.URI().Path())
-	}
-	if len(targetQuery) > 1 {
-		_, _ = buffer.Write([]byte{'?'})
-		_, _ = buffer.WriteString(targetQuery[1])
-	}
-	if len(req.QueryString()) > 0 {
-		if len(targetQuery) == 1 {
-			_, _ = buffer.Write([]byte{'?'})
-		} else {
-			_, _ = buffer.Write([]byte{'&'})
-		}
-		_, _ = buffer.Write(req.QueryString())
-	}
-	return buffer.Bytes()
 }
 
 // removeRequestConnHeaders removes hop-by-hop headers listed in the "Connection" header of h.
@@ -231,25 +209,13 @@ func (p *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	outReq := &ctx.Request
 	outResp := &ctx.Response
 
+	var err error
 	ctx.Set(config.UPSTREAM_ADDR, p.targetHost)
 
-	// save tmp resp header
-	respTmpHeader := respTmpHeaderPool.Get().(map[string][]string)
-	if p.saveOriginResHeader {
-		outResp.Header.SetNoDefaultContentType(true)
-		outResp.Header.VisitAll(func(key, value []byte) {
-			keyStr := string(key)
-			valueStr := string(value)
-			if _, ok := respTmpHeader[keyStr]; !ok {
-				respTmpHeader[keyStr] = []string{valueStr}
-			} else {
-				respTmpHeader[keyStr] = append(respTmpHeader[keyStr], valueStr)
-			}
-		})
-	}
 	if p.director != nil {
 		p.director(&ctx.Request)
 	}
+
 	outReq.Header.ResetConnectionClose()
 
 	hasTeTrailer := false
@@ -296,7 +262,6 @@ func (p *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		}
 	}
 
-	var err error
 	// After stripping all the hop-by-hop connection headers above, add back any
 	// necessary for protocol upgrades, such as for websockets.
 	if reqUpType != "" {
@@ -334,12 +299,7 @@ func (p *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		return
 	}
 
-	fn := client.Do
-	if p.client != nil {
-		fn = p.client.Do
-	}
-
-	err = fn(c, outReq, outResp)
+	err = p.client.Do(c, outReq, outResp)
 	if err != nil {
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
@@ -363,18 +323,7 @@ func (p *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		return
 	}
 
-	// add tmp resp header
-	for key, hs := range respTmpHeader {
-		for _, h := range hs {
-			outResp.Header.Add(key, h)
-		}
-	}
-
-	// Clear and put respTmpHeader back to respTmpHeaderPool
-	for k := range respTmpHeader {
-		delete(respTmpHeader, k)
-	}
-	respTmpHeaderPool.Put(respTmpHeader)
+	announcedTrailers := outResp.Header.Peek("Trailer")
 
 	removeResponseConnHeaders(ctx)
 
@@ -385,13 +334,8 @@ func (p *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		outResp.Header.DelBytes(cast.S2B(h))
 	}
 
-	if p.modifyResponse == nil {
-		return
-	}
-
-	err = p.modifyResponse(outResp)
-	if err != nil {
-		p.getErrorHandler()(ctx, err)
+	if len(announcedTrailers) > 0 {
+		outResp.Header.Add("Trailer", string(announcedTrailers))
 	}
 
 }
@@ -406,11 +350,6 @@ func (r *Proxy) SetClient(client *client.Client) {
 	r.client = client
 }
 
-// SetModifyResponse use to modify response
-func (r *Proxy) SetModifyResponse(mr func(*protocol.Response) error) {
-	r.modifyResponse = mr
-}
-
 // SetErrorHandler use to customize error handler
 func (r *Proxy) SetErrorHandler(eh func(c *app.RequestContext, err error)) {
 	r.errorHandler = eh
@@ -418,10 +357,6 @@ func (r *Proxy) SetErrorHandler(eh func(c *app.RequestContext, err error)) {
 
 func (r *Proxy) SetTransferTrailer(b bool) {
 	r.transferTrailer = b
-}
-
-func (r *Proxy) SetSaveOriginResHeader(b bool) {
-	r.saveOriginResHeader = b
 }
 
 func (r *Proxy) getErrorHandler() func(c *app.RequestContext, err error) {

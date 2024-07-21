@@ -158,7 +158,24 @@ func newService(bifrost *Bifrost, opts config.ServiceOptions) (*Service, error) 
 		url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, hostname, addr.Port(), addr.Path)
 	}
 
-	proxy, err := newReverseProxy(url, bifrost.opts.Tracing.Enabled, 0, clientOpts...)
+	clientOptions := clientOptions{
+		isTracingEnabled: bifrost.opts.Tracing.Enabled,
+		http2:            opts.Protocol == config.ProtocolHTTP2,
+		hzOptions:        clientOpts,
+	}
+
+	client, err := newClient(clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	proxyOptions := proxyOptions{
+		target:   url,
+		protocol: opts.Protocol,
+		weight:   0,
+	}
+
+	proxy, err := newReverseProxy(proxyOptions, client)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +193,8 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		defer func() {
 			done <- true
 			if r := recover(); r != nil {
-				logger.ErrorContext(c, "proxy panic recovered", slog.Any("panic", r))
+				stackTrace := getStackTrace()
+				logger.ErrorContext(c, "proxy panic recovered", slog.Any("panic", r), "stack", stackTrace)
 				ctx.Abort()
 			}
 		}()
