@@ -75,6 +75,7 @@ func TestReverseProxy(t *testing.T) {
 		protocol: config.ProtocolHTTP,
 		weight:   1,
 	}
+
 	proxy, err := newReverseProxy(proxyOptions, nil)
 	if err != nil {
 		t.Errorf("proxy error: %v", err)

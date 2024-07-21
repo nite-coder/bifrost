@@ -124,6 +124,18 @@ func newReverseProxy(opts proxyOptions, client *client.Client) (*Proxy, error) {
 		return nil, err
 	}
 
+	if client == nil {
+		clientOptions := clientOptions{
+			isTracingEnabled: false,
+			http2:            false,
+			hzOptions:        newDefaultClientOptions(),
+		}
+		client, err = newClient(clientOptions)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	r := &Proxy{
 		transferTrailer: true,
 		options:         &opts,

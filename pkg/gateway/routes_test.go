@@ -173,25 +173,33 @@ func TestRootRoute(t *testing.T) {
 
 	_ = route.Add(config.RouteOptions{
 		Paths: []string{"= /"},
-		//Methods: []string{"POST"},
 	}, exactkHandler)
 
 	_ = route.Add(config.RouteOptions{
 		Paths: []string{"^= /"},
-		//Methods: []string{"POST"},
 	}, prefixHandler)
 
 	_ = route.Add(config.RouteOptions{
 		Paths: []string{"/"},
-		//Methods: []string{"POST"},
 	}, generalkHandler)
 
 	c := app.NewContext(0)
 	c.Request.SetMethod("POST")
-	c.Request.URI().SetPath("/eee/sdss")
+	c.Request.URI().SetPath("/any/subpath")
 
 	route.ServeHTTP(context.Background(), c)
 	statusCode := c.Response.StatusCode()
+
+	if statusCode != 202 {
+		t.Errorf("Expected %v for path %s, but got %v", 202, "/", statusCode)
+	}
+
+	c = app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.URI().SetPath("/")
+
+	route.ServeHTTP(context.Background(), c)
+	statusCode = c.Response.StatusCode()
 
 	if statusCode != 201 {
 		t.Errorf("Expected %v for path %s, but got %v", 201, "/", statusCode)

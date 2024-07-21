@@ -81,13 +81,13 @@ func (n *node) matchChildByName(name string, nodeType nodeType) *node {
 		}
 	case nodeTypePrefix:
 		for _, prefix := range n.prefixChildren {
-			if strings.HasPrefix(name, prefix.path) {
+			if prefix.path == "/" || strings.HasPrefix(name, prefix.path) {
 				return prefix
 			}
 		}
 	case nodeTypeGeneral:
 		for _, general := range n.generalChildren {
-			if strings.HasPrefix(name, general.path) {
+			if general.path == "/" || strings.HasPrefix(name, general.path) {
 				return general
 			}
 		}
@@ -114,13 +114,13 @@ func (n *node) findHandler(method string) []app.HandlerFunc {
 
 // Router struct contains the Trie and handler chain
 type Router struct {
-	tree         *node // Root node of the Trie
+	tree *node // Root node of the Trie
 }
 
 // newRouter creates and returns a new router
 func newRouter() *Router {
 	r := &Router{
-		tree:         newNode("/"),
+		tree: newNode("/"),
 	}
 
 	return r
