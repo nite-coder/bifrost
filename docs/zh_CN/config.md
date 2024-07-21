@@ -54,7 +54,6 @@ servers:
     bind: ":80"
     reuse_port: true
     tls:
-      enabled: false
       cert_pem: ""
       key_pem: ""
     http2: false

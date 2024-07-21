@@ -8,6 +8,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
+	"github.com/hertz-contrib/http2/factory"
 	"github.com/hertz-contrib/websocket"
 )
 
@@ -161,13 +162,13 @@ func main() {
 		server.WithWriteTimeout(time.Second * 3),
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
+		server.WithH2C(true),
 		WithDefaultServerHeader(true),
 	}
 	h := server.New(opts...)
-	h.NoHijackConnPool = true
-	// h.Use(func(c context.Context, ctx *app.RequestContext) {
-	// 	//fmt.Println("futures/usdt/orders")
-	// })
+
+	h.AddProtocol("h2", factory.NewServerFactory())
+
 	h.POST("/", echoHandler)
 	h.Any("/spot/order", placeOrderHandler)
 	h.Any("/spot/orders", placeOrderHandler)

@@ -143,8 +143,6 @@ const (
 	ProtocolHTTP2 Protocol = "http2"
 )
 
-
-
 type ServiceOptions struct {
 	ID                  string                `yaml:"-" json:"-"`
 	TLSVerify           bool                  `yaml:"tls_verify" json:"tls_verify"`
@@ -163,7 +161,6 @@ type ServiceTimeoutOptions struct {
 }
 
 type TLSOptions struct {
-	Enabled    bool   `yaml:"enabled" json:"enabled"`
 	MinVersion string `yaml:"min_version" json:"min_version"`
 	CertPEM    string `yaml:"cert_pem" json:"cert_pem"`
 	KeyPEM     string `yaml:"key_pem" json:"key_pem"`

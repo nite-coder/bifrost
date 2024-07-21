@@ -90,7 +90,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		hzOpts = append(hzOpts, server.WithTracer(tracer))
 	}
 
-	if serverOpts.HTTP2 && !serverOpts.TLS.Enabled {
+	if serverOpts.HTTP2 && (len(serverOpts.TLS.CertPEM) == 0 || len(serverOpts.TLS.KeyPEM) == 0) {
 		hzOpts = append(hzOpts, server.WithH2C(true))
 	}
 
@@ -108,7 +108,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 	}
 
 	var tlsConfig *tls.Config
-	if serverOpts.TLS.Enabled {
+	if len(serverOpts.TLS.CertPEM) > 0 || len(serverOpts.TLS.KeyPEM) > 0 {
 		tlsConfig = &tls.Config{
 			MinVersion:               tls.VersionTLS13,
 			CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256},
@@ -163,7 +163,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 			http2opts = append(http2opts, configHTTP2.WithReadTimeout(serverOpts.Timeout.ReadTimeout))
 		}
 
-		if serverOpts.TLS.Enabled {
+		if len(serverOpts.TLS.CertPEM) > 0 || len(serverOpts.TLS.KeyPEM) > 0 {
 			h.AddProtocol("h2", factory.NewServerFactory(http2opts...))
 			tlsConfig.NextProtos = append(tlsConfig.NextProtos, "h2")
 		} else {
