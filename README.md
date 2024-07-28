@@ -12,9 +12,9 @@
 
 1. 支持用 `Go` 寫你的中間件 (server, route, service 都可以使用很彈性)
 1. 高性能與低延遲特性 (底層用的 HTTP 框架是使用字節開源的 hertz 框架, 經過大廠驗證)
-1. 毫秒級熱更新，請求不中斷
-1. 支持加密 HTTP2，同時也支持 H2C
-1. 原生支持 prometheus metric, opentelemetry 整合
+1. 修改路由配置後毫秒級熱更新，請求不中斷
+1. 原生支持 prometheus, opentelemetry 監控整合
+1. 支持 HTTP/1.1, HTTP/2，同時也支持 H2C
 
 ## Roadmap
 

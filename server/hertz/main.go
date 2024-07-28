@@ -14,6 +14,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/adaptor"
 	"github.com/cloudwego/hertz/pkg/common/config"
+	"github.com/cloudwego/hertz/pkg/network/netpoll"
 	configHTTP2 "github.com/hertz-contrib/http2/config"
 	"github.com/hertz-contrib/http2/factory"
 	"github.com/hertz-contrib/reverseproxy"
@@ -34,6 +35,7 @@ func main() {
 		server.WithDisablePrintRoute(true),
 		server.WithSenseClientDisconnection(true),
 		server.WithReadTimeout(time.Second * 60),
+		server.WithTransport(netpoll.NewTransporter),
 		server.WithKeepAlive(true),
 		server.WithALPN(true),
 		server.WithStreamBody(true),

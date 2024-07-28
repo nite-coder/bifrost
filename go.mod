@@ -6,8 +6,8 @@ replace github.com/hertz-contrib/http2 v0.1.8 => github.com/0x5487/http2 v0.0.0-
 
 require (
 	github.com/bytedance/gopkg v0.0.0-20240711085056-a03554c296f8
-	github.com/cloudwego/hertz v0.9.1
-	github.com/cloudwego/netpoll v0.6.2
+	github.com/cloudwego/hertz v0.9.2
+	github.com/cloudwego/netpoll v0.6.3
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/hertz-contrib/http2 v0.1.8

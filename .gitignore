@@ -27,3 +27,7 @@ config.yaml
 
 bin
 obj
+
+server/standard/standard
+server/standard/std.pid
+server/standard/std.sock
