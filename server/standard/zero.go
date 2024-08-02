@@ -4,64 +4,79 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 	"net"
-	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
 	"syscall"
 )
 
-type Upgrader struct {
-	Options *UpgraderOption
-
+type ZeroDownTime struct {
+	options       *ZeroDownTimeOptions
 	isDaemon      bool
 	listener      net.Listener
-	server        *http.Server
-	stopUpgradeCh chan bool
+	stopWaitingCh chan bool
 }
 
-type UpgraderOption struct {
+type ZeroDownTimeOptions struct {
 	Bind       string
 	SocketPath string
 	PIDFile    string
 }
 
-func NewUpgrader(opts *UpgraderOption) *Upgrader {
-	return &Upgrader{
-		Options:       opts,
-		stopUpgradeCh: make(chan bool, 1),
+func New(opts ZeroDownTimeOptions) *ZeroDownTime {
+	return &ZeroDownTime{
+		options:       &opts,
+		stopWaitingCh: make(chan bool, 1),
 	}
 }
 
-func (u *Upgrader) Close(ctx context.Context) error {
-	u.stopUpgradeCh <- true
-
-	if u.server != nil {
-		if err := u.server.Shutdown(ctx); err != nil {
-			slog.ErrorContext(ctx, "failed to shutdown server", "error", err)
-			return err
-		}
-	}
-
-	<-ctx.Done()
-
+func (z *ZeroDownTime) Close(ctx context.Context) error {
+	z.stopWaitingCh <- true
 	return nil
 }
 
-func (u *Upgrader) Upgrade() error {
-	conn, err := net.Dial("unix", u.Options.SocketPath)
+func (z *ZeroDownTime) Upgrade() error {
+	conn, err := net.Dial("unix", z.options.SocketPath)
 	if err != nil {
 		return fmt.Errorf("failed to connect to upgrade socket: %v", err)
 	}
-	conn.Close()
+	defer conn.Close()
+
 	slog.Info("Connected to upgrade socket")
 	return nil
 }
 
-func (u *Upgrader) WaitForUpgrade(ctx context.Context) error {
-	socket, err := net.Listen("unix", u.Options.SocketPath)
+func (z *ZeroDownTime) IsUpgraded() bool {
+	return os.Getenv("UPGRADE") != ""
+}
+
+func (z *ZeroDownTime) Listener() (net.Listener, error) {
+	var err error
+
+	if z.IsUpgraded() {
+		listenerFile := os.NewFile(3, "")
+		z.listener, err = net.FileListener(listenerFile)
+		if err != nil {
+			log.Fatalf("Failed to create listener from file: %v", err)
+			return nil, err
+		}
+	}
+
+	if z.listener == nil {
+		z.listener, err = net.Listen("tcp", z.options.Bind)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return z.listener, nil
+}
+
+func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
+	socket, err := net.Listen("unix", z.options.SocketPath)
 	if err != nil {
 		return fmt.Errorf("failed to open upgrade socket: %v", err)
 	}
@@ -69,7 +84,7 @@ func (u *Upgrader) WaitForUpgrade(ctx context.Context) error {
 		socket.Close()
 	}()
 
-	slog.Info("unix socket is created", "path", u.Options.SocketPath)
+	slog.Info("unix socket is created", "path", z.options.SocketPath)
 
 	go func() {
 		for {
@@ -84,7 +99,7 @@ func (u *Upgrader) WaitForUpgrade(ctx context.Context) error {
 			}
 			conn.Close()
 
-			file, err := u.listener.(*net.TCPListener).File()
+			file, err := z.listener.(*net.TCPListener).File()
 			if err != nil {
 				slog.ErrorContext(ctx, "failed to get listener file", "error", err)
 				continue
@@ -103,7 +118,7 @@ func (u *Upgrader) WaitForUpgrade(ctx context.Context) error {
 		}
 	}()
 
-	for range u.stopUpgradeCh {
+	for range z.stopWaitingCh {
 		slog.Info("stop waiting for upgrade signal", "pid", os.Getpid())
 		return nil
 	}
@@ -111,8 +126,8 @@ func (u *Upgrader) WaitForUpgrade(ctx context.Context) error {
 	return nil
 }
 
-func (u *Upgrader) Shutdown(ctx context.Context) error {
-	b, err := os.ReadFile(u.Options.PIDFile)
+func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
+	b, err := os.ReadFile(z.options.PIDFile)
 	if err != nil {
 		slog.Error("shutdown error", "error", err)
 		return err
@@ -125,7 +140,7 @@ func (u *Upgrader) Shutdown(ctx context.Context) error {
 	}
 
 	defer func() {
-		_ = os.Remove(u.Options.PIDFile)
+		_ = os.Remove(z.options.PIDFile)
 	}()
 
 	p, err := os.FindProcess(int(pid))
