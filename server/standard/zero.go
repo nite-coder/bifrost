@@ -2,26 +2,33 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"net"
 	"os"
 	"os/exec"
 	"strconv"
+	"sync"
 	"syscall"
 )
 
+type listenInfo struct {
+	listener net.Listener `json:"-"`
+	Key      string       `json:"key"`
+}
+
 type ZeroDownTime struct {
+	mu            sync.Mutex
 	options       *ZeroDownTimeOptions
-	isDaemon      bool
-	listener      net.Listener
+	listeners     []*listenInfo
 	stopWaitingCh chan bool
+	isShutdownCh  chan bool
+	listenerOnce  sync.Once
 }
 
 type ZeroDownTimeOptions struct {
-	Bind       string
 	SocketPath string
 	PIDFile    string
 }
@@ -30,11 +37,17 @@ func New(opts ZeroDownTimeOptions) *ZeroDownTime {
 	return &ZeroDownTime{
 		options:       &opts,
 		stopWaitingCh: make(chan bool, 1),
+		isShutdownCh:  make(chan bool, 1),
 	}
 }
 
 func (z *ZeroDownTime) Close(ctx context.Context) error {
+	for _, info := range z.listeners {
+		_ = info.listener.Close()
+	}
+
 	z.stopWaitingCh <- true
+	<-z.isShutdownCh
 	return nil
 }
 
@@ -53,26 +66,77 @@ func (z *ZeroDownTime) IsUpgraded() bool {
 	return os.Getenv("UPGRADE") != ""
 }
 
-func (z *ZeroDownTime) Listener() (net.Listener, error) {
+func (z *ZeroDownTime) Listener(address string) (net.Listener, error) {
 	var err error
 
-	if z.IsUpgraded() {
-		listenerFile := os.NewFile(3, "")
-		z.listener, err = net.FileListener(listenerFile)
-		if err != nil {
-			log.Fatalf("Failed to create listener from file: %v", err)
-			return nil, err
+	z.listenerOnce.Do(func() {
+		if z.IsUpgraded() {
+			str := os.Getenv("LISTENERS")
+
+			if len(str) > 0 {
+				err := json.Unmarshal([]byte(str), &z.listeners)
+				if err != nil {
+					slog.Error("failed to unmarshal LISTENERS", "error", err)
+					return
+				}
+			}
+
+			z.mu.Lock()
+			defer z.mu.Unlock()
+
+			index := 0
+			count := len(z.listeners)
+			for count > 0 {
+				// fd starting from 3
+				fd := 2 + count
+
+				f := os.NewFile(uintptr(fd), "")
+				if f == nil {
+					break
+				}
+
+				fileListener, err := net.FileListener(f)
+				if err != nil {
+					slog.Error("failed to create file listener", "error", err, "fd", fd)
+					continue
+				}
+
+				l := z.listeners[index]
+				l.listener = fileListener
+
+				count--
+				index++
+
+				slog.Info("file Listener is created", "addr", fileListener.Addr(), "fd", fd)
+			}
+		}
+	})
+
+	for _, l := range z.listeners {
+		if l.Key == address {
+			slog.Info("get listener from cache", "addr", address)
+			return l.listener, nil
 		}
 	}
 
-	if z.listener == nil {
-		z.listener, err = net.Listen("tcp", z.options.Bind)
-		if err != nil {
-			return nil, err
-		}
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		slog.Error("failed to create tcp listener", "error", err)
+		return nil, err
 	}
 
-	return z.listener, nil
+	info := &listenInfo{
+		listener: listener,
+		Key:      address,
+	}
+
+	slog.Info("tcp Listener is created", "addr", address)
+
+	z.mu.Lock()
+	z.listeners = append(z.listeners, info)
+	z.mu.Unlock()
+
+	return listener, nil
 }
 
 func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
@@ -82,11 +146,18 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	}
 	defer func() {
 		socket.Close()
+		z.isShutdownCh <- true
 	}()
 
 	slog.Info("unix socket is created", "path", z.options.SocketPath)
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("recover from panic:", r)
+			}
+		}()
+
 		for {
 			conn, err := socket.Accept()
 			if err != nil {
@@ -99,18 +170,31 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 			}
 			conn.Close()
 
-			file, err := z.listener.(*net.TCPListener).File()
+			files := []*os.File{}
+
+			for _, l := range z.listeners {
+				f, err := l.listener.(*net.TCPListener).File()
+				if err != nil {
+					slog.ErrorContext(ctx, "failed to get listener file", "error", err)
+					continue
+				}
+				files = append(files, f)
+			}
+
+			slog.Info("listeners count", "count", len(files))
+
+			b, err := json.Marshal(z.listeners)
 			if err != nil {
-				slog.ErrorContext(ctx, "failed to get listener file", "error", err)
-				continue
+				slog.Error("failed to marshal listeners", "error", err)
+				break
 			}
 
 			cmd := exec.Command(os.Args[0], os.Args[1:]...)
-			cmd.Env = append(os.Environ(), "UPGRADE=1")
+			cmd.Env = append(os.Environ(), "UPGRADE=1", fmt.Sprintf("LISTENERS=%s", string(b)))
 			cmd.Stdin = os.Stdin
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
-			cmd.ExtraFiles = []*os.File{file}
+			cmd.ExtraFiles = files
 			if err := cmd.Start(); err != nil {
 				slog.ErrorContext(ctx, "failed to start child process", "error", err)
 				continue
@@ -118,10 +202,8 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 		}
 	}()
 
-	for range z.stopWaitingCh {
-		slog.Info("stop waiting for upgrade signal", "pid", os.Getpid())
-		return nil
-	}
+	<-z.stopWaitingCh
+	slog.Info("stop waiting for upgrade signal", "pid", os.Getpid())
 
 	return nil
 }
@@ -156,5 +238,16 @@ func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
 	}
 
 	slog.Info("sent SIGTERM to process", "pid", pid)
+	return nil
+}
+
+func (z *ZeroDownTime) WritePID(ctx context.Context) error {
+	pid := os.Getpid()
+	err := os.WriteFile(z.options.PIDFile, []byte(fmt.Sprintf("%d", pid)), 0644)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to write PID file", "error", err)
+		return err
+	}
+
 	return nil
 }

@@ -43,7 +43,6 @@ func main() {
 	ctx := context.Background()
 
 	zeroDT := New(ZeroDownTimeOptions{
-		Bind:       ":8001",
 		SocketPath: "./std.sock",
 		PIDFile:    "./std.pid",
 	})
@@ -53,10 +52,6 @@ func main() {
 			log.Fatalf("Upgrade failed: %v", err)
 		}
 		return
-	}
-
-	if *daemon {
-		zeroDT.isDaemon = true
 	}
 
 	if *shudown {
@@ -76,20 +71,13 @@ func main() {
 
 			time.Sleep(2 * time.Second)
 
-			// 写入PID文件
-			pid := os.Getpid()
-			err = os.WriteFile(zeroDT.options.PIDFile, []byte(fmt.Sprintf("%d", pid)), 0644)
-			if err != nil {
-				log.Printf("Failed to write PID file: %v", err)
-			}
-			slog.Info("Write PID file", "path", zeroDT.options.PIDFile, "pid", pid)
+			_ = zeroDT.WritePID(ctx)
 
 			if err := zeroDT.WaitForUpgrade(ctx); err != nil {
 				log.Fatalf("Upgrade process error: %v", err)
 			}
 		}()
 
-		slog.Info("get file listener")
 		err := startup(ctx, zeroDT, done)
 		if err != nil {
 			slog.Error("Failed to start server", "error", err)
@@ -113,12 +101,12 @@ func main() {
 }
 
 func startup(ctx context.Context, zeroDT *ZeroDownTime, done chan bool) error {
-	if zeroDT.isDaemon && os.Getenv("DAEMONIZED") == "" {
+	if *daemon && os.Getenv("DAEMONIZED") == "" {
 		daemonize(zeroDT)
 		return nil
 	}
 
-	slog.Info("starting server", "bind", ":8001", "isDaemon", zeroDT.isDaemon)
+	slog.Info("starting server", "bind", ":8001", "isDaemon", *daemon)
 
 	upstreamURL, err := url.Parse("http://localhost:8000")
 	if err != nil {
@@ -156,7 +144,7 @@ func startup(ctx context.Context, zeroDT *ZeroDownTime, done chan bool) error {
 	}
 
 	go func() {
-		ln, err := zeroDT.Listener()
+		ln, err := zeroDT.Listener(":8001")
 		if err != nil {
 			return
 		}
@@ -169,7 +157,7 @@ func startup(ctx context.Context, zeroDT *ZeroDownTime, done chan bool) error {
 
 	go func() {
 		for {
-			conn, err := net.Dial("tcp", zeroDT.options.Bind)
+			conn, err := net.Dial("tcp", ":8001")
 			if err == nil {
 				conn.Close()
 				done <- true
@@ -185,7 +173,7 @@ func startup(ctx context.Context, zeroDT *ZeroDownTime, done chan bool) error {
 
 	slog.Info("received shutdown signal", "pid", os.Getpid())
 
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	if err := httpServer.Shutdown(ctx); err != nil {
@@ -193,14 +181,13 @@ func startup(ctx context.Context, zeroDT *ZeroDownTime, done chan bool) error {
 		return err
 	}
 
-	<-ctx.Done()
 	_ = zeroDT.Close(ctx)
 
-	slog.Info("server is closed", "pid", os.Getpid())
+	slog.Info("server is shutdown successfully", "pid", os.Getpid())
 	return nil
 }
 
-func daemonize(upgrader *ZeroDownTime) {
+func daemonize(zeroDT *ZeroDownTime) {
 	cmd := exec.Command(os.Args[0], os.Args[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -214,12 +201,7 @@ func daemonize(upgrader *ZeroDownTime) {
 
 	fmt.Printf("Daemon process started with PID %d\n", cmd.Process.Pid)
 
-	// 写入PID文件
-	pid := cmd.Process.Pid
-	err = os.WriteFile(upgrader.options.PIDFile, []byte(fmt.Sprintf("%d", pid)), 0644)
-	if err != nil {
-		log.Printf("Failed to write PID file: %v", err)
-	}
+	_ = zeroDT.WritePID(nil)
 
 	os.Exit(0)
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
+	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/hertz-contrib/http2/factory"
 	"github.com/hertz-contrib/websocket"
 )
@@ -166,6 +167,8 @@ func main() {
 		WithDefaultServerHeader(true),
 	}
 	h := server.New(opts...)
+
+	hlog.SetSilentMode(true)
 
 	h.AddProtocol("h2", factory.NewServerFactory())
 
