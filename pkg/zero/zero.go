@@ -1,4 +1,4 @@
-package main
+package zero
 
 import (
 	"context"
@@ -21,19 +21,19 @@ type listenInfo struct {
 
 type ZeroDownTime struct {
 	mu            sync.Mutex
-	options       *ZeroDownTimeOptions
+	options       *Options
 	listeners     []*listenInfo
 	stopWaitingCh chan bool
 	isShutdownCh  chan bool
 	listenerOnce  sync.Once
 }
 
-type ZeroDownTimeOptions struct {
+type Options struct {
 	SocketPath string
 	PIDFile    string
 }
 
-func New(opts ZeroDownTimeOptions) *ZeroDownTime {
+func New(opts Options) *ZeroDownTime {
 	return &ZeroDownTime{
 		options:       &opts,
 		stopWaitingCh: make(chan bool, 1),
@@ -241,11 +241,14 @@ func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (z *ZeroDownTime) WritePID(ctx context.Context) error {
-	pid := os.Getpid()
+func (z *ZeroDownTime) WritePID(pid int) error {
+	if pid == 0 {
+		pid = os.Getpid()
+	}
+
 	err := os.WriteFile(z.options.PIDFile, []byte(fmt.Sprintf("%d", pid)), 0644)
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to write PID file", "error", err)
+		slog.Error("failed to write PID file", "error", err)
 		return err
 	}
 

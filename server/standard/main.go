@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"http-benchmark/pkg/zero"
 	"log"
 	"log/slog"
 	"net"
@@ -42,10 +43,12 @@ func main() {
 
 	ctx := context.Background()
 
-	zeroDT := New(ZeroDownTimeOptions{
+	zeroOpts := zero.Options{
 		SocketPath: "./std.sock",
 		PIDFile:    "./std.pid",
-	})
+	}
+
+	zeroDT := zero.New(zeroOpts)
 
 	if *upgrade {
 		if err := zeroDT.Upgrade(); err != nil {
@@ -71,7 +74,7 @@ func main() {
 
 			time.Sleep(2 * time.Second)
 
-			_ = zeroDT.WritePID(ctx)
+			_ = zeroDT.WritePID(0)
 
 			if err := zeroDT.WaitForUpgrade(ctx); err != nil {
 				log.Fatalf("Upgrade process error: %v", err)
@@ -100,7 +103,7 @@ func main() {
 	}
 }
 
-func startup(ctx context.Context, zeroDT *ZeroDownTime, done chan bool) error {
+func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) error {
 	if *daemon && os.Getenv("DAEMONIZED") == "" {
 		daemonize(zeroDT)
 		return nil
@@ -187,7 +190,7 @@ func startup(ctx context.Context, zeroDT *ZeroDownTime, done chan bool) error {
 	return nil
 }
 
-func daemonize(zeroDT *ZeroDownTime) {
+func daemonize(zeroDT *zero.ZeroDownTime) {
 	cmd := exec.Command(os.Args[0], os.Args[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -201,7 +204,7 @@ func daemonize(zeroDT *ZeroDownTime) {
 
 	fmt.Printf("Daemon process started with PID %d\n", cmd.Process.Pid)
 
-	_ = zeroDT.WritePID(nil)
+	zeroDT.WritePID(cmd.Process.Pid)
 
 	os.Exit(0)
 }
