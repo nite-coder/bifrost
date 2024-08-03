@@ -7,6 +7,7 @@ import (
 	"http-benchmark/pkg/provider/file"
 	"http-benchmark/pkg/tracer/accesslog"
 	"http-benchmark/pkg/tracer/prometheus"
+	"http-benchmark/pkg/zero"
 	"log/slog"
 	"time"
 
@@ -25,6 +26,7 @@ type Bifrost struct {
 	reloadCh     chan bool
 	stopCh       chan bool
 	onReload     reloadFunc
+	zero         *zero.ZeroDownTime
 }
 
 func (b *Bifrost) Run() {
@@ -37,6 +39,10 @@ func (b *Bifrost) Run() {
 		go server.Run()
 		i++
 	}
+}
+
+func (b *Bifrost) ZeroDownTime() *zero.ZeroDownTime {
+	return b.zero
 }
 
 func (b *Bifrost) stop() {
@@ -132,12 +138,18 @@ func load(opts config.Options, isReload bool) (*Bifrost, error) {
 		return nil, err
 	}
 
+	zeroOptions := zero.Options{
+		SocketPath: "./bifrost.sock",
+		PIDFile:    "./bifrost.pid",
+	}
+
 	bifrsot := &Bifrost{
 		resolver:    &dnscache.Resolver{},
 		httpServers: make(map[string]*HTTPServer),
 		opts:        &opts,
 		stopCh:      make(chan bool),
 		reloadCh:    make(chan bool),
+		zero:        zero.New(zeroOptions),
 	}
 
 	go func() {

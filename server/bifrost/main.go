@@ -27,6 +27,8 @@ func main() {
 		}
 	}()
 
+	//runtime.GOMAXPROCS(5)
+
 	var err error
 	_ = gateway.DisableGopool()
 

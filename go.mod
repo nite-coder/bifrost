@@ -4,6 +4,8 @@ go 1.22.0
 
 replace github.com/hertz-contrib/http2 v0.1.8 => github.com/0x5487/http2 v0.0.0-20240721025235-d0d87f8f75bd
 
+replace github.com/cloudwego/hertz v0.9.2 => github.com/nite-coder/hertz v0.0.0-20240803105047-3186ef3aad9d
+
 require (
 	github.com/bytedance/gopkg v0.0.0-20240711085056-a03554c296f8
 	github.com/cloudwego/hertz v0.9.2
@@ -35,7 +37,6 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/go-tagexpr/v2 v2.9.2 // indirect
-	github.com/bytedance/mockey v1.2.7 // indirect
 	github.com/bytedance/sonic v1.11.9 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect

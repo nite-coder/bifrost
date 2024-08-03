@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"log/slog"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/hertz-contrib/http2/factory"
+	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/websocket"
 )
 
@@ -168,6 +170,9 @@ func main() {
 	}
 	h := server.New(opts...)
 
+	logger := hertzslog.NewLogger(hertzslog.WithOutput(io.Discard))
+	hlog.SetLevel(hlog.LevelError)
+	hlog.SetLogger(logger)
 	hlog.SetSilentMode(true)
 
 	h.AddProtocol("h2", factory.NewServerFactory())
@@ -204,6 +209,8 @@ func echoHandler(c context.Context, ctx *app.RequestContext) {
 }
 
 func placeOrderHandler(c context.Context, ctx *app.RequestContext) {
+	//slog.Info("request proto", "proto", ctx.Request.Header.GetProtocol())
+
 	ctx.SetContentType("application/json; charset=utf8")
 	ctx.Response.SetStatusCode(200)
 	ctx.Response.SetBody(orderResp)

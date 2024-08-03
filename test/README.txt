@@ -36,11 +36,11 @@ go tool pprof -http=0.0.0.0:4231 cpu.prof
 curl 'http://localhost:9091/metrics'
 
 
-curl --insecure --http2 --request POST 'https://bifrost.io:443/spot/orders'
+curl --insecure --http2 --request POST 'https://localhost:8001/spot/orders'
 curl --insecure -I --http1.1 --request POST 'https://bifrost.io:443/spot/orders'
 
 curl --insecure --request POST 'https://bifrost.io:443/spot/orders'
 
 curl -v --http2 --request POST 'http://localhost:8001/spot/orders'
-curl -v --http2-prior-knowledge --request POST 'http://localhost:8001/spot/orders'
+curl -v --http2-prior-knowledge --request POST 'https://localhost:8001/spot/orders'
 curl -v --http1.1 --request POST 'http://localhost:8001/spot/orders'

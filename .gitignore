@@ -7,6 +7,8 @@
 *.dll
 *.so
 *.dylib
+*.pid
+*.sock
 
 # Test binary, built with `go test -c`
 *.test
@@ -29,5 +31,4 @@ bin
 obj
 
 server/standard/standard
-server/standard/std.pid
-server/standard/std.sock
+server/hertz/hertz

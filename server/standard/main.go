@@ -147,7 +147,7 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 	}
 
 	go func() {
-		ln, err := zeroDT.Listener(":8001")
+		ln, err := zeroDT.Listener(ctx, "tcp", ":8001", nil)
 		if err != nil {
 			return
 		}

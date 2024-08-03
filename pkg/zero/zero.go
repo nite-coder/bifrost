@@ -78,7 +78,7 @@ func (z *ZeroDownTime) IsUpgraded() bool {
 	return os.Getenv("UPGRADE") != ""
 }
 
-func (z *ZeroDownTime) Listener(address string) (net.Listener, error) {
+func (z *ZeroDownTime) Listener(ctx context.Context, network string, address string, cfg *net.ListenConfig) (net.Listener, error) {
 	var err error
 
 	z.listenerOnce.Do(func() {
@@ -131,10 +131,20 @@ func (z *ZeroDownTime) Listener(address string) (net.Listener, error) {
 		}
 	}
 
-	listener, err := net.Listen("tcp", address)
-	if err != nil {
-		slog.Error("failed to create tcp listener", "error", err)
-		return nil, err
+	var listener net.Listener
+
+	if cfg != nil {
+		listener, err = cfg.Listen(ctx, network, address)
+		if err != nil {
+			slog.Error("failed to create listener from config", "error", err, "addr", address, "network", network)
+			return nil, err
+		}
+	} else {
+		listener, err = net.Listen(network, address)
+		if err != nil {
+			slog.Error("failed to create listener", "error", err, "addr", address, "network", network)
+			return nil, err
+		}
 	}
 
 	info := &listenInfo{
@@ -142,7 +152,7 @@ func (z *ZeroDownTime) Listener(address string) (net.Listener, error) {
 		Key:      address,
 	}
 
-	slog.Info("tcp Listener is created", "addr", address)
+	slog.Debug("listener is created", "addr", address)
 
 	z.mu.Lock()
 	z.listeners = append(z.listeners, info)

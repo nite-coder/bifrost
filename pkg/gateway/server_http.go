@@ -30,9 +30,29 @@ type HTTPServer struct {
 }
 
 func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []tracer.Tracer) (*HTTPServer, error) {
+	ctx := context.Background()
+
+	var listenerConfig *net.ListenConfig
+	if serverOpts.ReusePort {
+		listenerConfig = &net.ListenConfig{
+			Control: func(network, address string, c syscall.RawConn) error {
+				return c.Control(func(fd uintptr) {
+					err := unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
+					if err != nil {
+						return
+					}
+				})
+			},
+		}
+	}
+
+	listener, err := bifrost.zero.Listener(ctx, "tcp", serverOpts.Bind, listenerConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	hzOpts := []hzconfig.Option{
-		server.WithHostPorts(serverOpts.Bind),
+		server.WithListener(listener),
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		server.WithSenseClientDisconnection(true),
@@ -92,19 +112,6 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 
 	if serverOpts.HTTP2 && (len(serverOpts.TLS.CertPEM) == 0 || len(serverOpts.TLS.KeyPEM) == 0) {
 		hzOpts = append(hzOpts, server.WithH2C(true))
-	}
-
-	if serverOpts.ReusePort {
-		hzOpts = append(hzOpts, server.WithListenConfig(&net.ListenConfig{
-			Control: func(network, address string, c syscall.RawConn) error {
-				return c.Control(func(fd uintptr) {
-					err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
-					if err != nil {
-						return
-					}
-				})
-			},
-		}))
 	}
 
 	var tlsConfig *tls.Config
