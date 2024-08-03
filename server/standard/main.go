@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"http-benchmark/pkg/zero"
@@ -16,6 +17,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 type ProxyHandler struct {
@@ -72,12 +76,13 @@ func main() {
 				return
 			}
 
-			time.Sleep(2 * time.Second)
+			time.Sleep(5 * time.Second)
 
-			_ = zeroDT.WritePID(0)
-
-			if err := zeroDT.WaitForUpgrade(ctx); err != nil {
-				log.Fatalf("Upgrade process error: %v", err)
+			if *daemon {
+				if err := zeroDT.WaitForUpgrade(ctx); err != nil {
+					slog.Error("Upgrade process error: %v", err)
+					return
+				}
 			}
 		}()
 
@@ -90,8 +95,11 @@ func main() {
 		go func() {
 			<-done
 
-			if err := zeroDT.WaitForUpgrade(ctx); err != nil {
-				log.Fatalf("Upgrade process error: %v", err)
+			if *daemon {
+				if err := zeroDT.WaitForUpgrade(ctx); err != nil {
+					slog.Error("Upgrade process error: %v", err)
+					return
+				}
 			}
 		}()
 
@@ -105,11 +113,9 @@ func main() {
 
 func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) error {
 	if *daemon && os.Getenv("DAEMONIZED") == "" {
-		daemonize(zeroDT)
+		daemonize()
 		return nil
 	}
-
-	slog.Info("starting server", "bind", ":8001", "isDaemon", *daemon)
 
 	upstreamURL, err := url.Parse("http://localhost:8000")
 	if err != nil {
@@ -121,29 +127,23 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 		MaxConnsPerHost: 2048,
 	}
 
-	// proxy.Transport = &http2.Transport{
-	// 	AllowHTTP: true,
-	// 	DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
-	// 		return net.Dial(network, addr)
-	// 	},
-	// 	TLSClientConfig: &tls.Config{
-	// 		InsecureSkipVerify: true,
-	// 	},
-	// }
+	proxy.Transport = &http2.Transport{
+		AllowHTTP: true,
+		DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+			return net.Dial(network, addr)
+		},
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
 
-	// handler := &ProxyHandler{
-	// 	upstream: upstreamURL,
-	// 	proxy:    proxy,
-	// }
+	handler := &ProxyHandler{
+		proxy: proxy,
+	}
 
-	// h2s := &http2.Server{}
-	// h1s := &http.Server{
-	// 	Addr:    fmt.Sprintf(":%d", *port),
-	// 	Handler: h2c.NewHandler(handler, h2s),
-	// }
-
+	h2s := &http2.Server{}
 	httpServer := &http.Server{
-		Handler: proxy,
+		Handler: h2c.NewHandler(handler, h2s),
 	}
 
 	go func() {
@@ -151,7 +151,7 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 		if err != nil {
 			return
 		}
-		log.Println("Starting proxy server on :8001")
+		slog.Info("starting server", "bind", ":8001", "isDaemon", *daemon)
 
 		if err := httpServer.Serve(ln); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Error starting server: %v\n", err)
@@ -190,7 +190,7 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 	return nil
 }
 
-func daemonize(zeroDT *zero.ZeroDownTime) {
+func daemonize() {
 	cmd := exec.Command(os.Args[0], os.Args[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -203,8 +203,6 @@ func daemonize(zeroDT *zero.ZeroDownTime) {
 	}
 
 	fmt.Printf("Daemon process started with PID %d\n", cmd.Process.Pid)
-
-	zeroDT.WritePID(cmd.Process.Pid)
 
 	os.Exit(0)
 }

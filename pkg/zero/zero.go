@@ -19,6 +19,13 @@ type listenInfo struct {
 	Key      string       `json:"key"`
 }
 
+type State int8
+
+const (
+	defaultState State = iota
+	waitingState
+)
+
 type ZeroDownTime struct {
 	mu            sync.Mutex
 	options       *Options
@@ -26,6 +33,7 @@ type ZeroDownTime struct {
 	stopWaitingCh chan bool
 	isShutdownCh  chan bool
 	listenerOnce  sync.Once
+	state         State
 }
 
 type Options struct {
@@ -38,6 +46,7 @@ func New(opts Options) *ZeroDownTime {
 		options:       &opts,
 		stopWaitingCh: make(chan bool, 1),
 		isShutdownCh:  make(chan bool, 1),
+		state:         defaultState,
 	}
 }
 
@@ -46,8 +55,11 @@ func (z *ZeroDownTime) Close(ctx context.Context) error {
 		_ = info.listener.Close()
 	}
 
-	z.stopWaitingCh <- true
-	<-z.isShutdownCh
+	if z.state == waitingState {
+		z.stopWaitingCh <- true
+		<-z.isShutdownCh
+	}
+
 	return nil
 }
 
@@ -140,6 +152,15 @@ func (z *ZeroDownTime) Listener(address string) (net.Listener, error) {
 }
 
 func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
+	if z.state != defaultState {
+		return fmt.Errorf("state is not default and cannot be upgraded, state=%d", z.state)
+	}
+
+	z.mu.Lock()
+	z.state = waitingState
+	z.mu.Unlock()
+
+	_ = z.writePID()
 	socket, err := net.Listen("unix", z.options.SocketPath)
 	if err != nil {
 		return fmt.Errorf("failed to open upgrade socket: %v", err)
@@ -241,11 +262,8 @@ func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (z *ZeroDownTime) WritePID(pid int) error {
-	if pid == 0 {
-		pid = os.Getpid()
-	}
-
+func (z *ZeroDownTime) writePID() error {
+	pid := os.Getpid()
 	err := os.WriteFile(z.options.PIDFile, []byte(fmt.Sprintf("%d", pid)), 0644)
 	if err != nil {
 		slog.Error("failed to write PID file", "error", err)
