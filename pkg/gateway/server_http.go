@@ -65,7 +65,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 	}
 
 	if serverOpts.Timeout.KeepAliveTimeout.Seconds() > 0 {
-		hzOpts = append(hzOpts, server.WithIdleTimeout(serverOpts.Timeout.KeepAliveTimeout))
+		hzOpts = append(hzOpts, server.WithKeepAliveTimeout(serverOpts.Timeout.KeepAliveTimeout))
 	}
 
 	if serverOpts.Timeout.IdleTimeout.Seconds() > 0 {

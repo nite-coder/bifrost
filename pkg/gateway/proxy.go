@@ -3,6 +3,7 @@ package gateway
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
@@ -15,6 +16,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
+	hzerrors "github.com/cloudwego/hertz/pkg/common/errors"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
@@ -303,8 +305,13 @@ func (p *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		return
 	}
 
+ProxyPassLoop:
 	err = p.client.Do(c, outReq, outResp)
 	if err != nil {
+		if errors.Is(err, hzerrors.ErrBadPoolConn) {
+			goto ProxyPassLoop
+		}
+
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
 
