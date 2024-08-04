@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	_ "go.uber.org/automaxprocs"
 )
 
 type FindMyHome struct {

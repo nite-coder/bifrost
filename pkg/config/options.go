@@ -144,13 +144,13 @@ const (
 )
 
 type ServiceOptions struct {
-	ID                  string                `yaml:"-" json:"-"`
-	TLSVerify           bool                  `yaml:"tls_verify" json:"tls_verify"`
-	MaxIdleConnsPerHost *int                  `yaml:"max_idle_conns_per_host" json:"max_idle_conns_per_host"`
-	Protocol            Protocol              `yaml:"protocol" json:"protocol"`
-	Url                 string                `yaml:"url" json:"url"`
-	Timeout             ServiceTimeoutOptions `yaml:"timeout" json:"timeout"`
-	Middlewares         []MiddlwareOptions    `yaml:"middlewares" json:"middlewares"`
+	ID              string                `yaml:"-" json:"-"`
+	TLSVerify       bool                  `yaml:"tls_verify" json:"tls_verify"`
+	MaxConnsPerHost *int                  `yaml:"max_conns_per_host" json:"max_conns_per_host"`
+	Protocol        Protocol              `yaml:"protocol" json:"protocol"`
+	Url             string                `yaml:"url" json:"url"`
+	Timeout         ServiceTimeoutOptions `yaml:"timeout" json:"timeout"`
+	Middlewares     []MiddlwareOptions    `yaml:"middlewares" json:"middlewares"`
 }
 
 type ServiceTimeoutOptions struct {

@@ -89,8 +89,8 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(serviceOpts.Timeout.MaxConnWaitTimeout))
 	}
 
-	if serviceOpts.MaxIdleConnsPerHost != nil {
-		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*serviceOpts.MaxIdleConnsPerHost))
+	if serviceOpts.MaxConnsPerHost != nil {
+		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*serviceOpts.MaxConnsPerHost))
 	}
 
 	upstream := &Upstream{
@@ -163,13 +163,13 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 			return nil, err
 		}
 
-		proxyOptions := proxyOptions{
-			target:   url,
-			protocol: serviceOpts.Protocol,
-			weight:   targetOpts.Weight,
+		proxyOptions := ProxyOptions{
+			Target:   url,
+			Protocol: serviceOpts.Protocol,
+			Weight:   targetOpts.Weight,
 		}
 
-		proxy, err := newReverseProxy(proxyOptions, client)
+		proxy, err := NewReverseProxy(proxyOptions, client)
 
 		if err != nil {
 			return nil, err

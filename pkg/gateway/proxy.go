@@ -11,7 +11,6 @@ import (
 	"net/textproto"
 	"net/url"
 	"strings"
-	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
@@ -42,7 +41,7 @@ import (
 const TrailerPrefix = "Trailer:"
 
 type Proxy struct {
-	options *proxyOptions
+	options *ProxyOptions
 
 	client *client.Client
 
@@ -71,10 +70,10 @@ type Proxy struct {
 	weight int
 }
 
-type proxyOptions struct {
-	target   string
-	protocol config.Protocol
-	weight   int
+type ProxyOptions struct {
+	Target   string
+	Protocol config.Protocol
+	Weight   int
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -101,7 +100,6 @@ type clientOptions struct {
 }
 
 func newClient(opts clientOptions) (*client.Client, error) {
-
 	c, err := client.NewClient(opts.hzOptions...)
 	if err != nil {
 		return nil, err
@@ -118,8 +116,8 @@ func newClient(opts clientOptions) (*client.Client, error) {
 	return c, nil
 }
 
-func newReverseProxy(opts proxyOptions, client *client.Client) (*Proxy, error) {
-	addr, err := url.Parse(opts.target)
+func NewReverseProxy(opts ProxyOptions, client *client.Client) (*Proxy, error) {
+	addr, err := url.Parse(opts.Target)
 	if err != nil {
 		return nil, err
 	}
@@ -139,12 +137,12 @@ func newReverseProxy(opts proxyOptions, client *client.Client) (*Proxy, error) {
 	r := &Proxy{
 		transferTrailer: true,
 		options:         &opts,
-		target:          opts.target,
+		target:          opts.Target,
 		targetHost:      addr.Host,
-		weight:          opts.weight,
+		weight:          opts.Weight,
 		director: func(req *protocol.Request) {
 
-			switch opts.protocol {
+			switch opts.Protocol {
 			case config.ProtocolHTTP2:
 				req.Header.SetProtocol("HTTP/2.0")
 			case config.ProtocolHTTP:
@@ -158,7 +156,7 @@ func newReverseProxy(opts proxyOptions, client *client.Client) (*Proxy, error) {
 				req.SetIsTLS(true)
 			}
 
-			req.SetRequestURI(cast.B2S(JoinURLPath(req, opts.target)))
+			req.SetRequestURI(cast.B2S(JoinURLPath(req, opts.Target)))
 			//req.Header.SetHostBytes(req.URI().Host())
 		},
 		client: client,
@@ -209,12 +207,6 @@ func checkTeHeader(header *protocol.RequestHeader) bool {
 
 func (r *Proxy) defaultErrorHandler(c *app.RequestContext, _ error) {
 	c.Response.Header.SetStatusCode(consts.StatusBadGateway)
-}
-
-var respTmpHeaderPool = sync.Pool{
-	New: func() interface{} {
-		return make(map[string][]string)
-	},
 }
 
 func (p *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {

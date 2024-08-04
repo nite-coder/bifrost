@@ -57,6 +57,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		server.WithDisablePrintRoute(true),
 		server.WithSenseClientDisconnection(true),
 		server.WithReadTimeout(time.Second * 60),
+		server.WithWriteTimeout(time.Second * 60),
 		server.WithKeepAlive(true),
 		server.WithALPN(true),
 		server.WithStreamBody(true),

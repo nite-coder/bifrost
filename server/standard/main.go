@@ -123,9 +123,6 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(upstreamURL)
-	proxy.Transport = &http.Transport{
-		MaxConnsPerHost: 2048,
-	}
 
 	proxy.Transport = &http2.Transport{
 		AllowHTTP: true,

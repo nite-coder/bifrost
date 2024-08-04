@@ -70,13 +70,13 @@ func TestReverseProxy(t *testing.T) {
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
 	})
 
-	proxyOptions := proxyOptions{
-		target:   "http://127.0.0.1:9990/proxy",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions := ProxyOptions{
+		Target:   "http://127.0.0.1:9990/proxy",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
 
-	proxy, err := newReverseProxy(proxyOptions, nil)
+	proxy, err := NewReverseProxy(proxyOptions, nil)
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
 	}
@@ -185,12 +185,12 @@ func TestReverseProxyStripHeadersPresentInConnection(t *testing.T) {
 		ctx.Data(200, "application/json", []byte(backendResponse))
 	})
 
-	proxyOptions := proxyOptions{
-		target:   "http://127.0.0.1:9991/proxy",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions := ProxyOptions{
+		Target:   "http://127.0.0.1:9991/proxy",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy, err := newReverseProxy(proxyOptions, nil)
+	proxy, err := NewReverseProxy(proxyOptions, nil)
 
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
@@ -255,12 +255,12 @@ func TestReverseProxyStripEmptyConnection(t *testing.T) {
 		ctx.Data(200, "application/json", []byte(backendResponse))
 	})
 
-	proxyOptions := proxyOptions{
-		target:   "http://127.0.0.1:9992/proxy",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions := ProxyOptions{
+		Target:   "http://127.0.0.1:9992/proxy",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy, err := newReverseProxy(proxyOptions, nil)
+	proxy, err := NewReverseProxy(proxyOptions, nil)
 
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
@@ -316,12 +316,12 @@ func TestXForwardedFor(t *testing.T) {
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
 	})
 
-	proxyOptions := proxyOptions{
-		target:   "http://127.0.0.1:9993/proxy",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions := ProxyOptions{
+		Target:   "http://127.0.0.1:9993/proxy",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy, err := newReverseProxy(proxyOptions, nil)
+	proxy, err := NewReverseProxy(proxyOptions, nil)
 
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
@@ -372,12 +372,12 @@ func TestReverseProxyQuery(t *testing.T) {
 	})
 
 	for i, tt := range proxyQueryTests {
-		proxyOptions := proxyOptions{
-			target:   "http://127.0.0.1:9995/proxy" + tt.baseSuffix,
-			protocol: config.ProtocolHTTP,
-			weight:   1,
+		proxyOptions := ProxyOptions{
+			Target:   "http://127.0.0.1:9995/proxy" + tt.baseSuffix,
+			Protocol: config.ProtocolHTTP,
+			Weight:   1,
 		}
-		proxy, _ := newReverseProxy(proxyOptions, nil)
+		proxy, _ := NewReverseProxy(proxyOptions, nil)
 
 		r.GET("/backend", proxy.ServeHTTP)
 		go r.Spin()
@@ -417,12 +417,12 @@ func TestReverseProxy_Post(t *testing.T) {
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
 	})
 
-	proxyOptions := proxyOptions{
-		target:   "http://127.0.0.1:9996/proxy",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions := ProxyOptions{
+		Target:   "http://127.0.0.1:9996/proxy",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy, _ := newReverseProxy(proxyOptions, nil)
+	proxy, _ := NewReverseProxy(proxyOptions, nil)
 
 	r.POST("/backend", proxy.ServeHTTP)
 	go r.Spin()

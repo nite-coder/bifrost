@@ -4,10 +4,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"http-benchmark/pkg/gateway"
 	"http-benchmark/pkg/zero"
+	"io"
 	"log"
 	"log/slog"
-	"math"
 	"net"
 	"os"
 	"os/exec"
@@ -15,12 +16,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cloudwego/hertz/pkg/app/client"
+	configBifrost "http-benchmark/pkg/config"
+
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
+	"github.com/cloudwego/hertz/pkg/common/hlog"
 	configHTTP2 "github.com/hertz-contrib/http2/config"
 	"github.com/hertz-contrib/http2/factory"
-	"github.com/hertz-contrib/reverseproxy"
+	hertzslog "github.com/hertz-contrib/logger/slog"
 )
 
 func withDefaultServerHeader(disable bool) config.Option {
@@ -115,11 +118,17 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 		slog.Error("failed to create listener", "error", err)
 	}
 
+	logger := hertzslog.NewLogger(hertzslog.WithOutput(io.Discard))
+	hlog.SetLevel(hlog.LevelError)
+	hlog.SetLogger(logger)
+	hlog.SetSilentMode(true)
+
 	hzOpts := []config.Option{
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		server.WithSenseClientDisconnection(true),
-		server.WithReadTimeout(time.Second * 60),
+		server.WithReadTimeout(time.Second * 3),
+		server.WithWriteTimeout(time.Second * 3),
 		server.WithKeepAlive(true),
 		server.WithALPN(true),
 		server.WithStreamBody(true),
@@ -134,18 +143,28 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 	http2opts := []configHTTP2.Option{}
 	h.AddProtocol("h2", factory.NewServerFactory(http2opts...))
 
-	defaultClientOptions := []config.ClientOption{
-		client.WithNoDefaultUserAgentHeader(true),
-		client.WithDisableHeaderNamesNormalizing(true),
-		client.WithDisablePathNormalizing(true),
-		client.WithMaxConnsPerHost(math.MaxInt),
-		client.WithDialTimeout(10 * time.Second),
-		client.WithClientReadTimeout(10 * time.Second),
-		client.WithWriteTimeout(10 * time.Second),
-		client.WithKeepAlive(true),
-	}
+	// defaultClientOptions := []config.ClientOption{
+	// 	client.WithNoDefaultUserAgentHeader(true),
+	// 	client.WithDisableHeaderNamesNormalizing(true),
+	// 	client.WithDisablePathNormalizing(true),
+	// 	client.WithMaxConnsPerHost(math.MaxInt),
+	// 	client.WithDialTimeout(3 * time.Second),
+	// 	client.WithClientReadTimeout(3 * time.Second),
+	// 	client.WithWriteTimeout(3 * time.Second),
+	// 	client.WithKeepAlive(true),
+	// }
 
-	proxy, _ := reverseproxy.NewSingleHostReverseProxy("http://localhost:8000", defaultClientOptions...)
+	//proxy, _ := reverseproxy.NewSingleHostReverseProxy("http://localhost:8000", defaultClientOptions...)
+
+	opts := gateway.ProxyOptions{
+		Target:   "http://localhost:8000",
+		Weight:   1,
+		Protocol: configBifrost.ProtocolHTTP,
+	}
+	proxy, err := gateway.NewReverseProxy(opts, nil)
+	if err != nil {
+		return err
+	}
 	h.POST("/spot/orders", proxy.ServeHTTP)
 
 	go func() {

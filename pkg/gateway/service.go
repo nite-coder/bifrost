@@ -126,8 +126,8 @@ func newService(bifrost *Bifrost, opts config.ServiceOptions) (*Service, error) 
 		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(opts.Timeout.MaxConnWaitTimeout))
 	}
 
-	if opts.MaxIdleConnsPerHost != nil {
-		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*opts.MaxIdleConnsPerHost))
+	if opts.MaxConnsPerHost != nil {
+		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*opts.MaxConnsPerHost))
 	}
 
 	var dnsResolver dnscache.DNSResolver
@@ -169,13 +169,13 @@ func newService(bifrost *Bifrost, opts config.ServiceOptions) (*Service, error) 
 		return nil, err
 	}
 
-	proxyOptions := proxyOptions{
-		target:   url,
-		protocol: opts.Protocol,
-		weight:   0,
+	proxyOptions := ProxyOptions{
+		Target:   url,
+		Protocol: opts.Protocol,
+		Weight:   0,
 	}
 
-	proxy, err := newReverseProxy(proxyOptions, client)
+	proxy, err := NewReverseProxy(proxyOptions, client)
 	if err != nil {
 		return nil, err
 	}

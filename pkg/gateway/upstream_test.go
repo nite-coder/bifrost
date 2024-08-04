@@ -12,26 +12,26 @@ import (
 )
 
 func TestRoundRobin(t *testing.T) {
-	proxyOptions1 := proxyOptions{
-		target:   "http://backend1",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions1 := ProxyOptions{
+		Target:   "http://backend1",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy1, _ := newReverseProxy(proxyOptions1, nil)
+	proxy1, _ := NewReverseProxy(proxyOptions1, nil)
 
-	proxyOptions2 := proxyOptions{
-		target:   "http://backend2",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions2 := ProxyOptions{
+		Target:   "http://backend2",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy2, _ := newReverseProxy(proxyOptions2, nil)
+	proxy2, _ := NewReverseProxy(proxyOptions2, nil)
 
-	proxyOptions3 := proxyOptions{
-		target:   "http://backend3",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions3 := ProxyOptions{
+		Target:   "http://backend3",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy3, _ := newReverseProxy(proxyOptions3, nil)
+	proxy3, _ := NewReverseProxy(proxyOptions3, nil)
 
 	upstream := &Upstream{
 		proxies: []*Proxy{
@@ -51,26 +51,26 @@ func TestRoundRobin(t *testing.T) {
 }
 
 func TestWeighted(t *testing.T) {
-	proxyOptions1 := proxyOptions{
-		target:   "http://backend1",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions1 := ProxyOptions{
+		Target:   "http://backend1",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy1, _ := newReverseProxy(proxyOptions1, nil)
+	proxy1, _ := NewReverseProxy(proxyOptions1, nil)
 
-	proxyOptions2 := proxyOptions{
-		target:   "http://backend2",
-		protocol: config.ProtocolHTTP,
-		weight:   2,
+	proxyOptions2 := ProxyOptions{
+		Target:   "http://backend2",
+		Protocol: config.ProtocolHTTP,
+		Weight:   2,
 	}
-	proxy2, _ := newReverseProxy(proxyOptions2, nil)
+	proxy2, _ := NewReverseProxy(proxyOptions2, nil)
 
-	proxyOptions3 := proxyOptions{
-		target:   "http://backend3",
-		protocol: config.ProtocolHTTP,
-		weight:   3,
+	proxyOptions3 := ProxyOptions{
+		Target:   "http://backend3",
+		Protocol: config.ProtocolHTTP,
+		Weight:   3,
 	}
-	proxy3, _ := newReverseProxy(proxyOptions3, nil)
+	proxy3, _ := NewReverseProxy(proxyOptions3, nil)
 
 	upstream := &Upstream{
 		proxies: []*Proxy{
@@ -96,26 +96,26 @@ func TestWeighted(t *testing.T) {
 }
 
 func TestRandom(t *testing.T) {
-	proxyOptions1 := proxyOptions{
-		target:   "http://backend1",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions1 := ProxyOptions{
+		Target:   "http://backend1",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy1, _ := newReverseProxy(proxyOptions1, nil)
+	proxy1, _ := NewReverseProxy(proxyOptions1, nil)
 
-	proxyOptions2 := proxyOptions{
-		target:   "http://backend2",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions2 := ProxyOptions{
+		Target:   "http://backend2",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy2, _ := newReverseProxy(proxyOptions2, nil)
+	proxy2, _ := NewReverseProxy(proxyOptions2, nil)
 
-	proxyOptions3 := proxyOptions{
-		target:   "http://backend3",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions3 := ProxyOptions{
+		Target:   "http://backend3",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy3, _ := newReverseProxy(proxyOptions3, nil)
+	proxy3, _ := NewReverseProxy(proxyOptions3, nil)
 
 	upstream := &Upstream{
 		proxies: []*Proxy{
@@ -140,26 +140,26 @@ func TestRandom(t *testing.T) {
 }
 
 func TestHashing(t *testing.T) {
-	proxyOptions1 := proxyOptions{
-		target:   "http://backend1",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions1 := ProxyOptions{
+		Target:   "http://backend1",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy1, _ := newReverseProxy(proxyOptions1, nil)
+	proxy1, _ := NewReverseProxy(proxyOptions1, nil)
 
-	proxyOptions2 := proxyOptions{
-		target:   "http://backend2",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions2 := ProxyOptions{
+		Target:   "http://backend2",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy2, _ := newReverseProxy(proxyOptions2, nil)
+	proxy2, _ := NewReverseProxy(proxyOptions2, nil)
 
-	proxyOptions3 := proxyOptions{
-		target:   "http://backend3",
-		protocol: config.ProtocolHTTP,
-		weight:   1,
+	proxyOptions3 := ProxyOptions{
+		Target:   "http://backend3",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
 	}
-	proxy3, _ := newReverseProxy(proxyOptions3, nil)
+	proxy3, _ := NewReverseProxy(proxyOptions3, nil)
 
 	upstream := &Upstream{
 		proxies: []*Proxy{
