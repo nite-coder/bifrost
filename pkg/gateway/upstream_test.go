@@ -3,6 +3,7 @@ package gateway
 import (
 	"hash/fnv"
 	"http-benchmark/pkg/config"
+	"http-benchmark/pkg/proxy"
 	"math/rand"
 	"sync/atomic"
 	"testing"
@@ -12,29 +13,29 @@ import (
 )
 
 func TestRoundRobin(t *testing.T) {
-	proxyOptions1 := ProxyOptions{
+	proxyOptions1 := proxy.Options{
 		Target:   "http://backend1",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy1, _ := NewReverseProxy(proxyOptions1, nil)
+	proxy1, _ := proxy.NewReverseProxy(proxyOptions1, nil)
 
-	proxyOptions2 := ProxyOptions{
+	proxyOptions2 := proxy.Options{
 		Target:   "http://backend2",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy2, _ := NewReverseProxy(proxyOptions2, nil)
+	proxy2, _ := proxy.NewReverseProxy(proxyOptions2, nil)
 
-	proxyOptions3 := ProxyOptions{
+	proxyOptions3 := proxy.Options{
 		Target:   "http://backend3",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy3, _ := NewReverseProxy(proxyOptions3, nil)
+	proxy3, _ := proxy.NewReverseProxy(proxyOptions3, nil)
 
 	upstream := &Upstream{
-		proxies: []*Proxy{
+		proxies: []*proxy.Proxy{
 			proxy1,
 			proxy2,
 			proxy3,
@@ -46,34 +47,34 @@ func TestRoundRobin(t *testing.T) {
 	for _, e := range expected {
 		proxy := upstream.roundRobin()
 		assert.NotNil(t, proxy)
-		assert.Equal(t, e, proxy.target)
+		assert.Equal(t, e, proxy.Target())
 	}
 }
 
 func TestWeighted(t *testing.T) {
-	proxyOptions1 := ProxyOptions{
+	proxyOptions1 := proxy.Options{
 		Target:   "http://backend1",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy1, _ := NewReverseProxy(proxyOptions1, nil)
+	proxy1, _ := proxy.NewReverseProxy(proxyOptions1, nil)
 
-	proxyOptions2 := ProxyOptions{
+	proxyOptions2 := proxy.Options{
 		Target:   "http://backend2",
 		Protocol: config.ProtocolHTTP,
 		Weight:   2,
 	}
-	proxy2, _ := NewReverseProxy(proxyOptions2, nil)
+	proxy2, _ := proxy.NewReverseProxy(proxyOptions2, nil)
 
-	proxyOptions3 := ProxyOptions{
+	proxyOptions3 := proxy.Options{
 		Target:   "http://backend3",
 		Protocol: config.ProtocolHTTP,
 		Weight:   3,
 	}
-	proxy3, _ := NewReverseProxy(proxyOptions3, nil)
+	proxy3, _ := proxy.NewReverseProxy(proxyOptions3, nil)
 
 	upstream := &Upstream{
-		proxies: []*Proxy{
+		proxies: []*proxy.Proxy{
 			proxy1,
 			proxy2,
 			proxy3,
@@ -86,7 +87,7 @@ func TestWeighted(t *testing.T) {
 	for i := 0; i < 6000; i++ {
 		proxy := upstream.weighted()
 		assert.NotNil(t, proxy)
-		hits[proxy.target]++
+		hits[proxy.Target()]++
 	}
 
 	// Assert that weight distribution is roughly correct
@@ -96,29 +97,29 @@ func TestWeighted(t *testing.T) {
 }
 
 func TestRandom(t *testing.T) {
-	proxyOptions1 := ProxyOptions{
+	proxyOptions1 := proxy.Options{
 		Target:   "http://backend1",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy1, _ := NewReverseProxy(proxyOptions1, nil)
+	proxy1, _ := proxy.NewReverseProxy(proxyOptions1, nil)
 
-	proxyOptions2 := ProxyOptions{
+	proxyOptions2 := proxy.Options{
 		Target:   "http://backend2",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy2, _ := NewReverseProxy(proxyOptions2, nil)
+	proxy2, _ := proxy.NewReverseProxy(proxyOptions2, nil)
 
-	proxyOptions3 := ProxyOptions{
+	proxyOptions3 := proxy.Options{
 		Target:   "http://backend3",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy3, _ := NewReverseProxy(proxyOptions3, nil)
+	proxy3, _ := proxy.NewReverseProxy(proxyOptions3, nil)
 
 	upstream := &Upstream{
-		proxies: []*Proxy{
+		proxies: []*proxy.Proxy{
 			proxy1,
 			proxy2,
 			proxy3,
@@ -130,7 +131,7 @@ func TestRandom(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		proxy := upstream.random()
 		assert.NotNil(t, proxy)
-		hits[proxy.target]++
+		hits[proxy.Target()]++
 	}
 
 	// Assert that each proxy was selected roughly equally
@@ -140,29 +141,29 @@ func TestRandom(t *testing.T) {
 }
 
 func TestHashing(t *testing.T) {
-	proxyOptions1 := ProxyOptions{
+	proxyOptions1 := proxy.Options{
 		Target:   "http://backend1",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy1, _ := NewReverseProxy(proxyOptions1, nil)
+	proxy1, _ := proxy.NewReverseProxy(proxyOptions1, nil)
 
-	proxyOptions2 := ProxyOptions{
+	proxyOptions2 := proxy.Options{
 		Target:   "http://backend2",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy2, _ := NewReverseProxy(proxyOptions2, nil)
+	proxy2, _ := proxy.NewReverseProxy(proxyOptions2, nil)
 
-	proxyOptions3 := ProxyOptions{
+	proxyOptions3 := proxy.Options{
 		Target:   "http://backend3",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy3, _ := NewReverseProxy(proxyOptions3, nil)
+	proxy3, _ := proxy.NewReverseProxy(proxyOptions3, nil)
 
 	upstream := &Upstream{
-		proxies: []*Proxy{
+		proxies: []*proxy.Proxy{
 			proxy1,
 			proxy2,
 			proxy3,
@@ -180,6 +181,6 @@ func TestHashing(t *testing.T) {
 	for _, key := range keys {
 		proxy := upstream.hasing(key)
 		assert.NotNil(t, proxy)
-		assert.Equal(t, expected[key], proxy.target)
+		assert.Equal(t, expected[key], proxy.Target())
 	}
 }

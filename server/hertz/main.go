@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"http-benchmark/pkg/gateway"
+	"http-benchmark/pkg/proxy"
 	"http-benchmark/pkg/zero"
 	"io"
 	"log"
@@ -156,12 +156,12 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 
 	//proxy, _ := reverseproxy.NewSingleHostReverseProxy("http://localhost:8000", defaultClientOptions...)
 
-	opts := gateway.ProxyOptions{
+	opts := proxy.Options{
 		Target:   "http://localhost:8000",
 		Weight:   1,
 		Protocol: configBifrost.ProtocolHTTP,
 	}
-	proxy, err := gateway.NewReverseProxy(opts, nil)
+	proxy, err := proxy.NewReverseProxy(opts, nil)
 	if err != nil {
 		return err
 	}

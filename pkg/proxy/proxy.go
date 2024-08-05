@@ -1,4 +1,4 @@
-package gateway
+package proxy
 
 import (
 	"bytes"
@@ -15,14 +15,10 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
-	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	hzerrors "github.com/cloudwego/hertz/pkg/common/errors"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
-	http2Config "github.com/hertz-contrib/http2/config"
-	"github.com/hertz-contrib/http2/factory"
-	hertztracing "github.com/hertz-contrib/obs-opentelemetry/tracing"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
 )
@@ -43,7 +39,7 @@ import (
 const TrailerPrefix = "Trailer:"
 
 type Proxy struct {
-	options *ProxyOptions
+	options *Options
 
 	client *client.Client
 
@@ -72,7 +68,7 @@ type Proxy struct {
 	weight int
 }
 
-type ProxyOptions struct {
+type Options struct {
 	Target   string
 	Protocol config.Protocol
 	Weight   int
@@ -95,42 +91,19 @@ var hopHeaders = []string{
 	"Upgrade",
 }
 
-type clientOptions struct {
-	isTracingEnabled bool
-	http2            bool
-	hzOptions        []hzconfig.ClientOption
-}
-
-func newClient(opts clientOptions) (*client.Client, error) {
-	c, err := client.NewClient(opts.hzOptions...)
-	if err != nil {
-		return nil, err
-	}
-
-	if opts.http2 {
-		c.SetClientFactory(factory.NewClientFactory(http2Config.WithAllowHTTP(true)))
-	}
-
-	if opts.isTracingEnabled {
-		c.Use(hertztracing.ClientMiddleware())
-	}
-
-	return c, nil
-}
-
-func NewReverseProxy(opts ProxyOptions, client *client.Client) (*Proxy, error) {
+func NewReverseProxy(opts Options, client *client.Client) (*Proxy, error) {
 	addr, err := url.Parse(opts.Target)
 	if err != nil {
 		return nil, err
 	}
 
 	if client == nil {
-		clientOptions := clientOptions{
-			isTracingEnabled: false,
-			http2:            false,
-			hzOptions:        newDefaultClientOptions(),
+		clientOptions := ClientOptions{
+			IsTracingEnabled: false,
+			IsHTTP2:          false,
+			HZOptions:        DefaultClientOptions(),
 		}
-		client, err = newClient(clientOptions)
+		client, err = NewClient(clientOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -368,6 +341,14 @@ func (r *Proxy) SetErrorHandler(eh func(c *app.RequestContext, err error)) {
 
 func (r *Proxy) SetTransferTrailer(b bool) {
 	r.transferTrailer = b
+}
+
+func (p *Proxy) Weight() int {
+	return p.weight
+}
+
+func (p *Proxy) Target() string {
+	return p.target
 }
 
 func (r *Proxy) getErrorHandler() func(c *app.RequestContext, err error) {

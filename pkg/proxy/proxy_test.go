@@ -1,4 +1,4 @@
-package gateway
+package proxy
 
 import (
 	"bytes"
@@ -70,7 +70,7 @@ func TestReverseProxy(t *testing.T) {
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
 	})
 
-	proxyOptions := ProxyOptions{
+	proxyOptions := Options{
 		Target:   "http://127.0.0.1:9990/proxy",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
@@ -185,7 +185,7 @@ func TestReverseProxyStripHeadersPresentInConnection(t *testing.T) {
 		ctx.Data(200, "application/json", []byte(backendResponse))
 	})
 
-	proxyOptions := ProxyOptions{
+	proxyOptions := Options{
 		Target:   "http://127.0.0.1:9991/proxy",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
@@ -255,7 +255,7 @@ func TestReverseProxyStripEmptyConnection(t *testing.T) {
 		ctx.Data(200, "application/json", []byte(backendResponse))
 	})
 
-	proxyOptions := ProxyOptions{
+	proxyOptions := Options{
 		Target:   "http://127.0.0.1:9992/proxy",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
@@ -316,7 +316,7 @@ func TestXForwardedFor(t *testing.T) {
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
 	})
 
-	proxyOptions := ProxyOptions{
+	proxyOptions := Options{
 		Target:   "http://127.0.0.1:9993/proxy",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
@@ -372,7 +372,7 @@ func TestReverseProxyQuery(t *testing.T) {
 	})
 
 	for i, tt := range proxyQueryTests {
-		proxyOptions := ProxyOptions{
+		proxyOptions := Options{
 			Target:   "http://127.0.0.1:9995/proxy" + tt.baseSuffix,
 			Protocol: config.ProtocolHTTP,
 			Weight:   1,
@@ -417,7 +417,7 @@ func TestReverseProxy_Post(t *testing.T) {
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
 	})
 
-	proxyOptions := ProxyOptions{
+	proxyOptions := Options{
 		Target:   "http://127.0.0.1:9996/proxy",
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,

@@ -7,6 +7,7 @@ import (
 	"hash"
 	"hash/fnv"
 	"http-benchmark/pkg/config"
+	"http-benchmark/pkg/proxy"
 	"math/rand"
 	"net"
 	"net/url"
@@ -15,31 +16,16 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/client"
-	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/rs/dnscache"
 )
 
 type Upstream struct {
 	opts        *config.UpstreamOptions
-	proxies     []*Proxy
+	proxies     []*proxy.Proxy
 	counter     atomic.Uint64
 	totalWeight int
 	hasher      hash.Hash32
 	rng         *rand.Rand
-}
-
-func newDefaultClientOptions() []hzconfig.ClientOption {
-	return []hzconfig.ClientOption{
-		client.WithNoDefaultUserAgentHeader(true),
-		client.WithDisableHeaderNamesNormalizing(true),
-		client.WithDisablePathNormalizing(true),
-		client.WithDialTimeout(10 * time.Second),
-		client.WithClientReadTimeout(60 * time.Second),
-		client.WithWriteTimeout(60 * time.Second),
-		client.WithMaxIdleConnDuration(120 * time.Second),
-		client.WithKeepAlive(true),
-		client.WithMaxConnsPerHost(1024),
-	}
 }
 
 func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[string]*Upstream, error) {
@@ -71,7 +57,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 	}
 
 	// direct proxy
-	clientOpts := newDefaultClientOptions()
+	clientOpts := proxy.DefaultClientOptions()
 
 	if serviceOpts.Timeout.DailTimeout > 0 {
 		clientOpts = append(clientOpts, client.WithDialTimeout(serviceOpts.Timeout.DailTimeout))
@@ -95,7 +81,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 
 	upstream := &Upstream{
 		opts:    &opts,
-		proxies: make([]*Proxy, 0),
+		proxies: make([]*proxy.Proxy, 0),
 		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
 		hasher:  fnv.New32a(),
 	}
@@ -152,24 +138,24 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 			url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
 		}
 
-		clientOptions := clientOptions{
-			isTracingEnabled: bifrost.opts.Tracing.Enabled,
-			http2:            serviceOpts.Protocol == config.ProtocolHTTP2,
-			hzOptions:        clientOpts,
+		clientOptions := proxy.ClientOptions{
+			IsTracingEnabled: bifrost.opts.Tracing.Enabled,
+			IsHTTP2:          serviceOpts.Protocol == config.ProtocolHTTP2,
+			HZOptions:        clientOpts,
 		}
 
-		client, err := newClient(clientOptions)
+		client, err := proxy.NewClient(clientOptions)
 		if err != nil {
 			return nil, err
 		}
 
-		proxyOptions := ProxyOptions{
+		proxyOptions := proxy.Options{
 			Target:   url,
 			Protocol: serviceOpts.Protocol,
 			Weight:   targetOpts.Weight,
 		}
 
-		proxy, err := NewReverseProxy(proxyOptions, client)
+		proxy, err := proxy.NewReverseProxy(proxyOptions, client)
 
 		if err != nil {
 			return nil, err
@@ -196,7 +182,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 	return upstream, nil
 }
 
-func (u *Upstream) roundRobin() *Proxy {
+func (u *Upstream) roundRobin() *proxy.Proxy {
 	if len(u.proxies) == 1 {
 		return u.proxies[0]
 	}
@@ -206,7 +192,7 @@ func (u *Upstream) roundRobin() *Proxy {
 	return proxy
 }
 
-func (u *Upstream) weighted() *Proxy {
+func (u *Upstream) weighted() *proxy.Proxy {
 	if len(u.proxies) == 1 {
 		return u.proxies[0]
 	}
@@ -214,7 +200,7 @@ func (u *Upstream) weighted() *Proxy {
 	randomWeight := u.rng.Intn(u.totalWeight)
 
 	for _, proxy := range u.proxies {
-		randomWeight -= proxy.weight
+		randomWeight -= proxy.Weight()
 		if randomWeight < 0 {
 			return proxy
 		}
@@ -223,7 +209,7 @@ func (u *Upstream) weighted() *Proxy {
 	return nil
 }
 
-func (u *Upstream) random() *Proxy {
+func (u *Upstream) random() *proxy.Proxy {
 	if len(u.proxies) == 1 {
 		return u.proxies[0]
 	}
@@ -232,7 +218,7 @@ func (u *Upstream) random() *Proxy {
 	return u.proxies[selectedIndex]
 }
 
-func (u *Upstream) hasing(key string) *Proxy {
+func (u *Upstream) hasing(key string) *proxy.Proxy {
 	if len(u.proxies) == 1 {
 		return u.proxies[0]
 	}
