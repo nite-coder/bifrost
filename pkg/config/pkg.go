@@ -10,15 +10,10 @@ import (
 type ChangeFunc func() error
 
 var (
-	OnChanged    ChangeFunc
-	providerType string
+	OnChanged ChangeFunc
 )
 
-func ProviderType() string {
-	return providerType
-}
-
-func LoadFrom(path string) (Options, error) {
+func Load(path string) (Options, error) {
 	// load main config
 	var mainOpts Options
 
@@ -37,10 +32,14 @@ func LoadFrom(path string) (Options, error) {
 	if err != nil {
 		return mainOpts, err
 	}
-	fileProvider.Reset()
 
 	// use file provider if enabled
 	if mainOpts.Providers.File.Enabled && len(mainOpts.Providers.File.Paths) > 0 {
+		fileProviderOpts := file.Options{
+			Paths: []string{},
+		}
+		fileProvider = file.NewProvider(fileProviderOpts)
+
 		for _, content := range mainOpts.Providers.File.Paths {
 			fileProvider.Add(content)
 		}
@@ -58,11 +57,10 @@ func LoadFrom(path string) (Options, error) {
 			}
 		}
 
-		providerType = "file"
 		return mainOpts, nil
 	}
 
-	return mainOpts, nil
+	return mainOpts, fmt.Errorf("no provider found")
 }
 
 func parseContent(content string) (Options, error) {

@@ -82,7 +82,7 @@ func main() {
 			}
 
 			configPath := cCtx.String("config")
-			mainOpts, err := config.LoadFrom(configPath)
+			mainOpts, err := config.Load(configPath)
 			if err != nil {
 				slog.Error("fail to load config", "error", err, "path", configPath)
 				return err
@@ -95,6 +95,8 @@ func main() {
 					slog.Error("fail to validate config", "error", err)
 					return err
 				}
+
+				return nil
 			}
 
 			isUpgrade := cCtx.Bool("upgrade")
@@ -110,6 +112,8 @@ func main() {
 					slog.Error("fail to upgrade", "error", err)
 					return err
 				}
+
+				return nil
 			}
 
 			bifrost, err = gateway.Load(mainOpts, false)
@@ -121,7 +125,7 @@ func main() {
 			config.OnChanged = func() error {
 				slog.Info("reloading...")
 
-				mainOpts, err := config.LoadFrom(configPath)
+				mainOpts, err := config.Load(configPath)
 				if err != nil {
 					slog.Error("fail to load config", "error", err, "path", configPath)
 					return err
@@ -162,7 +166,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		slog.Error("fail to start bifrost", "error", err)
+		//slog.Error("fail to start bifrost", "error", err)
 		os.Exit(-1)
 	}
 }
