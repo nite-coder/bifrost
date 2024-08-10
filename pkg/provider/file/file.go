@@ -17,31 +17,31 @@ type ContentInfo struct {
 	Path    string
 }
 type FileProvider struct {
-	opts      config.FileProviderOptions
+	options      config.FileProviderOptions
 	watcher   *fsnotify.Watcher
 	OnChanged ChangeFunc
 }
 
 func NewProvider(opts config.FileProviderOptions) *FileProvider {
 	return &FileProvider{
-		opts: opts,
+		options: opts,
 	}
 }
 
 func (p *FileProvider) Reset() {
-	p.opts.Paths = p.opts.Paths[:0]
+	p.options.Paths = p.options.Paths[:0]
 }
 
 func (p *FileProvider) Add(path string) {
-	p.opts.Paths = append(p.opts.Paths, path)
+	p.options.Paths = append(p.options.Paths, path)
 }
 
 func (p *FileProvider) Open() ([]*ContentInfo, error) {
-	p.opts.Paths = removeDuplicates(p.opts.Paths)
+	p.options.Paths = removeDuplicates(p.options.Paths)
 
 	var contents []*ContentInfo
 
-	for _, path := range p.opts.Paths {
+	for _, path := range p.options.Paths {
 		err := filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -69,7 +69,7 @@ func (p *FileProvider) Open() ([]*ContentInfo, error) {
 func (p *FileProvider) Watch() error {
 	var err error
 
-	if len(p.opts.Paths) == 0 {
+	if len(p.options.Paths) == 0 {
 		return nil
 	}
 
@@ -101,7 +101,7 @@ func (p *FileProvider) Watch() error {
 					isUpdate = true
 				case event.Op&fsnotify.Remove == fsnotify.Remove:
 					// Some editors will remove the path from the watch list when the event is triggered, so we need to re-add it
-					for _, path := range p.opts.Paths {
+					for _, path := range p.options.Paths {
 						err := p.addWatch(path)
 						if err != nil {
 							slog.Error("file watcher error", "error:", err)
@@ -130,7 +130,7 @@ func (p *FileProvider) Watch() error {
 		}
 	}(p.watcher)
 
-	for _, path := range p.opts.Paths {
+	for _, path := range p.options.Paths {
 		err := p.addWatch(path)
 		if err != nil {
 			return err

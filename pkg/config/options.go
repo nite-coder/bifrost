@@ -3,6 +3,9 @@ package config
 import "time"
 
 type Options struct {
+	Version     string                      `yaml:"version" json:"version"`
+	PIDFile     string                      `yaml:"pid_file" json:"pid_file"`
+	UpgradeSock string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
 	Providers   ProviderOtions              `yaml:"providers" json:"providers"`
 	Logging     LoggingOtions               `yaml:"logging" json:"logging"`
 	Metrics     MetricsOptions              `yaml:"metrics" json:"metrics"`

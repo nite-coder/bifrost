@@ -32,7 +32,7 @@ type Service struct {
 
 func loadServices(bifrost *Bifrost, middlewares map[string]app.HandlerFunc) (map[string]*Service, error) {
 	services := map[string]*Service{}
-	for id, serviceOpts := range bifrost.opts.Services {
+	for id, serviceOpts := range bifrost.options.Services {
 
 		if len(id) == 0 {
 			return nil, fmt.Errorf("service id can't be empty")
@@ -160,7 +160,7 @@ func newService(bifrost *Bifrost, opts config.ServiceOptions) (*Service, error) 
 	}
 
 	clientOptions := proxy.ClientOptions{
-		IsTracingEnabled: bifrost.opts.Tracing.Enabled,
+		IsTracingEnabled: bifrost.options.Tracing.Enabled,
 		IsHTTP2:          opts.Protocol == config.ProtocolHTTP2,
 		HZOptions:        clientOpts,
 	}

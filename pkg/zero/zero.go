@@ -37,8 +37,8 @@ type ZeroDownTime struct {
 }
 
 type Options struct {
-	SocketPath string
-	PIDFile    string
+	UpgradeSock string
+	PIDFile     string
 }
 
 func New(opts Options) *ZeroDownTime {
@@ -64,7 +64,7 @@ func (z *ZeroDownTime) Close(ctx context.Context) error {
 }
 
 func (z *ZeroDownTime) Upgrade() error {
-	conn, err := net.Dial("unix", z.options.SocketPath)
+	conn, err := net.Dial("unix", z.options.UpgradeSock)
 	if err != nil {
 		return fmt.Errorf("failed to connect to upgrade socket: %v", err)
 	}
@@ -171,7 +171,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	z.mu.Unlock()
 
 	_ = z.writePID()
-	socket, err := net.Listen("unix", z.options.SocketPath)
+	socket, err := net.Listen("unix", z.options.UpgradeSock)
 	if err != nil {
 		return fmt.Errorf("failed to open upgrade socket: %v", err)
 	}
@@ -180,7 +180,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 		z.isShutdownCh <- true
 	}()
 
-	slog.Info("unix socket is created", "path", z.options.SocketPath)
+	slog.Info("unix socket is created", "path", z.options.UpgradeSock)
 
 	go func() {
 		defer func() {

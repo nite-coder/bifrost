@@ -25,7 +25,7 @@ type Engine struct {
 func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, error) {
 
 	// middlewares
-	middlewares, err := loadMiddlewares(bifrost.opts.Middlewares)
+	middlewares, err := loadMiddlewares(bifrost.options.Middlewares)
 	if err != nil {
 		return nil, err
 	}
@@ -44,14 +44,14 @@ func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, erro
 
 	// engine
 	engine := &Engine{
-		opts:            *bifrost.opts,
+		opts:            *bifrost.options,
 		handlers:        make([]app.HandlerFunc, 0),
 		notFoundHandler: nil,
 		options:         make([]hzconfig.Option, 0),
 	}
 
 	// tracing
-	if bifrost.opts.Tracing.Enabled {
+	if bifrost.options.Tracing.Enabled {
 
 		provider.NewOpenTelemetryProvider(
 			provider.WithEnableMetrics(false),

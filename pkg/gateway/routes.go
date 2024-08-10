@@ -23,7 +23,7 @@ type routeSetting struct {
 func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[string]*Service, middlewares map[string]app.HandlerFunc) (*Routes, error) {
 	route := newRoutes()
 
-	for routeID, routeOpts := range bifrost.opts.Routes {
+	for routeID, routeOpts := range bifrost.options.Routes {
 
 		routeOpts.ID = routeID
 

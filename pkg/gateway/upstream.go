@@ -31,7 +31,7 @@ type Upstream struct {
 func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[string]*Upstream, error) {
 	upstreams := map[string]*Upstream{}
 
-	for id, upstreamOpts := range bifrost.opts.Upstreams {
+	for id, upstreamOpts := range bifrost.options.Upstreams {
 		upstreamOpts.ID = id
 
 		upstream, err := newUpstream(bifrost, serviceOpts, upstreamOpts)
@@ -139,7 +139,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 		}
 
 		clientOptions := proxy.ClientOptions{
-			IsTracingEnabled: bifrost.opts.Tracing.Enabled,
+			IsTracingEnabled: bifrost.options.Tracing.Enabled,
 			IsHTTP2:          serviceOpts.Protocol == config.ProtocolHTTP2,
 			HZOptions:        clientOpts,
 		}

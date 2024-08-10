@@ -19,7 +19,7 @@ type reloadFunc func(bifrost *Bifrost) error
 
 type Bifrost struct {
 	configPath   string
-	opts         *config.Options
+	options      *config.Options
 	fileProvider *file.FileProvider
 	httpServers  map[string]*HTTPServer
 	resolver     *dnscache.Resolver
@@ -139,14 +139,14 @@ func load(opts config.Options, isReload bool) (*Bifrost, error) {
 	}
 
 	zeroOptions := zero.Options{
-		SocketPath: "./bifrost.sock",
-		PIDFile:    "./bifrost.pid",
+		UpgradeSock: "./bifrost.sock",
+		PIDFile:     "./bifrost.pid",
 	}
 
 	bifrsot := &Bifrost{
 		resolver:    &dnscache.Resolver{},
 		httpServers: make(map[string]*HTTPServer),
-		opts:        &opts,
+		options:     &opts,
 		stopCh:      make(chan bool),
 		reloadCh:    make(chan bool),
 		zero:        zero.New(zeroOptions),
@@ -285,7 +285,7 @@ func reload(bifrost *Bifrost) error {
 
 	for id, httpServer := range bifrost.httpServers {
 		newServer, found := newBifrost.httpServers[id]
-		if found && httpServer.serverOpts.Bind == newServer.serverOpts.Bind {
+		if found && httpServer.options.Bind == newServer.options.Bind {
 			httpServer.switcher.SetEngine(newServer.switcher.Engine())
 			isReloaded = true
 		}

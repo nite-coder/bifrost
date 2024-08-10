@@ -24,9 +24,9 @@ import (
 )
 
 type HTTPServer struct {
-	serverOpts *config.ServerOptions
-	switcher   *switcher
-	server     *server.Hertz
+	options  *config.ServerOptions
+	switcher *switcher
+	server   *server.Hertz
 }
 
 func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []tracer.Tracer) (*HTTPServer, error) {
@@ -155,7 +155,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 	}
 
 	httpServer := &HTTPServer{
-		serverOpts: &serverOpts,
+		options: &serverOpts,
 	}
 
 	h := server.Default(hzOpts...)
@@ -199,7 +199,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 }
 
 func (s *HTTPServer) Run() {
-	slog.Info("starting server", "id", s.serverOpts.ID, "bind", s.serverOpts.Bind)
+	slog.Info("starting server", "id", s.options.ID, "bind", s.options.Bind)
 	s.server.Spin()
 }
 

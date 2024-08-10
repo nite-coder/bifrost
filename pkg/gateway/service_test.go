@@ -49,7 +49,7 @@ func TestServices(t *testing.T) {
 	}()
 
 	bifrost := &Bifrost{
-		opts: &config.Options{
+		options: &config.Options{
 			Services: map[string]config.ServiceOptions{
 				"testService": {
 					Url: "http://localhost:80",
@@ -80,7 +80,7 @@ func TestServices(t *testing.T) {
 	ctx := context.Background()
 
 	// direct proxy
-	service, err := newService(bifrost, bifrost.opts.Services["testService"])
+	service, err := newService(bifrost, bifrost.options.Services["testService"])
 	assert.NoError(t, err)
 	hzCtx := app.NewContext(0)
 	hzCtx.Request.SetRequestURI("http://localhost:80/proxy/backend")
@@ -88,7 +88,7 @@ func TestServices(t *testing.T) {
 	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
 
 	// exist upstream
-	serviceOpts := bifrost.opts.Services["testService"]
+	serviceOpts := bifrost.options.Services["testService"]
 	serviceOpts.Url = "http://testUpstream"
 	service, err = newService(bifrost, serviceOpts)
 	assert.NoError(t, err)
@@ -107,7 +107,7 @@ func TestServices(t *testing.T) {
 	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
 
 	// dynamic upstream
-	serviceOpts = bifrost.opts.Services["testService"]
+	serviceOpts = bifrost.options.Services["testService"]
 	serviceOpts.Url = "http://$test"
 	service, err = newService(bifrost, serviceOpts)
 	assert.NoError(t, err)
@@ -128,7 +128,7 @@ func TestDynamicService(t *testing.T) {
 	}()
 
 	bifrost := &Bifrost{
-		opts: &config.Options{
+		options: &config.Options{
 			Services: map[string]config.ServiceOptions{
 				"testService": {
 					Url: "http://localhost:80",

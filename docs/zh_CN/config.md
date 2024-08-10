@@ -90,7 +90,7 @@ services:
     write_timeout: 5s
     idle_timeout: 5s
     dail_timeout: 5s
-    max_idle_conns_per_host: 1024  # default: 1024
+    max_conns_per_host: 1024  # default: 1024
     tls_verify: false
     protocol: http
     url: http://localhost:8000

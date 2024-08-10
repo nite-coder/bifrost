@@ -44,8 +44,8 @@ func main() {
 	ctx := context.Background()
 
 	zeroOpts := zero.Options{
-		SocketPath: "./hertz.sock",
-		PIDFile:    "./hertz.pid",
+		UpgradeSock: "./hertz.sock",
+		PIDFile:     "./hertz.pid",
 	}
 
 	zeroDT := zero.New(zeroOpts)
