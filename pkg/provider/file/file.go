@@ -1,7 +1,6 @@
 package file
 
 import (
-	"http-benchmark/pkg/config"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -16,13 +15,20 @@ type ContentInfo struct {
 	Content string
 	Path    string
 }
+
+type Options struct {
+	Enabled bool     `yaml:"enabled" json:"enabled"`
+	Paths   []string `yaml:"paths" json:"paths"`
+	Watch   bool     `yaml:"watch" json:"watch"`
+}
+
 type FileProvider struct {
-	options      config.FileProviderOptions
+	options   Options
 	watcher   *fsnotify.Watcher
 	OnChanged ChangeFunc
 }
 
-func NewProvider(opts config.FileProviderOptions) *FileProvider {
+func NewProvider(opts Options) *FileProvider {
 	return &FileProvider{
 		options: opts,
 	}
@@ -122,7 +128,7 @@ func (p *FileProvider) Watch() error {
 				if p.OnChanged != nil {
 					err := p.OnChanged()
 					if err != nil {
-						slog.Error("Error in OnChanged:", "error:", err)
+						slog.Error("fail to change in file provider", "error:", err)
 					}
 				}
 			}

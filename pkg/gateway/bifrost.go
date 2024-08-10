@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
-	"http-benchmark/pkg/provider/file"
 	"http-benchmark/pkg/tracer/accesslog"
 	"http-benchmark/pkg/tracer/prometheus"
 	"http-benchmark/pkg/zero"
@@ -15,24 +14,18 @@ import (
 	"github.com/rs/dnscache"
 )
 
-type reloadFunc func(bifrost *Bifrost) error
-
 type Bifrost struct {
-	configPath   string
-	options      *config.Options
-	fileProvider *file.FileProvider
-	httpServers  map[string]*HTTPServer
-	resolver     *dnscache.Resolver
-	reloadCh     chan bool
-	stopCh       chan bool
-	onReload     reloadFunc
-	zero         *zero.ZeroDownTime
+	options     *config.Options
+	HttpServers map[string]*HTTPServer
+	resolver    *dnscache.Resolver
+	stopCh      chan bool
+	zero        *zero.ZeroDownTime
 }
 
 func (b *Bifrost) Run() {
 	i := 0
-	for _, server := range b.httpServers {
-		if i == len(b.httpServers)-1 {
+	for _, server := range b.HttpServers {
+		if i == len(b.HttpServers)-1 {
 			// last server need to blocked
 			server.Run()
 		}
@@ -45,110 +38,32 @@ func (b *Bifrost) ZeroDownTime() *zero.ZeroDownTime {
 	return b.zero
 }
 
-func (b *Bifrost) stop() {
+func (b *Bifrost) Stop() {
 	b.stopCh <- true
 }
 
 func (b *Bifrost) Shutdown() {
-	b.stop()
+	b.Stop()
 
 }
 
-func LoadFromConfig(path string) (*Bifrost, error) {
-	return loadFromConfig(path, false)
-}
-
-func loadFromConfig(path string, isReload bool) (*Bifrost, error) {
-	if !fileExist(path) {
-		return nil, fmt.Errorf("config file not found, path: %s", path)
-	}
-
-	// main config file
-	fileProviderOpts := config.FileProviderOptions{
-		Paths: []string{path},
-	}
-
-	fileProvider := file.NewProvider(fileProviderOpts)
-
-	cInfo, err := fileProvider.Open()
-	if err != nil {
-		return nil, err
-	}
-
-	mainOpts, err := parseContent(cInfo[0].Content)
-	if err != nil {
-		return nil, err
-	}
-	fileProvider.Reset()
-
-	// file provider
-	if mainOpts.Providers.File.Enabled && len(mainOpts.Providers.File.Paths) > 0 {
-		for _, content := range mainOpts.Providers.File.Paths {
-			fileProvider.Add(content)
-		}
-
-		cInfo, err = fileProvider.Open()
-		if err != nil {
-			return nil, err
-		}
-
-		for _, c := range cInfo {
-			mainOpts, err = mergeOptions(mainOpts, c.Content)
-			if err != nil {
-				errMsg := fmt.Sprintf("path: %s, error: %s", c.Path, err.Error())
-				return nil, fmt.Errorf(errMsg)
-			}
-		}
-	}
-
-	bifrost, err := load(mainOpts, isReload)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isReload {
-		reloadCh := make(chan bool)
-		bifrost.fileProvider = fileProvider
-		bifrost.configPath = path
-		bifrost.onReload = reload
-		bifrost.reloadCh = reloadCh
-
-		if mainOpts.Providers.File.Watch {
-			fileProvider.Add(path)
-			fileProvider.OnChanged = func() error {
-				reloadCh <- true
-				return nil
-			}
-			_ = fileProvider.Watch()
-			bifrost.watch()
-		}
-	}
-
-	return bifrost, nil
-}
-
-func Load(opts config.Options) (*Bifrost, error) {
-	return load(opts, false)
-}
-
-func load(opts config.Options, isReload bool) (*Bifrost, error) {
+func Load(opts config.Options, isReload bool) (*Bifrost, error) {
 	// validate
-	err := validateOptions(opts)
+	err := config.Validate(opts)
 	if err != nil {
 		return nil, err
 	}
 
 	zeroOptions := zero.Options{
-		UpgradeSock: "./bifrost.sock",
-		PIDFile:     "./bifrost.pid",
+		UpgradeSock: opts.UpgradeSock,
+		PIDFile:     opts.PIDFile,
 	}
 
 	bifrsot := &Bifrost{
 		resolver:    &dnscache.Resolver{},
-		httpServers: make(map[string]*HTTPServer),
+		HttpServers: make(map[string]*HTTPServer),
 		options:     &opts,
 		stopCh:      make(chan bool),
-		reloadCh:    make(chan bool),
 		zero:        zero.New(zeroOptions),
 	}
 
@@ -219,7 +134,7 @@ func load(opts config.Options, isReload bool) (*Bifrost, error) {
 			return nil, fmt.Errorf("http server bind can't be empty")
 		}
 
-		_, found := bifrsot.httpServers[id]
+		_, found := bifrsot.HttpServers[id]
 		if found {
 			return nil, fmt.Errorf("http server '%s' already exists", id)
 		}
@@ -241,57 +156,8 @@ func load(opts config.Options, isReload bool) (*Bifrost, error) {
 			return nil, err
 		}
 
-		bifrsot.httpServers[id] = httpServer
+		bifrsot.HttpServers[id] = httpServer
 	}
 
 	return bifrsot, nil
-}
-
-func (b *Bifrost) watch() {
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				slog.Error("bifrost: unknown error when reload config", "error", err)
-				b.watch()
-			}
-		}()
-
-		for {
-			select {
-			case <-b.reloadCh:
-				err := b.onReload(b)
-				if err != nil {
-					slog.Error("bifrost: fail to reload config", "error", err)
-				}
-			case <-b.stopCh:
-				return
-			}
-		}
-	}()
-}
-
-func reload(bifrost *Bifrost) error {
-	slog.Info("bifrost: reloading...")
-
-	newBifrost, err := loadFromConfig(bifrost.configPath, true)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		newBifrost.stop()
-	}()
-
-	isReloaded := false
-
-	for id, httpServer := range bifrost.httpServers {
-		newServer, found := newBifrost.httpServers[id]
-		if found && httpServer.options.Bind == newServer.options.Bind {
-			httpServer.switcher.SetEngine(newServer.switcher.Engine())
-			isReloaded = true
-		}
-	}
-
-	slog.Info("bifrost is reloaded successfully", "isReloaded", isReloaded)
-
-	return nil
 }

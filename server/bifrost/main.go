@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/gateway"
 	"http-benchmark/pkg/log"
+	"http-benchmark/pkg/zero"
 	"log/slog"
 	"os"
 
@@ -54,6 +56,12 @@ func main() {
 				Value:   false,
 				Usage:   "Test the server conf and then exit",
 			},
+			&cli.BoolFlag{
+				Name:    "stop",
+				Aliases: []string{"s"},
+				Value:   false,
+				Usage:   "This server should gracefully shutdown a running server",
+			},
 		},
 		Action: func(cCtx *cli.Context) error {
 			defer func() {
@@ -70,13 +78,81 @@ func main() {
 				return m.ServeHTTP, nil
 			})
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			configPath := cCtx.String("config")
-			bifrost, err = gateway.LoadFromConfig(configPath)
+			mainOpts, err := config.LoadFrom(configPath)
+			if err != nil {
+				slog.Error("fail to load config", "error", err, "path", configPath)
+				return err
+			}
+
+			isTest := cCtx.Bool("test")
+			if isTest {
+				err = config.Validate(mainOpts)
+				if err != nil {
+					slog.Error("fail to validate config", "error", err)
+					return err
+				}
+			}
+
+			isUpgrade := cCtx.Bool("upgrade")
+			if isUpgrade {
+				zeroOpts := zero.Options{
+					UpgradeSock: mainOpts.UpgradeSock,
+					PIDFile:     mainOpts.UpgradeSock,
+				}
+
+				zeroDT := zero.New(zeroOpts)
+
+				if err := zeroDT.Upgrade(); err != nil {
+					slog.Error("fail to upgrade", "error", err)
+					return err
+				}
+			}
+
+			bifrost, err = gateway.Load(mainOpts, false)
 			if err != nil {
 				slog.Error("fail to start bifrost", "error", err)
+				return err
+			}
+
+			config.OnChanged = func() error {
+				slog.Info("reloading...")
+
+				mainOpts, err := config.LoadFrom(configPath)
+				if err != nil {
+					slog.Error("fail to load config", "error", err, "path", configPath)
+					return err
+				}
+
+				err = config.Validate(mainOpts)
+				if err != nil {
+					slog.Error("fail to validate config", "error", err)
+					return err
+				}
+
+				newBifrost, err := gateway.Load(mainOpts, true)
+				if err != nil {
+					return err
+				}
+				defer func() {
+					newBifrost.Stop()
+				}()
+
+				isReloaded := false
+
+				for id, httpServer := range bifrost.HttpServers {
+					newHTTPServer, found := newBifrost.HttpServers[id]
+					if found && httpServer.Bind() == newHTTPServer.Bind() {
+						httpServer.SetEngine(newHTTPServer.Engine())
+						isReloaded = true
+					}
+				}
+
+				slog.Info("bifrost is reloaded successfully", "isReloaded", isReloaded)
+
 				return nil
 			}
 

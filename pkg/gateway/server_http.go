@@ -206,3 +206,15 @@ func (s *HTTPServer) Run() {
 func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
+
+func (s *HTTPServer) Bind() string {
+	return s.options.Bind
+}
+
+func (s *HTTPServer) SetEngine(engine *Engine) {
+	s.switcher.SetEngine(engine)
+}
+
+func (s *HTTPServer) Engine() *Engine {
+	return s.switcher.Engine()
+}
