@@ -158,7 +158,7 @@ func Load(opts config.Options, isReload bool) (*Bifrost, error) {
 			}
 		}
 
-		httpServer, err := newHTTPServer(bifrsot, server, tracers)
+		httpServer, err := newHTTPServer(bifrsot, server, tracers, isReload)
 		if err != nil {
 			return nil, err
 		}

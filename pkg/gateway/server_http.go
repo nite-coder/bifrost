@@ -29,30 +29,10 @@ type HTTPServer struct {
 	server   *server.Hertz
 }
 
-func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []tracer.Tracer) (*HTTPServer, error) {
+func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []tracer.Tracer, disableListener bool) (*HTTPServer, error) {
 	ctx := context.Background()
 
-	var listenerConfig *net.ListenConfig
-	if serverOpts.ReusePort {
-		listenerConfig = &net.ListenConfig{
-			Control: func(network, address string, c syscall.RawConn) error {
-				return c.Control(func(fd uintptr) {
-					err := unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
-					if err != nil {
-						return
-					}
-				})
-			},
-		}
-	}
-
-	listener, err := bifrost.zero.Listener(ctx, "tcp", serverOpts.Bind, listenerConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	hzOpts := []hzconfig.Option{
-		server.WithListener(listener),
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		server.WithSenseClientDisconnection(true),
@@ -62,6 +42,29 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		server.WithALPN(true),
 		server.WithStreamBody(true),
 		withDefaultServerHeader(true),
+	}
+
+	if !disableListener {
+		var listenerConfig *net.ListenConfig
+		if serverOpts.ReusePort {
+			listenerConfig = &net.ListenConfig{
+				Control: func(network, address string, c syscall.RawConn) error {
+					return c.Control(func(fd uintptr) {
+						err := unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
+						if err != nil {
+							return
+						}
+					})
+				},
+			}
+		}
+
+		listener, err := bifrost.zero.Listener(ctx, "tcp", serverOpts.Bind, listenerConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		hzOpts = append(hzOpts, server.WithListener(listener))
 	}
 
 	if serverOpts.Timeout.KeepAliveTimeout.Seconds() > 0 {

@@ -26,7 +26,6 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/valyala/fasthttp v1.55.0
 	go.opentelemetry.io/otel/trace v1.28.0
-	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/net v0.28.0
 	golang.org/x/sys v0.24.0
 	google.golang.org/grpc v1.65.0

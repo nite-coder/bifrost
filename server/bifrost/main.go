@@ -16,7 +16,6 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/urfave/cli/v2"
-	_ "go.uber.org/automaxprocs"
 )
 
 type FindMyHome struct {
@@ -95,6 +94,7 @@ func main() {
 					return err
 				}
 
+				slog.Info("config is tested successfully")
 				return nil
 			}
 
@@ -146,7 +146,7 @@ func main() {
 					return err
 				}
 
-				slog.Info("daemon process started with PID", "pid", cmd.Process.Pid)
+				slog.Info("daemon process started", "pid", cmd.Process.Pid)
 				return nil
 			}
 

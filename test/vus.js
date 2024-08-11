@@ -14,7 +14,7 @@ export const options = {
 };
 
 export default function () {
-    const url = 'http://localhost:8001/spot/orders?a=b';
+    const url = 'https://localhost:8443/spot/orders?a=b';
 
     const payload = JSON.stringify({
         "market": "BTC_USDT",
@@ -34,7 +34,7 @@ export default function () {
             'Content-Type': 'application/json',
             'X-User-ID': '1'
         },
-        timeout: '1s'
+        timeout: '3s'
     };
 
     let resp = http.post(url, payload, params);
