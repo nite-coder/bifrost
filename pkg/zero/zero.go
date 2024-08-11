@@ -70,7 +70,6 @@ func (z *ZeroDownTime) Upgrade() error {
 	}
 	defer conn.Close()
 
-	slog.Info("Connected to upgrade socket")
 	return nil
 }
 
@@ -98,9 +97,9 @@ func (z *ZeroDownTime) Listener(ctx context.Context, network string, address str
 
 			index := 0
 			count := len(z.listeners)
-			for count > 0 {
+			for index < count {
 				// fd starting from 3
-				fd := 2 + count
+				fd := 3 + index
 
 				f := os.NewFile(uintptr(fd), "")
 				if f == nil {
@@ -116,7 +115,6 @@ func (z *ZeroDownTime) Listener(ctx context.Context, network string, address str
 				l := z.listeners[index]
 				l.listener = fileListener
 
-				count--
 				index++
 
 				slog.Info("file Listener is created", "addr", fileListener.Addr(), "fd", fd)
@@ -152,8 +150,6 @@ func (z *ZeroDownTime) Listener(ctx context.Context, network string, address str
 		Key:      address,
 	}
 
-	slog.Debug("listener is created", "addr", address)
-
 	z.mu.Lock()
 	z.listeners = append(z.listeners, info)
 	z.mu.Unlock()
@@ -185,7 +181,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				fmt.Println("recover from panic:", r)
+				fmt.Println("zero: recover from panic:", r)
 			}
 		}()
 
@@ -222,9 +218,9 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 
 			cmd := exec.Command(os.Args[0], os.Args[1:]...)
 			cmd.Env = append(os.Environ(), "UPGRADE=1", fmt.Sprintf("LISTENERS=%s", string(b)))
-			cmd.Stdin = os.Stdin
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
+			cmd.Stdin = nil
+			cmd.Stdout = nil
+			cmd.Stderr = nil
 			cmd.ExtraFiles = files
 			if err := cmd.Start(); err != nil {
 				slog.ErrorContext(ctx, "failed to start child process", "error", err)

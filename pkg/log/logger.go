@@ -18,10 +18,10 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 	level = strings.ToLower(level)
 
 	switch level {
-	case "none":
+	case "":
 	case "debug":
 		logOptions.Level = slog.LevelDebug
-	case "info", "":
+	case "info":
 		logOptions.Level = slog.LevelInfo
 	case "warn":
 		logOptions.Level = slog.LevelWarn

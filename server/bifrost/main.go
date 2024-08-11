@@ -7,7 +7,12 @@ import (
 	"http-benchmark/pkg/log"
 	"http-benchmark/pkg/zero"
 	"log/slog"
+	"net"
 	"os"
+	"os/exec"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/urfave/cli/v2"
@@ -64,22 +69,16 @@ func main() {
 			},
 		},
 		Action: func(cCtx *cli.Context) error {
+			ctx := context.Background()
+
 			defer func() {
-				if bifrost != nil {
-					bifrost.Shutdown()
-				}
+				ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+				defer cancel()
+				_ = shutdown(ctx)
 			}()
 
 			var err error
 			_ = gateway.DisableGopool()
-
-			err = gateway.RegisterMiddleware("find_upstream", func(param map[string]any) (app.HandlerFunc, error) {
-				m := FindMyHome{}
-				return m.ServeHTTP, nil
-			})
-			if err != nil {
-				return err
-			}
 
 			configPath := cCtx.String("config")
 			mainOpts, err := config.Load(configPath)
@@ -96,6 +95,23 @@ func main() {
 					return err
 				}
 
+				return nil
+			}
+
+			isStop := cCtx.Bool("stop")
+			if isStop {
+				zeroOpts := zero.Options{
+					UpgradeSock: mainOpts.UpgradeSock,
+					PIDFile:     mainOpts.PIDFile,
+				}
+
+				zeroDT := zero.New(zeroOpts)
+
+				err = zeroDT.Shutdown(ctx)
+				if err != nil {
+					slog.Error("fail to stop", "error", err)
+					return err
+				}
 				return nil
 			}
 
@@ -116,6 +132,29 @@ func main() {
 				return nil
 			}
 
+			isDaemon := cCtx.Bool("daemon")
+			if isDaemon && os.Getenv("DAEMONIZED") == "" {
+				cmd := exec.Command(os.Args[0], os.Args[1:]...)
+				cmd.Stdin = nil
+				cmd.Stdout = nil
+				cmd.Stderr = nil
+				cmd.Env = append(os.Environ(), "DAEMONIZED=1")
+
+				err := cmd.Start()
+				if err != nil {
+					slog.Error("fail to start daemon", "error", err)
+					return err
+				}
+
+				slog.Info("daemon process started with PID", "pid", cmd.Process.Pid)
+				return nil
+			}
+
+			err = registerMiddlewares()
+			if err != nil {
+				return err
+			}
+
 			bifrost, err = gateway.Load(mainOpts, false)
 			if err != nil {
 				slog.Error("fail to start bifrost", "error", err)
@@ -123,9 +162,9 @@ func main() {
 			}
 
 			config.OnChanged = func() error {
-				slog.Info("reloading...")
+				slog.Debug("reloading...")
 
-				mainOpts, err := config.Load(configPath)
+				_, mainOpts, err := config.LoadDynamic(mainOpts)
 				if err != nil {
 					slog.Error("fail to load config", "error", err, "path", configPath)
 					return err
@@ -160,7 +199,61 @@ func main() {
 				return nil
 			}
 
-			bifrost.Run()
+			err = config.Watch()
+			if err != nil {
+				return err
+			}
+
+			go func() {
+				defer func() {
+					ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+					defer cancel()
+
+					_ = shutdown(ctx)
+				}()
+
+				bifrost.Run()
+			}()
+
+			go func() {
+				for _, httpServer := range bifrost.HttpServers {
+					for {
+						conn, err := net.Dial("tcp", httpServer.Bind())
+						if err == nil {
+							conn.Close()
+							break
+						}
+						time.Sleep(500 * time.Millisecond)
+					}
+				}
+
+				slog.Info("all servers are started successfully", "pid", os.Getpid())
+
+				zeroDT := bifrost.ZeroDownTime()
+
+				if zeroDT != nil && zeroDT.IsUpgraded() {
+					err := zeroDT.Shutdown(ctx)
+					if err != nil {
+						return
+					}
+
+					time.Sleep(5 * time.Second)
+				}
+
+				if isDaemon {
+					if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
+						slog.Error("failed to upgrade process", "error", err)
+						return
+					}
+				}
+			}()
+
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+			<-sigChan
+
+			slog.Info("received shutdown signal", "pid", os.Getpid())
+
 			return nil
 		},
 	}
@@ -169,4 +262,29 @@ func main() {
 		//slog.Error("fail to start bifrost", "error", err)
 		os.Exit(-1)
 	}
+}
+
+func shutdown(ctx context.Context) error {
+	if bifrost != nil {
+		if err := bifrost.Shutdown(ctx); err != nil {
+			slog.ErrorContext(ctx, "failed to shutdown server", "error", err)
+			return err
+		}
+
+		slog.Info("server is shutdown successfully", "pid", os.Getpid())
+	}
+
+	return nil
+}
+
+func registerMiddlewares() error {
+	err := gateway.RegisterMiddleware("find_upstream", func(param map[string]any) (app.HandlerFunc, error) {
+		m := FindMyHome{}
+		return m.ServeHTTP, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"http-benchmark/pkg/provider"
 	"http-benchmark/pkg/provider/file"
 
 	"gopkg.in/yaml.v3"
@@ -10,7 +11,8 @@ import (
 type ChangeFunc func() error
 
 var (
-	OnChanged ChangeFunc
+	OnChanged       provider.ChangeFunc
+	dynamicProvider provider.Provider
 )
 
 func Load(path string) (Options, error) {
@@ -33,34 +35,58 @@ func Load(path string) (Options, error) {
 		return mainOpts, err
 	}
 
+	dynamicProvider, mainOpts, err = LoadDynamic(mainOpts)
+	if err != nil {
+		return mainOpts, err
+	}
+
+	return mainOpts, nil
+}
+
+func LoadDynamic(mainOpts Options) (provider.Provider, Options, error) {
+
+	mainOpts.Routes = nil
+	mainOpts.Services = nil
+	mainOpts.Middlewares = nil
+	mainOpts.Upstreams = nil
+
 	// use file provider if enabled
 	if mainOpts.Providers.File.Enabled && len(mainOpts.Providers.File.Paths) > 0 {
 		fileProviderOpts := file.Options{
 			Paths: []string{},
 		}
-		fileProvider = file.NewProvider(fileProviderOpts)
+		fileProvider := file.NewProvider(fileProviderOpts)
 
 		for _, content := range mainOpts.Providers.File.Paths {
 			fileProvider.Add(content)
 		}
 
-		cInfo, err = fileProvider.Open()
+		cInfo, err := fileProvider.Open()
 		if err != nil {
-			return mainOpts, err
+			return nil, mainOpts, err
 		}
 
 		for _, c := range cInfo {
 			mainOpts, err = mergeOptions(mainOpts, c.Content)
 			if err != nil {
 				errMsg := fmt.Sprintf("path: %s, error: %s", c.Path, err.Error())
-				return mainOpts, fmt.Errorf(errMsg)
+				return nil, mainOpts, fmt.Errorf(errMsg)
 			}
 		}
 
-		return mainOpts, nil
+		return fileProvider, mainOpts, nil
 	}
 
-	return mainOpts, fmt.Errorf("no provider found")
+	return nil, mainOpts, fmt.Errorf("no provider found")
+}
+
+func Watch() error {
+	if dynamicProvider != nil {
+		dynamicProvider.SetOnChanged(OnChanged)
+		return dynamicProvider.Watch()
+	}
+
+	return nil
 }
 
 func parseContent(content string) (Options, error) {

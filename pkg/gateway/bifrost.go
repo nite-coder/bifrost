@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"context"
 	"fmt"
 	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
@@ -28,6 +29,7 @@ func (b *Bifrost) Run() {
 		if i == len(b.HttpServers)-1 {
 			// last server need to blocked
 			server.Run()
+			return
 		}
 		go server.Run()
 		i++
@@ -42,9 +44,14 @@ func (b *Bifrost) Stop() {
 	b.stopCh <- true
 }
 
-func (b *Bifrost) Shutdown() {
+func (b *Bifrost) Shutdown(ctx context.Context) error {
 	b.Stop()
 
+	for _, server := range b.HttpServers {
+		server.Shutdown(ctx)
+	}
+
+	return b.zero.Close(ctx)
 }
 
 func Load(opts config.Options, isReload bool) (*Bifrost, error) {

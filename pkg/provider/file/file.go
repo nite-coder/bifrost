@@ -1,6 +1,7 @@
 package file
 
 import (
+	"http-benchmark/pkg/provider"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -8,8 +9,6 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 )
-
-type ChangeFunc func() error
 
 type ContentInfo struct {
 	Content string
@@ -25,7 +24,7 @@ type Options struct {
 type FileProvider struct {
 	options   Options
 	watcher   *fsnotify.Watcher
-	OnChanged ChangeFunc
+	OnChanged provider.ChangeFunc
 }
 
 func NewProvider(opts Options) *FileProvider {
@@ -70,6 +69,10 @@ func (p *FileProvider) Open() ([]*ContentInfo, error) {
 	}
 
 	return contents, nil
+}
+
+func (p *FileProvider) SetOnChanged(changeFunc provider.ChangeFunc) {
+	p.OnChanged = changeFunc
 }
 
 func (p *FileProvider) Watch() error {

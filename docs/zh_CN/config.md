@@ -76,7 +76,7 @@ routes:
     methods: []
     paths:
       - /spot/orders
-    entries: ["extenal"]
+    servers: ["extenal"]
     service_id: spot-orders
     middlewares:
       - type: add_prefix
