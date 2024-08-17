@@ -184,25 +184,61 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 
 func (u *Upstream) roundRobin() *proxy.Proxy {
 	if len(u.proxies) == 1 {
-		return u.proxies[0]
+		proxy := u.proxies[0]
+		if proxy.IsAvailable() {
+			return proxy
+		}
+		return nil
 	}
 
+	failedReconds := map[string]bool{}
+
+findLoop:
 	index := u.counter.Add(1)
 	proxy := u.proxies[(int(index)-1)%len(u.proxies)]
-	return proxy
+
+	if proxy.IsAvailable() {
+		return proxy
+	}
+
+	// no live upstream
+	if len(failedReconds) == len(u.proxies) {
+		return nil
+	}
+
+	failedReconds[proxy.ID()] = true
+	goto findLoop
 }
 
 func (u *Upstream) weighted() *proxy.Proxy {
 	if len(u.proxies) == 1 {
-		return u.proxies[0]
+		proxy := u.proxies[0]
+		if proxy.IsAvailable() {
+			return proxy
+		}
+		return nil
 	}
 
+	failedReconds := map[string]bool{}
+
+findLoop:
 	randomWeight := u.rng.Intn(u.totalWeight)
 
 	for _, proxy := range u.proxies {
 		randomWeight -= proxy.Weight()
 		if randomWeight < 0 {
-			return proxy
+
+			if proxy.IsAvailable() {
+				return proxy
+			}
+
+			// no live upstream
+			if len(failedReconds) == len(u.proxies) {
+				return nil
+			}
+
+			failedReconds[proxy.ID()] = true
+			goto findLoop
 		}
 	}
 
@@ -211,23 +247,83 @@ func (u *Upstream) weighted() *proxy.Proxy {
 
 func (u *Upstream) random() *proxy.Proxy {
 	if len(u.proxies) == 1 {
-		return u.proxies[0]
+		proxy := u.proxies[0]
+		if proxy.IsAvailable() {
+			return proxy
+		}
+		return nil
 	}
 
+	failedReconds := map[string]bool{}
+
+findLoop:
 	selectedIndex := u.rng.Intn(len(u.proxies))
-	return u.proxies[selectedIndex]
+	proxy := u.proxies[selectedIndex]
+
+	if proxy.IsAvailable() {
+		return proxy
+	}
+
+	// no live upstream
+	if len(failedReconds) == len(u.proxies) {
+		return nil
+	}
+
+	failedReconds[proxy.ID()] = true
+	goto findLoop
 }
 
 func (u *Upstream) hasing(key string) *proxy.Proxy {
 	if len(u.proxies) == 1 {
-		return u.proxies[0]
+		proxy := u.proxies[0]
+		if proxy.IsAvailable() {
+			return proxy
+		}
+		return nil
 	}
 
 	u.hasher.Write([]byte(key))
 	hashValue := u.hasher.Sum32()
 
-	selectedIndex := int(hashValue) % len(u.proxies)
-	return u.proxies[selectedIndex]
+	failedReconds := map[string]bool{}
+
+findLoop:
+	var allProxies []*proxy.Proxy
+
+	if len(failedReconds) > 0 {
+		allProxies = make([]*proxy.Proxy, len(u.proxies))
+		copy(allProxies, u.proxies)
+
+		for failedProxyID := range failedReconds {
+			for idx, proxy := range allProxies {
+				if proxy.ID() == failedProxyID {
+					allProxies = append(allProxies[:idx], allProxies[idx+1:]...)
+					break
+				}
+			}
+		}
+	} else {
+		allProxies = u.proxies
+	}
+
+	if len(allProxies) == 0 {
+		return nil
+	}
+
+	selectedIndex := int(hashValue) % len(allProxies)
+	proxy := allProxies[selectedIndex]
+
+	if proxy.IsAvailable() {
+		return proxy
+	}
+
+	// no live upstream
+	if len(failedReconds) == len(u.proxies) {
+		return nil
+	}
+
+	failedReconds[proxy.ID()] = true
+	goto findLoop
 }
 
 func allowDNS(address string) bool {

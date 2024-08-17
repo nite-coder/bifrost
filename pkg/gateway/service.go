@@ -237,8 +237,16 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		}
 
 		if proxy == nil {
-			logger.ErrorContext(c, "no proxy found")
-			ctx.Abort()
+			reqMethod := cast.B2S(ctx.Request.Method())
+			reqPath := ctx.Request.Path()
+			reqProtocol := ctx.Request.Header.GetProtocol()
+
+			logger.ErrorContext(c, ErrNoLiveUpstream.Error(),
+				"request_uri", fmt.Sprintf("%s %s %s", reqMethod, reqPath, reqProtocol),
+				"upstream_uri", reqPath,
+				"host", cast.B2S(ctx.Request.Host()))
+
+			ctx.SetStatusCode(502)
 			return
 		}
 
@@ -255,6 +263,11 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			ctx.Response.SetStatusCode(504)
 		} else {
 			ctx.Set(config.UPSTREAM_STATUS, ctx.Response.StatusCode())
+		}
+
+		// check upstream health
+		if ctx.Response.StatusCode() >= 500 {
+			proxy.AddFailedCount(1)
 		}
 	})
 
@@ -274,6 +287,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			slog.String("full_uri", fullURI),
 		)
 
+		// The client canceled the request
 		ctx.Response.SetStatusCode(499)
 	case <-done:
 	}

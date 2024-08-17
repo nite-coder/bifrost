@@ -12,12 +12,15 @@ import (
 	"net/textproto"
 	"net/url"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	hzerrors "github.com/cloudwego/hertz/pkg/common/errors"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/google/uuid"
 
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
@@ -39,6 +42,8 @@ import (
 const TrailerPrefix = "Trailer:"
 
 type Proxy struct {
+	mu      sync.RWMutex
+	id      string
 	options *Options
 
 	client *client.Client
@@ -65,13 +70,17 @@ type Proxy struct {
 
 	targetHost string
 
-	weight int
+	weight       int
+	failedCount  uint
+	failExpireAt time.Time
 }
 
 type Options struct {
-	Target   string
-	Protocol config.Protocol
-	Weight   int
+	Target      string
+	Protocol    config.Protocol
+	Weight      int
+	MaxFails    uint
+	FailTimeout time.Duration
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -110,6 +119,7 @@ func NewReverseProxy(opts Options, client *client.Client) (*Proxy, error) {
 	}
 
 	r := &Proxy{
+		id:              uuid.New().String(),
 		transferTrailer: true,
 		options:         &opts,
 		target:          opts.Target,
@@ -140,48 +150,37 @@ func NewReverseProxy(opts Options, client *client.Client) (*Proxy, error) {
 	return r, nil
 }
 
-// removeRequestConnHeaders removes hop-by-hop headers listed in the "Connection" header of h.
-// See RFC 7230, section 6.1
-func removeRequestConnHeaders(c *app.RequestContext) {
-	c.Request.Header.VisitAll(func(k, v []byte) {
-		if cast.B2S(k) == "Connection" {
-			for _, sf := range strings.Split(cast.B2S(v), ",") {
-				if sf = textproto.TrimString(sf); sf != "" {
-					c.Request.Header.DelBytes(cast.S2B(sf))
-				}
-			}
-		}
-	})
-}
+func (p *Proxy) IsAvailable() bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 
-// removeRespConnHeaders removes hop-by-hop headers listed in the "Connection" header of h.
-// See RFC 7230, section 6.1
-func removeResponseConnHeaders(c *app.RequestContext) {
-	c.Response.Header.VisitAll(func(k, v []byte) {
-		if cast.B2S(k) == "Connection" {
-			for _, sf := range strings.Split(cast.B2S(v), ",") {
-				if sf = textproto.TrimString(sf); sf != "" {
-					c.Response.Header.DelBytes(cast.S2B(sf))
-				}
-			}
-		}
-	})
-}
-
-// checkTeHeader check RequestHeader if has 'Te: trailers'
-// See https://github.com/golang/go/issues/21096
-func checkTeHeader(header *protocol.RequestHeader) bool {
-	teHeaders := header.PeekAll("Te")
-	for _, te := range teHeaders {
-		if bytes.Contains(te, []byte("trailers")) {
-			return true
-		}
+	if p.options.MaxFails == 0 {
+		return true
 	}
+
+	now := time.Now()
+	if now.After(p.failExpireAt) {
+		return true
+	}
+
+	if p.failedCount <= p.options.MaxFails {
+		return true
+	}
+
 	return false
 }
 
-func (r *Proxy) defaultErrorHandler(c *app.RequestContext, _ error) {
-	c.Response.Header.SetStatusCode(consts.StatusBadGateway)
+func (p *Proxy) AddFailedCount(count uint) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	now := time.Now()
+	if now.After(p.failExpireAt) {
+		p.failExpireAt = now.Add(p.options.FailTimeout)
+		p.failedCount = count
+	} else {
+		p.failedCount = p.failedCount + count
+	}
 }
 
 func (p *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
@@ -324,19 +323,24 @@ ProxyPassLoop:
 
 }
 
+// ID return proxy's ID
+func (p *Proxy) ID() string {
+	return p.id
+}
+
 // SetDirector use to customize protocol.Request
-func (r *Proxy) SetDirector(director func(req *protocol.Request)) {
-	r.director = director
+func (p *Proxy) SetDirector(director func(req *protocol.Request)) {
+	p.director = director
 }
 
 // SetClient use to customize client
-func (r *Proxy) SetClient(client *client.Client) {
-	r.client = client
+func (p *Proxy) SetClient(client *client.Client) {
+	p.client = client
 }
 
 // SetErrorHandler use to customize error handler
-func (r *Proxy) SetErrorHandler(eh func(c *app.RequestContext, err error)) {
-	r.errorHandler = eh
+func (p *Proxy) SetErrorHandler(eh func(c *app.RequestContext, err error)) {
+	p.errorHandler = eh
 }
 
 func (r *Proxy) SetTransferTrailer(b bool) {
@@ -351,9 +355,53 @@ func (p *Proxy) Target() string {
 	return p.target
 }
 
+func (r *Proxy) defaultErrorHandler(c *app.RequestContext, _ error) {
+	c.Response.Header.SetStatusCode(consts.StatusBadGateway)
+}
+
 func (r *Proxy) getErrorHandler() func(c *app.RequestContext, err error) {
 	if r.errorHandler != nil {
 		return r.errorHandler
 	}
 	return r.defaultErrorHandler
+}
+
+// removeRequestConnHeaders removes hop-by-hop headers listed in the "Connection" header of h.
+// See RFC 7230, section 6.1
+func removeRequestConnHeaders(c *app.RequestContext) {
+	c.Request.Header.VisitAll(func(k, v []byte) {
+		if cast.B2S(k) == "Connection" {
+			for _, sf := range strings.Split(cast.B2S(v), ",") {
+				if sf = textproto.TrimString(sf); sf != "" {
+					c.Request.Header.DelBytes(cast.S2B(sf))
+				}
+			}
+		}
+	})
+}
+
+// removeRespConnHeaders removes hop-by-hop headers listed in the "Connection" header of h.
+// See RFC 7230, section 6.1
+func removeResponseConnHeaders(c *app.RequestContext) {
+	c.Response.Header.VisitAll(func(k, v []byte) {
+		if cast.B2S(k) == "Connection" {
+			for _, sf := range strings.Split(cast.B2S(v), ",") {
+				if sf = textproto.TrimString(sf); sf != "" {
+					c.Response.Header.DelBytes(cast.S2B(sf))
+				}
+			}
+		}
+	})
+}
+
+// checkTeHeader check RequestHeader if has 'Te: trailers'
+// See https://github.com/golang/go/issues/21096
+func checkTeHeader(header *protocol.RequestHeader) bool {
+	teHeaders := header.PeekAll("Te")
+	for _, te := range teHeaders {
+		if bytes.Contains(te, []byte("trailers")) {
+			return true
+		}
+	}
+	return false
 }
