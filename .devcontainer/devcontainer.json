@@ -8,7 +8,7 @@
 			// Update the VARIANT arg to pick a version of Go: 1, 1.19, 1.18
 			// Append -bullseye or -buster to pin to an OS version.
 			// Use -bullseye variants on local arm64/Apple Silicon.
-			"VARIANT": "1.22-bullseye",
+			"VARIANT": "1.22-bookworm",
 			// Options
 			"NODE_VERSION": "none"
 		}
@@ -95,6 +95,14 @@
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode",
 	"features": {
-		"docker-from-docker": "20.10"
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+			"moby": true,
+			"installDockerBuildx": true,
+			"version": "latest",
+			"dockerDashComposeVersion": "v2"
+		}
+		// "ghcr.io/devcontainers/features/node:1": {
+		// 	"version": "latest"
+		// }
 	}
 }

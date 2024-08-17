@@ -9,7 +9,7 @@ export const options = {
             timeUnit: '1s',
             duration: '10s',
             preAllocatedVUs: 500,
-            maxVUs: 700,
+            maxVUs: 500,
         },
     },
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(75)', 'p(95)', 'p(99)', 'count'],

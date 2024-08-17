@@ -99,6 +99,9 @@ func (t *Tracer) Start(ctx context.Context, c *app.RequestContext) context.Conte
 
 func (t *Tracer) Finish(ctx context.Context, c *app.RequestContext) {
 	result := t.buildReplacer(c)
+	if result == nil {
+		return
+	}
 
 	select {
 	case t.logChan <- result:
@@ -115,6 +118,13 @@ func (t *Tracer) Shutdown() {
 }
 
 func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
+	// TODO: there is a weird request without any information...
+	// therefore, we try to get trace info to ensure the request is real
+	httpStart := c.GetTraceInfo().Stats().GetEvent(stats.HTTPStart)
+	if httpStart == nil {
+		return nil
+	}
+
 	replacements := make([]string, 0, len(t.matchVars)*2)
 
 	info := c.GetTraceInfo().Stats()
@@ -122,11 +132,6 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 	for _, matchVal := range t.matchVars {
 		switch matchVal {
 		case config.TIME:
-			httpStart := c.GetTraceInfo().Stats().GetEvent(stats.HTTPStart)
-			if httpStart == nil {
-				continue
-			}
-
 			startTime := httpStart.Time()
 			replacements = append(replacements, config.TIME, startTime.Format(t.opts.TimeFormat))
 		case config.REMOTE_ADDR:
@@ -213,11 +218,6 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 		case config.UPSTREAM_DURATION:
 			replacements = append(replacements, config.UPSTREAM_DURATION, c.GetString(config.UPSTREAM_DURATION))
 		case config.DURATION:
-			httpStart := c.GetTraceInfo().Stats().GetEvent(stats.HTTPStart)
-			if httpStart == nil {
-				continue
-			}
-
 			val, found := c.Get(config.CLIENT_CANCELED_AT)
 
 			if found {
