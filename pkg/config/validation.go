@@ -52,9 +52,7 @@ func Validate(mainOpts Options) error {
 		}
 
 		switch opts.Strategy {
-		case WeightedStrategy, RandomStrategy, HashingStrategy, RoundRobinStrategy:
-		case "":
-			return fmt.Errorf("upstream '%s' strategy field can't be empty", upstreamID)
+		case WeightedStrategy, RandomStrategy, HashingStrategy, RoundRobinStrategy, "":
 		default:
 			return fmt.Errorf("upstream '%s' strategy field '%s' is invalid", upstreamID, opts.Strategy)
 		}

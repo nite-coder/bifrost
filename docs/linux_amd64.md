@@ -4,6 +4,7 @@ CPU: AMD Ryzen7 4750U
 Ram: 16GB
 OS: Debian 11 (container)
 Date: 2024-08-11
+Golang: 1.22.6
 
 client:
 
@@ -24,20 +25,20 @@ taskset -c 0,1,2,3,4,5,6,7 k6 run vus.js
               * contacts: 500 looping VUs for 2m0s (gracefulStop: 30s)
 
 
-     data_received..................: 2.9 GB  24 MB/s
-     data_sent......................: 1.1 GB  9.0 MB/s
-     http_req_blocked...............: avg=14.5µs   min=0s         med=2.42µs  max=127.79ms p(75)=3µs     p(95)=4.96µs   p(99)=7.97µs   count=3269372
-     http_req_connecting............: avg=8.42µs   min=0s         med=0s      max=116.98ms p(75)=0s      p(95)=0s       p(99)=0s       count=3269372
-     http_req_duration..............: avg=16.88ms  min=251.88µs   med=14.21ms max=169.28ms p(75)=20.26ms p(95)=37.48ms  p(99)=66.34ms  count=3269372
-       { expected_response:true }...: avg=16.88ms  min=251.88µs   med=14.21ms max=169.28ms p(75)=20.26ms p(95)=37.48ms  p(99)=66.34ms  count=3269372
-     http_req_failed................: 0.00%   ✓ 0            ✗ 3269372
-     http_req_receiving.............: avg=550.12µs min=-1918006ns med=33.38µs max=140.78ms p(75)=37.22µs p(95)=210.84µs p(99)=19.79ms  count=3269372
-     http_req_sending...............: avg=58.1µs   min=-1932243ns med=17.3µs  max=123.74ms p(75)=19.42µs p(95)=32.85µs  p(99)=204.66µs count=3269372
-     http_req_tls_handshaking.......: avg=0s       min=0s         med=0s      max=0s       p(75)=0s      p(95)=0s       p(99)=0s       count=3269372
-     http_req_waiting...............: avg=16.27ms  min=206.34µs   med=14.11ms max=117.86ms p(75)=20.09ms p(95)=36.05ms  p(99)=51.36ms  count=3269372
-     http_reqs......................: 3269372 27245.545656/s
-     iteration_duration.............: avg=18.16ms  min=396.29µs   med=15ms    max=232.11ms p(75)=21.48ms p(95)=41.47ms  p(99)=73.41ms  count=3269372
-     iterations.....................: 3269372 27245.545656/s
+     data_received..................: 3.0 GB  25 MB/s
+     data_sent......................: 1.1 GB  9.2 MB/s
+     http_req_blocked...............: avg=13.95µs  min=591ns      med=2.29µs  max=157.27ms p(75)=2.9µs   p(95)=4.92µs   p(99)=8.23µs  count=3326242
+     http_req_connecting............: avg=8.45µs   min=0s         med=0s      max=154.42ms p(75)=0s      p(95)=0s       p(99)=0s      count=3326242
+     http_req_duration..............: avg=16.61ms  min=189.3µs    med=13.98ms max=200.28ms p(75)=20.01ms p(95)=37.47ms  p(99)=63.7ms  count=3326242
+       { expected_response:true }...: avg=16.61ms  min=189.3µs    med=13.98ms max=200.28ms p(75)=20.01ms p(95)=37.47ms  p(99)=63.7ms  count=3326242
+     http_req_failed................: 0.00%   ✓ 0            ✗ 3326242
+     http_req_receiving.............: avg=510.36µs min=-1721213ns med=31.2µs  max=111.88ms p(75)=35.29µs p(95)=203.72µs p(99)=18.31ms count=3326242
+     http_req_sending...............: avg=54.3µs   min=-1586309ns med=16.68µs max=124.27ms p(75)=18.74µs p(95)=35.05µs  p(99)=194.3µs count=3326242
+     http_req_tls_handshaking.......: avg=0s       min=0s         med=0s      max=0s       p(75)=0s      p(95)=0s       p(99)=0s      count=3326242
+     http_req_waiting...............: avg=16.05ms  min=150.77µs   med=13.88ms max=134.12ms p(75)=19.85ms p(95)=35.62ms  p(99)=51.31ms count=3326242
+     http_reqs......................: 3326242 27718.416082/s
+     iteration_duration.............: avg=17.84ms  min=283.17µs   med=14.73ms max=250.57ms p(75)=21.17ms p(95)=41.23ms  p(99)=70.99ms count=3326242
+     iterations.....................: 3326242 27718.416082/s
      vus............................: 500     min=500        max=500  
      vus_max........................: 500     min=500        max=500  
 ```

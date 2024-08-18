@@ -6,6 +6,7 @@ import (
 	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"http-benchmark/pkg/tracer/accesslog"
+	"http-benchmark/pkg/tracer/opentelemetry"
 	"http-benchmark/pkg/tracer/prometheus"
 	"http-benchmark/pkg/zero"
 	"log/slog"
@@ -98,7 +99,7 @@ func Load(opts config.Options, isReload bool) (*Bifrost, error) {
 
 	tracers := []tracer.Tracer{}
 
-	// prometheus tracer
+	// prometheus
 	if opts.Metrics.Prometheus.Enabled && !isReload {
 		promOpts := []prometheus.Option{}
 
@@ -128,6 +129,15 @@ func Load(opts config.Options, isReload bool) (*Bifrost, error) {
 				accessLogTracers[id] = accessLogTracer
 			}
 		}
+	}
+
+	if opts.Tracing.Enabled {
+		// otel tracing
+		t, err := opentelemetry.NewTracer(opts.Tracing)
+		if err != nil {
+			return nil, err
+		}
+		tracers = append(tracers, t)
 	}
 
 	for id, server := range opts.Servers {

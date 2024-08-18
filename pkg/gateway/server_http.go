@@ -108,7 +108,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 	hlog.SetLogger(logger)
 	hlog.SetSilentMode(true)
 
-	hzOpts = append(hzOpts, engine.options...)
+	hzOpts = append(hzOpts, engine.hzOptions...)
 
 	for _, tracer := range tracers {
 		hzOpts = append(hzOpts, server.WithTracer(tracer))

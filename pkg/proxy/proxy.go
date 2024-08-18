@@ -21,7 +21,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/google/uuid"
-
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
 )
@@ -276,6 +275,13 @@ func (p *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		}
 		return
 	}
+
+	// tracer := otel.Tracer("bifrost")
+	// var span trace.Span
+	// if tracer != nil {
+	// 	c, span = tracer.Start(c, "upstream")
+	// 	defer span.End()
+	// }
 
 ProxyPassLoop:
 	err = p.client.Do(c, outReq, outResp)

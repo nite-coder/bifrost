@@ -183,7 +183,7 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 
 	_ = zeroDT.Close(ctx)
 
-	slog.Info("server is shutdown successfully", "pid", os.Getpid())
+	slog.Info("all servers are shutdown successfully", "pid", os.Getpid())
 	return nil
 }
 

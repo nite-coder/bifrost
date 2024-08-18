@@ -8,18 +8,16 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
-	"github.com/hertz-contrib/obs-opentelemetry/provider"
-	"github.com/hertz-contrib/obs-opentelemetry/tracing"
 )
 
 type Engine struct {
 	ID              string
-	opts            config.Options
+	bibfrost        *Bifrost
 	handlers        app.HandlersChain
 	middlewares     app.HandlersChain
 	notFoundHandler app.HandlerFunc
 
-	options []hzconfig.Option
+	hzOptions []hzconfig.Option
 }
 
 func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, error) {
@@ -44,24 +42,10 @@ func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, erro
 
 	// engine
 	engine := &Engine{
-		opts:            *bifrost.options,
+		bibfrost:        bifrost,
 		handlers:        make([]app.HandlerFunc, 0),
 		notFoundHandler: nil,
-		options:         make([]hzconfig.Option, 0),
-	}
-
-	// tracing
-	if bifrost.options.Tracing.Enabled {
-
-		provider.NewOpenTelemetryProvider(
-			provider.WithEnableMetrics(false),
-			provider.WithServiceName("bifrost"),
-		)
-
-		tracer, cfg := tracing.NewServerTracer()
-		engine.options = append(engine.options, tracer)
-		tracingServerMiddleware := tracing.ServerMiddleware(cfg)
-		engine.Use(tracingServerMiddleware)
+		hzOptions:       make([]hzconfig.Option, 0),
 	}
 
 	// init middlewares

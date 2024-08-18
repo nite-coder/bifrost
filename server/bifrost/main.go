@@ -271,7 +271,7 @@ func shutdown(ctx context.Context) error {
 			return err
 		}
 
-		slog.Info("server is shutdown successfully", "pid", os.Getpid())
+		slog.Info("all server are shutdown successfully", "pid", os.Getpid())
 	}
 
 	return nil

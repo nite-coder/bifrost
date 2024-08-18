@@ -12,6 +12,7 @@ import (
 	"http-benchmark/pkg/middleware/replacepathregex"
 	"http-benchmark/pkg/middleware/stripprefix"
 	"http-benchmark/pkg/middleware/timinglogger"
+	"http-benchmark/pkg/middleware/tracing"
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -193,6 +194,11 @@ func init() {
 
 	_ = RegisterMiddleware("timing_logger", func(param map[string]any) (app.HandlerFunc, error) {
 		m := timinglogger.NewMiddleware()
+		return m.ServeHTTP, nil
+	})
+
+	_ = RegisterMiddleware("tracing", func(param map[string]any) (app.HandlerFunc, error) {
+		m := tracing.NewMiddleware()
 		return m.ServeHTTP, nil
 	})
 

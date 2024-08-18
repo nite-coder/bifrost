@@ -55,10 +55,12 @@ type OTLPOptions struct {
 
 type OTLPHTTPOptions struct {
 	Endpoint string `yaml:"endpoint" json:"endpoint"`
+	Insecure bool   `yaml:"insecure" json:"insecure"`
 }
 
 type OTLPGRPCOptions struct {
 	Endpoint string `yaml:"endpoint" json:"endpoint"`
+	Insecure bool   `yaml:"insecure" json:"insecure"`
 }
 
 type ServerOptions struct {
