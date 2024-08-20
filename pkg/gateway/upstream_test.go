@@ -21,7 +21,8 @@ func TestRoundRobin(t *testing.T) {
 		MaxFails:    1,
 	}
 	proxy1, _ := proxy.NewReverseProxy(proxyOptions1, nil)
-	proxy1.AddFailedCount(2)
+	err := proxy1.AddFailedCount(1)
+	assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
 	time.Sleep(1 * time.Second) // wait and proxy1 should be availabe
 
 	proxyOptions2 := proxy.Options{
@@ -61,8 +62,10 @@ func TestRoundRobin(t *testing.T) {
 	})
 
 	t.Run("one proxy failed", func(t *testing.T) {
-		proxy2.AddFailedCount(100)  // proxy 2 is failed
-		proxy3.AddFailedCount(1000) // proxy should be available because it turns off max_fail check
+		err = proxy2.AddFailedCount(1) // proxy 2 is failed
+		assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
+		err = proxy3.AddFailedCount(1000) // proxy should be available because it turns off max_fail check
+		assert.NoError(t, err)
 
 		expected := []string{"http://backend1", "http://backend3"}
 		for _, e := range expected {
@@ -73,8 +76,11 @@ func TestRoundRobin(t *testing.T) {
 	})
 
 	t.Run("no live upstream", func(t *testing.T) {
-		proxy1.AddFailedCount(100)
-		proxy2.AddFailedCount(100)
+		err = proxy1.AddFailedCount(100)
+		assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
+		err = proxy2.AddFailedCount(100)
+		assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
+
 		proxyOptions3 := proxy.Options{
 			Target:      "http://backend3",
 			Protocol:    config.ProtocolHTTP,
@@ -83,7 +89,8 @@ func TestRoundRobin(t *testing.T) {
 			MaxFails:    1,
 		}
 		proxy3, _ := proxy.NewReverseProxy(proxyOptions3, nil)
-		proxy3.AddFailedCount(100)
+		err = proxy3.AddFailedCount(100)
+		assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
 
 		upstream.proxies = []*proxy.Proxy{proxy1, proxy2, proxy3}
 
@@ -147,7 +154,7 @@ func TestWeighted(t *testing.T) {
 	})
 
 	t.Run("one proxy failed", func(t *testing.T) {
-		proxy1.AddFailedCount(100)
+		_ = proxy1.AddFailedCount(100)
 
 		hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
 		for i := 0; i < 6000; i++ {
@@ -162,9 +169,9 @@ func TestWeighted(t *testing.T) {
 	})
 
 	t.Run("no live upstream", func(t *testing.T) {
-		proxy1.AddFailedCount(1000)
-		proxy2.AddFailedCount(1000)
-		proxy3.AddFailedCount(1000)
+		_ = proxy1.AddFailedCount(1000)
+		_ = proxy2.AddFailedCount(1000)
+		_ = proxy3.AddFailedCount(1000)
 
 		for i := 0; i < 6000; i++ {
 			proxy := upstream.weighted()
@@ -226,8 +233,8 @@ func TestRandom(t *testing.T) {
 	})
 
 	t.Run("two proxy failed", func(t *testing.T) {
-		proxy1.AddFailedCount(100)
-		proxy2.AddFailedCount(100)
+		_ = proxy1.AddFailedCount(100)
+		_ = proxy2.AddFailedCount(100)
 
 		hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
 		for i := 0; i < 10000; i++ {
@@ -243,9 +250,9 @@ func TestRandom(t *testing.T) {
 	})
 
 	t.Run("no live upstream", func(t *testing.T) {
-		proxy1.AddFailedCount(100)
-		proxy2.AddFailedCount(100)
-		proxy3.AddFailedCount(100)
+		_ = proxy1.AddFailedCount(100)
+		_ = proxy2.AddFailedCount(100)
+		_ = proxy3.AddFailedCount(100)
 
 		for i := 0; i < 10000; i++ {
 			proxy := upstream.random()
@@ -308,8 +315,8 @@ func TestHashing(t *testing.T) {
 	})
 
 	t.Run("two proxies failed", func(t *testing.T) {
-		proxy1.AddFailedCount(100)
-		proxy2.AddFailedCount(100)
+		_ = proxy1.AddFailedCount(100)
+		_ = proxy2.AddFailedCount(100)
 
 		keys := []string{"key1", "key2", "key3"}
 
@@ -321,9 +328,9 @@ func TestHashing(t *testing.T) {
 	})
 
 	t.Run("no live upstream", func(t *testing.T) {
-		proxy1.AddFailedCount(100)
-		proxy2.AddFailedCount(100)
-		proxy3.AddFailedCount(100)
+		_ = proxy1.AddFailedCount(100)
+		_ = proxy2.AddFailedCount(100)
+		_ = proxy3.AddFailedCount(100)
 
 		keys := []string{"key1", "key2", "key3"}
 

@@ -69,13 +69,6 @@ func main() {
 		},
 		Action: func(cCtx *cli.Context) error {
 			ctx := context.Background()
-
-			defer func() {
-				ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-				defer cancel()
-				_ = shutdown(ctx)
-			}()
-
 			var err error
 			_ = gateway.DisableGopool()
 
@@ -161,6 +154,11 @@ func main() {
 				return err
 			}
 
+			// shutdown bifrost
+			defer func() {
+				_ = shutdown(ctx)
+			}()
+
 			config.OnChanged = func() error {
 				slog.Debug("reloading...")
 
@@ -227,7 +225,7 @@ func main() {
 					}
 				}
 
-				slog.Info("all servers are started successfully", "pid", os.Getpid())
+				slog.Info("bifrost started successfully", "pid", os.Getpid())
 
 				zeroDT := bifrost.ZeroDownTime()
 
@@ -270,10 +268,9 @@ func shutdown(ctx context.Context) error {
 			slog.ErrorContext(ctx, "failed to shutdown server", "error", err)
 			return err
 		}
-
-		slog.Info("all server are shutdown successfully", "pid", os.Getpid())
 	}
 
+	slog.Info("bifrost is shutdown successfully", "pid", os.Getpid())
 	return nil
 }
 

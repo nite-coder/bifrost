@@ -69,7 +69,7 @@ type Proxy struct {
 
 	targetHost string
 
-	weight       int
+	weight       uint
 	failedCount  uint
 	failExpireAt time.Time
 }
@@ -77,7 +77,7 @@ type Proxy struct {
 type Options struct {
 	Target      string
 	Protocol    config.Protocol
-	Weight      int
+	Weight      uint
 	MaxFails    uint
 	FailTimeout time.Duration
 }
@@ -162,14 +162,14 @@ func (p *Proxy) IsAvailable() bool {
 		return true
 	}
 
-	if p.failedCount <= p.options.MaxFails {
+	if p.failedCount < p.options.MaxFails {
 		return true
 	}
 
 	return false
 }
 
-func (p *Proxy) AddFailedCount(count uint) {
+func (p *Proxy) AddFailedCount(count uint) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -180,6 +180,12 @@ func (p *Proxy) AddFailedCount(count uint) {
 	} else {
 		p.failedCount = p.failedCount + count
 	}
+
+	if p.options.MaxFails > 0 && p.failedCount >= p.options.MaxFails {
+		return ErrMaxFailedCount
+	}
+
+	return nil
 }
 
 func (p *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
@@ -353,7 +359,7 @@ func (r *Proxy) SetTransferTrailer(b bool) {
 	r.transferTrailer = b
 }
 
-func (p *Proxy) Weight() int {
+func (p *Proxy) Weight() uint {
 	return p.weight
 }
 

@@ -10,6 +10,7 @@ import (
 	"http-benchmark/pkg/tracer/prometheus"
 	"http-benchmark/pkg/zero"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/common/tracer"
@@ -48,10 +49,17 @@ func (b *Bifrost) Stop() {
 func (b *Bifrost) Shutdown(ctx context.Context) error {
 	b.Stop()
 
+	var wg sync.WaitGroup
+
 	for _, server := range b.HttpServers {
-		server.Shutdown(ctx)
+		wg.Add(1)
+		go func(srv *HTTPServer) {
+			_ = srv.Shutdown(ctx)
+			wg.Done()
+		}(server)
 	}
 
+	wg.Wait()
 	return b.zero.Close(ctx)
 }
 

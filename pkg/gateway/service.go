@@ -246,7 +246,8 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 				"upstream_uri", reqPath,
 				"host", cast.B2S(ctx.Request.Host()))
 
-			ctx.SetStatusCode(502)
+			// no live upstream
+			ctx.SetStatusCode(503)
 			return
 		}
 
@@ -267,7 +268,10 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 		// check upstream health
 		if ctx.Response.StatusCode() >= 500 {
-			proxy.AddFailedCount(1)
+			err := proxy.AddFailedCount(1)
+			if err != nil {
+				slog.WarnContext(c, "upstream server temporarily disabled")
+			}
 		}
 	})
 

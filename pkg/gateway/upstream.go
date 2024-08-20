@@ -23,7 +23,7 @@ type Upstream struct {
 	opts        *config.UpstreamOptions
 	proxies     []*proxy.Proxy
 	counter     atomic.Uint64
-	totalWeight int
+	totalWeight uint
 	hasher      hash.Hash32
 	rng         *rand.Rand
 }
@@ -150,9 +150,11 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 		}
 
 		proxyOptions := proxy.Options{
-			Target:   url,
-			Protocol: serviceOpts.Protocol,
-			Weight:   targetOpts.Weight,
+			Target:      url,
+			Protocol:    serviceOpts.Protocol,
+			Weight:      targetOpts.Weight,
+			MaxFails:    targetOpts.MaxFails,
+			FailTimeout: targetOpts.FailTimeout,
 		}
 
 		proxy, err := proxy.NewReverseProxy(proxyOptions, client)
@@ -222,10 +224,10 @@ func (u *Upstream) weighted() *proxy.Proxy {
 	failedReconds := map[string]bool{}
 
 findLoop:
-	randomWeight := u.rng.Intn(u.totalWeight)
+	randomWeight := u.rng.Intn(int(u.totalWeight))
 
 	for _, proxy := range u.proxies {
-		randomWeight -= proxy.Weight()
+		randomWeight -= int(proxy.Weight())
 		if randomWeight < 0 {
 
 			if proxy.IsAvailable() {
