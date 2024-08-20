@@ -235,6 +235,9 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			replacements = append(replacements, config.RECEIVED_SIZE, strconv.Itoa(info.RecvSize()))
 		case config.SEND_SIZE:
 			replacements = append(replacements, config.SEND_SIZE, strconv.Itoa(info.SendSize()))
+		case config.TRACE_ID:
+			traceID := c.GetString(config.TRACE_ID)
+			replacements = append(replacements, config.TRACE_ID, traceID)
 		default:
 
 			if strings.HasPrefix(matchVal, "$upstream_header_") {

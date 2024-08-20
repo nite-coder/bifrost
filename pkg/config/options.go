@@ -79,11 +79,11 @@ type ServerOptions struct {
 }
 
 type ServerTimeoutOptions struct {
-	GracefulTimeOut  time.Duration `yaml:"graceful_timeout" json:"graceful_timeout"`
-	IdleTimeout      time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
-	KeepAliveTimeout time.Duration `yaml:"keepalive_timeout" json:"keepalive_timeout"`
-	ReadTimeout      time.Duration `yaml:"read_timeout" json:"read_timeout"`
-	WriteTimeout     time.Duration `yaml:"write_timeout" json:"write_timeout"`
+	Graceful  time.Duration `yaml:"graceful" json:"graceful"`
+	Idle      time.Duration `yaml:"idle" json:"idle_timeout"`
+	KeepAlive time.Duration `yaml:"keepalive" json:"keepalive"`
+	Read      time.Duration `yaml:"read" json:"read"`
+	Write     time.Duration `yaml:"write" json:"write"`
 }
 
 type EscapeType string
@@ -161,10 +161,10 @@ type ServiceOptions struct {
 }
 
 type ServiceTimeoutOptions struct {
-	ReadTimeout        time.Duration `yaml:"read_timeout" json:"read_timeout"`
-	WriteTimeout       time.Duration `yaml:"write_timeout" json:"write_timeout"`
-	DailTimeout        time.Duration `yaml:"dail_timeout" json:"dail_timeout"`
-	MaxConnWaitTimeout time.Duration `yaml:"max_conn_wait_timeout" json:"max_conn_wait_timeout"`
+	Read        time.Duration `yaml:"read" json:"read"`
+	Write       time.Duration `yaml:"write" json:"write"`
+	Dail        time.Duration `yaml:"dail" json:"dail"`
+	MaxConnWait time.Duration `yaml:"max_conn_wait" json:"max_conn_wait"`
 }
 
 type TLSOptions struct {

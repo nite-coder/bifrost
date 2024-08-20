@@ -111,20 +111,20 @@ func newService(bifrost *Bifrost, opts config.ServiceOptions) (*Service, error) 
 	// direct proxy
 	clientOpts := proxy.DefaultClientOptions()
 
-	if opts.Timeout.DailTimeout > 0 {
-		clientOpts = append(clientOpts, client.WithDialTimeout(opts.Timeout.DailTimeout))
+	if opts.Timeout.Dail > 0 {
+		clientOpts = append(clientOpts, client.WithDialTimeout(opts.Timeout.Dail))
 	}
 
-	if opts.Timeout.ReadTimeout > 0 {
-		clientOpts = append(clientOpts, client.WithClientReadTimeout(opts.Timeout.ReadTimeout))
+	if opts.Timeout.Read > 0 {
+		clientOpts = append(clientOpts, client.WithClientReadTimeout(opts.Timeout.Read))
 	}
 
-	if opts.Timeout.WriteTimeout > 0 {
-		clientOpts = append(clientOpts, client.WithWriteTimeout(opts.Timeout.WriteTimeout))
+	if opts.Timeout.Write > 0 {
+		clientOpts = append(clientOpts, client.WithWriteTimeout(opts.Timeout.Write))
 	}
 
-	if opts.Timeout.MaxConnWaitTimeout > 0 {
-		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(opts.Timeout.MaxConnWaitTimeout))
+	if opts.Timeout.MaxConnWait > 0 {
+		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(opts.Timeout.MaxConnWait))
 	}
 
 	if opts.MaxConnsPerHost != nil {

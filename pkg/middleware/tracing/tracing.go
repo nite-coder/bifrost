@@ -2,6 +2,7 @@ package tracing
 
 import (
 	"context"
+	"http-benchmark/pkg/config"
 	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -39,6 +40,9 @@ func (m *TracingMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext
 
 	c, span := m.tracer.Start(c, method+" "+path, spanOptions...)
 	defer span.End()
+
+	traceID := span.SpanContext().TraceID()
+	ctx.Set(config.TRACE_ID, traceID.String())
 
 	ctx.Next(c)
 }

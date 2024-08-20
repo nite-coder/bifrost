@@ -67,24 +67,24 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		hzOpts = append(hzOpts, server.WithListener(listener))
 	}
 
-	if serverOpts.Timeout.KeepAliveTimeout.Seconds() > 0 {
-		hzOpts = append(hzOpts, server.WithKeepAliveTimeout(serverOpts.Timeout.KeepAliveTimeout))
+	if serverOpts.Timeout.KeepAlive.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithKeepAliveTimeout(serverOpts.Timeout.KeepAlive))
 	}
 
-	if serverOpts.Timeout.IdleTimeout.Seconds() > 0 {
-		hzOpts = append(hzOpts, server.WithIdleTimeout(serverOpts.Timeout.IdleTimeout))
+	if serverOpts.Timeout.Idle.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithIdleTimeout(serverOpts.Timeout.Idle))
 	}
 
-	if serverOpts.Timeout.ReadTimeout.Seconds() > 0 {
-		hzOpts = append(hzOpts, server.WithReadTimeout(serverOpts.Timeout.ReadTimeout))
+	if serverOpts.Timeout.Read.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithReadTimeout(serverOpts.Timeout.Read))
 	}
 
-	if serverOpts.Timeout.WriteTimeout.Seconds() > 0 {
-		hzOpts = append(hzOpts, server.WithWriteTimeout(serverOpts.Timeout.WriteTimeout))
+	if serverOpts.Timeout.Write.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithWriteTimeout(serverOpts.Timeout.Write))
 	}
 
-	if serverOpts.Timeout.GracefulTimeOut.Seconds() > 0 {
-		hzOpts = append(hzOpts, server.WithExitWaitTime(serverOpts.Timeout.GracefulTimeOut))
+	if serverOpts.Timeout.Graceful.Seconds() > 0 {
+		hzOpts = append(hzOpts, server.WithExitWaitTime(serverOpts.Timeout.Graceful))
 	}
 
 	if serverOpts.MaxRequestBodySize > 0 {
@@ -166,12 +166,12 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 	if serverOpts.HTTP2 {
 		http2opts := []configHTTP2.Option{}
 
-		if serverOpts.Timeout.IdleTimeout.Seconds() > 0 {
-			http2opts = append(http2opts, configHTTP2.WithIdleTimeout(serverOpts.Timeout.IdleTimeout))
+		if serverOpts.Timeout.Idle.Seconds() > 0 {
+			http2opts = append(http2opts, configHTTP2.WithIdleTimeout(serverOpts.Timeout.Idle))
 		}
 
-		if serverOpts.Timeout.ReadTimeout.Seconds() > 0 {
-			http2opts = append(http2opts, configHTTP2.WithReadTimeout(serverOpts.Timeout.ReadTimeout))
+		if serverOpts.Timeout.Read.Seconds() > 0 {
+			http2opts = append(http2opts, configHTTP2.WithReadTimeout(serverOpts.Timeout.Read))
 		}
 
 		if len(serverOpts.TLS.CertPEM) > 0 || len(serverOpts.TLS.KeyPEM) > 0 {
