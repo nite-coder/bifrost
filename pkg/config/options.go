@@ -18,6 +18,8 @@ type Options struct {
 	Upstreams   map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
 }
 
+
+
 type ProviderOtions struct {
 	File FileProviderOptions `yaml:"file" json:"file"`
 }
@@ -44,13 +46,13 @@ type PrometheusOptions struct {
 }
 
 type TracingOptions struct {
-	Enabled bool        `yaml:"enabled" json:"enabled"`
-	OTLP    OTLPOptions `yaml:"otlp" json:"otlp"`
+	OTLP OTLPOptions `yaml:"otlp" json:"otlp"`
 }
 
 type OTLPOptions struct {
-	HTTP OTLPHTTPOptions `yaml:"http" json:"http"`
-	GRPC OTLPGRPCOptions `yaml:"grpc" json:"grpc"`
+	Enabled bool            `yaml:"enabled" json:"enabled"`
+	HTTP    OTLPHTTPOptions `yaml:"http" json:"http"`
+	GRPC    OTLPGRPCOptions `yaml:"grpc" json:"grpc"`
 }
 
 type OTLPHTTPOptions struct {

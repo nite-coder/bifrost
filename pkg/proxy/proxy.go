@@ -310,7 +310,7 @@ ProxyPassLoop:
 			slog.String("upstream", uri),
 		)
 
-		if err.Error() == "timeout" {
+		if errors.Is(err, hzerrors.ErrTimeout) {
 			ctx.Set("target_timeout", true)
 		}
 

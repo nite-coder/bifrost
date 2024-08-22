@@ -139,7 +139,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 		}
 
 		clientOptions := proxy.ClientOptions{
-			IsTracingEnabled: bifrost.options.Tracing.Enabled,
+			IsTracingEnabled: bifrost.options.Tracing.OTLP.Enabled,
 			IsHTTP2:          serviceOpts.Protocol == config.ProtocolHTTP2,
 			HZOptions:        clientOpts,
 		}

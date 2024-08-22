@@ -41,6 +41,20 @@ type Options struct {
 	PIDFile     string
 }
 
+func (opts Options) GetPIDFile() string {
+	if opts.PIDFile == "" {
+		return "./logs/bifrost.pid"
+	}
+	return opts.PIDFile
+}
+
+func (opts Options) GetUpgradeSock() string {
+	if opts.UpgradeSock == "" {
+		return "./logs/bifrost.sock"
+	}
+	return opts.UpgradeSock
+}
+
 func New(opts Options) *ZeroDownTime {
 	return &ZeroDownTime{
 		options:       &opts,
@@ -64,7 +78,7 @@ func (z *ZeroDownTime) Close(ctx context.Context) error {
 }
 
 func (z *ZeroDownTime) Upgrade() error {
-	conn, err := net.Dial("unix", z.options.UpgradeSock)
+	conn, err := net.Dial("unix", z.options.GetUpgradeSock())
 	if err != nil {
 		return fmt.Errorf("failed to connect to upgrade socket: %v", err)
 	}
@@ -236,7 +250,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 }
 
 func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
-	b, err := os.ReadFile(z.options.PIDFile)
+	b, err := os.ReadFile(z.options.GetPIDFile())
 	if err != nil {
 		slog.Error("shutdown error", "error", err)
 		return err
@@ -249,7 +263,7 @@ func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
 	}
 
 	defer func() {
-		_ = os.Remove(z.options.PIDFile)
+		_ = os.Remove(z.options.GetPIDFile())
 	}()
 
 	p, err := os.FindProcess(int(pid))
@@ -270,7 +284,7 @@ func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
 
 func (z *ZeroDownTime) writePID() error {
 	pid := os.Getpid()
-	err := os.WriteFile(z.options.PIDFile, []byte(fmt.Sprintf("%d", pid)), 0644)
+	err := os.WriteFile(z.options.GetPIDFile(), []byte(fmt.Sprintf("%d", pid)), 0644)
 	if err != nil {
 		slog.Error("failed to write PID file", "error", err)
 		return err

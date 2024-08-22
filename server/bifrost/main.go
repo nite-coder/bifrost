@@ -112,7 +112,7 @@ func main() {
 			if isUpgrade {
 				zeroOpts := zero.Options{
 					UpgradeSock: mainOpts.UpgradeSock,
-					PIDFile:     mainOpts.UpgradeSock,
+					PIDFile:     mainOpts.PIDFile,
 				}
 
 				zeroDT := zero.New(zeroOpts)
@@ -250,7 +250,7 @@ func main() {
 			signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 			<-sigChan
 
-			slog.Info("received shutdown signal", "pid", os.Getpid())
+			slog.Debug("received shutdown signal", "pid", os.Getpid())
 
 			return nil
 		},

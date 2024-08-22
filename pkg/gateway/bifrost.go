@@ -139,7 +139,7 @@ func Load(opts config.Options, isReload bool) (*Bifrost, error) {
 		}
 	}
 
-	if opts.Tracing.Enabled {
+	if opts.Tracing.OTLP.Enabled {
 		// otel tracing
 		t, err := opentelemetry.NewTracer(opts.Tracing)
 		if err != nil {

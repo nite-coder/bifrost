@@ -1,0 +1,1 @@
+openresty -g "daemon off;"

@@ -160,7 +160,7 @@ func newService(bifrost *Bifrost, opts config.ServiceOptions) (*Service, error) 
 	}
 
 	clientOptions := proxy.ClientOptions{
-		IsTracingEnabled: bifrost.options.Tracing.Enabled,
+		IsTracingEnabled: bifrost.options.Tracing.OTLP.Enabled,
 		IsHTTP2:          opts.Protocol == config.ProtocolHTTP2,
 		HZOptions:        clientOpts,
 	}
@@ -260,6 +260,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
 		ctx.Set(config.UPSTREAM_DURATION, responseTime)
 
+		// the upstream target timeout and we need to response http status 504 back to client
 		if ctx.GetBool("target_timeout") {
 			ctx.Response.SetStatusCode(504)
 		} else {
