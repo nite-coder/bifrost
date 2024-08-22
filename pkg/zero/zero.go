@@ -172,11 +172,11 @@ func (z *ZeroDownTime) Listener(ctx context.Context, network string, address str
 }
 
 func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
+	z.mu.Lock()
 	if z.state != defaultState {
+		z.mu.Unlock()
 		return fmt.Errorf("state is not default and cannot be upgraded, state=%d", z.state)
 	}
-
-	z.mu.Lock()
 	z.state = waitingState
 	z.mu.Unlock()
 

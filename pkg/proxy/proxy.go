@@ -178,7 +178,7 @@ func (p *Proxy) AddFailedCount(count uint) error {
 		p.failExpireAt = now.Add(p.options.FailTimeout)
 		p.failedCount = count
 	} else {
-		p.failedCount = p.failedCount + count
+		p.failedCount += count
 	}
 
 	if p.options.MaxFails > 0 && p.failedCount >= p.options.MaxFails {
