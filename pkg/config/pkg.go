@@ -1,9 +1,13 @@
 package config
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"http-benchmark/pkg/provider"
 	"http-benchmark/pkg/provider/file"
+	"log/slog"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -30,8 +34,18 @@ func Load(path string) (Options, error) {
 		return mainOpts, err
 	}
 
-	mainOpts, err = parseContent(cInfo[0].Content)
+	mainOpts, err = unmarshal(cInfo[0].Content)
 	if err != nil {
+		return mainOpts, err
+	}
+
+	err = ValidateValue(mainOpts)
+	if err != nil {
+		var errInvalidConfig ErrInvalidConfig
+		if errors.As(err, &errInvalidConfig) {
+			line := findConfigurationLine(cInfo[0].Content, errInvalidConfig.FullPath, errInvalidConfig.Value)
+			return mainOpts, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), path, line)
+		}
 		return mainOpts, err
 	}
 
@@ -69,8 +83,14 @@ func LoadDynamic(mainOpts Options) (provider.Provider, Options, error) {
 		for _, c := range cInfo {
 			mainOpts, err = mergeOptions(mainOpts, c.Content)
 			if err != nil {
+				var errInvalidConfig ErrInvalidConfig
+				if errors.As(err, &errInvalidConfig) {
+					line := findConfigurationLine(c.Content, errInvalidConfig.FullPath, errInvalidConfig.Value)
+					return nil, mainOpts, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), c.Path, line)
+				}
+
 				errMsg := fmt.Sprintf("path: %s, error: %s", c.Path, err.Error())
-				return nil, mainOpts, fmt.Errorf(errMsg)
+				return nil, mainOpts, errors.New(errMsg)
 			}
 		}
 
@@ -89,7 +109,7 @@ func Watch() error {
 	return nil
 }
 
-func parseContent(content string) (Options, error) {
+func unmarshal(content string) (Options, error) {
 	result := Options{}
 
 	b := []byte(content)
@@ -104,7 +124,7 @@ func parseContent(content string) (Options, error) {
 
 func mergeOptions(mainOpts Options, content string) (Options, error) {
 
-	otherOpts, err := parseContent(content)
+	newOptions, err := unmarshal(content)
 	if err != nil {
 		return mainOpts, err
 	}
@@ -129,46 +149,140 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 		mainOpts.Services = make(map[string]ServiceOptions)
 	}
 
-	for k, v := range otherOpts.Servers {
+	for k, v := range newOptions.Servers {
 
 		if _, found := mainOpts.Servers[k]; found {
-			return mainOpts, fmt.Errorf("server '%s' is duplicate", k)
+			msg := fmt.Sprintf("server '%s' is duplicate", k)
+			fullpath := []string{"servers", k}
+			return mainOpts, newInvalidConfig(fullpath, "", msg)
 		}
 
 		mainOpts.Servers[k] = v
 	}
 
-	for k, v := range otherOpts.Middlewares {
+	for k, v := range newOptions.Middlewares {
 		if _, found := mainOpts.Middlewares[k]; found {
-			return mainOpts, fmt.Errorf("middleware '%s' is duplicate", k)
+			msg := fmt.Sprintf("middleware '%s' is duplicate", k)
+			fullpath := []string{"middlewares", k}
+			return mainOpts, newInvalidConfig(fullpath, "", msg)
 		}
 
 		mainOpts.Middlewares[k] = v
 	}
 
-	for k, v := range otherOpts.Services {
+	for k, v := range newOptions.Services {
 		if _, found := mainOpts.Services[k]; found {
-			return mainOpts, fmt.Errorf("service '%s' is duplicate", k)
+			msg := fmt.Sprintf("service '%s' is duplicate", k)
+			fullpath := []string{"services", k}
+			return mainOpts, newInvalidConfig(fullpath, "", msg)
 		}
 
 		mainOpts.Services[k] = v
 	}
 
-	for k, v := range otherOpts.Routes {
+	for k, v := range newOptions.Routes {
 		if _, found := mainOpts.Routes[k]; found {
-			return mainOpts, fmt.Errorf("route '%s' is duplicates", k)
+			msg := fmt.Sprintf("route '%s' is duplicate", k)
+			fullpath := []string{"routes", k}
+			return mainOpts, newInvalidConfig(fullpath, "", msg)
 		}
 
 		mainOpts.Routes[k] = v
 	}
 
-	for k, v := range otherOpts.Upstreams {
+	for k, v := range newOptions.Upstreams {
 		if _, found := mainOpts.Upstreams[k]; found {
-			return mainOpts, fmt.Errorf("upstream '%s' is duplicate", k)
+			msg := fmt.Sprintf("upstream '%s' is duplicate", k)
+			fullpath := []string{"upstreams", k}
+			return mainOpts, newInvalidConfig(fullpath, "", msg)
 		}
 
 		mainOpts.Upstreams[k] = v
 	}
 
 	return mainOpts, nil
+}
+
+func findConfigurationLine(content string, fullPath []string, value interface{}) int {
+	var node interface{}
+	var err error
+
+	err = json.Unmarshal([]byte(content), &node)
+	if err != nil {
+		var yamlNode yaml.Node
+		err = yaml.Unmarshal([]byte(content), &yamlNode)
+		if err != nil {
+			slog.Error("failed to unmarshal config yaml file", "error", err)
+			return -1
+		}
+		node = &yamlNode
+	}
+
+	lines := strings.Split(content, "\n")
+	return findInNode(node, fullPath, value, lines)
+}
+
+func findInNode(node interface{}, path []string, value interface{}, lines []string) int {
+	for i, key := range path {
+		switch n := node.(type) {
+		case map[string]interface{}:
+			if val, ok := n[key]; ok {
+				if i == len(path)-1 {
+					if fmt.Sprintf("%v", val) == fmt.Sprintf("%v", value) {
+						return findLineNumber(lines, key, value)
+					}
+					return -1
+				}
+				node = val
+			} else {
+				return -1
+			}
+		case []interface{}:
+			for _, item := range n {
+				if line := findInNode(item, path[i:], value, lines); line != -1 {
+					return line
+				}
+			}
+			return -1
+		case *yaml.Node:
+			switch n.Kind {
+			case yaml.DocumentNode:
+				if len(n.Content) > 0 {
+					return findInNode(n.Content[0], path, value, lines)
+				}
+			case yaml.MappingNode:
+				for j := 0; j < len(n.Content); j += 2 {
+					if n.Content[j].Value == path[0] {
+						if len(path) == 1 {
+							if n.Content[j+1].Value == fmt.Sprintf("%v", value) {
+								return n.Content[j+1].Line
+							}
+							return -1
+						}
+						return findInNode(n.Content[j+1], path[1:], value, lines)
+					}
+				}
+			case yaml.SequenceNode:
+				for _, item := range n.Content {
+					if line := findInNode(item, path[i:], value, lines); line != -1 {
+						return line
+					}
+				}
+			}
+			return -1
+		default:
+			return -1
+		}
+	}
+	return -1
+}
+
+func findLineNumber(lines []string, key string, value interface{}) int {
+	searchStr := fmt.Sprintf(`"%s": %v`, key, value)
+	for i, line := range lines {
+		if strings.Contains(line, searchStr) {
+			return i + 1
+		}
+	}
+	return -1
 }

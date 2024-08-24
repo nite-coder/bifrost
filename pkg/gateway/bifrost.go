@@ -55,30 +55,38 @@ func (b *Bifrost) Shutdown(ctx context.Context) error {
 		wg.Add(1)
 		go func(srv *HTTPServer) {
 			_ = srv.Shutdown(ctx)
+			slog.Debug("http server shutdown", "id", srv.options.ID)
 			wg.Done()
 		}(server)
 	}
 
 	wg.Wait()
+
+	slog.Debug("http server is closed")
 	return b.zero.Close(ctx)
 }
 
-func Load(opts config.Options, isReload bool) (*Bifrost, error) {
+func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	// validate
-	err := config.Validate(opts)
+	err := config.ValidateValue(mainOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	err = config.ValidateMapping(mainOptions)
 	if err != nil {
 		return nil, err
 	}
 
 	zeroOptions := zero.Options{
-		UpgradeSock: opts.UpgradeSock,
-		PIDFile:     opts.PIDFile,
+		UpgradeSock: mainOptions.UpgradeSock,
+		PIDFile:     mainOptions.PIDFile,
 	}
 
 	bifrsot := &Bifrost{
 		resolver:    &dnscache.Resolver{},
 		HttpServers: make(map[string]*HTTPServer),
-		options:     &opts,
+		options:     &mainOptions,
 		stopCh:      make(chan bool),
 		zero:        zero.New(zeroOptions),
 	}
@@ -99,7 +107,7 @@ func Load(opts config.Options, isReload bool) (*Bifrost, error) {
 	}()
 
 	// system logger
-	logger, err := log.NewLogger(opts.Logging)
+	logger, err := log.NewLogger(mainOptions.Logging)
 	if err != nil {
 		return nil, err
 	}
@@ -108,11 +116,11 @@ func Load(opts config.Options, isReload bool) (*Bifrost, error) {
 	tracers := []tracer.Tracer{}
 
 	// prometheus
-	if opts.Metrics.Prometheus.Enabled && !isReload {
+	if mainOptions.Metrics.Prometheus.Enabled && !isReload {
 		promOpts := []prometheus.Option{}
 
-		if len(opts.Metrics.Prometheus.Buckets) > 0 {
-			promOpts = append(promOpts, prometheus.WithHistogramBuckets(opts.Metrics.Prometheus.Buckets))
+		if len(mainOptions.Metrics.Prometheus.Buckets) > 0 {
+			promOpts = append(promOpts, prometheus.WithHistogramBuckets(mainOptions.Metrics.Prometheus.Buckets))
 		}
 
 		promTracer := prometheus.NewTracer(promOpts...)
@@ -121,9 +129,9 @@ func Load(opts config.Options, isReload bool) (*Bifrost, error) {
 
 	// access log
 	accessLogTracers := map[string]*accesslog.Tracer{}
-	if len(opts.AccessLogs) > 0 && !isReload {
+	if len(mainOptions.AccessLogs) > 0 && !isReload {
 
-		for id, accessLogOptions := range opts.AccessLogs {
+		for id, accessLogOptions := range mainOptions.AccessLogs {
 			if !accessLogOptions.Enabled {
 				continue
 			}
@@ -139,16 +147,16 @@ func Load(opts config.Options, isReload bool) (*Bifrost, error) {
 		}
 	}
 
-	if opts.Tracing.OTLP.Enabled {
+	if mainOptions.Tracing.OTLP.Enabled {
 		// otel tracing
-		t, err := opentelemetry.NewTracer(opts.Tracing)
+		t, err := opentelemetry.NewTracer(mainOptions.Tracing)
 		if err != nil {
 			return nil, err
 		}
 		tracers = append(tracers, t)
 	}
 
-	for id, server := range opts.Servers {
+	for id, server := range mainOptions.Servers {
 		if id == "" {
 			return nil, fmt.Errorf("http server id can't be empty")
 		}
@@ -165,7 +173,7 @@ func Load(opts config.Options, isReload bool) (*Bifrost, error) {
 		}
 
 		if len(server.AccessLogID) > 0 {
-			_, found := opts.AccessLogs[server.AccessLogID]
+			_, found := mainOptions.AccessLogs[server.AccessLogID]
 			if !found {
 				return nil, fmt.Errorf("access log '%s' was not found in server '%s'", server.AccessLogID, server.ID)
 			}

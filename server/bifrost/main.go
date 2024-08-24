@@ -73,21 +73,19 @@ func main() {
 			_ = gateway.DisableGopool()
 
 			configPath := cCtx.String("config")
+			isTest := cCtx.Bool("test")
+
 			mainOpts, err := config.Load(configPath)
 			if err != nil {
-				slog.Error("fail to load config", "error", err, "path", configPath)
+				slog.Error(err.Error())
+				if isTest {
+					slog.Info("config file tested failed")
+				}
 				return err
 			}
 
-			isTest := cCtx.Bool("test")
 			if isTest {
-				err = config.Validate(mainOpts)
-				if err != nil {
-					slog.Error("fail to validate config", "error", err)
-					return err
-				}
-
-				slog.Info("config is tested successfully")
+				slog.Info("config file tested successfully", "path", configPath)
 				return nil
 			}
 
@@ -148,7 +146,7 @@ func main() {
 				return err
 			}
 
-			bifrost, err = gateway.Load(mainOpts, false)
+			bifrost, err = gateway.NewBifrost(mainOpts, false)
 			if err != nil {
 				slog.Error("fail to start bifrost", "error", err)
 				return err
@@ -168,13 +166,13 @@ func main() {
 					return err
 				}
 
-				err = config.Validate(mainOpts)
+				err = config.ValidateValue(mainOpts)
 				if err != nil {
 					slog.Error("fail to validate config", "error", err)
 					return err
 				}
 
-				newBifrost, err := gateway.Load(mainOpts, true)
+				newBifrost, err := gateway.NewBifrost(mainOpts, true)
 				if err != nil {
 					return err
 				}
