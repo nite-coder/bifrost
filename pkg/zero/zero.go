@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type listenInfo struct {
@@ -266,20 +267,56 @@ func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
 		_ = os.Remove(z.options.GetPIDFile())
 	}()
 
-	p, err := os.FindProcess(int(pid))
+	process, err := os.FindProcess(int(pid))
 	if err != nil {
 		slog.Error("find process error", "error", err)
 		return err
 	}
 
-	err = p.Signal(syscall.SIGTERM)
+	err = process.Signal(syscall.SIGTERM)
 	if err != nil {
 		slog.Error("send signal error", "error", err)
 		return err
 	}
 
-	slog.Info("sent SIGTERM to process", "pid", pid)
-	return nil
+	// Create a ticker to check process status
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	// Set timeout deadline
+	deadline := time.Now().Add(10 * time.Second)
+
+	for time.Now().Before(deadline) {
+		<-ticker.C
+		// Try to send a null signal to check if the process exists
+		err := process.Signal(syscall.Signal(0))
+		if err != nil {
+			if err == os.ErrProcessDone || err == syscall.ESRCH {
+				// Process no longer exists
+				return nil
+			}
+			// Other errors, possibly permission issues
+			return fmt.Errorf("check process error: %w", err)
+		}
+	}
+
+
+	// If we reach here, it means timeout occurred
+	// Optionally send SIGKILL
+	err = process.Kill()
+	if err != nil {
+		return fmt.Errorf("failed to kill process after timeout: %w", err)
+	}
+
+	// Check again if the process has terminated
+	time.Sleep(100 * time.Millisecond)
+	if err := process.Signal(syscall.Signal(0)); err != nil {
+		if err == os.ErrProcessDone || err == syscall.ESRCH {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("process did not terminate within the timeout period")
 }
 
 func (z *ZeroDownTime) writePID() error {

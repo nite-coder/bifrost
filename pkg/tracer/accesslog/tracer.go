@@ -143,6 +143,9 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 				ip = addr.IP.String()
 			}
 			replacements = append(replacements, config.REMOTE_ADDR, ip)
+		case config.HOST:
+			host := c.GetString(config.HOST)
+			replacements = append(replacements, config.HOST, host)
 		case config.REQUEST_METHOD:
 			replacements = append(replacements, config.REQUEST_METHOD, cast.B2S(c.Request.Method()))
 		case config.REQUEST_URI:

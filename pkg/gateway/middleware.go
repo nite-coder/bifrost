@@ -35,6 +35,10 @@ func newInitMiddleware(serverID string, logger *slog.Logger) *initMiddleware {
 func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	logger := m.logger
 
+	// save original host
+	host := string(ctx.Request.Host())
+	ctx.Set(config.HOST, host)
+
 	if len(ctx.Request.Header.Get("X-Forwarded-For")) > 0 {
 		ctx.Set("X-Forwarded-For", ctx.Request.Header.Get("X-Forwarded-For"))
 	}
@@ -50,6 +54,7 @@ func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	ctx.Set(config.SERVER_ID, m.serverID)
 
 	c = log.NewContext(c, logger)
+
 	ctx.Next(c)
 }
 

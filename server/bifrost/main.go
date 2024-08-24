@@ -137,7 +137,7 @@ func main() {
 					return err
 				}
 
-				slog.Info("daemon process started", "pid", cmd.Process.Pid)
+				slog.Debug("daemon process started", "pid", cmd.Process.Pid)
 				return nil
 			}
 

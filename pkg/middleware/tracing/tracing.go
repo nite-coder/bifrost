@@ -6,8 +6,9 @@ import (
 	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/blackbear/pkg/cast"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -30,8 +31,8 @@ func (m *TracingMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext
 		return
 	}
 
-	method := cast.B2S(ctx.Method())
-	path := cast.B2S(ctx.Request.Path())
+	method := string(ctx.Method())
+	path := string(ctx.Request.Path())
 
 	spanOptions := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindServer),
@@ -39,7 +40,22 @@ func (m *TracingMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext
 	}
 
 	c, span := m.tracer.Start(c, method+" "+path, spanOptions...)
-	defer span.End()
+
+	defer func() {
+		if ctx.Response.StatusCode() >= 200 && ctx.Response.StatusCode() < 300 {
+			span.SetStatus(codes.Ok, "OK")
+		}
+
+		span.End()
+	}()
+
+	labels := []attribute.KeyValue{
+		attribute.String("http.host", string(ctx.Request.Host())),
+		attribute.String("http.method", method),
+		attribute.String("http.path", path),
+		attribute.String("http.protocol", ctx.Request.Header.GetProtocol()),
+	}
+	span.SetAttributes(labels...)
 
 	traceID := span.SpanContext().TraceID()
 	ctx.Set(config.TRACE_ID, traceID.String())

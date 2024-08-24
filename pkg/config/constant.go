@@ -3,6 +3,7 @@ package config
 const (
 	SERVER_ID          = "$server_id"
 	REMOTE_ADDR        = "$remote_addr"
+	HOST               = "$host"
 	TIME               = "$time"
 	RECEIVED_SIZE      = "$received_size"
 	SEND_SIZE          = "$send_size"

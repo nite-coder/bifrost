@@ -54,9 +54,13 @@ func (b *Bifrost) Shutdown(ctx context.Context) error {
 	for _, server := range b.HttpServers {
 		wg.Add(1)
 		go func(srv *HTTPServer) {
+			defer wg.Done()
+
+			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+
 			_ = srv.Shutdown(ctx)
 			slog.Debug("http server shutdown", "id", srv.options.ID)
-			wg.Done()
 		}(server)
 	}
 
