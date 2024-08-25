@@ -80,7 +80,7 @@ func main() {
 
 			if *daemon {
 				if err := zeroDT.WaitForUpgrade(ctx); err != nil {
-					slog.Error("Upgrade process error: %v", err)
+					slog.Error("Upgrade process error", "error", err)
 					return
 				}
 			}
@@ -97,7 +97,7 @@ func main() {
 
 			if *daemon {
 				if err := zeroDT.WaitForUpgrade(ctx); err != nil {
-					slog.Error("Upgrade process error: %v", err)
+					slog.Error("Upgrade process", "error", err)
 					return
 				}
 			}

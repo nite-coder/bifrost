@@ -70,6 +70,12 @@ func (b *Bifrost) Shutdown(ctx context.Context) error {
 	return b.zero.Close(ctx)
 }
 
+// NewBifrost creates a new instance of Bifrost.
+//
+// It takes in two parameters: mainOptions of type config.Options and isReload of type bool.
+// The mainOptions parameter contains the main configuration options for the Bifrost instance.
+// The isReload parameter indicates whether the function is being called during a reload operation.
+// The function returns a pointer to Bifrost and an error.
 func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	// validate
 	err := config.ValidateValue(mainOptions)
@@ -81,6 +87,13 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// system logger
+	logger, err := log.NewLogger(mainOptions.Logging)
+	if err != nil {
+		return nil, err
+	}
+	slog.SetDefault(logger)
 
 	zeroOptions := zero.Options{
 		UpgradeSock: mainOptions.UpgradeSock,
@@ -109,13 +122,6 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 			}
 		}
 	}()
-
-	// system logger
-	logger, err := log.NewLogger(mainOptions.Logging)
-	if err != nil {
-		return nil, err
-	}
-	slog.SetDefault(logger)
 
 	tracers := []tracer.Tracer{}
 

@@ -99,6 +99,12 @@ var hopHeaders = []string{
 	"Upgrade",
 }
 
+// NewReverseProxy creates a new reverse proxy instance.
+//
+// It takes a set of options and a client as parameters, and returns a new reverse proxy instance and an error.
+// The options parameter specifies the target URL and other configuration options for the reverse proxy.
+// The client parameter specifies the client to use for making requests to the target URL.
+// The returned error is nil if the reverse proxy instance is created successfully, or an error if there is a problem.
 func NewReverseProxy(opts Options, client *client.Client) (*Proxy, error) {
 	addr, err := url.Parse(opts.Target)
 	if err != nil {

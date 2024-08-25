@@ -7,6 +7,7 @@ import (
 	"http-benchmark/pkg/provider"
 	"http-benchmark/pkg/provider/file"
 	"log/slog"
+	"os"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -23,18 +24,13 @@ func Load(path string) (Options, error) {
 	// load main config
 	var mainOpts Options
 
-	fileProviderOpts := file.Options{
-		Paths: []string{path},
-	}
-
-	fileProvider := file.NewProvider(fileProviderOpts)
-
-	cInfo, err := fileProvider.Open()
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return mainOpts, err
 	}
 
-	mainOpts, err = unmarshal(cInfo[0].Content)
+	content := string(b)
+	mainOpts, err = unmarshal(content)
 	if err != nil {
 		return mainOpts, err
 	}
@@ -43,13 +39,18 @@ func Load(path string) (Options, error) {
 	if err != nil {
 		var errInvalidConfig ErrInvalidConfig
 		if errors.As(err, &errInvalidConfig) {
-			line := findConfigurationLine(cInfo[0].Content, errInvalidConfig.FullPath, errInvalidConfig.Value)
+			line := findConfigurationLine(content, errInvalidConfig.FullPath, errInvalidConfig.Value)
 			return mainOpts, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), path, line)
 		}
 		return mainOpts, err
 	}
 
 	dynamicProvider, mainOpts, err = LoadDynamic(mainOpts)
+	if err != nil {
+		return mainOpts, err
+	}
+
+	err = ValidateMapping(mainOpts)
 	if err != nil {
 		return mainOpts, err
 	}

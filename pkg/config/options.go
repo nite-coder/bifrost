@@ -6,6 +6,9 @@ type Options struct {
 	Version     string                      `yaml:"version" json:"version"`
 	PIDFile     string                      `yaml:"pid_file" json:"pid_file"`
 	UpgradeSock string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
+	IsDaemon    bool                        `yaml:"-" json:"-"`
+	User        string                      `yaml:"user" json:"user"`
+	Group       string                      `yaml:"group" json:"group"`
 	Providers   ProviderOtions              `yaml:"providers" json:"providers"`
 	Logging     LoggingOtions               `yaml:"logging" json:"logging"`
 	Metrics     MetricsOptions              `yaml:"metrics" json:"metrics"`
@@ -17,8 +20,6 @@ type Options struct {
 	Services    map[string]ServiceOptions   `yaml:"services" json:"services"`
 	Upstreams   map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
 }
-
-
 
 type ProviderOtions struct {
 	File FileProviderOptions `yaml:"file" json:"file"`

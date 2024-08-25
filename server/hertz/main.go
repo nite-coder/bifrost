@@ -76,7 +76,7 @@ func main() {
 
 			if *daemon {
 				if err := zeroDT.WaitForUpgrade(ctx); err != nil {
-					slog.Error("Upgrade process error: %v", err)
+					slog.Error("fail to upgrade process", "error", err)
 					return
 				}
 			}
