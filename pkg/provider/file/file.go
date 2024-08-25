@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -16,9 +17,10 @@ type ContentInfo struct {
 }
 
 type Options struct {
-	Enabled bool     `yaml:"enabled" json:"enabled"`
-	Paths   []string `yaml:"paths" json:"paths"`
-	Watch   bool     `yaml:"watch" json:"watch"`
+	Enabled    bool     `yaml:"enabled" json:"enabled"`
+	Paths      []string `yaml:"paths" json:"paths"`
+	Watch      bool     `yaml:"watch" json:"watch"`
+	Extensions []string `yaml:"extensions" json:"extensions"`
 }
 
 type FileProvider struct {
@@ -28,6 +30,10 @@ type FileProvider struct {
 }
 
 func NewProvider(opts Options) *FileProvider {
+	if len(opts.Extensions) == 0 {
+		opts.Extensions = []string{".yaml", ".yml", ".json"}
+	}
+
 	return &FileProvider{
 		options: opts,
 	}
@@ -51,7 +57,18 @@ func (p *FileProvider) Open() ([]*ContentInfo, error) {
 			if err != nil {
 				return err
 			}
+
 			if !info.IsDir() {
+				fileExtension := filepath.Ext(filePath)
+
+				if len(fileExtension) == 0 {
+					return nil
+				}
+
+				if !slices.Contains(p.options.Extensions, fileExtension) {
+					return nil
+				}
+
 				content, err := os.ReadFile(filePath)
 				if err != nil {
 					return err

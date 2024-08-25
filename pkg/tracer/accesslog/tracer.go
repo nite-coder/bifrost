@@ -290,7 +290,7 @@ func escape(s string, escapeType config.EscapeType) string {
 		s = escapeString(s)
 	case config.JSONEscape:
 		s = escapeJSON(s)
-	case config.NoneEscape:
+	case config.NoneEscape, "":
 		return s
 	}
 

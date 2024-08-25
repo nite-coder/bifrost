@@ -58,47 +58,53 @@ func Load(path string) (Options, error) {
 	return mainOpts, nil
 }
 
-func LoadDynamic(mainOpts Options) (provider.Provider, Options, error) {
-
-	mainOpts.Routes = nil
-	mainOpts.Services = nil
-	mainOpts.Middlewares = nil
-	mainOpts.Upstreams = nil
+func LoadDynamic(mainOptions Options) (provider.Provider, Options, error) {
 
 	// use file provider if enabled
-	if mainOpts.Providers.File.Enabled && len(mainOpts.Providers.File.Paths) > 0 {
+	if mainOptions.Providers.File.Enabled {
+
+		if len(mainOptions.Providers.File.Paths) == 0 {
+			mainOptions.Providers.File.Paths = []string{"./"}
+		}
+
+		mainOptions.Servers = nil
+		mainOptions.Routes = nil
+		mainOptions.Services = nil
+		mainOptions.Middlewares = nil
+		mainOptions.Upstreams = nil
+
 		fileProviderOpts := file.Options{
 			Paths: []string{},
 		}
 		fileProvider := file.NewProvider(fileProviderOpts)
 
-		for _, content := range mainOpts.Providers.File.Paths {
+		for _, content := range mainOptions.Providers.File.Paths {
 			fileProvider.Add(content)
 		}
 
 		cInfo, err := fileProvider.Open()
 		if err != nil {
-			return nil, mainOpts, err
+			return nil, mainOptions, err
 		}
 
 		for _, c := range cInfo {
-			mainOpts, err = mergeOptions(mainOpts, c.Content)
+			mainOptions, err = mergeOptions(mainOptions, c.Content)
 			if err != nil {
 				var errInvalidConfig ErrInvalidConfig
 				if errors.As(err, &errInvalidConfig) {
 					line := findConfigurationLine(c.Content, errInvalidConfig.FullPath, errInvalidConfig.Value)
-					return nil, mainOpts, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), c.Path, line)
+					return nil, mainOptions, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), c.Path, line)
 				}
 
 				errMsg := fmt.Sprintf("path: %s, error: %s", c.Path, err.Error())
-				return nil, mainOpts, errors.New(errMsg)
+				return nil, mainOptions, errors.New(errMsg)
 			}
 		}
 
-		return fileProvider, mainOpts, nil
+		return fileProvider, mainOptions, nil
 	}
 
-	return nil, mainOpts, fmt.Errorf("no provider found")
+	return nil, mainOptions, nil
 }
 
 func Watch() error {

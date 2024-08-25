@@ -21,14 +21,29 @@ type Options struct {
 	Upstreams   map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
 }
 
+func NewOptions() Options {
+	mainOptions := Options{
+		Version:     "1",
+		AccessLogs:  make(map[string]AccessLogOptions),
+		Servers:     make(map[string]ServerOptions),
+		Routes:      make(map[string]RouteOptions),
+		Middlewares: make(map[string]MiddlwareOptions),
+		Services:    make(map[string]ServiceOptions),
+		Upstreams:   make(map[string]UpstreamOptions),
+	}
+
+	return mainOptions
+}
+
 type ProviderOtions struct {
 	File FileProviderOptions `yaml:"file" json:"file"`
 }
 
 type FileProviderOptions struct {
-	Enabled bool     `yaml:"enabled" json:"enabled"`
-	Paths   []string `yaml:"paths" json:"paths"`
-	Watch   bool     `yaml:"watch" json:"watch"`
+	Enabled    bool     `yaml:"enabled" json:"enabled"`
+	Paths      []string `yaml:"paths" json:"paths"`
+	Watch      bool     `yaml:"watch" json:"watch"`
+	Extensions []string `yaml:"extensions" json:"extensions"`
 }
 
 type MetricsOptions struct {
