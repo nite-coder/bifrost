@@ -60,18 +60,17 @@ func Load(path string) (Options, error) {
 
 func LoadDynamic(mainOptions Options) (provider.Provider, Options, error) {
 
+	mainOptions.Routes = nil
+	mainOptions.Services = nil
+	mainOptions.Middlewares = nil
+	mainOptions.Upstreams = nil
+
 	// use file provider if enabled
 	if mainOptions.Providers.File.Enabled {
 
 		if len(mainOptions.Providers.File.Paths) == 0 {
 			mainOptions.Providers.File.Paths = []string{"./"}
 		}
-
-		mainOptions.Servers = nil
-		mainOptions.Routes = nil
-		mainOptions.Services = nil
-		mainOptions.Middlewares = nil
-		mainOptions.Upstreams = nil
 
 		fileProviderOpts := file.Options{
 			Paths: []string{},
@@ -136,10 +135,6 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 		return mainOpts, err
 	}
 
-	if mainOpts.Servers == nil {
-		mainOpts.Servers = make(map[string]ServerOptions)
-	}
-
 	if mainOpts.Routes == nil {
 		mainOpts.Routes = make(map[string]RouteOptions)
 	}
@@ -154,17 +149,6 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 
 	if mainOpts.Services == nil {
 		mainOpts.Services = make(map[string]ServiceOptions)
-	}
-
-	for k, v := range newOptions.Servers {
-
-		if _, found := mainOpts.Servers[k]; found {
-			msg := fmt.Sprintf("server '%s' is duplicate", k)
-			fullpath := []string{"servers", k}
-			return mainOpts, newInvalidConfig(fullpath, "", msg)
-		}
-
-		mainOpts.Servers[k] = v
 	}
 
 	for k, v := range newOptions.Middlewares {

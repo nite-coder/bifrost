@@ -132,8 +132,8 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 	for _, matchVal := range t.matchVars {
 		switch matchVal {
 		case config.TIME:
-			startTime := httpStart.Time()
-			replacements = append(replacements, config.TIME, startTime.Format(t.opts.TimeFormat))
+			now := time.Now().Format(t.opts.TimeFormat)
+			replacements = append(replacements, config.TIME, now)
 		case config.REMOTE_ADDR:
 			var ip string
 			switch addr := c.RemoteAddr().(type) {

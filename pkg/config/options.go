@@ -6,6 +6,7 @@ type Options struct {
 	Version     string                      `yaml:"version" json:"version"`
 	PIDFile     string                      `yaml:"pid_file" json:"pid_file"`
 	UpgradeSock string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
+	Gopool      bool                        `yaml:"gopool" json:"gopool"`
 	IsDaemon    bool                        `yaml:"-" json:"-"`
 	User        string                      `yaml:"user" json:"user"`
 	Group       string                      `yaml:"group" json:"group"`

@@ -83,6 +83,10 @@ func getStackTrace() string {
 // mainOptions is the configuration for the bifrost server.
 // err is the error that occurred during the startup process.
 func Run(mainOptions config.Options) (err error) {
+	if !mainOptions.Gopool {
+		return DisableGopool()
+	}
+
 	bifrost, err = NewBifrost(mainOptions, false)
 	if err != nil {
 		slog.Error("fail to start bifrost", "error", err)

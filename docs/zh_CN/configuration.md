@@ -2,8 +2,8 @@
 
 在配置文件的部分，目前有分兩種類型，`靜態配置` 與`動態配置`。
 
-* `靜態配置`: 這種配置的內容無法動態更新，如果想要更新則必須要重啟服務後配置才會生效，例如更換 server 端口等
-* `動態配置`: 屬於這一類的配置，當內容修改後，則配置會立即生效，例如: `routes`, `services`, `upstreams`, `middlewares`
+* `靜態配置`: 這種配置的內容無法動態更新，如果想要更新則必須要重啟服務後配置才會生效，例如更換 servers 端口等
+* `動態配置`: 屬於這一類的配置，當內容修改後，則配置會立即生效，目前只有 `routes`, `services`, `upstreams`, `middlewares` 配置屬於這配置屬於這類型
 
 ## 目錄
    * [providers](#providers)
@@ -76,10 +76,10 @@ metrics:
     buckets: [0.01, 0.03, 0.05, 0.1]
 ```
 
-| 欄位               | 預設值 | 說明                     |
-| ------------------ | ------ | ------------------------ |
-| prometheus.enabled | false  | 是否開啟 prometheus 支持 |
-| prometheus.buckets |        | 延遲等級分類             |
+| 欄位               | 預設值                                 | 說明                     |
+| ------------------ | -------------------------------------- | ------------------------ |
+| prometheus.enabled | false                                  | 是否開啟 prometheus 支持 |
+| prometheus.buckets | 0.100000, 0.300000, 1.200000, 5.000000 | 延遲等級分類             |
 
 
 ## tracing
@@ -145,7 +145,7 @@ access_logs:
 | output         |        | 輸出; 目前支持 `stderr` 或文件路徑           |
 | buffering_size | 64 KB  | 輸出緩衝                                     |
 | time_format    |        | 時間格式                                     |
-| escape         |        | 字元跳脫; 目前支持 `none`, `json`, `default` |
+| escape         | none   | 字元跳脫; 目前支持 `none`, `json`, `default` |
 | template       |        | 請求日誌格式                                 |
 
 
@@ -165,8 +165,8 @@ servers:
       output: "./logs/extenal.log"
     timeout:
       keepalive: 60s
-      read: 3s
-      write: 3s
+      read: 60s
+      write: 60s
       graceful: 10s
     access_log_id: my_access_log
     middlewares:
@@ -181,8 +181,8 @@ servers:
 | logging.handler   | text   | 日誌格式，目前支持的格式有 `text`, `json`                             |
 | logging.level     | ""     | 日誌等級，目前支持的有 `debug`, `info`, `warn`, `error`，預設是不開啟 |
 | logging.output    | `.`    | 日誌輸出地方，目前有 `stderr`，文件路徑                               |
-| timeout.keepalive |        | keepalive 超時時間                                                    |
-| timeout.read      |        | 讀取的超時時間                                                        |
-| timeout.write     |        | 寫入的超時時間                                                        |
-| timeout.graceful  |        | 優雅關閉的超時時間                                                    |
+| timeout.keepalive | 60s    | keepalive 超時時間                                                    |
+| timeout.read      | 60s    | 讀取的超時時間                                                        |
+| timeout.write     | 60s    | 寫入的超時時間                                                        |
+| timeout.graceful  | 10s    | 優雅關閉的超時時間                                                    |
 | access_log_id     |        | 使用哪個請求日誌                                                      |

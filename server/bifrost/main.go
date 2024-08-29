@@ -53,7 +53,6 @@ func main() {
 		},
 		Action: func(cCtx *cli.Context) error {
 			var err error
-			_ = gateway.DisableGopool()
 
 			configPath := cCtx.String("config")
 			isTest := cCtx.Bool("test")
