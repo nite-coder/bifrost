@@ -87,6 +87,8 @@ type ServerOptions struct {
 	Bind               string               `yaml:"bind" json:"bind"`
 	TLS                TLSOptions           `yaml:"tls" json:"tls"`
 	ReusePort          bool                 `yaml:"reuse_port" json:"reuse_port"`
+	TCPQuickAck        bool                 `yaml:"tcp_quick_ack" json:"tcp_quick_ack"`
+	TCPFastOpen        bool                 `yaml:"tcp_fast_open" json:"tcp_fast_open"`
 	HTTP2              bool                 `yaml:"http2" json:"http2"`
 	Middlewares        []MiddlwareOptions   `yaml:"middlewares" json:"middlewares"`
 	Logging            LoggingOtions        `yaml:"logging" json:"logging"`

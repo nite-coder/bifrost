@@ -179,6 +179,8 @@ servers:
   api:  # server 名稱，必須是唯一值
     bind: ":8001"
     reuse_port: false
+    tcp_fast_open: false
+    tcp_quick_ack: false
     http2: false
     logging:
       level: info
@@ -197,7 +199,9 @@ servers:
 | 欄位              | 預設值 | 說明                                                                  |
 | ----------------- | ------ | --------------------------------------------------------------------- |
 | bind              |        | 端口綁定                                                              |
-| reuse_port        | false  | 是否使用 reuse port                                                   |
+| reuse_port        | false  | 是否使用 reuse port; (僅支持 linux)                                   |
+| tcp_fast_open     | false  | 是否開啟 tcp fast open; (僅支持 linux)                                |
+| tcp_quick_ack     | false  | 是否開啟 tcp quickack (僅支持 linux)                                  |
 | http2             | false  | 是否開啟 http2                                                        |
 | logging.handler   | text   | 日誌格式，目前支持的格式有 `text`, `json`                             |
 | logging.level     | ""     | 日誌等級，目前支持的有 `debug`, `info`, `warn`, `error`，預設是不開啟 |

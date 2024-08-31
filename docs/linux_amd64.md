@@ -25,22 +25,22 @@ taskset -c 0,1,2,3,4,5,6,7 k6 run vus.js
               * contacts: 500 looping VUs for 2m0s (gracefulStop: 30s)
 
 
-     data_received..................: 2.9 GB  24 MB/s
-     data_sent......................: 1.1 GB  8.9 MB/s
-     http_req_blocked...............: avg=7.41µs   min=541ns      med=2.32µs  max=169.56ms p(75)=2.91µs  p(95)=4.87µs   p(99)=8.04µs   count=3242768
-     http_req_connecting............: avg=1.28µs   min=0s         med=0s      max=66.66ms  p(75)=0s      p(95)=0s       p(99)=0s       count=3242768
-     http_req_duration..............: avg=17.08ms  min=267.84µs   med=14.4ms  max=177.87ms p(75)=20.54ms p(95)=38.19ms  p(99)=65.52ms  count=3242768
-       { expected_response:true }...: avg=17.08ms  min=267.84µs   med=14.4ms  max=177.87ms p(75)=20.54ms p(95)=38.19ms  p(99)=65.52ms  count=3242768
-     http_req_failed................: 0.00%   ✓ 0            ✗ 3242768
-     http_req_receiving.............: avg=563.22µs min=-1671420ns med=32.03µs max=126.55ms p(75)=36.12µs p(95)=217.99µs p(99)=20.47ms  count=3242768
-     http_req_sending...............: avg=63.43µs  min=-2476747ns med=16.87µs max=161.98ms p(75)=18.93µs p(95)=34.58µs  p(99)=196.71µs count=3242768
-     http_req_tls_handshaking.......: avg=0s       min=0s         med=0s      max=0s       p(75)=0s      p(95)=0s       p(99)=0s       count=3242768
-     http_req_waiting...............: avg=16.46ms  min=215.26µs   med=14.29ms max=154.59ms p(75)=20.37ms p(95)=36.23ms  p(99)=51.76ms  count=3242768
-     http_reqs......................: 3242768 27019.199441/s
-     iteration_duration.............: avg=18.32ms  min=381.09µs   med=15.15ms max=259.34ms p(75)=21.71ms p(95)=42ms     p(99)=72.88ms  count=3242768
-     iterations.....................: 3242768 27019.199441/s
+     data_received..................: 3.0 GB  25 MB/s
+     data_sent......................: 1.1 GB  9.3 MB/s
+     http_req_blocked...............: avg=7.36µs   min=621ns      med=2.32µs  max=67.82ms  p(75)=2.85µs  p(95)=4.86µs  p(99)=8.43µs   count=3373825
+     http_req_connecting............: avg=1.16µs   min=0s         med=0s      max=61ms     p(75)=0s      p(95)=0s      p(99)=0s       count=3373825
+     http_req_duration..............: avg=17.28ms  min=240.23µs   med=15.57ms max=334.97ms p(75)=20.06ms p(95)=32.25ms p(99)=57.31ms  count=3373825
+       { expected_response:true }...: avg=17.28ms  min=240.23µs   med=15.57ms max=334.97ms p(75)=20.06ms p(95)=32.25ms p(99)=57.31ms  count=3373825
+     http_req_failed................: 0.00%   ✓ 0            ✗ 3373825
+     http_req_receiving.............: avg=673.15µs min=-1299709ns med=32.22µs max=94.47ms  p(75)=37.58µs p(95)=272.9µs p(99)=23.85ms  count=3373825
+     http_req_sending...............: avg=71.38µs  min=-1116638ns med=16.67µs max=70.05ms  p(75)=18.85µs p(95)=36.06µs p(99)=204.28µs count=3373825
+     http_req_tls_handshaking.......: avg=0s       min=0s         med=0s      max=0s       p(75)=0s      p(95)=0s      p(99)=0s       count=3373825
+     http_req_waiting...............: avg=16.54ms  min=197.28µs   med=15.47ms max=330.65ms p(75)=19.9ms  p(95)=29.6ms  p(99)=39.42ms  count=3373825
+     http_reqs......................: 3373825 28113.622936/s
+     iteration_duration.............: avg=17.71ms  min=339.07µs   med=15.81ms max=348.36ms p(75)=20.4ms  p(95)=33.82ms p(99)=59.43ms  count=3373825
+     iterations.....................: 3373825 28113.622936/s
      vus............................: 500     min=500        max=500  
-     vus_max........................: 500     min=500        max=500 
+     vus_max........................: 500     min=500        max=500  
 ```
 
 1. http1.1 (tls), upstream http1.1
@@ -68,8 +68,8 @@ taskset -c 0,1,2,3,4,5,6,7 k6 run vus.js
      http_reqs......................: 2963802 24698.728138/s
      iteration_duration.............: avg=20.04ms  min=438.07µs   med=16.44ms max=332.02ms p(75)=24.51ms p(95)=46.55ms  p(99)=80.57ms  count=2963802
      iterations.....................: 2963802 24698.728138/s
-     vus............................: 500     min=500        max=500  
-     vus_max........................: 500     min=500        max=500  
+     vus............................: 500     min=500        max=500
+     vus_max........................: 500     min=500        max=500
 ```
 
 1. http2 (tls), upstream http1.1

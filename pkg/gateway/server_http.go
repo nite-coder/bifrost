@@ -47,18 +47,36 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 	}
 
 	if !disableListener {
-		var listenerConfig *net.ListenConfig
-		if serverOpts.ReusePort {
-			listenerConfig = &net.ListenConfig{
-				Control: func(network, address string, c syscall.RawConn) error {
-					return c.Control(func(fd uintptr) {
-						err := unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
-						if err != nil {
+		listenerConfig := &net.ListenConfig{
+			Control: func(network, address string, c syscall.RawConn) error {
+				var opErr error
+				err := c.Control(func(fd uintptr) {
+					if serverOpts.ReusePort {
+						if err := unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1); err != nil {
+							opErr = err
 							return
 						}
-					})
-				},
-			}
+					}
+
+					if serverOpts.TCPQuickAck {
+						if err := unix.SetsockoptInt(int(fd), unix.IPPROTO_TCP, unix.TCP_QUICKACK, 1); err != nil {
+							opErr = err
+							return
+						}
+					}
+
+					if serverOpts.TCPFastOpen {
+						if err := unix.SetsockoptInt(int(fd), unix.SOL_TCP, unix.TCP_FASTOPEN_CONNECT, 1); err != nil {
+							opErr = err
+							return
+						}
+					}
+				})
+				if err != nil {
+					return err
+				}
+				return opErr
+			},
 		}
 
 		listener, err := bifrost.zero.Listener(ctx, "tcp", serverOpts.Bind, listenerConfig)
