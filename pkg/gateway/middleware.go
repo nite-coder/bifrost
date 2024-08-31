@@ -60,7 +60,7 @@ func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 type CreateMiddlewareHandler func(param map[string]any) (app.HandlerFunc, error)
 
-var middlewareFactory map[string]CreateMiddlewareHandler = make(map[string]CreateMiddlewareHandler)
+
 
 func RegisterMiddleware(kind string, handler CreateMiddlewareHandler) error {
 

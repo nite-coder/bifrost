@@ -1,4 +1,4 @@
-# Bifrost
+# Bifrost Gateway
 
 一個用 Golang 寫出來的 API 網關函式庫, 可以內嵌在 Golang 程序中, 對性能與延遲敏感的項目友善
 

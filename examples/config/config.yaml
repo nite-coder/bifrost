@@ -1,0 +1,29 @@
+providers:
+  file:
+    enabled: true
+    extensions:
+      - ".yaml"
+      - ".yml"
+      - ".json"
+    paths:
+      - "."
+    watch: true
+
+servers:
+  test-server:
+    bind: ":8001"
+
+routes:
+  test-route:
+    paths:
+      - /
+    service_id: test-service
+
+services:
+  test-service:
+    url: "http://test-upstream:8000"
+
+upstreams:
+  test-upstream:
+    targets:
+      - target: "127.0.0.1:8000"

@@ -23,9 +23,10 @@ import (
 )
 
 var (
-	bifrost     *Bifrost
-	spaceByte   = []byte{byte(' ')}
-	httpMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch, http.MethodHead, http.MethodOptions, http.MethodTrace, http.MethodConnect}
+	bifrost           *Bifrost
+	spaceByte                                            = []byte{byte(' ')}
+	middlewareFactory map[string]CreateMiddlewareHandler = make(map[string]CreateMiddlewareHandler)
+	httpMethods                                          = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch, http.MethodHead, http.MethodOptions, http.MethodTrace, http.MethodConnect}
 )
 
 var runTask = gopool.CtxGo
@@ -84,7 +85,7 @@ func getStackTrace() string {
 // err is the error that occurred during the startup process.
 func Run(mainOptions config.Options) (err error) {
 	if !mainOptions.Gopool {
-		return DisableGopool()
+		_ = DisableGopool()
 	}
 
 	bifrost, err = NewBifrost(mainOptions, false)

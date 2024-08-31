@@ -13,6 +13,9 @@
    * [tracing](#tracing)
    * [access_logs](#access_logs)
    * [servers](#servers)
+   * [routes](#routes)
+   * [services](#services)
+   * [upstreams](#upstreams)
 
 ## providers
 
@@ -60,7 +63,7 @@ logging:
 | 欄位    | 預設值 | 說明                                                                  |
 | ------- | ------ | --------------------------------------------------------------------- |
 | handler | text   | 日誌格式，目前支持的格式有 `text`, `json`                             |
-| level   | ""     | 日誌等級，目前支持的有 `debug`, `info`, `warn`, `error`，預設是不開啟 |
+| level   |        | 日誌等級，目前支持的有 `debug`, `info`, `warn`, `error`，預設是不開啟 |
 | output  | `.`    | 日誌輸出地方，目前有 `stderr`，文件路徑                               |
 
 ## metrics
@@ -108,10 +111,28 @@ tracing:
 | otlp.grpc.endpoint |        | otlp collector grpc 端口            |
 | otlp.grpc.insecure | false  | 是否驗證憑證                        |
 
+## middlewares
+
+中間件(插件)，支持使用原生 Golang 開發自定義外部中間件，細節可以參考[中間件](./middlewares.md)
+
+範例:
+
+```yaml
+middlewares:
+  timing:  #中間件名稱，必須是唯一值
+    type: timing_logger
+```
+
+| 欄位   | 預設值 | 說明           |
+| ------ | ------ | -------------- |
+| type   |        | 中間件類型     |
+| params |        | 中間件配置參數 |
+
+
 
 ## access_logs
 
-請求日誌
+請求日誌; 詳細變量支持可參考[請求日誌](./access_logs.md)
 
 範例:
 
@@ -151,7 +172,7 @@ access_logs:
 
 ## servers
 
-管理服務器組態
+服務器組態，支持 middlwares 使用
 
 ```yaml
 servers:
@@ -186,3 +207,80 @@ servers:
 | timeout.write     | 60s    | 寫入的超時時間                                                        |
 | timeout.graceful  | 10s    | 優雅關閉的超時時間                                                    |
 | access_log_id     |        | 使用哪個請求日誌                                                      |
+
+## routes
+
+路由組態，支持 middlwares 使用，更詳細的用法可以參考[路由用法](./routes.md)
+
+```yaml
+routes:
+  spot-orders: # 路由名稱，必須是唯一值
+    methods: []
+    paths:
+      - /api/v1
+    servers: ["extenal", "extenal_tls"]
+    service_id: api-service
+    middlewares:
+      - type: tracing
+```
+
+| 欄位       | 預設值 | 說明                                                              |
+| ---------- | ------ | ----------------------------------------------------------------- |
+| methods    |        | http method; 為空則支持全部 http method                           |
+| paths      |        | http path                                                         |
+| servers    |        | 選擇路由要套用到哪個 server 端口上，如果為空則全部 servers 都支持 |
+| service_id |        | 服務 ID                                                           |
+
+
+## services
+
+業務服務組態，不同業務可以共用同一個 upstream，同時可以依照業務屬性配置不同的 service 參數等
+
+```yaml
+services:
+  api-service: # 服務名稱，必須是唯一值
+    timeout:
+      read: 3s
+      write: 3s
+      idle: 600s
+      dail: 3s
+    #max_conns_per_host: 1
+    tls_verify: false
+    protocol: http
+    url: http://test-server:8000
+```
+
+| 欄位          | 預設值 | 說明                                        |
+| ------------- | ------ | ------------------------------------------- |
+| timeout.read  | 60s    | 讀取的超時時間                              |
+| timeout.write | 60s    | 寫入的超時時間                              |
+| timeout.idle  | 60s    | 閒置超時時間                                |
+| timeout.dail  | 60s    | 撥接超時時間                                |
+| tls_verify    | false  | 是否驗證憑證                                |
+| protocol      | http   | 轉發上游協議; 支持 http, http2              |
+| url           |        | 轉發上游路徑，支持使用 upstream 名稱當 host |
+
+## upstreams
+
+上游組態
+
+```yaml
+upstreams:
+  test-server: # 上游名稱，必須是唯一值
+    strategy: "round_robin"
+    hash_on: ""
+    targets:
+      - target: "127.0.0.1:8000"
+        max_fails: 1
+        fail_timeout: 10s
+        weight: 1
+```
+
+| 欄位                 | 預設值      | 說明                                                             |
+| -------------------- | ----------- | ---------------------------------------------------------------- |
+| strategy             | round_robin | 分流算法; 目前支持`round_robin`、`random`、`weighted`、`hashing` |
+| hash_on              |             | 依照哪個變量來計算哈希分流，僅當 strategy 為 `hashing` 生效      |
+| targets.target       |             | 目標 IP                                                          |
+| targets.max_fails    | 0           | 失敗次數; `0`: 無限制                                            |
+| targets.fail_timeout | 10s         | 失敗次數有效時間範圍                                             |
+| targets.weight       | 1           | 權重                                                             |

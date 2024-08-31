@@ -123,6 +123,10 @@ func NewReverseProxy(opts Options, client *client.Client) (*Proxy, error) {
 		}
 	}
 
+	if opts.Weight == 0 {
+		opts.Weight = 1
+	}
+
 	r := &Proxy{
 		id:              uuid.New().String(),
 		transferTrailer: true,
