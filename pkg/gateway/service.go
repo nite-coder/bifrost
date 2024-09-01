@@ -17,7 +17,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/rs/dnscache"
-	"github.com/valyala/bytebufferpool"
 )
 
 type Service struct {
@@ -281,13 +280,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		time := time.Now()
 		ctx.Set(config.CLIENT_CANCELED_AT, time)
 
-		buf := bytebufferpool.Get()
-		defer bytebufferpool.Put(buf)
-
-		buf.Write(ctx.Request.Method())
-		buf.Write(spaceByte)
-		buf.Write(ctx.Request.URI().FullURI())
-		fullURI := buf.String()
+		fullURI := fullURI(&ctx.Request)
 		logger.WarnContext(c, "client cancel the request",
 			slog.String("full_uri", fullURI),
 		)

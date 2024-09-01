@@ -20,7 +20,9 @@ import (
 	"time"
 
 	"github.com/bytedance/gopkg/util/gopool"
+	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/netpoll"
+	"github.com/valyala/bytebufferpool"
 )
 
 var (
@@ -199,7 +201,7 @@ func Run(mainOptions config.Options) (err error) {
 // It takes mainOptions of type config.Options which contains the user and group information to run the daemon process.
 // Returns an error if the daemon process fails to start.
 func RunAsDaemon(mainOptions config.Options) error {
-	// ensure to create file for pid file and upgrade sock file
+	// verify permissions to create the PID file and the upgrade socket file
 	dir := filepath.Dir(mainOptions.PIDFile)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -306,4 +308,14 @@ func shutdown(ctx context.Context) error {
 
 	slog.Info("bifrost is shutdown successfully", "pid", os.Getpid())
 	return nil
+}
+
+func fullURI(req *protocol.Request) string {
+	buf := bytebufferpool.Get()
+	defer bytebufferpool.Put(buf)
+
+	_, _ = buf.Write(req.Method())
+	_, _ = buf.Write(spaceByte)
+	_, _ = buf.Write(req.URI().FullURI())
+	return buf.String()
 }

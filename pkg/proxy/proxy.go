@@ -268,18 +268,12 @@ func (p *Proxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 		err = p.roundTrip(c, ctx, outReq, outResp)
 		if err != nil {
-			buf := bytebufferpool.Get()
-			defer bytebufferpool.Put(buf)
-
-			buf.Write(outReq.Method())
-			buf.Write(spaceByte)
-			buf.Write(outReq.URI().FullURI())
-			uri := buf.String()
+			fullURI := fullURI(outReq)
 
 			logger := log.FromContext(c)
 			logger.ErrorContext(c, "sent upstream error",
 				slog.String("error", err.Error()),
-				slog.String("upstream", uri),
+				slog.String("upstream", fullURI),
 			)
 
 			if err.Error() == "timeout" {
@@ -306,18 +300,12 @@ ProxyPassLoop:
 			goto ProxyPassLoop
 		}
 
-		buf := bytebufferpool.Get()
-		defer bytebufferpool.Put(buf)
-
-		buf.Write(outReq.Method())
-		buf.Write(spaceByte)
-		buf.Write(outReq.URI().FullURI())
-		uri := buf.String()
+		fullURI := fullURI(outReq)
 
 		logger := log.FromContext(c)
 		logger.ErrorContext(c, "sent upstream error",
 			slog.String("error", err.Error()),
-			slog.String("upstream", uri),
+			slog.String("upstream", fullURI),
 		)
 
 		if errors.Is(err, hzerrors.ErrTimeout) {

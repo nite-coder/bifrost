@@ -73,3 +73,13 @@ func JoinURLPath(req *protocol.Request, target string) (path []byte) {
 	}
 	return buffer.Bytes()
 }
+
+func fullURI(req *protocol.Request) string {
+	buf := bytebufferpool.Get()
+	defer bytebufferpool.Put(buf)
+
+	_, _ = buf.Write(req.Method())
+	_, _ = buf.Write(spaceByte)
+	_, _ = buf.Write(req.URI().FullURI())
+	return buf.String()
+}
