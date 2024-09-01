@@ -20,7 +20,6 @@ import (
 	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/pprof"
-	"golang.org/x/sys/unix"
 )
 
 type HTTPServer struct {
@@ -52,7 +51,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 				var opErr error
 				err := c.Control(func(fd uintptr) {
 					if serverOpts.ReusePort {
-						if err := unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1); err != nil {
+						if err := setTCPReusePort(fd); err != nil {
 							opErr = err
 							return
 						}

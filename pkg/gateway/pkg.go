@@ -21,7 +21,6 @@ import (
 
 	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/cloudwego/hertz/pkg/protocol"
-	"github.com/cloudwego/netpoll"
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -36,19 +35,6 @@ var runTask = gopool.CtxGo
 
 func setRunner(runner func(ctx context.Context, f func())) {
 	runTask = runner
-}
-
-// DisableGopool disables the Go pool.
-//
-// No parameters.
-// Returns an error type.
-
-func DisableGopool() error {
-	_ = netpoll.DisableGopool()
-	runTask = func(ctx context.Context, f func()) {
-		go f()
-	}
-	return nil
 }
 
 func isValidHTTPMethod(method string) bool {
@@ -238,13 +224,7 @@ func RunAsDaemon(mainOptions config.Options) error {
 			gid, _ = strconv.Atoi(g.Gid)
 		}
 
-		// it requires root permission
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			Credential: &syscall.Credential{
-				Uid: uint32(uid),
-				Gid: uint32(gid),
-			},
-		}
+		setUserAndGroup(cmd, uint32(uid), uint32(gid))
 	}
 
 	err := cmd.Start()
