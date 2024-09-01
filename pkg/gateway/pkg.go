@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"os/user"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -198,6 +199,21 @@ func Run(mainOptions config.Options) (err error) {
 // It takes mainOptions of type config.Options which contains the user and group information to run the daemon process.
 // Returns an error if the daemon process fails to start.
 func RunAsDaemon(mainOptions config.Options) error {
+	// ensure to create file for pid file and upgrade sock file
+	dir := filepath.Dir(mainOptions.PIDFile)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %v", dir, err)
+		}
+	}
+
+	dir = filepath.Dir(mainOptions.UpgradeSock)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %v", dir, err)
+		}
+	}
+
 	cmd := exec.Command(os.Args[0], os.Args[1:]...)
 	cmd.Stdin = nil
 	cmd.Stdout = nil

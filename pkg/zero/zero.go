@@ -182,7 +182,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	z.mu.Unlock()
 
 	_ = z.writePID()
-	socket, err := net.Listen("unix", z.options.UpgradeSock)
+	socket, err := net.Listen("unix", z.options.GetUpgradeSock())
 	if err != nil {
 		return fmt.Errorf("failed to open upgrade socket: %v", err)
 	}
@@ -191,7 +191,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 		z.isShutdownCh <- true
 	}()
 
-	slog.Info("unix socket is created", "path", z.options.UpgradeSock)
+	slog.Info("unix socket is created", "path", z.options.GetUpgradeSock())
 
 	go func() {
 		defer func() {
@@ -299,7 +299,6 @@ func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
 			return fmt.Errorf("check process error: %w", err)
 		}
 	}
-
 
 	// If we reach here, it means timeout occurred
 	// Optionally send SIGKILL
