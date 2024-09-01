@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -52,20 +53,20 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 				var opErr error
 				err := c.Control(func(fd uintptr) {
 					if serverOpts.ReusePort {
-						if err := unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1); err != nil {
+						if err := syscall.SetsockoptInt(int(fd), unix.SOL_SOCKET, syscall.SO_REUSEPORT, 1); err != nil {
 							opErr = err
 							return
 						}
 					}
 
-					if serverOpts.TCPQuickAck {
+					if serverOpts.TCPQuickAck && runtime.GOOS == "linux" {
 						if err := unix.SetsockoptInt(int(fd), unix.IPPROTO_TCP, unix.TCP_QUICKACK, 1); err != nil {
 							opErr = err
 							return
 						}
 					}
 
-					if serverOpts.TCPFastOpen {
+					if serverOpts.TCPFastOpen && runtime.GOOS == "linux" {
 						if err := unix.SetsockoptInt(int(fd), unix.SOL_TCP, unix.TCP_FASTOPEN_CONNECT, 1); err != nil {
 							opErr = err
 							return
