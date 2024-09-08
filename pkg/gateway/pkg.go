@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -84,10 +85,6 @@ func Run(mainOptions config.Options) (err error) {
 	}
 
 	ctx := context.Background()
-	// shutdown bifrost
-	defer func() {
-		_ = shutdown(ctx)
-	}()
 
 	config.OnChanged = func() error {
 		slog.Debug("reloading...")
@@ -133,13 +130,6 @@ func Run(mainOptions config.Options) (err error) {
 	}
 
 	go func() {
-		defer func() {
-			ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-			defer cancel()
-
-			_ = shutdown(ctx)
-		}()
-
 		bifrost.Run()
 	}()
 
@@ -172,6 +162,11 @@ func Run(mainOptions config.Options) (err error) {
 				return
 			}
 		}
+	}()
+
+	defer func() {
+		// shutdown bifrost
+		_ = shutdown(ctx)
 	}()
 
 	sigChan := make(chan os.Signal, 1)
@@ -298,4 +293,21 @@ func fullURI(req *protocol.Request) string {
 	_, _ = buf.Write(spaceByte)
 	_, _ = buf.Write(req.URI().FullURI())
 	return buf.String()
+}
+
+
+// waitTimeout waits for the waitgroup for the specified max timeout.
+// Returns true if waiting timed out.
+func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return false // completed normally
+	case <-time.After(timeout):
+		return true // timed out
+	}
 }
