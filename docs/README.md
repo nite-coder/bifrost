@@ -8,4 +8,8 @@ grpcurl -plaintext localhost:8003 list
 
 grpcurl -v -proto hello_world.proto -d '{"name": "jason"}' -plaintext localhost:8001 helloworld.Greeter/SayHello
 
+timeout 30 tcpdump -i any host localhost and port 8001 -w ./bifrost.pcap
+
 ss -tulpn | grep :8001
+
+ss -plnt

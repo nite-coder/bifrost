@@ -6,16 +6,17 @@
 * `動態配置`: 屬於這一類的配置，當內容修改後，則配置會立即生效，目前只有 `routes`, `services`, `upstreams`, `middlewares` 配置屬於這配置屬於這類型
 
 ## 目錄
-   * [providers](#providers)
-      + [file](#file)
-   * [logging](#logging)
-   * [metrics](#metrics)
-   * [tracing](#tracing)
-   * [access_logs](#access_logs)
-   * [servers](#servers)
-   * [routes](#routes)
-   * [services](#services)
-   * [upstreams](#upstreams)
+
+* [providers](#providers)
+  * [file](#file)
+* [logging](#logging)
+* [metrics](#metrics)
+* [tracing](#tracing)
+* [access_logs](#access_logs)
+* [servers](#servers)
+* [routes](#routes)
+* [services](#services)
+* [upstreams](#upstreams)
 
 ## providers
 
@@ -84,7 +85,6 @@ metrics:
 | prometheus.enabled | false                                  | 是否開啟 prometheus 支持 |
 | prometheus.buckets | 0.100000, 0.300000, 1.200000, 5.000000 | 延遲等級分類             |
 
-
 ## tracing
 
 追蹤，目前支持 `opentelemetry`
@@ -128,8 +128,6 @@ middlewares:
 | type   |        | 中間件類型     |
 | params |        | 中間件配置參數 |
 
-
-
 ## access_logs
 
 請求日誌; 詳細變量支持可參考[請求日誌](./access_logs.md)
@@ -169,7 +167,6 @@ access_logs:
 | escape         | none   | 字元跳脫; 目前支持 `none`, `json`, `default` |
 | template       |        | 請求日誌格式                                 |
 
-
 ## servers
 
 服務器組態，支持 middlwares 使用
@@ -202,6 +199,7 @@ servers:
 | reuse_port        | false  | 是否使用 reuse port; (僅支持 linux)                                   |
 | tcp_fast_open     | false  | 是否開啟 tcp fast open; (僅支持 linux)                                |
 | tcp_quick_ack     | false  | 是否開啟 tcp quickack (僅支持 linux)                                  |
+| backlog           |        | 限制 tcp backlog 數量 (僅支持 linux)                                  |
 | http2             | false  | 是否開啟 http2                                                        |
 | logging.handler   | text   | 日誌格式，目前支持的格式有 `text`, `json`                             |
 | logging.level     | ""     | 日誌等級，目前支持的有 `debug`, `info`, `warn`, `error`，預設是不開啟 |
@@ -234,7 +232,6 @@ routes:
 | paths      |        | http path                                                         |
 | servers    |        | 選擇路由要套用到哪個 server 端口上，如果為空則全部 servers 都支持 |
 | service_id |        | 服務 ID                                                           |
-
 
 ## services
 

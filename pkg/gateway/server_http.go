@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/pprof"
+	"golang.org/x/sys/unix"
 )
 
 type HTTPServer struct {
@@ -81,6 +83,22 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		listener, err := bifrost.zero.Listener(ctx, "tcp", serverOpts.Bind, listenerConfig)
 		if err != nil {
 			return nil, err
+		}
+
+		if serverOpts.Backlog > 0 && runtime.GOOS == "linux" {
+			tl, ok := listener.(*net.TCPListener)
+			if !ok {
+				return nil, fmt.Errorf("only tcp listener supported, called with %#v", listener)
+			}
+			file, err := tl.File()
+			if err != nil {
+				return nil, err
+			}
+			fd := int(file.Fd())
+			err = unix.Listen(fd, serverOpts.Backlog)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		hzOpts = append(hzOpts, server.WithListener(listener))

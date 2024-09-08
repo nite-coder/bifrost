@@ -28,13 +28,8 @@ func setTCPQuickAck(fd uintptr) error {
 }
 
 func setTCPFastOpen(fd uintptr) error {
-	// Enable fastopen on the server side
-	if err := unix.SetsockoptInt(int(fd), unix.SOL_TCP, unix.TCP_FASTOPEN, 1); err != nil {
-		return err
-	}
-
-	// Enable fastopen on the client side
-	if err := unix.SetsockoptInt(int(fd), unix.SOL_TCP, unix.TCP_FASTOPEN_CONNECT, 1); err != nil {
+	// Enable fastopen on both client and server side
+	if err := unix.SetsockoptInt(int(fd), unix.SOL_TCP, unix.TCP_FASTOPEN, 3); err != nil {
 		return err
 	}
 	return nil

@@ -9,6 +9,7 @@
 *.dylib
 *.pid
 *.sock
+*.pcap
 
 # Test binary, built with `go test -c`
 *.test
@@ -32,3 +33,4 @@ obj
 
 server/standard/standard
 server/hertz/hertz
+
