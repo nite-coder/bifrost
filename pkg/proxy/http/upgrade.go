@@ -1,4 +1,4 @@
-package proxy
+package http
 
 import (
 	"context"
@@ -30,7 +30,7 @@ func upgradeRespType(h *protocol.ResponseHeader) string {
 	return h.Get("Upgrade")
 }
 
-func (p *Proxy) roundTrip(ctx context.Context, clientCtx *app.RequestContext, req *protocol.Request, resp *protocol.Response) error {
+func (p *HTTPProxy) roundTrip(ctx context.Context, clientCtx *app.RequestContext, req *protocol.Request, resp *protocol.Response) error {
 	dailer := p.client.GetOptions().Dialer
 
 	host := string(req.Host())
@@ -94,7 +94,7 @@ func (p *Proxy) roundTrip(ctx context.Context, clientCtx *app.RequestContext, re
 	return nil
 }
 
-func (p *Proxy) handleUpgradeResponse(ctx context.Context, clientConn network.Conn, backendConn network.Conn) {
+func (p *HTTPProxy) handleUpgradeResponse(ctx context.Context, clientConn network.Conn, backendConn network.Conn) {
 	backConnCloseCh := make(chan bool)
 	go func() {
 		// Ensure that the cancellation of a request closes the backend.

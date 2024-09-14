@@ -8,7 +8,7 @@ import (
 
 type rawCodec struct{}
 
-func (c *rawCodec) Marshal(v interface{}) ([]byte, error) {
+func (c *rawCodec) Marshal(v any) ([]byte, error) {
 	return v.([]byte), nil
 }
 

@@ -1,7 +1,6 @@
-package proxy
+package http
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -11,10 +10,6 @@ import (
 
 var (
 	spaceByte = []byte{byte(' ')}
-)
-
-var (
-	ErrMaxFailedCount = errors.New("reach max failed count")
 )
 
 // IsASCIIPrint returns whether s is ASCII and printable according to

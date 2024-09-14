@@ -5,7 +5,9 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"http-benchmark/pkg/proxy"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -18,21 +20,31 @@ import (
 )
 
 type Options struct {
-	Target    string
-	TLSVerify bool
+	Target      string
+	TLSVerify   bool
+	Weight      uint
+	MaxFails    uint
+	FailTimeout time.Duration
 }
 
-type GrpcProxy struct {
-	option *Options
-	client *grpc.ClientConn
+type GRPCProxy struct {
+	mu      sync.RWMutex
+	id      string
+	options *Options
+	client  *grpc.ClientConn
+	// target is set as a reverse proxy address
+	target       string
+	weight       uint
+	failedCount  uint
+	failExpireAt time.Time
 }
 
-func NewGrpcProxy(option Options) (*GrpcProxy, error) {
+func New(option Options) (*GRPCProxy, error) {
 
 	grpcOpts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(&rawCodec{})),
-		grpc.WithIdleTimeout(3 * time.Second),
+		grpc.WithIdleTimeout(30 * time.Minute),
 		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(1024 * 1024 * 20)), // 20MB
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024 * 1024 * 20)), // 20MB
 		grpc.WithDisableRetry(),
@@ -43,16 +55,68 @@ func NewGrpcProxy(option Options) (*GrpcProxy, error) {
 		return nil, fmt.Errorf("fail to dial backend: %v", err)
 	}
 
-	return &GrpcProxy{
-		option: &option,
-		client: client,
+	return &GRPCProxy{
+		options: &option,
+		client:  client,
 	}, nil
 }
 
-func (p *GrpcProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+func (p *GRPCProxy) IsAvailable() bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	if p.options.MaxFails == 0 {
+		return true
+	}
+
+	now := time.Now()
+	if now.After(p.failExpireAt) {
+		return true
+	}
+
+	if p.failedCount < p.options.MaxFails {
+		return true
+	}
+
+	return false
+}
+
+func (p *GRPCProxy) AddFailedCount(count uint) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	now := time.Now()
+	if now.After(p.failExpireAt) {
+		p.failExpireAt = now.Add(p.options.FailTimeout)
+		p.failedCount = count
+	} else {
+		p.failedCount += count
+	}
+
+	if p.options.MaxFails > 0 && p.failedCount >= p.options.MaxFails {
+		return proxy.ErrMaxFailedCount
+	}
+
+	return nil
+}
+
+// ID return proxy's ID
+func (p *GRPCProxy) ID() string {
+	return p.id
+}
+
+func (p *GRPCProxy) Weight() uint {
+	return p.weight
+}
+
+func (p *GRPCProxy) Target() string {
+	return p.target
+}
+
+func (p *GRPCProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	defer func() {
 		if r := recover(); r != nil {
-			slog.ErrorContext(c, "grpc proxy panic recovered", slog.Any("panic", r))
+			slog.ErrorContext(c, "proxy: grpc proxy panic recovered", slog.Any("error", r))
 			ctx.Abort()
 		}
 	}()

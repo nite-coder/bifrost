@@ -170,6 +170,7 @@ type Protocol string
 const (
 	ProtocolHTTP  Protocol = "http"
 	ProtocolHTTP2 Protocol = "http2"
+	ProtocolGRPC  Protocol = "grpc"
 )
 
 type ServiceOptions struct {

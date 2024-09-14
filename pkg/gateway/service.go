@@ -7,6 +7,7 @@ import (
 	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"http-benchmark/pkg/proxy"
+	httpproxy "http-benchmark/pkg/proxy/http"
 	"log/slog"
 	"net/url"
 	"strconv"
@@ -23,7 +24,7 @@ type Service struct {
 	bifrost         *Bifrost
 	options         *config.ServiceOptions
 	upstreams       map[string]*Upstream
-	proxy           *proxy.Proxy
+	proxy           proxy.Proxy
 	upstream        *Upstream
 	dynamicUpstream string
 	middlewares     []app.HandlerFunc
@@ -108,7 +109,7 @@ func newService(bifrost *Bifrost, opts config.ServiceOptions) (*Service, error) 
 	}
 
 	// direct proxy
-	clientOpts := proxy.DefaultClientOptions()
+	clientOpts := httpproxy.DefaultClientOptions()
 
 	if opts.Timeout.Dail > 0 {
 		clientOpts = append(clientOpts, client.WithDialTimeout(opts.Timeout.Dail))
@@ -158,24 +159,24 @@ func newService(bifrost *Bifrost, opts config.ServiceOptions) (*Service, error) 
 		url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, hostname, addr.Port(), addr.Path)
 	}
 
-	clientOptions := proxy.ClientOptions{
+	clientOptions := httpproxy.ClientOptions{
 		IsTracingEnabled: bifrost.options.Tracing.OTLP.Enabled,
 		IsHTTP2:          opts.Protocol == config.ProtocolHTTP2,
 		HZOptions:        clientOpts,
 	}
 
-	client, err := proxy.NewClient(clientOptions)
+	client, err := httpproxy.NewClient(clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	proxyOptions := proxy.Options{
+	proxyOptions := httpproxy.Options{
 		Target:   url,
 		Protocol: opts.Protocol,
 		Weight:   0,
 	}
 
-	proxy, err := proxy.NewReverseProxy(proxyOptions, client)
+	proxy, err := httpproxy.New(proxyOptions, client)
 	if err != nil {
 		return nil, err
 	}

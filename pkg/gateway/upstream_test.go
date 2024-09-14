@@ -4,6 +4,7 @@ import (
 	"hash/fnv"
 	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/proxy"
+	httpproxy "http-benchmark/pkg/proxy/http"
 	"math/rand"
 	"sync/atomic"
 	"testing"
@@ -13,38 +14,38 @@ import (
 )
 
 func TestRoundRobin(t *testing.T) {
-	proxyOptions1 := proxy.Options{
+	proxyOptions1 := httpproxy.Options{
 		Target:      "http://backend1",
 		Protocol:    config.ProtocolHTTP,
 		Weight:      1,
 		FailTimeout: 1 * time.Second,
 		MaxFails:    1,
 	}
-	proxy1, _ := proxy.NewReverseProxy(proxyOptions1, nil)
+	proxy1, _ := httpproxy.New(proxyOptions1, nil)
 	err := proxy1.AddFailedCount(1)
 	assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
 	time.Sleep(1 * time.Second) // wait and proxy1 should be availabe
 
-	proxyOptions2 := proxy.Options{
+	proxyOptions2 := httpproxy.Options{
 		Target:      "http://backend2",
 		Protocol:    config.ProtocolHTTP,
 		Weight:      1,
 		FailTimeout: 10 * time.Second,
 		MaxFails:    1,
 	}
-	proxy2, _ := proxy.NewReverseProxy(proxyOptions2, nil)
+	proxy2, _ := httpproxy.New(proxyOptions2, nil)
 
-	proxyOptions3 := proxy.Options{
+	proxyOptions3 := httpproxy.Options{
 		Target:      "http://backend3",
 		Protocol:    config.ProtocolHTTP,
 		Weight:      1,
 		FailTimeout: 10 * time.Second,
 		MaxFails:    0,
 	}
-	proxy3, _ := proxy.NewReverseProxy(proxyOptions3, nil)
+	proxy3, _ := httpproxy.New(proxyOptions3, nil)
 
 	upstream := &Upstream{
-		proxies: []*proxy.Proxy{
+		proxies: []proxy.Proxy{
 			proxy1,
 			proxy2,
 			proxy3,
@@ -81,18 +82,18 @@ func TestRoundRobin(t *testing.T) {
 		err = proxy2.AddFailedCount(100)
 		assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
 
-		proxyOptions3 := proxy.Options{
+		proxyOptions3 := httpproxy.Options{
 			Target:      "http://backend3",
 			Protocol:    config.ProtocolHTTP,
 			Weight:      1,
 			FailTimeout: 10 * time.Second,
 			MaxFails:    1,
 		}
-		proxy3, _ := proxy.NewReverseProxy(proxyOptions3, nil)
+		proxy3, _ := httpproxy.New(proxyOptions3, nil)
 		err = proxy3.AddFailedCount(100)
 		assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
 
-		upstream.proxies = []*proxy.Proxy{proxy1, proxy2, proxy3}
+		upstream.proxies = []proxy.Proxy{proxy1, proxy2, proxy3}
 
 		for i := 0; i < 6000; i++ {
 			proxy := upstream.roundRobin()
@@ -102,35 +103,35 @@ func TestRoundRobin(t *testing.T) {
 }
 
 func TestWeighted(t *testing.T) {
-	proxyOptions1 := proxy.Options{
+	proxyOptions1 := httpproxy.Options{
 		Target:      "http://backend1",
 		Protocol:    config.ProtocolHTTP,
 		Weight:      1,
 		FailTimeout: 10 * time.Second,
 		MaxFails:    10,
 	}
-	proxy1, _ := proxy.NewReverseProxy(proxyOptions1, nil)
+	proxy1, _ := httpproxy.New(proxyOptions1, nil)
 
-	proxyOptions2 := proxy.Options{
+	proxyOptions2 := httpproxy.Options{
 		Target:      "http://backend2",
 		Protocol:    config.ProtocolHTTP,
 		Weight:      2,
 		FailTimeout: 10 * time.Second,
 		MaxFails:    1,
 	}
-	proxy2, _ := proxy.NewReverseProxy(proxyOptions2, nil)
+	proxy2, _ := httpproxy.New(proxyOptions2, nil)
 
-	proxyOptions3 := proxy.Options{
+	proxyOptions3 := httpproxy.Options{
 		Target:      "http://backend3",
 		Protocol:    config.ProtocolHTTP,
 		Weight:      3,
 		FailTimeout: 10 * time.Second,
 		MaxFails:    100,
 	}
-	proxy3, _ := proxy.NewReverseProxy(proxyOptions3, nil)
+	proxy3, _ := httpproxy.New(proxyOptions3, nil)
 
 	upstream := &Upstream{
-		proxies: []*proxy.Proxy{
+		proxies: []proxy.Proxy{
 			proxy1,
 			proxy2,
 			proxy3,
@@ -182,35 +183,35 @@ func TestWeighted(t *testing.T) {
 }
 
 func TestRandom(t *testing.T) {
-	proxyOptions1 := proxy.Options{
+	proxyOptions1 := httpproxy.Options{
 		Target:      "http://backend1",
 		Protocol:    config.ProtocolHTTP,
 		Weight:      1,
 		FailTimeout: 10 * time.Second,
 		MaxFails:    1,
 	}
-	proxy1, _ := proxy.NewReverseProxy(proxyOptions1, nil)
+	proxy1, _ := httpproxy.New(proxyOptions1, nil)
 
-	proxyOptions2 := proxy.Options{
+	proxyOptions2 := httpproxy.Options{
 		Target:      "http://backend2",
 		Protocol:    config.ProtocolHTTP,
 		Weight:      1,
 		FailTimeout: 10 * time.Second,
 		MaxFails:    1,
 	}
-	proxy2, _ := proxy.NewReverseProxy(proxyOptions2, nil)
+	proxy2, _ := httpproxy.New(proxyOptions2, nil)
 
-	proxyOptions3 := proxy.Options{
+	proxyOptions3 := httpproxy.Options{
 		Target:      "http://backend3",
 		Protocol:    config.ProtocolHTTP,
 		Weight:      1,
 		FailTimeout: 10 * time.Second,
 		MaxFails:    1,
 	}
-	proxy3, _ := proxy.NewReverseProxy(proxyOptions3, nil)
+	proxy3, _ := httpproxy.New(proxyOptions3, nil)
 
 	upstream := &Upstream{
-		proxies: []*proxy.Proxy{
+		proxies: []proxy.Proxy{
 			proxy1,
 			proxy2,
 			proxy3,
@@ -263,35 +264,35 @@ func TestRandom(t *testing.T) {
 }
 
 func TestHashing(t *testing.T) {
-	proxyOptions1 := proxy.Options{
+	proxyOptions1 := httpproxy.Options{
 		Target:      "http://backend1",
 		Protocol:    config.ProtocolHTTP,
 		Weight:      1,
 		FailTimeout: 10 * time.Minute,
 		MaxFails:    1,
 	}
-	proxy1, _ := proxy.NewReverseProxy(proxyOptions1, nil)
+	proxy1, _ := httpproxy.New(proxyOptions1, nil)
 
-	proxyOptions2 := proxy.Options{
+	proxyOptions2 := httpproxy.Options{
 		Target:      "http://backend2",
 		Protocol:    config.ProtocolHTTP,
 		Weight:      1,
 		FailTimeout: 10 * time.Minute,
 		MaxFails:    1,
 	}
-	proxy2, _ := proxy.NewReverseProxy(proxyOptions2, nil)
+	proxy2, _ := httpproxy.New(proxyOptions2, nil)
 
-	proxyOptions3 := proxy.Options{
+	proxyOptions3 := httpproxy.Options{
 		Target:      "http://backend3",
 		Protocol:    config.ProtocolHTTP,
 		Weight:      1,
 		FailTimeout: 10 * time.Minute,
 		MaxFails:    1,
 	}
-	proxy3, _ := proxy.NewReverseProxy(proxyOptions3, nil)
+	proxy3, _ := httpproxy.New(proxyOptions3, nil)
 
 	upstream := &Upstream{
-		proxies: []*proxy.Proxy{
+		proxies: []proxy.Proxy{
 			proxy1,
 			proxy2,
 			proxy3,

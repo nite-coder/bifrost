@@ -8,6 +8,7 @@ import (
 	"hash/fnv"
 	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/proxy"
+	httpproxy "http-benchmark/pkg/proxy/http"
 	"math/rand"
 	"net"
 	"net/url"
@@ -21,7 +22,7 @@ import (
 
 type Upstream struct {
 	opts        *config.UpstreamOptions
-	proxies     []*proxy.Proxy
+	proxies     []proxy.Proxy
 	counter     atomic.Uint64
 	totalWeight uint
 	hasher      hash.Hash32
@@ -57,7 +58,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 	}
 
 	// direct proxy
-	clientOpts := proxy.DefaultClientOptions()
+	clientOpts := httpproxy.DefaultClientOptions()
 
 	if serviceOpts.Timeout.Dail > 0 {
 		clientOpts = append(clientOpts, client.WithDialTimeout(serviceOpts.Timeout.Dail))
@@ -81,7 +82,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 
 	upstream := &Upstream{
 		opts:    &opts,
-		proxies: make([]*proxy.Proxy, 0),
+		proxies: make([]proxy.Proxy, 0),
 		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
 		hasher:  fnv.New32a(),
 	}
@@ -138,18 +139,18 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 			url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
 		}
 
-		clientOptions := proxy.ClientOptions{
+		clientOptions := httpproxy.ClientOptions{
 			IsTracingEnabled: bifrost.options.Tracing.OTLP.Enabled,
 			IsHTTP2:          serviceOpts.Protocol == config.ProtocolHTTP2,
 			HZOptions:        clientOpts,
 		}
 
-		client, err := proxy.NewClient(clientOptions)
+		client, err := httpproxy.NewClient(clientOptions)
 		if err != nil {
 			return nil, err
 		}
 
-		proxyOptions := proxy.Options{
+		proxyOptions := httpproxy.Options{
 			Target:      url,
 			Protocol:    serviceOpts.Protocol,
 			Weight:      targetOpts.Weight,
@@ -157,7 +158,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 			FailTimeout: targetOpts.FailTimeout,
 		}
 
-		proxy, err := proxy.NewReverseProxy(proxyOptions, client)
+		proxy, err := httpproxy.New(proxyOptions, client)
 
 		if err != nil {
 			return nil, err
@@ -184,7 +185,7 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 	return upstream, nil
 }
 
-func (u *Upstream) roundRobin() *proxy.Proxy {
+func (u *Upstream) roundRobin() proxy.Proxy {
 	if len(u.proxies) == 1 {
 		proxy := u.proxies[0]
 		if proxy.IsAvailable() {
@@ -212,7 +213,7 @@ findLoop:
 	goto findLoop
 }
 
-func (u *Upstream) weighted() *proxy.Proxy {
+func (u *Upstream) weighted() proxy.Proxy {
 	if len(u.proxies) == 1 {
 		proxy := u.proxies[0]
 		if proxy.IsAvailable() {
@@ -247,7 +248,7 @@ findLoop:
 	return nil
 }
 
-func (u *Upstream) random() *proxy.Proxy {
+func (u *Upstream) random() proxy.Proxy {
 	if len(u.proxies) == 1 {
 		proxy := u.proxies[0]
 		if proxy.IsAvailable() {
@@ -275,7 +276,7 @@ findLoop:
 	goto findLoop
 }
 
-func (u *Upstream) hasing(key string) *proxy.Proxy {
+func (u *Upstream) hasing(key string) proxy.Proxy {
 	if len(u.proxies) == 1 {
 		proxy := u.proxies[0]
 		if proxy.IsAvailable() {
@@ -290,10 +291,10 @@ func (u *Upstream) hasing(key string) *proxy.Proxy {
 	failedReconds := map[string]bool{}
 
 findLoop:
-	var allProxies []*proxy.Proxy
+	var allProxies []proxy.Proxy
 
 	if len(failedReconds) > 0 {
-		allProxies = make([]*proxy.Proxy, len(u.proxies))
+		allProxies = make([]proxy.Proxy, len(u.proxies))
 		copy(allProxies, u.proxies)
 
 		for failedProxyID := range failedReconds {

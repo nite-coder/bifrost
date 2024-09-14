@@ -2,6 +2,7 @@ package accesslog
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"http-benchmark/pkg/config"
 	"log/slog"
@@ -125,6 +126,8 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 		return nil
 	}
 
+	contentType := c.Request.Header.ContentType()
+
 	replacements := make([]string, 0, len(t.matchVars)*2)
 
 	info := c.GetTraceInfo().Stats()
@@ -190,6 +193,12 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 		case config.REQUEST_PROTOCOL:
 			replacements = append(replacements, config.REQUEST_PROTOCOL, c.Request.Header.GetProtocol())
 		case config.REQUEST_BODY:
+			// if content type is grpc, the $request_body will be ignored
+			if bytes.Equal(contentType, grpcContentType) {
+				replacements = append(replacements, config.REQUEST_BODY, "")
+				continue
+			}
+
 			body := escape(cast.B2S(c.Request.Body()), t.opts.Escape)
 			replacements = append(replacements, config.REQUEST_BODY, body)
 		case config.STATUS:

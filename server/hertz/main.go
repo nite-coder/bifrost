@@ -4,8 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"http-benchmark/pkg/proxy"
-	"http-benchmark/pkg/proxy/grpc"
+	grpcproxy "http-benchmark/pkg/proxy/grpc"
+	httpproxy "http-benchmark/pkg/proxy/http"
 	"http-benchmark/pkg/zero"
 	"io"
 	"log"
@@ -144,39 +144,26 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 	http2opts := []configHTTP2.Option{}
 	h.AddProtocol("h2", factory.NewServerFactory(http2opts...))
 
-	// defaultClientOptions := []config.ClientOption{
-	// 	client.WithNoDefaultUserAgentHeader(true),
-	// 	client.WithDisableHeaderNamesNormalizing(true),
-	// 	client.WithDisablePathNormalizing(true),
-	// 	client.WithMaxConnsPerHost(math.MaxInt),
-	// 	client.WithDialTimeout(3 * time.Second),
-	// 	client.WithClientReadTimeout(3 * time.Second),
-	// 	client.WithWriteTimeout(3 * time.Second),
-	// 	client.WithKeepAlive(true),
-	// }
-
-	//proxy, _ := reverseproxy.NewSingleHostReverseProxy("http://localhost:8000", defaultClientOptions...)
-
-	opts := proxy.Options{
+	opts := httpproxy.Options{
 		Target:   "http://localhost:8000",
 		Weight:   1,
 		Protocol: configBifrost.ProtocolHTTP,
 	}
-	proxy, err := proxy.NewReverseProxy(opts, nil)
+	httpProxy, err := httpproxy.New(opts, nil)
 	if err != nil {
 		return err
 	}
 
-	grpcOption := grpc.Options{
+	grpcOption := grpcproxy.Options{
 		Target:    "127.0.0.1:8501",
 		TLSVerify: false,
 	}
 
-	grpcProxy, err := grpc.NewGrpcProxy(grpcOption)
+	grpcProxy, err := grpcproxy.New(grpcOption)
 	if err != nil {
 		return err
 	}
-	h.POST("/spot/orders", proxy.ServeHTTP)
+	h.POST("/spot/orders", httpProxy.ServeHTTP)
 	h.POST("/helloworld.Greeter/SayHello", grpcProxy.ServeHTTP)
 
 	go func() {

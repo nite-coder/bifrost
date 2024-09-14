@@ -1,4 +1,4 @@
-package proxy
+package http
 
 import (
 	"bytes"
@@ -76,7 +76,7 @@ func TestReverseProxy(t *testing.T) {
 		Weight:   1,
 	}
 
-	proxy, err := NewReverseProxy(proxyOptions, nil)
+	proxy, err := New(proxyOptions, nil)
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestReverseProxyStripHeadersPresentInConnection(t *testing.T) {
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy, err := NewReverseProxy(proxyOptions, nil)
+	proxy, err := New(proxyOptions, nil)
 
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
@@ -260,7 +260,7 @@ func TestReverseProxyStripEmptyConnection(t *testing.T) {
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy, err := NewReverseProxy(proxyOptions, nil)
+	proxy, err := New(proxyOptions, nil)
 
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
@@ -321,7 +321,7 @@ func TestXForwardedFor(t *testing.T) {
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy, err := NewReverseProxy(proxyOptions, nil)
+	proxy, err := New(proxyOptions, nil)
 
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
@@ -377,7 +377,7 @@ func TestReverseProxyQuery(t *testing.T) {
 			Protocol: config.ProtocolHTTP,
 			Weight:   1,
 		}
-		proxy, _ := NewReverseProxy(proxyOptions, nil)
+		proxy, _ := New(proxyOptions, nil)
 
 		r.GET("/backend", proxy.ServeHTTP)
 		go r.Spin()
@@ -422,7 +422,7 @@ func TestReverseProxy_Post(t *testing.T) {
 		Protocol: config.ProtocolHTTP,
 		Weight:   1,
 	}
-	proxy, _ := NewReverseProxy(proxyOptions, nil)
+	proxy, _ := New(proxyOptions, nil)
 
 	r.POST("/backend", proxy.ServeHTTP)
 	go r.Spin()
