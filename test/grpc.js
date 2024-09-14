@@ -10,7 +10,7 @@ export const options = {
     scenarios: {
         grpc_test: {
             executor: 'constant-vus',
-            vus: 500,
+            vus: 100,
             duration: '10s',
             gracefulStop: '0s',
         },
@@ -23,7 +23,7 @@ export const options = {
 export default () => {
 
     if (exec.vu.iterationInScenario == 0) {
-        client.connect('localhost:8003', {
+        client.connect('127.0.0.1:8001', {
             plaintext: true
         });
     }

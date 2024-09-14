@@ -8,12 +8,15 @@ import (
 	"log"
 	"net"
 
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
 
 var (
-	port = flag.Int("port", 8003, "The server port")
+	port = flag.Int("port", 8501, "The server port")
 )
 
 // server is used to implement helloworld.GreeterServer.
@@ -23,8 +26,26 @@ type server struct {
 
 // SayHello implements helloworld.GreeterServer
 func (s *server) SayHello(ctx context.Context, in *proto.HelloRequest) (*proto.HelloReply, error) {
-	//log.Printf("Received: %v", in.GetName())
-	return &proto.HelloReply{Message: "Hello kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk3"}, nil
+	name := in.GetName()
+
+	if name == "err" {
+		st := status.New(codes.InvalidArgument, "oops....something wrong")
+
+		// add error detail
+		detail := &errdetails.ErrorInfo{
+			Reason: "INVALID_NAME",
+			Domain: "example.com",
+			Metadata: map[string]string{
+				"message": "Hello error",
+			},
+		}
+		st, _ = st.WithDetails(detail)
+
+		return nil, st.Err()
+	}
+
+	//log.Printf("Received: %v", name)
+	return &proto.HelloReply{Message: "Hello " + name}, nil
 }
 
 func main() {

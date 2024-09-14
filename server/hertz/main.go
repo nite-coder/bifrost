@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"http-benchmark/pkg/proxy"
+	"http-benchmark/pkg/proxy/grpc"
 	"http-benchmark/pkg/zero"
 	"io"
 	"log"
@@ -165,7 +166,18 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 	if err != nil {
 		return err
 	}
+
+	grpcOption := grpc.Options{
+		Target:    "127.0.0.1:8501",
+		TLSVerify: false,
+	}
+
+	grpcProxy, err := grpc.NewGrpcProxy(grpcOption)
+	if err != nil {
+		return err
+	}
 	h.POST("/spot/orders", proxy.ServeHTTP)
+	h.POST("/helloworld.Greeter/SayHello", grpcProxy.ServeHTTP)
 
 	go func() {
 		h.Spin()

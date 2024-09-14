@@ -10,6 +10,6 @@ grpcurl -v -proto hello_world.proto -d '{"name": "jason"}' -plaintext localhost:
 
 timeout 30 tcpdump -i any host localhost and port 8001 -w ./bifrost.pcap
 
-ss -tulpn | grep :8001
+ss -tulpn | grep :80
 
 ss -plnt
