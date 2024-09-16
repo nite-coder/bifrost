@@ -44,7 +44,7 @@ func (s *server) SayHello(ctx context.Context, in *proto.HelloRequest) (*proto.H
 		return nil, st.Err()
 	}
 
-	//log.Printf("Received: %v", name)
+	log.Printf("Received: %v", name)
 	return &proto.HelloReply{Message: "Hello " + name}, nil
 }
 

@@ -29,12 +29,15 @@ func init() {
 func TestReverseProxy(t *testing.T) {
 	const backendResponse = "I am the backend"
 	const backendStatus = 404
-	r := server.New(
+	serv := server.New(
 		server.WithHostPorts("127.0.0.1:9990"),
 		server.WithExitWaitTime(1*time.Second),
 	)
 
-	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	// client request: /backend
+	// updatream: /proxy/backend
+
+	serv.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
 		if ctx.Query("mode") == "hangup" {
 			ctx.GetConn().Close()
 			return
@@ -81,15 +84,15 @@ func TestReverseProxy(t *testing.T) {
 		t.Errorf("proxy error: %v", err)
 	}
 
-	r.GET("/backend", func(c context.Context, ctx *app.RequestContext) {
+	serv.GET("/backend", func(c context.Context, ctx *app.RequestContext) {
 		proxy.ServeHTTP(c, ctx)
 	})
-	go r.Spin()
+	go serv.Spin()
 	time.Sleep(time.Second)
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
-		_ = r.Shutdown(ctx)
+		_ = serv.Shutdown(ctx)
 	}()
 
 	cli, _ := client.NewClient()

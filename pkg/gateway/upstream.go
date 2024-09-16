@@ -8,6 +8,7 @@ import (
 	"hash/fnv"
 	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/proxy"
+	grpcproxy "http-benchmark/pkg/proxy/grpc"
 	httpproxy "http-benchmark/pkg/proxy/http"
 	"math/rand"
 	"net"
@@ -47,17 +48,7 @@ func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[str
 	return upstreams, nil
 }
 
-func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts config.UpstreamOptions) (*Upstream, error) {
-
-	if len(opts.ID) == 0 {
-		return nil, fmt.Errorf("upstream id can't be empty")
-	}
-
-	if len(opts.Targets) == 0 {
-		return nil, fmt.Errorf("targets can't be empty. upstream id: %s", opts.ID)
-	}
-
-	// direct proxy
+func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts config.UpstreamOptions) (*Upstream, error) {
 	clientOpts := httpproxy.DefaultClientOptions()
 
 	if serviceOpts.Timeout.Dail > 0 {
@@ -183,6 +174,98 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts confi
 	}
 
 	return upstream, nil
+}
+
+func createGRPCUpstream(serviceOpts config.ServiceOptions, opts config.UpstreamOptions) (*Upstream, error) {
+	upstream := &Upstream{
+		opts:    &opts,
+		proxies: make([]proxy.Proxy, 0),
+		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
+		hasher:  fnv.New32a(),
+	}
+
+	for _, targetOpts := range opts.Targets {
+
+		if opts.Strategy == config.WeightedStrategy && targetOpts.Weight == 0 {
+			return nil, fmt.Errorf("weight can't be 0. upstream id: %s, target: %s", opts.ID, targetOpts.Target)
+		}
+
+		upstream.totalWeight += targetOpts.Weight
+
+		targetHost, targetPort, err := net.SplitHostPort(targetOpts.Target)
+		if err != nil {
+			targetHost = targetOpts.Target
+		}
+
+		addr, err := url.Parse(serviceOpts.Url)
+		if err != nil {
+			return nil, err
+		}
+
+		port := targetPort
+		if len(addr.Port()) > 0 {
+			port = addr.Port()
+		}
+
+		url := fmt.Sprintf("grpc://%s%s", targetHost, addr.Path)
+		if port != "" {
+			url = fmt.Sprintf("grpc://%s:%s%s", targetHost, port, addr.Path)
+		}
+
+		grpcOptions := grpcproxy.Options{
+			Target:      url,
+			TLSVerify:   serviceOpts.TLSVerify,
+			Weight:      1,
+			MaxFails:    targetOpts.MaxFails,
+			FailTimeout: targetOpts.FailTimeout,
+		}
+
+		grpcProxy, err := grpcproxy.New(grpcOptions)
+		if err != nil {
+			return nil, err
+		}
+		upstream.proxies = append(upstream.proxies, grpcProxy)
+	}
+
+	if opts.Strategy == config.RoundRobinStrategy {
+		go func() {
+			t := time.NewTimer(5 * time.Minute)
+			defer t.Stop()
+
+			for {
+				select {
+				case <-bifrost.stopCh:
+					return
+				case <-t.C:
+					upstream.counter.Store(0)
+				}
+			}
+		}()
+	}
+
+	return upstream, nil
+}
+
+func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts config.UpstreamOptions) (*Upstream, error) {
+
+	if len(opts.ID) == 0 {
+		return nil, fmt.Errorf("upstream id can't be empty")
+	}
+
+	if len(opts.Targets) == 0 {
+		return nil, fmt.Errorf("targets can't be empty. upstream id: %s", opts.ID)
+	}
+
+	// direct proxy
+
+	switch serviceOpts.Protocol {
+	case config.ProtocolHTTP, config.ProtocolHTTP2:
+		return createHTTPUpstream(bifrost, serviceOpts, opts)
+	case config.ProtocolGRPC:
+		return createGRPCUpstream(serviceOpts, opts)
+	}
+
+	return nil, nil
 }
 
 func (u *Upstream) roundRobin() proxy.Proxy {

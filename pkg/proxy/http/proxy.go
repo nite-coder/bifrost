@@ -10,6 +10,7 @@ import (
 	"http-benchmark/pkg/proxy"
 	"log/slog"
 	"net"
+	"net/http"
 	"net/textproto"
 	"net/url"
 	"strings"
@@ -20,7 +21,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/client"
 	hzerrors "github.com/cloudwego/hertz/pkg/common/errors"
 	"github.com/cloudwego/hertz/pkg/protocol"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/google/uuid"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
@@ -109,7 +109,7 @@ var hopHeaders = []string{
 func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 	addr, err := url.Parse(opts.Target)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("proxy: http proxy fail to parse target url; %w", err)
 	}
 
 	if client == nil {
@@ -226,7 +226,8 @@ func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 	reqUpType := upgradeReqType(&outReq.Header)
 	if !IsASCIIPrint(reqUpType) { // We know reqUpType is ASCII, it's checked by the caller.
-		p.getErrorHandler()(ctx, fmt.Errorf("backend tried to switch to invalid protocol %q", reqUpType))
+		p.handleError(c, ctx, fmt.Errorf("backend tried to switch to invalid protocol %q", reqUpType))
+		return
 	}
 
 	removeRequestConnHeaders(ctx)
@@ -276,19 +277,7 @@ func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 		err = p.roundTrip(c, ctx, outReq, outResp)
 		if err != nil {
-			fullURI := fullURI(outReq)
-
-			logger := log.FromContext(c)
-			logger.ErrorContext(c, "sent upstream error",
-				slog.String("error", err.Error()),
-				slog.String("upstream", fullURI),
-			)
-
-			if err.Error() == "timeout" {
-				ctx.Set("target_timeout", true)
-			}
-
-			p.getErrorHandler()(ctx, err)
+			p.handleError(c, ctx, err)
 			return
 		}
 		return
@@ -308,19 +297,7 @@ ProxyPassLoop:
 			goto ProxyPassLoop
 		}
 
-		fullURI := fullURI(outReq)
-
-		logger := log.FromContext(c)
-		logger.ErrorContext(c, "sent upstream error",
-			slog.String("error", err.Error()),
-			slog.String("upstream", fullURI),
-		)
-
-		if errors.Is(err, hzerrors.ErrTimeout) {
-			ctx.Set("target_timeout", true)
-		}
-
-		p.getErrorHandler()(ctx, err)
+		p.handleError(c, ctx, err)
 		return
 	}
 
@@ -373,15 +350,23 @@ func (p *HTTPProxy) Target() string {
 	return p.target
 }
 
-func (r *HTTPProxy) defaultErrorHandler(c *app.RequestContext, _ error) {
-	c.Response.Header.SetStatusCode(consts.StatusBadGateway)
-}
+func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err error) {
+	logger := log.FromContext(ctx)
 
-func (r *HTTPProxy) getErrorHandler() func(c *app.RequestContext, err error) {
-	if r.errorHandler != nil {
-		return r.errorHandler
+	fullURI := fullURI(&c.Request)
+	orinalPath := c.GetString(config.REQUEST_PATH)
+
+	logger.ErrorContext(ctx, "fail to send request to upstream",
+		slog.String("error", err.Error()),
+		slog.String("original_path", orinalPath),
+		slog.String("upstream", fullURI),
+	)
+
+	if errors.Is(err, hzerrors.ErrTimeout) {
+		c.Set("target_timeout", true)
 	}
-	return r.defaultErrorHandler
+
+	c.Response.Header.SetStatusCode(http.StatusBadGateway)
 }
 
 // removeRequestConnHeaders removes hop-by-hop headers listed in the "Connection" header of h.

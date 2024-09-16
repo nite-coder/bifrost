@@ -2,7 +2,6 @@ package replacepathregex
 
 import (
 	"context"
-	"http-benchmark/pkg/config"
 	"regexp"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -24,15 +23,9 @@ func NewMiddleware(regex, replacement string) *ReplacePathRegexMiddleware {
 }
 
 func (m *ReplacePathRegexMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	originalPath := string(ctx.Request.Path())
-	_, found := ctx.Get(config.REQUEST_PATH)
-	if !found {
-		ctx.Set(config.REQUEST_PATH, originalPath)
-	}
-
 	newPath := m.regex.ReplaceAll(ctx.Request.Path(), m.replacement)
 
-	ctx.Request.Header.Set("X-Replaced-Path", originalPath)
+	ctx.Request.Header.Set("X-Replaced-Path", string(ctx.Request.Path()))
 
 	ctx.Request.URI().SetPathBytes(newPath)
 

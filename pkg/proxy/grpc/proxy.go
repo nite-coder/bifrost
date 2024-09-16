@@ -5,12 +5,15 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/proxy"
 	"log/slog"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -34,30 +37,38 @@ type GRPCProxy struct {
 	client  *grpc.ClientConn
 	// target is set as a reverse proxy address
 	target       string
+	targetHost   string
 	weight       uint
 	failedCount  uint
 	failExpireAt time.Time
 }
 
-func New(option Options) (*GRPCProxy, error) {
+func New(options Options) (*GRPCProxy, error) {
+	addr, err := url.Parse(options.Target)
+	if err != nil {
+		return nil, fmt.Errorf("proxy: grpc proxy fail to parse target url; %w", err)
+	}
+
+	if options.Weight == 0 {
+		options.Weight = 1
+	}
 
 	grpcOpts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(&rawCodec{})),
-		grpc.WithIdleTimeout(30 * time.Minute),
-		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(1024 * 1024 * 20)), // 20MB
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024 * 1024 * 20)), // 20MB
 		grpc.WithDisableRetry(),
 	}
 
-	client, err := grpc.NewClient(option.Target, grpcOpts...)
+	client, err := grpc.NewClient(addr.Host, grpcOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("fail to dial backend: %v", err)
 	}
 
 	return &GRPCProxy{
-		options: &option,
-		client:  client,
+		id:         uuid.New().String(),
+		targetHost: addr.Host,
+		options:    &options,
+		client:     client,
 	}, nil
 }
 
@@ -123,12 +134,15 @@ func (p *GRPCProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 	fullMethodName := string(ctx.Request.URI().Path())
 
+	ctx.Set(config.UPSTREAM_ADDR, p.targetHost)
+
 	md := metadata.New(nil)
 	ctx.Request.Header.VisitAll(func(key, value []byte) {
 		md.Append(string(key), string(value))
 	})
 	grpcCtx := metadata.NewOutgoingContext(c, md)
 
+	// grpc spec: first 5 bytes are Length-Prefixed Message
 	payload := ctx.Request.Body()
 	if len(payload) < 5 {
 		return
@@ -142,7 +156,7 @@ func (p *GRPCProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	err := p.client.Invoke(grpcCtx, fullMethodName, payload, &respBody, grpc.Header(&header), grpc.Trailer(&trailer))
 	if err != nil {
 		slog.Error("fail to invoke grpc service", "error", err)
-		handleGRPCError(ctx, err)
+		p.handleGRPCError(ctx, err)
 		return
 	}
 
@@ -152,7 +166,7 @@ func (p *GRPCProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 	// build http frame
 	frame := make([]byte, len(respBody)+5)
-	frame[0] = 0 // 0: not compression
+	frame[0] = 0 // 0: no compression
 	binary.BigEndian.PutUint32(frame[1:5], uint32(len(respBody)))
 	copy(frame[5:], respBody)
 
@@ -173,7 +187,7 @@ func (p *GRPCProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	ctx.Response.SetBody(frame)
 }
 
-func handleGRPCError(ctx *app.RequestContext, err error) {
+func (p *GRPCProxy) handleGRPCError(ctx *app.RequestContext, err error) {
 	st, ok := status.FromError(err)
 	if !ok {
 		// If it's not a gRPC status error, create an internal error
@@ -187,6 +201,14 @@ func handleGRPCError(ctx *app.RequestContext, err error) {
 	ctx.Response.Header.SetContentType("application/grpc")
 	ctx.Response.Header.Set("grpc-status", code)
 	ctx.Response.Header.Set("grpc-message", st.Message())
+
+	switch st.Code() {
+	case codes.Unavailable, codes.Unknown, codes.Unimplemented:
+		err := p.AddFailedCount(1)
+		if err != nil {
+			slog.Warn("upstream server temporarily disabled")
+		}
+	}
 
 	// Include detailed information if available
 	details := st.Proto().GetDetails()

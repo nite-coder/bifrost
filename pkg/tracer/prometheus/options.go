@@ -4,7 +4,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
-var defaultBuckets = []float64{0.100000, 0.300000, 1.200000, 5.000000}
+var defaultBuckets = []float64{0.005000, 0.010000, 0.025000, 0.050000, 0.10000, 0.250000, 0.500000, 1.00000, 2.50000, 5.000000, 10.000000}
 
 // Option opts for monitor prometheus
 type Option interface {

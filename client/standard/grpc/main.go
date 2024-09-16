@@ -19,7 +19,7 @@ func main() {
 	gClient := proto.NewGreeterClient(client)
 
 	req := proto.HelloRequest{
-		Name: "grpc client",
+		Name: "gprc test",
 	}
 
 	reply, err := gClient.SayHello(context.Background(), &req)

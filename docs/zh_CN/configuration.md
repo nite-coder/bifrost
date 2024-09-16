@@ -77,13 +77,13 @@ logging:
 metrics:
   prometheus:
     enabled: true
-    buckets: [0.01, 0.03, 0.05, 0.1]
+    buckets: [0.005000, 0.010000, 0.025000, 0.050000, 0.10000, 0.250000, 0.500000, 1.00000, 2.50000, 5.000000, 10.000000]
 ```
 
-| 欄位               | 預設值                                 | 說明                     |
-| ------------------ | -------------------------------------- | ------------------------ |
-| prometheus.enabled | false                                  | 是否開啟 prometheus 支持 |
-| prometheus.buckets | 0.100000, 0.300000, 1.200000, 5.000000 | 延遲等級分類             |
+| 欄位               | 預設值                                                                                                     | 說明                     |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------ |
+| prometheus.enabled | false                                                                                                      | 是否開啟 prometheus 支持 |
+| prometheus.buckets | 0.005000, 0.010000, 0.025000, 0.050000, 0.10000, 0.250000, 0.500000, 1.00000, 2.50000, 5.000000, 10.000000 | 延遲等級分類             |
 
 ## tracing
 
@@ -169,11 +169,11 @@ access_logs:
 
 ## servers
 
-服務器組態，支持 middlwares 使用
+服務器組態，支持 `middlwares` 使用，用來控制哪個端口需要對外等，`server` 名稱必須是唯一值
 
 ```yaml
 servers:
-  api:  # server 名稱，必須是唯一值
+  my-wallet:  # server 名稱必須是唯一值
     bind: ":8001"
     reuse_port: false
     tcp_fast_open: false
@@ -212,11 +212,11 @@ servers:
 
 ## routes
 
-路由組態，支持 middlwares 使用，更詳細的用法可以參考[路由用法](./routes.md)
+路由組態，用來控制請求路徑的轉發規則到哪一個 `service` 上，支持 middlwares 使用，路由名稱必須是唯一值，更詳細的用法可以參考[路由用法](./routes.md)
 
 ```yaml
 routes:
-  spot-orders: # 路由名稱，必須是唯一值
+  spot-orders: # 路由名稱必須是唯一值
     methods: []
     paths:
       - /api/v1
@@ -235,39 +235,40 @@ routes:
 
 ## services
 
-業務服務組態，不同業務可以共用同一個 upstream，同時可以依照業務屬性配置不同的 service 參數等
+業務服務組態，用來控制服務配置，例如協議資訊等，不同業務可以共用同一個 `upstream`，同時可以依照業務屬性配置不同的 service 參數等，服務名稱必須要是唯一值
 
 ```yaml
 services:
-  api-service: # 服務名稱，必須是唯一值
+  api-service: # 服務名稱必須是唯一值
     timeout:
       read: 3s
       write: 3s
       idle: 600s
       dail: 3s
-    #max_conns_per_host: 1
+    max_conns_per_host: 1
     tls_verify: false
     protocol: http
     url: http://test-server:8000
 ```
 
-| 欄位          | 預設值 | 說明                                        |
-| ------------- | ------ | ------------------------------------------- |
-| timeout.read  | 60s    | 讀取的超時時間                              |
-| timeout.write | 60s    | 寫入的超時時間                              |
-| timeout.idle  | 60s    | 閒置超時時間                                |
-| timeout.dail  | 60s    | 撥接超時時間                                |
-| tls_verify    | false  | 是否驗證憑證                                |
-| protocol      | http   | 轉發上游協議; 支持 http, http2              |
-| url           |        | 轉發上游路徑，支持使用 upstream 名稱當 host |
+| 欄位               | 預設值 | 說明                                          |
+| ------------------ | ------ | --------------------------------------------- |
+| timeout.read       | 60s    | 讀取的超時時間                                |
+| timeout.write      | 60s    | 寫入的超時時間                                |
+| timeout.idle       | 60s    | 閒置超時時間                                  |
+| timeout.dail       | 60s    | 撥接超時時間                                  |
+| max_conns_per_host | 1024   | 連線上游每台主機的最多連線數                  |
+| tls_verify         | false  | 是否驗證憑證                                  |
+| protocol           | http   | 轉發上游協議; 支持 `http`, `http2`, `grpc`    |
+| url                |        | 轉發上游路徑，支持使用 `upstream` 名稱當 host |
 
 ## upstreams
 
-上游組態
+上游組態，用來控制後端主機的負載均衡規則等，上游名稱必須是唯一值
 
 ```yaml
 upstreams:
-  test-server: # 上游名稱，必須是唯一值
+  test-server: # 上游名稱必須是唯一值
     strategy: "round_robin"
     hash_on: ""
     targets:
@@ -277,11 +278,11 @@ upstreams:
         weight: 1
 ```
 
-| 欄位                 | 預設值      | 說明                                                             |
-| -------------------- | ----------- | ---------------------------------------------------------------- |
-| strategy             | round_robin | 分流算法; 目前支持`round_robin`、`random`、`weighted`、`hashing` |
-| hash_on              |             | 依照哪個變量來計算哈希分流，僅當 strategy 為 `hashing` 生效      |
-| targets.target       |             | 目標 IP                                                          |
-| targets.max_fails    | 0           | 失敗次數; `0`: 無限制                                            |
-| targets.fail_timeout | 10s         | 失敗次數有效時間範圍                                             |
-| targets.weight       | 1           | 權重                                                             |
+| 欄位                 | 預設值      | 說明                                                                 |
+| -------------------- | ----------- | -------------------------------------------------------------------- |
+| strategy             | round_robin | 負載均衡算法; 目前支持`round_robin`、`random`、`weighted`、`hashing` |
+| hash_on              |             | 依照哪個變量來計算哈希負載均衡，僅當 strategy 為 `hashing` 生效      |
+| targets.target       |             | 目標 IP                                                              |
+| targets.max_fails    | 0           | 失敗次數; `0`- 無限制                                                |
+| targets.fail_timeout | 10s         | 失敗次數的有效時間範圍                                               |
+| targets.weight       | 1           | 權重                                                                 |

@@ -43,6 +43,10 @@ func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		ctx.Set("X-Forwarded-For", ctx.Request.Header.Get("X-Forwarded-For"))
 	}
 
+	// save original path
+	ctx.Set(config.REQUEST_PATH, string(ctx.Request.Path()))
+
+	// add trace_id to logger
 	spanCtx := trace.SpanContextFromContext(c)
 	if spanCtx.HasTraceID() {
 		traceID := spanCtx.TraceID().String()
@@ -50,17 +54,15 @@ func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 		logger = logger.With(slog.String("trace_id", traceID))
 	}
-
-	ctx.Set(config.SERVER_ID, m.serverID)
-
 	c = log.NewContext(c, logger)
+
+	// save serverID for access log
+	ctx.Set(config.SERVER_ID, m.serverID)
 
 	ctx.Next(c)
 }
 
 type CreateMiddlewareHandler func(param map[string]any) (app.HandlerFunc, error)
-
-
 
 func RegisterMiddleware(kind string, handler CreateMiddlewareHandler) error {
 

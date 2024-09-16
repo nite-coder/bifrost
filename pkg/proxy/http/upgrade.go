@@ -58,7 +58,7 @@ func (p *HTTPProxy) roundTrip(ctx context.Context, clientCtx *app.RequestContext
 
 	if resp.StatusCode() != http.StatusSwitchingProtocols {
 		err := fmt.Errorf("backend returns status is not 101, status code: %d", resp.StatusCode())
-		p.getErrorHandler()(clientCtx, err)
+		p.handleError(ctx, clientCtx, err)
 		return err
 	}
 
@@ -66,13 +66,12 @@ func (p *HTTPProxy) roundTrip(ctx context.Context, clientCtx *app.RequestContext
 	resUpType := upgradeRespType(backendHeader)
 
 	if !IsASCIIPrint(resUpType) { // We know reqUpType is ASCII, it's checked by the caller.
-		err := fmt.Errorf("backend tried to switch to invalid protocol %q", resUpType)
-		p.getErrorHandler()(clientCtx, fmt.Errorf("backend tried to switch to invalid protocol %q", resUpType))
+		p.handleError(ctx, clientCtx, err)
 		return err
 	}
 	if !strings.EqualFold(reqUpType, resUpType) {
 		err := fmt.Errorf("backend tried to switch protocol %q when %q was requested", resUpType, reqUpType)
-		p.getErrorHandler()(clientCtx, fmt.Errorf("backend tried to switch protocol %q when %q was requested", resUpType, reqUpType))
+		p.handleError(ctx, clientCtx, err)
 		return err
 	}
 
@@ -80,13 +79,13 @@ func (p *HTTPProxy) roundTrip(ctx context.Context, clientCtx *app.RequestContext
 
 	_, err = clientConn.Write(backendHeader.Header())
 	if err != nil {
-		p.getErrorHandler()(clientCtx, fmt.Errorf("write header to client error %w", err))
+		p.handleError(ctx, clientCtx, fmt.Errorf("write header to client error %w", err))
 		return err
 	}
 
 	err = clientConn.Flush()
 	if err != nil {
-		p.getErrorHandler()(clientCtx, fmt.Errorf("flush header to client error %w", err))
+		p.handleError(ctx, clientCtx, fmt.Errorf("flush header to client error %w", err))
 		return err
 	}
 
