@@ -176,7 +176,7 @@ func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opt
 	return upstream, nil
 }
 
-func createGRPCUpstream(serviceOpts config.ServiceOptions, opts config.UpstreamOptions) (*Upstream, error) {
+func createGRPCUpstream(serviceOptions config.ServiceOptions, opts config.UpstreamOptions) (*Upstream, error) {
 	upstream := &Upstream{
 		opts:    &opts,
 		proxies: make([]proxy.Proxy, 0),
@@ -197,7 +197,7 @@ func createGRPCUpstream(serviceOpts config.ServiceOptions, opts config.UpstreamO
 			targetHost = targetOpts.Target
 		}
 
-		addr, err := url.Parse(serviceOpts.Url)
+		addr, err := url.Parse(serviceOptions.Url)
 		if err != nil {
 			return nil, err
 		}
@@ -212,12 +212,18 @@ func createGRPCUpstream(serviceOpts config.ServiceOptions, opts config.UpstreamO
 			url = fmt.Sprintf("grpc://%s:%s%s", targetHost, port, addr.Path)
 		}
 
+		timeout := serviceOptions.Timeout.Read
+		if serviceOptions.Timeout.Write > serviceOptions.Timeout.Read {
+			timeout = serviceOptions.Timeout.Write
+		}
+
 		grpcOptions := grpcproxy.Options{
 			Target:      url,
-			TLSVerify:   serviceOpts.TLSVerify,
+			TLSVerify:   serviceOptions.TLSVerify,
 			Weight:      1,
 			MaxFails:    targetOpts.MaxFails,
 			FailTimeout: targetOpts.FailTimeout,
+			Timeout:     timeout,
 		}
 
 		grpcProxy, err := grpcproxy.New(grpcOptions)

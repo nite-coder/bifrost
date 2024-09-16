@@ -228,7 +228,11 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			code := c.GetInt(config.UPSTREAM_STATUS)
 			replacements = append(replacements, config.UPSTREAM_STATUS, strconv.Itoa(code))
 		case config.UPSTREAM_DURATION:
-			replacements = append(replacements, config.UPSTREAM_DURATION, c.GetString(config.UPSTREAM_DURATION))
+			dur := c.GetString(config.UPSTREAM_DURATION)
+			if len(dur) == 0 {
+				dur = "0"
+			}
+			replacements = append(replacements, config.UPSTREAM_DURATION, dur)
 		case config.DURATION:
 			val, found := c.Get(config.CLIENT_CANCELED_AT)
 
@@ -250,6 +254,12 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 		case config.TRACE_ID:
 			traceID := c.GetString(config.TRACE_ID)
 			replacements = append(replacements, config.TRACE_ID, traceID)
+		case config.GRPC_STATUS:
+			grpcStatus := c.GetUint32(config.GRPC_STATUS)
+			replacements = append(replacements, config.GRPC_STATUS, strconv.FormatUint(uint64(grpcStatus), 10))
+		case config.GRPC_MESSAGE:
+			grpcMessage := c.GetString(config.GRPC_MESSAGE)
+			replacements = append(replacements, config.GRPC_MESSAGE, grpcMessage)
 		default:
 
 			if strings.HasPrefix(matchVal, "$upstream_header_") {

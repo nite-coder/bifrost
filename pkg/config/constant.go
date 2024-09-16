@@ -27,6 +27,10 @@ const (
 	CLIENT_CANCELED_AT = "$client_canceled_at"
 	TRACE_ID           = "$trace_id"
 
+	//grpc
+	GRPC_STATUS  = "$grpc_status"
+	GRPC_MESSAGE = "$grpc_message"
+
 	B  = 1
 	KB = 1024 * B
 	MB = 1024 * KB

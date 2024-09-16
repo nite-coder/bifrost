@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"http-benchmark/pkg/config"
+	"http-benchmark/pkg/log"
 	"http-benchmark/pkg/proxy"
 	"log/slog"
 	"net/url"
@@ -27,6 +28,7 @@ type Options struct {
 	TLSVerify   bool
 	Weight      uint
 	MaxFails    uint
+	Timeout     time.Duration
 	FailTimeout time.Duration
 }
 
@@ -124,26 +126,28 @@ func (p *GRPCProxy) Target() string {
 	return p.target
 }
 
-func (p *GRPCProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+	logger := log.FromContext(ctx)
+
 	defer func() {
 		if r := recover(); r != nil {
-			slog.ErrorContext(c, "proxy: grpc proxy panic recovered", slog.Any("error", r))
-			ctx.Abort()
+			logger.ErrorContext(ctx, "proxy: grpc proxy panic recovered", slog.Any("error", r))
+			c.Abort()
 		}
 	}()
 
-	fullMethodName := string(ctx.Request.URI().Path())
+	fullMethodName := string(c.Request.URI().Path())
 
-	ctx.Set(config.UPSTREAM_ADDR, p.targetHost)
+	c.Set(config.UPSTREAM_ADDR, p.targetHost)
 
 	md := metadata.New(nil)
-	ctx.Request.Header.VisitAll(func(key, value []byte) {
+	c.Request.Header.VisitAll(func(key, value []byte) {
 		md.Append(string(key), string(value))
 	})
-	grpcCtx := metadata.NewOutgoingContext(c, md)
+	grpcCtx := metadata.NewOutgoingContext(ctx, md)
 
 	// grpc spec: first 5 bytes are Length-Prefixed Message
-	payload := ctx.Request.Body()
+	payload := c.Request.Body()
 	if len(payload) < 5 {
 		return
 	}
@@ -153,15 +157,21 @@ func (p *GRPCProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	var header, trailer metadata.MD
 
 	var respBody []byte
-	err := p.client.Invoke(grpcCtx, fullMethodName, payload, &respBody, grpc.Header(&header), grpc.Trailer(&trailer))
+
+	if p.options.Timeout > 0 {
+		ctxTimeout, cancel := context.WithTimeout(grpcCtx, p.options.Timeout)
+		ctx = ctxTimeout
+		defer cancel()
+	}
+
+	err := p.client.Invoke(ctx, fullMethodName, payload, &respBody, grpc.Header(&header), grpc.Trailer(&trailer))
 	if err != nil {
-		slog.Error("fail to invoke grpc service", "error", err)
-		p.handleGRPCError(ctx, err)
+		p.handleGRPCError(ctx, c, err)
 		return
 	}
 
 	if trailer.Len() == 0 {
-		_ = ctx.Response.Header.Trailer().Set("grpc-status", "0")
+		_ = c.Response.Header.Trailer().Set("grpc-status", "0")
 	}
 
 	// build http frame
@@ -172,41 +182,60 @@ func (p *GRPCProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 	for k, v := range header {
 		for _, vv := range v {
-			ctx.Response.Header.Add(k, vv)
+			c.Response.Header.Add(k, vv)
 		}
 	}
+
 	for k, v := range trailer {
 		for _, vv := range v {
-			_ = ctx.Response.Header.Trailer().Set(k, vv)
-			ctx.Response.Header.Add("grpc-"+k, vv)
+			_ = c.Response.Header.Trailer().Set(k, vv)
+			c.Response.Header.Add("grpc-"+k, vv)
 		}
 	}
 
-	ctx.SetStatusCode(200)
-	ctx.Response.Header.Set("Content-Type", "application/grpc")
-	ctx.Response.SetBody(frame)
+	c.SetStatusCode(200)
+	c.Response.Header.Set("Content-Type", "application/grpc")
+	c.Response.SetBody(frame)
 }
 
-func (p *GRPCProxy) handleGRPCError(ctx *app.RequestContext, err error) {
+func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, err error) {
+	if err == nil {
+		return
+	}
+
+	logger := log.FromContext(ctx)
+
+	originalPath := c.GetString(config.REQUEST_PATH)
+
 	st, ok := status.FromError(err)
 	if !ok {
 		// If it's not a gRPC status error, create an internal error
 		st = status.New(codes.Internal, err.Error())
 	}
 
+	c.Set(config.GRPC_STATUS, uint32(st.Code()))
+
+	logger.Error("fail to invoke grpc server", "error",
+		slog.String("error", err.Error()),
+		slog.String("original_path", originalPath),
+		slog.String("upstream", p.targetHost+string(c.Request.Path())),
+		slog.String("grpc_status", st.Code().String()),
+		slog.String("grpc_message", st.Message()),
+	)
+
 	// Set gspecific response headers
 	code := fmt.Sprintf("%d", st.Code())
-	_ = ctx.Response.Header.Trailer().Set("grpc-status", code)
-	_ = ctx.Response.Header.Trailer().Set("grpc-message", st.Message())
-	ctx.Response.Header.SetContentType("application/grpc")
-	ctx.Response.Header.Set("grpc-status", code)
-	ctx.Response.Header.Set("grpc-message", st.Message())
+	_ = c.Response.Header.Trailer().Set("grpc-status", code)
+	_ = c.Response.Header.Trailer().Set("grpc-message", st.Message())
+	c.Response.Header.SetContentType("application/grpc")
+	c.Response.Header.Set("grpc-status", code)
+	c.Response.Header.Set("grpc-message", st.Message())
 
 	switch st.Code() {
 	case codes.Unavailable, codes.Unknown, codes.Unimplemented:
 		err := p.AddFailedCount(1)
 		if err != nil {
-			slog.Warn("upstream server temporarily disabled")
+			logger.Warn("upstream server temporarily disabled")
 		}
 	}
 
@@ -215,17 +244,17 @@ func (p *GRPCProxy) handleGRPCError(ctx *app.RequestContext, err error) {
 	if len(details) > 0 {
 		detailsBytes, err := proto.Marshal(st.Proto())
 		if err == nil {
-			ctx.Response.Header.Set("grpc-status-details-bin", base64.StdEncoding.EncodeToString(detailsBytes))
+			c.Response.Header.Set("grpc-status-details-bin", base64.StdEncoding.EncodeToString(detailsBytes))
 		}
 	}
 
 	// gRPC always uses 200 OK status code, actual status is in grpc-status header
-	ctx.SetStatusCode(200)
+	c.SetStatusCode(200)
 
 	// Optionally write error information to the response body
 	// Note: Some gRPC clients may not expect a response body in error cases
 	errorFrame := makeGRPCErrorFrame(st)
-	ctx.Response.SetBody(errorFrame)
+	c.Response.SetBody(errorFrame)
 }
 
 func makeGRPCErrorFrame(st *status.Status) []byte {

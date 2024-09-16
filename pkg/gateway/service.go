@@ -346,7 +346,7 @@ func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) 
 	return httpProxy, nil
 }
 
-func initGRPCProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) (proxy.Proxy, error) {
+func initGRPCProxy(bifrost *Bifrost, serviceOptions config.ServiceOptions, addr *url.URL) (proxy.Proxy, error) {
 	hostname := addr.Hostname()
 
 	url := fmt.Sprintf("grpc://%s%s", hostname, addr.Path)
@@ -354,10 +354,16 @@ func initGRPCProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) 
 		url = fmt.Sprintf("grpc://%s:%s%s", hostname, addr.Port(), addr.Path)
 	}
 
+	timeout := serviceOptions.Timeout.Read
+	if serviceOptions.Timeout.Write > serviceOptions.Timeout.Read {
+		timeout = serviceOptions.Timeout.Write
+	}
+
 	grpcOptions := grpcproxy.Options{
 		Target:    url,
-		TLSVerify: opts.TLSVerify,
+		TLSVerify: serviceOptions.TLSVerify,
 		Weight:    1,
+		Timeout:   timeout,
 	}
 
 	grpcProxy, err := grpcproxy.New(grpcOptions)

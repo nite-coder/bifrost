@@ -354,12 +354,13 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 	logger := log.FromContext(ctx)
 
 	fullURI := fullURI(&c.Request)
-	orinalPath := c.GetString(config.REQUEST_PATH)
+	originalPath := c.GetString(config.REQUEST_PATH)
 
 	logger.ErrorContext(ctx, "fail to send request to upstream",
 		slog.String("error", err.Error()),
-		slog.String("original_path", orinalPath),
+		slog.String("original_path", originalPath),
 		slog.String("upstream", fullURI),
+		slog.Int("upstream_status", c.Response.StatusCode()),
 	)
 
 	if errors.Is(err, hzerrors.ErrTimeout) {

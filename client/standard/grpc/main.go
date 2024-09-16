@@ -4,6 +4,7 @@ import (
 	"context"
 	"http-benchmark/proto"
 	"log/slog"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -22,7 +23,10 @@ func main() {
 		Name: "gprc test",
 	}
 
-	reply, err := gClient.SayHello(context.Background(), &req)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	reply, err := gClient.SayHello(ctx, &req)
 	if err != nil {
 		st, ok := status.FromError(err)
 		if ok {

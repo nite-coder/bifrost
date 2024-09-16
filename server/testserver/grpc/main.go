@@ -7,6 +7,7 @@ import (
 	"http-benchmark/proto"
 	"log"
 	"net"
+	"time"
 
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
@@ -27,6 +28,8 @@ type server struct {
 // SayHello implements helloworld.GreeterServer
 func (s *server) SayHello(ctx context.Context, in *proto.HelloRequest) (*proto.HelloReply, error) {
 	name := in.GetName()
+
+	time.Sleep(10 * time.Second)
 
 	if name == "err" {
 		st := status.New(codes.InvalidArgument, "oops....something wrong")
