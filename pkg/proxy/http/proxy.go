@@ -351,6 +351,10 @@ func (p *HTTPProxy) Target() string {
 }
 
 func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err error) {
+	if err == nil {
+		return
+	}
+
 	logger := log.FromContext(ctx)
 
 	fullURI := fullURI(&c.Request)

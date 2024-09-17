@@ -52,6 +52,8 @@ access_logs:
       "upstream_duration":$upstream_duration,
       "upstream_status":$upstream_status,
       "status":$status,
+      "grpc_status":"$grpc_status",
+      "grpc_messaage":"$grpc_message",
       "duration":$duration,
       "trace_id":"$trace_id"}
 

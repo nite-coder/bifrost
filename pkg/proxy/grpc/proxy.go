@@ -15,6 +15,10 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	otelcodes "go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -37,6 +41,7 @@ type GRPCProxy struct {
 	id      string
 	options *Options
 	client  *grpc.ClientConn
+	tracer  trace.Tracer
 	// target is set as a reverse proxy address
 	target       string
 	targetHost   string
@@ -56,9 +61,12 @@ func New(options Options) (*GRPCProxy, error) {
 	}
 
 	grpcOpts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(&rawCodec{})),
 		grpc.WithDisableRetry(),
+	}
+
+	if !options.TLSVerify {
+		grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
 	client, err := grpc.NewClient(addr.Host, grpcOpts...)
@@ -71,6 +79,7 @@ func New(options Options) (*GRPCProxy, error) {
 		targetHost: addr.Host,
 		options:    &options,
 		client:     client,
+		tracer:     otel.Tracer("bifrost"),
 	}, nil
 }
 
@@ -126,6 +135,7 @@ func (p *GRPCProxy) Target() string {
 	return p.target
 }
 
+// ServeHTTP implements the http.Handler interface
 func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 
@@ -136,50 +146,99 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 	}()
 
+	if p.client == nil {
+		logger.ErrorContext(ctx, "proxy: grpc proxy client is nil", slog.Any("error", "grpc proxy client is nil"))
+		c.Abort()
+		return
+	}
+
+	// Get the full method name from the request URL
 	fullMethodName := string(c.Request.URI().Path())
 
+	// Set the upstream address
 	c.Set(config.UPSTREAM_ADDR, p.targetHost)
 
+	// Create a new metadata object
 	md := metadata.New(nil)
+
+	// Iterate over the request headers and add them to the metadata
 	c.Request.Header.VisitAll(func(key, value []byte) {
 		md.Append(string(key), string(value))
 	})
+
+	// Create a new grpc context with the metadata
 	grpcCtx := metadata.NewOutgoingContext(ctx, md)
 
-	// grpc spec: first 5 bytes are Length-Prefixed Message
+	// Check if the request payload is valid
 	payload := c.Request.Body()
 	if len(payload) < 5 {
+		logger.ErrorContext(ctx, "proxy: grpc proxy request payload is invalid", slog.Any("error", "grpc proxy request payload is invalid"))
 		return
 	}
+
+	// Get the length of the message
 	msgLen := binary.BigEndian.Uint32(payload[1:5])
+
+	// Get the message payload
 	payload = payload[5 : 5+msgLen]
 
+	// Create a new header and trailer metadata
 	var header, trailer metadata.MD
 
+	// Create a new response body
 	var respBody []byte
 
+	// If a timeout is set, create a new context with the timeout
 	if p.options.Timeout > 0 {
 		ctxTimeout, cancel := context.WithTimeout(grpcCtx, p.options.Timeout)
 		ctx = ctxTimeout
 		defer cancel()
 	}
 
+	spanOptions := []trace.SpanStartOption{
+		trace.WithSpanKind(trace.SpanKindClient),
+	}
+
+	ctx, span := p.tracer.Start(ctx, fullMethodName, spanOptions...)
+
+	labels := []attribute.KeyValue{
+		attribute.String("http.method", "POST"),
+		attribute.String("http.scheme", string(c.Request.Scheme())),
+		attribute.String("http.path", fullMethodName),
+		attribute.String("http.host", p.targetHost),
+		attribute.String("protocol", "grpc"),
+	}
+	span.SetAttributes(labels...)
+
+	// Call the grpc client with the request
 	err := p.client.Invoke(ctx, fullMethodName, payload, &respBody, grpc.Header(&header), grpc.Trailer(&trailer))
 	if err != nil {
+		// Handle the error
 		p.handleGRPCError(ctx, c, err)
 		return
 	}
 
+	span.SetStatus(otelcodes.Ok, "")
+	span.End()
+
+	// If there is no trailer, set the grpc-status header to 0
 	if trailer.Len() == 0 {
 		_ = c.Response.Header.Trailer().Set("grpc-status", "0")
 	}
 
-	// build http frame
+	// Build the http frame
 	frame := make([]byte, len(respBody)+5)
-	frame[0] = 0 // 0: no compression
+
+	// Set the first byte to 0, indicating no compression
+	frame[0] = 0
+
+	// Set the length of the message
 	binary.BigEndian.PutUint32(frame[1:5], uint32(len(respBody)))
+
+	// Copy the response body to the frame
 	copy(frame[5:], respBody)
 
+	// Iterate over the header and trailer metadata and add them to the response headers
 	for k, v := range header {
 		for _, vv := range v {
 			c.Response.Header.Add(k, vv)
@@ -193,6 +252,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 
+	// Set the status code and content type
 	c.SetStatusCode(200)
 	c.Response.Header.Set("Content-Type", "application/grpc")
 	c.Response.SetBody(frame)
@@ -230,6 +290,17 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 	c.Response.Header.SetContentType("application/grpc")
 	c.Response.Header.Set("grpc-status", code)
 	c.Response.Header.Set("grpc-message", st.Message())
+
+	span := trace.SpanFromContext(ctx)
+	span.SetStatus(otelcodes.Error, st.Message())
+	labels := []attribute.KeyValue{
+		attribute.String("grpc.status", st.Code().String()),
+		attribute.String("grpc.message", st.Message()),
+		attribute.String("original_path", originalPath),
+		attribute.String("error", err.Error()),
+	}
+	span.SetAttributes(labels...)
+	span.End()
 
 	switch st.Code() {
 	case codes.Unavailable, codes.Unknown, codes.Unimplemented:

@@ -20,15 +20,17 @@ const (
 	unknownLabelValue = "unknown"
 )
 
-// genLabels make labels values.
-func genLabels(ctx *app.RequestContext) prom.Labels {
+// genRequestDurationLabels make labels values.
+func genRequestDurationLabels(ctx *app.RequestContext) prom.Labels {
 	labels := make(prom.Labels)
 
 	serverID := ctx.GetString(config.SERVER_ID)
 	labels[labelServer] = defaultValIfEmpty(serverID, unknownLabelValue)
 	labels[labelMethod] = defaultValIfEmpty(string(ctx.Request.Method()), unknownLabelValue)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(ctx.Response.Header.StatusCode()), unknownLabelValue)
-	labels[labelPath] = defaultValIfEmpty(string(ctx.Request.Path()), unknownLabelValue)
+
+	originalPath := ctx.GetString(config.REQUEST_PATH)
+	labels[labelPath] = defaultValIfEmpty(originalPath, unknownLabelValue)
 
 	return labels
 }
@@ -61,8 +63,8 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	}
 
 	cost := httpFinish.Time().Sub(httpStart.Time())
-	_ = counterAdd(s.requestTotalCounter, 1, genLabels(c))
-	_ = histogramObserve(s.requestDurationHistogram, cost, genLabels(c))
+	_ = counterAdd(s.requestTotalCounter, 1, genRequestDurationLabels(c))
+	_ = histogramObserve(s.requestDurationHistogram, cost, genRequestDurationLabels(c))
 
 	serverLabel := make(prom.Labels)
 	serverLabel[labelServer] = serverID
@@ -118,6 +120,9 @@ func NewTracer(opts ...Option) tracer.Tracer {
 		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
 	)
 	prom.MustRegister(requestDurationHistogram)
+
+	// TODO: add upstream Duration Histogram
+	// TODO: add total connections
 
 	return &serverTracer{
 		requestSizeTotalCounter:   requestSizeTotalCounter,

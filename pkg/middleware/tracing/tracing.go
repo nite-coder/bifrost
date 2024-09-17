@@ -3,7 +3,6 @@ package tracing
 import (
 	"context"
 	"http-benchmark/pkg/config"
-	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"go.opentelemetry.io/otel"
@@ -13,52 +12,55 @@ import (
 )
 
 type TracingMiddleware struct {
-	once   sync.Once
 	tracer trace.Tracer
 }
 
 func NewMiddleware() *TracingMiddleware {
-	return &TracingMiddleware{}
+	return &TracingMiddleware{
+		tracer: otel.Tracer("bifrost"),
+	}
 }
 
-func (m *TracingMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	m.once.Do(func() {
-		m.tracer = otel.Tracer("bifrost")
-	})
-
+func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	if m.tracer == nil {
-		ctx.Next(c)
+		c.Next(ctx)
 		return
 	}
 
-	method := string(ctx.Method())
-	path := string(ctx.Request.Path())
+	method := string(c.Method())
+	path := string(c.Request.Path())
 
 	spanOptions := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithNewRoot(),
 	}
 
-	c, span := m.tracer.Start(c, method+" "+path, spanOptions...)
+	ctx, span := m.tracer.Start(ctx, method+" "+path, spanOptions...)
 
 	defer func() {
-		if ctx.Response.StatusCode() >= 200 && ctx.Response.StatusCode() < 300 {
-			span.SetStatus(codes.Ok, "OK")
+		labels := []attribute.KeyValue{
+			attribute.String("http.scheme", string(c.Request.Scheme())),
+			attribute.String("http.host", string(c.Request.Host())),
+			attribute.String("http.method", method),
+			attribute.String("http.path", path),
+			attribute.String("http.user_agent", string(c.Request.Header.UserAgent())),
+			attribute.String("protocol", c.Request.Header.GetProtocol()),
+			attribute.String("client_ip", c.ClientIP()),
+			attribute.Int("http.status", c.Response.StatusCode()),
 		}
 
+		if c.Response.StatusCode() >= 200 && c.Response.StatusCode() < 300 {
+			span.SetStatus(codes.Ok, "")
+		} else if c.Response.StatusCode() >= 400 {
+			span.SetStatus(codes.Error, "")
+		}
+
+		span.SetAttributes(labels...)
 		span.End()
 	}()
 
-	labels := []attribute.KeyValue{
-		attribute.String("http.host", string(ctx.Request.Host())),
-		attribute.String("http.method", method),
-		attribute.String("http.path", path),
-		attribute.String("http.protocol", ctx.Request.Header.GetProtocol()),
-	}
-	span.SetAttributes(labels...)
-
 	traceID := span.SpanContext().TraceID()
-	ctx.Set(config.TRACE_ID, traceID.String())
+	c.Set(config.TRACE_ID, traceID.String())
 
-	ctx.Next(c)
+	c.Next(ctx)
 }

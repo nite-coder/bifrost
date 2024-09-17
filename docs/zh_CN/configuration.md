@@ -87,7 +87,7 @@ metrics:
 
 ## tracing
 
-追蹤，目前支持 `opentelemetry`
+鏈路追蹤，目前支持 `opentelemetry` 標準，這邊的配置只包含把日誌往 otel server 傳遞，如需要開啟鏈路追蹤功能需要搭配 `tracing` 的中間件
 
 範例:
 
@@ -162,7 +162,7 @@ access_logs:
 | -------------- | ------ | -------------------------------------------- |
 | enabled        | false  | 是否開啟請求日誌                             |
 | output         |        | 輸出; 目前支持 `stderr` 或文件路徑           |
-| buffering_size | 64 KB  | 輸出緩衝                                     |
+| buffering_size | 64 KB  | 輸出緩衝；單位 byte                         |
 | time_format    |        | 時間格式                                     |
 | escape         | none   | 字元跳脫; 目前支持 `none`, `json`, `default` |
 | template       |        | 請求日誌格式                                 |
@@ -257,7 +257,7 @@ services:
 | timeout.write      | 60s    | 寫入的超時時間                                |
 | timeout.idle       | 60s    | 閒置超時時間                                  |
 | timeout.dail       | 60s    | 撥接超時時間                                  |
-| timeout.grpc       | 0      | `grpc` 請求超時時間                         |
+| timeout.grpc       | 0      | `grpc` 請求超時時間                           |
 | max_conns_per_host | 1024   | 連線上游每台主機的最多連線數                  |
 | tls_verify         | false  | 是否驗證憑證                                  |
 | protocol           | http   | 轉發上游協議; 支持 `http`, `http2`, `grpc`    |
