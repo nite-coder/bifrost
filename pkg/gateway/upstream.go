@@ -212,18 +212,13 @@ func createGRPCUpstream(serviceOptions config.ServiceOptions, opts config.Upstre
 			url = fmt.Sprintf("grpc://%s:%s%s", targetHost, port, addr.Path)
 		}
 
-		timeout := serviceOptions.Timeout.Read
-		if serviceOptions.Timeout.Write > serviceOptions.Timeout.Read {
-			timeout = serviceOptions.Timeout.Write
-		}
-
 		grpcOptions := grpcproxy.Options{
 			Target:      url,
 			TLSVerify:   serviceOptions.TLSVerify,
 			Weight:      1,
 			MaxFails:    targetOpts.MaxFails,
 			FailTimeout: targetOpts.FailTimeout,
-			Timeout:     timeout,
+			Timeout:     serviceOptions.Timeout.GRPC,
 		}
 
 		grpcProxy, err := grpcproxy.New(grpcOptions)

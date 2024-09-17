@@ -17,6 +17,7 @@ import (
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
+	"github.com/cloudwego/hertz/pkg/network"
 	configHTTP2 "github.com/hertz-contrib/http2/config"
 	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
@@ -33,6 +34,8 @@ type HTTPServer struct {
 func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []tracer.Tracer, disableListener bool) (*HTTPServer, error) {
 	ctx := context.Background()
 
+	httpServer := &HTTPServer{}
+
 	hzOpts := []hzconfig.Option{
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
@@ -44,6 +47,10 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		server.WithKeepAlive(true),
 		server.WithALPN(true),
 		server.WithStreamBody(true),
+		server.WithOnConnect(func(ctx context.Context, conn network.Conn) context.Context {
+			// TODO: add new tcp counter
+			return ctx
+		}),
 		withDefaultServerHeader(true),
 	}
 
@@ -104,23 +111,23 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		hzOpts = append(hzOpts, server.WithListener(listener))
 	}
 
-	if serverOpts.Timeout.KeepAlive.Seconds() > 0 {
+	if serverOpts.Timeout.KeepAlive > 0 {
 		hzOpts = append(hzOpts, server.WithKeepAliveTimeout(serverOpts.Timeout.KeepAlive))
 	}
 
-	if serverOpts.Timeout.Idle.Seconds() > 0 {
+	if serverOpts.Timeout.Idle > 0 {
 		hzOpts = append(hzOpts, server.WithIdleTimeout(serverOpts.Timeout.Idle))
 	}
 
-	if serverOpts.Timeout.Read.Seconds() > 0 {
+	if serverOpts.Timeout.Read > 0 {
 		hzOpts = append(hzOpts, server.WithReadTimeout(serverOpts.Timeout.Read))
 	}
 
-	if serverOpts.Timeout.Write.Seconds() > 0 {
+	if serverOpts.Timeout.Write > 0 {
 		hzOpts = append(hzOpts, server.WithWriteTimeout(serverOpts.Timeout.Write))
 	}
 
-	if serverOpts.Timeout.Graceful.Seconds() > 0 {
+	if serverOpts.Timeout.Graceful > 0 {
 		hzOpts = append(hzOpts, server.WithExitWaitTime(serverOpts.Timeout.Graceful))
 	}
 
@@ -194,20 +201,18 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		hzOpts = append(hzOpts, server.WithTLS(tlsConfig))
 	}
 
-	httpServer := &HTTPServer{
-		options: &serverOpts,
-	}
+	httpServer.options = &serverOpts
 
 	h := server.Default(hzOpts...)
 
 	if serverOpts.HTTP2 {
 		http2opts := []configHTTP2.Option{}
 
-		if serverOpts.Timeout.Idle.Seconds() > 0 {
+		if serverOpts.Timeout.Idle > 0 {
 			http2opts = append(http2opts, configHTTP2.WithIdleTimeout(serverOpts.Timeout.Idle))
 		}
 
-		if serverOpts.Timeout.Read.Seconds() > 0 {
+		if serverOpts.Timeout.Read > 0 {
 			http2opts = append(http2opts, configHTTP2.WithReadTimeout(serverOpts.Timeout.Read))
 		}
 
@@ -239,7 +244,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 }
 
 func (s *HTTPServer) Run() {
-	slog.Info("starting server", "id", s.options.ID, "bind", s.options.Bind)
+	slog.Info("starting server", "id", s.options.ID, "bind", s.options.Bind, "transporter", s.server.GetTransporterName())
 	s.server.Spin()
 }
 

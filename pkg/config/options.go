@@ -188,6 +188,7 @@ type ServiceTimeoutOptions struct {
 	Write       time.Duration `yaml:"write" json:"write"`
 	Dail        time.Duration `yaml:"dail" json:"dail"`
 	MaxConnWait time.Duration `yaml:"max_conn_wait" json:"max_conn_wait"`
+	GRPC        time.Duration `yaml:"grpc" json:"grpc"`
 }
 
 type TLSOptions struct {

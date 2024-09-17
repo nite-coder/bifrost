@@ -24,7 +24,6 @@ const (
 	UPSTREAM_ADDR      = "$upstream_addr"
 	UPSTREAM_DURATION  = "$upstream_duration"
 	UPSTREAM_STATUS    = "$upstream_status"
-	CLIENT_CANCELED_AT = "$client_canceled_at"
 	TRACE_ID           = "$trace_id"
 
 	//grpc

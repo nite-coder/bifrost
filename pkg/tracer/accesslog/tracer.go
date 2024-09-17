@@ -126,6 +126,8 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 		return nil
 	}
 
+	statErr := c.GetTraceInfo().Stats().Error()
+
 	contentType := c.Request.Header.ContentType()
 
 	replacements := make([]string, 0, len(t.matchVars)*2)
@@ -202,7 +204,14 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			body := escape(cast.B2S(c.Request.Body()), t.opts.Escape)
 			replacements = append(replacements, config.REQUEST_BODY, body)
 		case config.STATUS:
-			replacements = append(replacements, config.STATUS, strconv.Itoa(c.Response.StatusCode()))
+			status := strconv.Itoa(c.Response.StatusCode())
+
+			// this case for http2 client disconnected
+			if statErr != nil && statErr.Error() == "client disconnected" {
+				status = strconv.Itoa(499)
+			}
+
+			replacements = append(replacements, config.STATUS, status)
 		case config.UPSTREAM_PROTOCOL:
 			replacements = append(replacements, config.UPSTREAM_PROTOCOL, c.Request.Header.GetProtocol())
 		case config.UPSTREAM_METHOD:
@@ -234,16 +243,6 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			}
 			replacements = append(replacements, config.UPSTREAM_DURATION, dur)
 		case config.DURATION:
-			val, found := c.Get(config.CLIENT_CANCELED_AT)
-
-			if found {
-				cancelTime := val.(time.Time)
-				dur := cancelTime.Sub(httpStart.Time()).Microseconds()
-				duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
-				replacements = append(replacements, config.DURATION, duration)
-				continue
-			}
-
 			dur := time.Since(httpStart.Time()).Microseconds()
 			duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
 			replacements = append(replacements, config.DURATION, duration)
@@ -255,8 +254,14 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			traceID := c.GetString(config.TRACE_ID)
 			replacements = append(replacements, config.TRACE_ID, traceID)
 		case config.GRPC_STATUS:
-			grpcStatus := c.GetUint32(config.GRPC_STATUS)
-			replacements = append(replacements, config.GRPC_STATUS, strconv.FormatUint(uint64(grpcStatus), 10))
+			status := ""
+
+			val, found := c.Get(config.GRPC_STATUS)
+			if found {
+				status, _ = cast.ToString(val)
+			}
+
+			replacements = append(replacements, config.GRPC_STATUS, status)
 		case config.GRPC_MESSAGE:
 			grpcMessage := c.GetString(config.GRPC_MESSAGE)
 			replacements = append(replacements, config.GRPC_MESSAGE, grpcMessage)

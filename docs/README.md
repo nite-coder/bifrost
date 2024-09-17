@@ -10,6 +10,9 @@ grpcurl -v -proto hello_world.proto -d '{"name": "jason"}' -plaintext localhost:
 
 timeout 30 tcpdump -i any host localhost and port 8001 -w ./bifrost.pcap
 
-ss -tulpn | grep :80
+ss -tulpn | grep :8001
 
 ss -plnt
+
+-- 查找多少用戶端 tcp 連線到 server port 8001
+ss -tn state established '( dport = :8001 )' | wc -l

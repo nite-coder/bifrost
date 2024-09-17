@@ -155,7 +155,7 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 	}
 
 	grpcOption := grpcproxy.Options{
-		Target:    "127.0.0.1:8501",
+		Target:    "grpc://127.0.0.1:8501",
 		TLSVerify: false,
 	}
 

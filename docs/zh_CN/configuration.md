@@ -257,6 +257,7 @@ services:
 | timeout.write      | 60s    | 寫入的超時時間                                |
 | timeout.idle       | 60s    | 閒置超時時間                                  |
 | timeout.dail       | 60s    | 撥接超時時間                                  |
+| timeout.grpc       | 0      | `grpc` 請求超時時間                         |
 | max_conns_per_host | 1024   | 連線上游每台主機的最多連線數                  |
 | tls_verify         | false  | 是否驗證憑證                                  |
 | protocol           | http   | 轉發上游協議; 支持 `http`, `http2`, `grpc`    |

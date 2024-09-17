@@ -222,9 +222,6 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 	select {
 	case <-c.Done():
-		time := time.Now()
-		ctx.Set(config.CLIENT_CANCELED_AT, time)
-
 		fullURI := fullURI(&ctx.Request)
 		logger.WarnContext(c, "client cancel the request",
 			slog.String("full_uri", fullURI),
@@ -354,16 +351,11 @@ func initGRPCProxy(bifrost *Bifrost, serviceOptions config.ServiceOptions, addr 
 		url = fmt.Sprintf("grpc://%s:%s%s", hostname, addr.Port(), addr.Path)
 	}
 
-	timeout := serviceOptions.Timeout.Read
-	if serviceOptions.Timeout.Write > serviceOptions.Timeout.Read {
-		timeout = serviceOptions.Timeout.Write
-	}
-
 	grpcOptions := grpcproxy.Options{
 		Target:    url,
 		TLSVerify: serviceOptions.TLSVerify,
 		Weight:    1,
-		Timeout:   timeout,
+		Timeout:   serviceOptions.Timeout.GRPC,
 	}
 
 	grpcProxy, err := grpcproxy.New(grpcOptions)
