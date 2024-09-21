@@ -35,7 +35,7 @@ func Load(path string) (Options, error) {
 		return mainOpts, err
 	}
 
-	err = ValidateValue(mainOpts)
+	err = ValidateConfig(mainOpts)
 	if err != nil {
 		var errInvalidConfig ErrInvalidConfig
 		if errors.As(err, &errInvalidConfig) {

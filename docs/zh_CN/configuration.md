@@ -7,6 +7,9 @@
 
 ## 目錄
 
+* [timer_resolution](#timer_resolution)
+* [pid_file](#pid_file)
+* [upgrade_sock](#upgrade_sock)
 * [providers](#providers)
   * [file](#file)
 * [logging](#logging)
@@ -17,6 +20,18 @@
 * [routes](#routes)
 * [services](#services)
 * [upstreams](#upstreams)
+
+## timer_resolution
+
+配置緩存時間的更新間隔，降低調用系同時間來提升效率，在 Bifrost 的時間是經過緩存的，預設值是1秒，這個配置最低可以調整到 1毫秒 (ms)
+
+## pid_file
+
+當 bifrost 程序是透過背景任務 (daemon) 來運作的，系統會把當前的 `process` 的 pid 記錄到這個檔案中
+
+## upgrade_sock
+
+這個檔案是兩個 bifrost process 再升級的過程中透過 unix socket 來溝通的方式
 
 ## providers
 

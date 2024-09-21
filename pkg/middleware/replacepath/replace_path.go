@@ -22,9 +22,9 @@ func NewMiddleware(newPath string) *ReplacePathMiddleware {
 	}
 }
 
-func (m *ReplacePathMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	ctx.Request.Header.Set("X-Replaced-Path", string(ctx.Request.Path()))
-	ctx.Request.URI().SetPathBytes(m.newPath)
+func (m *ReplacePathMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+	c.Request.Header.Set("X-Replaced-Path", string(c.Request.Path()))
+	c.Request.URI().SetPathBytes(m.newPath)
 
-	ctx.Next(c)
+	c.Next(ctx)
 }

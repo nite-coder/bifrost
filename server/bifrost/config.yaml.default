@@ -1,4 +1,5 @@
 version: 1
+timer_resolution: 1ms
 # pid_file: ./logs1/bifrost.pid
 # upgrade_sock: ./logs1/bifrost.sock
 # user: vscode
@@ -60,9 +61,9 @@ access_logs:
 servers:
   extenal:
     bind: ":8001"
-    reuse_port: false
-    tcp_fast_open: false
-    tcp_quick_ack: false
+    reuse_port: true
+    tcp_fast_open: true
+    tcp_quick_ack: true
     http2: false
     logging:
       level: info

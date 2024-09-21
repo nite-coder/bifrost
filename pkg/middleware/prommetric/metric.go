@@ -23,10 +23,10 @@ func New(path string) *PromMetricMiddleware {
 	}
 }
 
-func (m *PromMetricMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	if bytes.Equal(ctx.Request.Method(), httpGET) && bytes.Equal(ctx.Request.Path(), m.path) {
-		httpReq, _ := adaptor.GetCompatRequest(&ctx.Request)
-		httpResp := adaptor.GetCompatResponseWriter(&ctx.Response)
+func (m *PromMetricMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+	if bytes.Equal(c.Request.Method(), httpGET) && bytes.Equal(c.Request.Path(), m.path) {
+		httpReq, _ := adaptor.GetCompatRequest(&c.Request)
+		httpResp := adaptor.GetCompatResponseWriter(&c.Response)
 
 		h := promhttp.Handler()
 		h.ServeHTTP(httpResp, httpReq)

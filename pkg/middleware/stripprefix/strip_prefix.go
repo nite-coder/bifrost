@@ -22,14 +22,14 @@ func NewMiddleware(prefixs []string) *StripPrefixMiddleware {
 	return m
 }
 
-func (m *StripPrefixMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+func (m *StripPrefixMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	for _, prefix := range m.prefixes {
-		if bytes.HasPrefix(ctx.Request.Path(), prefix) {
-			newPath := bytes.TrimPrefix(ctx.Request.Path(), prefix)
-			ctx.Request.URI().SetPathBytes(newPath)
+		if bytes.HasPrefix(c.Request.Path(), prefix) {
+			newPath := bytes.TrimPrefix(c.Request.Path(), prefix)
+			c.Request.URI().SetPathBytes(newPath)
 			break
 		}
 	}
 
-	ctx.Next(c)
+	c.Next(ctx)
 }

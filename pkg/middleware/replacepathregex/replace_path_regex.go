@@ -22,12 +22,12 @@ func NewMiddleware(regex, replacement string) *ReplacePathRegexMiddleware {
 	}
 }
 
-func (m *ReplacePathRegexMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	newPath := m.regex.ReplaceAll(ctx.Request.Path(), m.replacement)
+func (m *ReplacePathRegexMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+	newPath := m.regex.ReplaceAll(c.Request.Path(), m.replacement)
 
-	ctx.Request.Header.Set("X-Replaced-Path", string(ctx.Request.Path()))
+	c.Request.Header.Set("X-Replaced-Path", string(c.Request.Path()))
 
-	ctx.Request.URI().SetPathBytes(newPath)
+	c.Request.URI().SetPathBytes(newPath)
 
-	ctx.Next(c)
+	c.Next(ctx)
 }

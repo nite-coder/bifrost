@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
+	"http-benchmark/pkg/timecache"
 	"http-benchmark/pkg/tracer/accesslog"
 	"http-benchmark/pkg/tracer/opentelemetry"
 	"http-benchmark/pkg/tracer/prometheus"
@@ -89,7 +90,7 @@ func (b *Bifrost) Shutdown(ctx context.Context) error {
 // The function returns a pointer to Bifrost and an error.
 func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	// validate
-	err := config.ValidateValue(mainOptions)
+	err := config.ValidateConfig(mainOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +99,9 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	tCache := timecache.New(mainOptions.TimerResolution)
+	timecache.Set(tCache)
 
 	// system logger
 	logger, err := log.NewLogger(mainOptions.Logging)

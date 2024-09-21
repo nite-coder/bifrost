@@ -8,6 +8,7 @@ import (
 	"http-benchmark/pkg/config"
 	"http-benchmark/pkg/log"
 	"http-benchmark/pkg/proxy"
+	"http-benchmark/pkg/timecache"
 	"log/slog"
 	"net/url"
 	"sync"
@@ -91,7 +92,7 @@ func (p *GRPCProxy) IsAvailable() bool {
 		return true
 	}
 
-	now := time.Now()
+	now := timecache.Now()
 	if now.After(p.failExpireAt) {
 		return true
 	}
@@ -107,7 +108,7 @@ func (p *GRPCProxy) AddFailedCount(count uint) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	now := time.Now()
+	now := timecache.Now()
 	if now.After(p.failExpireAt) {
 		p.failExpireAt = now.Add(p.options.FailTimeout)
 		p.failedCount = count

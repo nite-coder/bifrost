@@ -9,11 +9,11 @@ import (
 	"http-benchmark/pkg/proxy"
 	grpcproxy "http-benchmark/pkg/proxy/grpc"
 	httpproxy "http-benchmark/pkg/proxy/http"
+	"http-benchmark/pkg/timecache"
 	"log/slog"
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
@@ -194,10 +194,11 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			return
 		}
 
-		startTime := time.Now()
+		startTime := timecache.Now()
 		proxy.ServeHTTP(c, ctx)
+		endTime := timecache.Now()
 
-		dur := time.Since(startTime)
+		dur := endTime.Sub(startTime)
 		mic := dur.Microseconds()
 		duration := float64(mic) / 1e6
 		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)

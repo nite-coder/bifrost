@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"http-benchmark/pkg/config"
+	"http-benchmark/pkg/timecache"
 	"log/slog"
 	"net"
 	"os"
@@ -121,23 +122,23 @@ func (t *Tracer) Shutdown() {
 func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 	// TODO: there is a weird request without any information...
 	// therefore, we try to get trace info to ensure the request is real
-	httpStart := c.GetTraceInfo().Stats().GetEvent(stats.HTTPStart)
+	httpStats := c.GetTraceInfo().Stats()
+	httpStart := httpStats.GetEvent(stats.HTTPStart)
 	if httpStart == nil {
 		return nil
 	}
 
-	statErr := c.GetTraceInfo().Stats().Error()
+	httpFinish := httpStats.GetEvent(stats.HTTPFinish)
+	statErr := httpStats.Error()
 
+	timeNow := timecache.Now()
 	contentType := c.Request.Header.ContentType()
-
 	replacements := make([]string, 0, len(t.matchVars)*2)
-
-	info := c.GetTraceInfo().Stats()
 
 	for _, matchVal := range t.matchVars {
 		switch matchVal {
 		case config.TIME:
-			now := time.Now().Format(t.opts.TimeFormat)
+			now := timeNow.Format(t.opts.TimeFormat)
 			replacements = append(replacements, config.TIME, now)
 		case config.REMOTE_ADDR:
 			var ip string
@@ -243,13 +244,13 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			}
 			replacements = append(replacements, config.UPSTREAM_DURATION, dur)
 		case config.DURATION:
-			dur := time.Since(httpStart.Time()).Microseconds()
+			dur := httpFinish.Time().Sub(httpStart.Time()).Microseconds()
 			duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
 			replacements = append(replacements, config.DURATION, duration)
 		case config.RECEIVED_SIZE:
-			replacements = append(replacements, config.RECEIVED_SIZE, strconv.Itoa(info.RecvSize()))
+			replacements = append(replacements, config.RECEIVED_SIZE, strconv.Itoa(httpStats.RecvSize()))
 		case config.SEND_SIZE:
-			replacements = append(replacements, config.SEND_SIZE, strconv.Itoa(info.SendSize()))
+			replacements = append(replacements, config.SEND_SIZE, strconv.Itoa(httpStats.SendSize()))
 		case config.TRACE_ID:
 			traceID := c.GetString(config.TRACE_ID)
 			replacements = append(replacements, config.TRACE_ID, traceID)

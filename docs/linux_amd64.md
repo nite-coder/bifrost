@@ -1,6 +1,6 @@
 # Load test
 
-因為環境與參數的不同隊壓測結果有很大的影響，數據僅供參考
+因為環境與參數的不同對壓測結果有很大的影響，數據僅供參考
 
 CPU: AMD Ryzen7 4750U
 Ram: 16GB
@@ -27,20 +27,20 @@ taskset -c 0,1,2,3,4,5,6,7 k6 run vus.js
               * contacts: 500 looping VUs for 2m0s (gracefulStop: 30s)
 
 
-     data_received..................: 2.9 GB  24 MB/s
-     data_sent......................: 1.1 GB  9.1 MB/s
-     http_req_blocked...............: avg=9.44µs  min=661ns      med=2.37µs  max=115.92ms p(75)=2.94µs  p(95)=4.91µs   p(99)=7.76µs   count=3292421
-     http_req_connecting............: avg=3.35µs  min=0s         med=0s      max=114.82ms p(75)=0s      p(95)=0s       p(99)=0s       count=3292421
-     http_req_duration..............: avg=16.83ms min=259.78µs   med=14.27ms max=236.57ms p(75)=20.09ms p(95)=36.7ms   p(99)=66.04ms  count=3292421
-       { expected_response:true }...: avg=16.83ms min=259.78µs   med=14.27ms max=236.57ms p(75)=20.09ms p(95)=36.7ms   p(99)=66.04ms  count=3292421
-     http_req_failed................: 0.00%   ✓ 0            ✗ 3292421
-     http_req_receiving.............: avg=613.5µs min=-1801191ns med=32.2µs  max=168.49ms p(75)=36.18µs p(95)=218.51µs p(99)=23.25ms  count=3292421
-     http_req_sending...............: avg=60.51µs min=-983837ns  med=16.84µs max=128.95ms p(75)=18.85µs p(95)=33.2µs   p(99)=195.21µs count=3292421
-     http_req_tls_handshaking.......: avg=0s      min=0s         med=0s      max=0s       p(75)=0s      p(95)=0s       p(99)=0s       count=3292421
-     http_req_waiting...............: avg=16.16ms min=0s         med=14.17ms max=230.9ms  p(75)=19.92ms p(95)=34.92ms  p(99)=49.09ms  count=3292421
-     http_reqs......................: 3292421 27436.287786/s
-     iteration_duration.............: avg=18.03ms min=349.2µs    med=14.99ms max=330.64ms p(75)=21.18ms p(95)=40.57ms  p(99)=73.24ms  count=3292421
-     iterations.....................: 3292421 27436.287786/s
+     data_received..................: 2.7 GB  23 MB/s
+     data_sent......................: 1.0 GB  8.4 MB/s
+     http_req_blocked...............: avg=8.57µs   min=551ns      med=2.55µs  max=319.34ms p(75)=3.17µs  p(95)=5.26µs   p(99)=8.7µs    count=3053426
+     http_req_connecting............: avg=1.64µs   min=0s         med=0s      max=117.08ms p(75)=0s      p(95)=0s       p(99)=0s       count=3053426
+     http_req_duration..............: avg=18.17ms  min=65.83µs    med=15.4ms  max=248.16ms p(75)=21.75ms p(95)=39.99ms  p(99)=68.65ms  count=3053426
+       { expected_response:true }...: avg=18.17ms  min=65.83µs    med=15.4ms  max=248.16ms p(75)=21.75ms p(95)=39.99ms  p(99)=68.65ms  count=3053426
+     http_req_failed................: 0.00%   ✓ 0            ✗ 3053426
+     http_req_receiving.............: avg=606.82µs min=-605182ns  med=34µs    max=208.11ms p(75)=38.41µs p(95)=233.86µs p(99)=22.19ms  count=3053426
+     http_req_sending...............: avg=61.79µs  min=-1262177ns med=17.97µs max=191.2ms  p(75)=20.12µs p(95)=37.48µs  p(99)=207.73µs count=3053426
+     http_req_tls_handshaking.......: avg=0s       min=0s         med=0s      max=0s       p(75)=0s      p(95)=0s       p(99)=0s       count=3053426
+     http_req_waiting...............: avg=17.5ms   min=12.43µs    med=15.29ms max=131.34ms p(75)=21.57ms p(95)=38.06ms  p(99)=53.11ms  count=3053426
+     http_reqs......................: 3053426 25444.960013/s
+     iteration_duration.............: avg=19.43ms  min=412.35µs   med=16.18ms max=333.1ms  p(75)=22.94ms p(95)=44.06ms  p(99)=76.11ms  count=3053426
+     iterations.....................: 3053426 25444.960013/s
      vus............................: 500     min=500        max=500  
      vus_max........................: 500     min=500        max=500  
 ```

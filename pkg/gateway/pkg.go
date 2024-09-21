@@ -95,7 +95,7 @@ func Run(mainOptions config.Options) (err error) {
 			return err
 		}
 
-		err = config.ValidateValue(mainOpts)
+		err = config.ValidateConfig(mainOpts)
 		if err != nil {
 			slog.Error("fail to validate config", "error", err)
 			return err
@@ -294,7 +294,6 @@ func fullURI(req *protocol.Request) string {
 	_, _ = buf.Write(req.URI().FullURI())
 	return buf.String()
 }
-
 
 // waitTimeout waits for the waitgroup for the specified max timeout.
 // Returns true if waiting timed out.

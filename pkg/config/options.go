@@ -3,23 +3,24 @@ package config
 import "time"
 
 type Options struct {
-	Version     string                      `yaml:"version" json:"version"`
-	PIDFile     string                      `yaml:"pid_file" json:"pid_file"`
-	UpgradeSock string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
-	Gopool      bool                        `yaml:"gopool" json:"gopool"`
-	IsDaemon    bool                        `yaml:"-" json:"-"`
-	User        string                      `yaml:"user" json:"user"`
-	Group       string                      `yaml:"group" json:"group"`
-	Providers   ProviderOtions              `yaml:"providers" json:"providers"`
-	Logging     LoggingOtions               `yaml:"logging" json:"logging"`
-	Metrics     MetricsOptions              `yaml:"metrics" json:"metrics"`
-	Tracing     TracingOptions              `yaml:"tracing" json:"tracing"`
-	AccessLogs  map[string]AccessLogOptions `yaml:"access_logs" json:"access_logs"`
-	Servers     map[string]ServerOptions    `yaml:"servers" json:"servers"`
-	Routes      map[string]RouteOptions     `yaml:"routes" json:"routes"`
-	Middlewares map[string]MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
-	Services    map[string]ServiceOptions   `yaml:"services" json:"services"`
-	Upstreams   map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
+	Version         string                      `yaml:"version" json:"version"`
+	PIDFile         string                      `yaml:"pid_file" json:"pid_file"`
+	UpgradeSock     string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
+	Gopool          bool                        `yaml:"gopool" json:"gopool"`
+	IsDaemon        bool                        `yaml:"-" json:"-"`
+	User            string                      `yaml:"user" json:"user"`
+	Group           string                      `yaml:"group" json:"group"`
+	Providers       ProviderOtions              `yaml:"providers" json:"providers"`
+	TimerResolution time.Duration               `yaml:"timer_resolution " json:"timer_resolution "`
+	Logging         LoggingOtions               `yaml:"logging" json:"logging"`
+	Metrics         MetricsOptions              `yaml:"metrics" json:"metrics"`
+	Tracing         TracingOptions              `yaml:"tracing" json:"tracing"`
+	AccessLogs      map[string]AccessLogOptions `yaml:"access_logs" json:"access_logs"`
+	Servers         map[string]ServerOptions    `yaml:"servers" json:"servers"`
+	Routes          map[string]RouteOptions     `yaml:"routes" json:"routes"`
+	Middlewares     map[string]MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
+	Services        map[string]ServiceOptions   `yaml:"services" json:"services"`
+	Upstreams       map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
 }
 
 func NewOptions() Options {

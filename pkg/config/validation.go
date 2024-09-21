@@ -29,8 +29,8 @@ func ValidateMapping(mainOpts Options) error {
 
 }
 
-// ValidateValue checks if the config's values are valid, but does not check if the config's value mapping is valid
-func ValidateValue(mainOpts Options) error {
+// ValidateConfig checks if the config's values are valid, but does not check if the config's value mapping is valid
+func ValidateConfig(mainOpts Options) error {
 
 	err := validateLogging(mainOpts.Logging)
 	if err != nil {

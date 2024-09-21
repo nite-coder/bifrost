@@ -18,19 +18,19 @@ func NewMiddleware(requestHeaders map[string]string, responseHeaders map[string]
 	}
 }
 
-func (m *HeadersMiddleware) ServeHTTP(ctx context.Context, hzCtx *app.RequestContext) {
+func (m *HeadersMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	if len(m.requestHeaders) > 0 {
 		for k, v := range m.requestHeaders {
-			hzCtx.Request.Header.Set(k, v)
+			c.Request.Header.Set(k, v)
 		}
 	}
 
-	hzCtx.Next(ctx)
+	c.Next(ctx)
 
 	if len(m.responseHeaders) > 0 {
 		for k, v := range m.responseHeaders {
-			hzCtx.Response.Header.Set(k, v)
+			c.Response.Header.Set(k, v)
 		}
 	}
 }
