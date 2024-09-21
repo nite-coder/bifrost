@@ -3,8 +3,9 @@ package gateway
 import (
 	"context"
 	"fmt"
-	"http-benchmark/pkg/config"
-	"http-benchmark/pkg/log"
+
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/log"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"

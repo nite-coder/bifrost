@@ -2,8 +2,9 @@ package gateway
 
 import (
 	"context"
-	"http-benchmark/pkg/config"
 	"testing"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"

@@ -2,11 +2,12 @@ package log
 
 import (
 	"fmt"
-	"http-benchmark/pkg/config"
 	"io"
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
 func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {

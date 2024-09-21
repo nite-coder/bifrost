@@ -4,9 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	grpcproxy "http-benchmark/pkg/proxy/grpc"
-	httpproxy "http-benchmark/pkg/proxy/http"
-	"http-benchmark/pkg/zero"
 	"io"
 	"log"
 	"log/slog"
@@ -17,7 +14,11 @@ import (
 	"syscall"
 	"time"
 
-	configBifrost "http-benchmark/pkg/config"
+	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
+	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
+	"github.com/nite-coder/bifrost/pkg/zero"
+
+	configBifrost "github.com/nite-coder/bifrost/pkg/config"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"

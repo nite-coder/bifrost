@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	model "http-benchmark/proto"
 	"io"
 	"log"
+
+	model "github.com/nite-coder/bifrost/proto"
 
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/protocol"
@@ -14,7 +15,6 @@ import (
 	"github.com/hertz-contrib/http2/config"
 	"github.com/hertz-contrib/http2/factory"
 	"google.golang.org/protobuf/proto"
-
 )
 
 func main() {

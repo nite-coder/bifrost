@@ -2,9 +2,10 @@ package gateway
 
 import (
 	"context"
-	"http-benchmark/pkg/config"
 	"testing"
 	"time"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"

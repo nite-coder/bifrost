@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"http-benchmark/pkg/config"
-	"http-benchmark/pkg/gateway"
-	"http-benchmark/pkg/log"
 	"log/slog"
 	"os"
+
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/gateway"
+	"github.com/nite-coder/bifrost/pkg/log"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/urfave/cli/v2"

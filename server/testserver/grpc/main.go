@@ -4,9 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"http-benchmark/proto"
 	"log"
 	"net"
+
+	"github.com/nite-coder/bifrost/proto"
 
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"

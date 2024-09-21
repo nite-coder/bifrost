@@ -1,12 +1,13 @@
 package file
 
 import (
-	"http-benchmark/pkg/provider"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 	"time"
+
+	"github.com/nite-coder/bifrost/pkg/provider"
 
 	"github.com/fsnotify/fsnotify"
 )

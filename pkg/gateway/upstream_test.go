@@ -2,13 +2,14 @@ package gateway
 
 import (
 	"hash/fnv"
-	"http-benchmark/pkg/config"
-	"http-benchmark/pkg/proxy"
-	httpproxy "http-benchmark/pkg/proxy/http"
 	"math/rand"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/proxy"
+	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 
 	"github.com/stretchr/testify/assert"
 )

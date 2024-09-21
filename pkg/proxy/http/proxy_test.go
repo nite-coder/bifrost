@@ -3,11 +3,12 @@ package http
 import (
 	"bytes"
 	"context"
-	"http-benchmark/pkg/config"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"

@@ -5,11 +5,12 @@ import (
 	"crypto/tls"
 	"encoding/binary"
 	"fmt"
-	model "http-benchmark/proto"
 	"io"
 	"log"
 	"net"
 	"net/http"
+
+	model "github.com/nite-coder/bifrost/proto"
 
 	"golang.org/x/net/http2"
 	"google.golang.org/protobuf/proto"

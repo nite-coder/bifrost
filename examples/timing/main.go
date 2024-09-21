@@ -1,8 +1,8 @@
 package main
 
 import (
-	"http-benchmark/pkg/config"
-	"http-benchmark/pkg/gateway"
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/gateway"
 
 	"github.com/cloudwego/hertz/pkg/app"
 )

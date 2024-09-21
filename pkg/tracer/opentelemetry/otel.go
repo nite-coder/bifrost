@@ -2,8 +2,9 @@ package opentelemetry
 
 import (
 	"context"
-	"http-benchmark/pkg/config"
 	"time"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"

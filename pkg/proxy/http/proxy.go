@@ -5,10 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"http-benchmark/pkg/config"
-	"http-benchmark/pkg/log"
-	"http-benchmark/pkg/proxy"
-	"http-benchmark/pkg/timecache"
 	"log/slog"
 	"net"
 	"net/http"
@@ -17,6 +13,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/log"
+	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/timecache"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"

@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"http-benchmark/pkg/provider"
-	"http-benchmark/pkg/provider/file"
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/nite-coder/bifrost/pkg/provider"
+	"github.com/nite-coder/bifrost/pkg/provider/file"
 
 	"gopkg.in/yaml.v3"
 )

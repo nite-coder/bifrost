@@ -2,8 +2,9 @@ package prometheus
 
 import (
 	"context"
-	"http-benchmark/pkg/config"
 	"strconv"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer"

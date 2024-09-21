@@ -2,7 +2,8 @@ package opentelemetry
 
 import (
 	"context"
-	"http-benchmark/pkg/config"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"go.opentelemetry.io/otel"

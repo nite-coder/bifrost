@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"http-benchmark/pkg/config"
 	"regexp"
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/blackbear/pkg/cast"

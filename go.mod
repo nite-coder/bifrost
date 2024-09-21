@@ -1,8 +1,9 @@
-module http-benchmark
+module github.com/nite-coder/bifrost
 
 go 1.22.0
 
 replace github.com/cloudwego/hertz v0.9.3 => github.com/nite-coder/hertz v0.0.0-20240906153830-9815bf8dbb53
+
 replace github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.0.0-20240820122516-bb9df3e1377c
 
 require (
@@ -18,7 +19,7 @@ require (
 	github.com/hertz-contrib/pprof v0.1.2
 	github.com/hertz-contrib/websocket v0.1.0
 	github.com/nite-coder/blackbear v0.0.0-20240707130328-7cf8dae7750a
-	github.com/prometheus/client_golang v1.20.3
+	github.com/prometheus/client_golang v1.20.4
 	github.com/rs/dnscache v0.0.0-20230804202142-fc85eb664529
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v2 v2.27.4
@@ -32,7 +33,7 @@ require (
 	golang.org/x/net v0.29.0
 	golang.org/x/sys v0.25.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1
-	google.golang.org/grpc v1.66.2
+	google.golang.org/grpc v1.67.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v3 v3.0.1
 )

@@ -2,9 +2,10 @@ package gateway
 
 import (
 	"fmt"
-	"http-benchmark/pkg/config"
 	"slices"
 	"testing"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 
 	"github.com/cloudwego/hertz/pkg/app"
 )

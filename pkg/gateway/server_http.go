@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"http-benchmark/pkg/config"
 	"io"
 	"log/slog"
 	"net"
@@ -12,6 +11,8 @@ import (
 	"runtime"
 	"syscall"
 	"time"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"

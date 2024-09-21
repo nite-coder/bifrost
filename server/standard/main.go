@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
-	"http-benchmark/pkg/zero"
 	"log"
 	"log/slog"
 	"net"
@@ -17,6 +16,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/nite-coder/bifrost/pkg/zero"
 
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
