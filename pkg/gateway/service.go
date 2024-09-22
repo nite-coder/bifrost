@@ -211,15 +211,6 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		} else {
 			ctx.Set(config.UPSTREAM_STATUS, ctx.Response.StatusCode())
 		}
-
-		// check upstream health
-		// TODO: move to http proxy
-		if ctx.Response.StatusCode() >= 500 {
-			err := proxy.AddFailedCount(1)
-			if err != nil {
-				slog.Warn("upstream server temporarily disabled")
-			}
-		}
 	})
 
 	select {

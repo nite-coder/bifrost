@@ -1,5 +1,7 @@
 protoc -I=. --go_out=plugins=grpc:. --go_opt=paths=source_relative ./server/testserver/grpc/proto/*.proto
 
+curl http://localhost:8999/metrics
+
 grpcurl -plaintext -vv localhost:8003 helloworld.Greeter/SayHello
 
 grpcurl -plaintext localhost:8003 list

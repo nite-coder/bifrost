@@ -22,16 +22,32 @@ const (
 )
 
 // genRequestDurationLabels make labels values.
-func genRequestDurationLabels(ctx *app.RequestContext) prom.Labels {
+func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 	labels := make(prom.Labels)
 
-	serverID := ctx.GetString(config.SERVER_ID)
+	serverID := c.GetString(config.SERVER_ID)
 	labels[labelServer] = defaultValIfEmpty(serverID, unknownLabelValue)
-	labels[labelMethod] = defaultValIfEmpty(string(ctx.Request.Method()), unknownLabelValue)
-	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(ctx.Response.Header.StatusCode()), unknownLabelValue)
+	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
+	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(c.Response.Header.StatusCode()), unknownLabelValue)
 
-	originalPath := ctx.GetString(config.REQUEST_PATH)
+	originalPath := c.GetString(config.REQUEST_PATH)
 	labels[labelPath] = defaultValIfEmpty(originalPath, unknownLabelValue)
+
+	return labels
+}
+
+func genUpstreamDurationLabels(c *app.RequestContext) prom.Labels {
+	labels := make(prom.Labels)
+
+	serverID := c.GetString(config.SERVER_ID)
+	labels[labelServer] = defaultValIfEmpty(serverID, unknownLabelValue)
+	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
+
+	UPSTREAM_STATUS := c.GetInt(config.UPSTREAM_STATUS)
+	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(UPSTREAM_STATUS), unknownLabelValue)
+
+	path := c.Request.Path()
+	labels[labelPath] = defaultValIfEmpty(string(path), unknownLabelValue)
 
 	return labels
 }
@@ -41,6 +57,7 @@ type serverTracer struct {
 	respoonseSizeTotalCounter *prom.CounterVec
 	requestTotalCounter       *prom.CounterVec
 	requestDurationHistogram  *prom.HistogramVec
+	upstreamDurationHistogram *prom.HistogramVec
 }
 
 // Start record the beginning of server handling request from client.
@@ -63,9 +80,12 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	cost := httpFinish.Time().Sub(httpStart.Time())
+	reqDuration := httpFinish.Time().Sub(httpStart.Time())
 	_ = counterAdd(s.requestTotalCounter, 1, genRequestDurationLabels(c))
-	_ = histogramObserve(s.requestDurationHistogram, cost, genRequestDurationLabels(c))
+	_ = histogramObserve(s.requestDurationHistogram, reqDuration, genRequestDurationLabels(c))
+
+	upstreamDuration := c.GetDuration(config.UPSTREAM_DURATION)
+	_ = histogramObserve(s.upstreamDurationHistogram, upstreamDuration, genUpstreamDurationLabels(c))
 
 	serverLabel := make(prom.Labels)
 	serverLabel[labelServer] = serverID
@@ -122,7 +142,16 @@ func NewTracer(opts ...Option) tracer.Tracer {
 	)
 	prom.MustRegister(requestDurationHistogram)
 
-	// TODO: add upstream Duration Histogram
+	upstreamDurationHistogram := prom.NewHistogramVec(
+		prom.HistogramOpts{
+			Name:    "bifrost_upstream_duration",
+			Help:    "Latency (seconds) of HTTP that had been sent to upstream server from server.",
+			Buckets: cfg.buckets,
+		},
+		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
+	)
+	prom.MustRegister(upstreamDurationHistogram)
+
 	// TODO: add total connections
 
 	return &serverTracer{
@@ -130,6 +159,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 		respoonseSizeTotalCounter: responseSizeTotalCounter,
 		requestTotalCounter:       requestTotalCounter,
 		requestDurationHistogram:  requestDurationHistogram,
+		upstreamDurationHistogram: upstreamDurationHistogram,
 	}
 }
 

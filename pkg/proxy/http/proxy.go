@@ -207,6 +207,14 @@ func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			slog.ErrorContext(c, "proxy: http proxy panic recovered", slog.Any("error", r))
 			ctx.Abort()
 		}
+
+		// check upstream health
+		if ctx.Response.StatusCode() >= 500 {
+			err := p.AddFailedCount(1)
+			if err != nil {
+				slog.Warn("upstream server temporarily disabled")
+			}
+		}
 	}()
 
 	outReq := &ctx.Request
