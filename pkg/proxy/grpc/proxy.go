@@ -36,13 +36,14 @@ type Options struct {
 	MaxFails    uint
 	Timeout     time.Duration
 	FailTimeout time.Duration
+	DailOptions []grpc.DialOption
 }
 
 type GRPCProxy struct {
 	mu      sync.RWMutex
 	id      string
 	options *Options
-	client  *grpc.ClientConn
+	client  grpc.ClientConnInterface
 	tracer  trace.Tracer
 	// target is set as a reverse proxy address
 	target       string
@@ -62,16 +63,20 @@ func New(options Options) (*GRPCProxy, error) {
 		options.Weight = 1
 	}
 
-	grpcOpts := []grpc.DialOption{
+	grpcOptions := []grpc.DialOption{
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(&rawCodec{})),
 		grpc.WithDisableRetry(),
 	}
 
 	if !options.TLSVerify {
-		grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
-	client, err := grpc.NewClient(addr.Host, grpcOpts...)
+	if len(options.DailOptions) > 0 {
+		grpcOptions = append(grpcOptions, options.DailOptions...)
+	}
+
+	client, err := grpc.NewClient(addr.Host, grpcOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("fail to dial backend: %v", err)
 	}
@@ -169,7 +174,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	})
 
 	// Create a new grpc context with the metadata
-	grpcCtx := metadata.NewOutgoingContext(ctx, md)
+	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	// Check if the request payload is valid
 	payload := c.Request.Body()
@@ -192,7 +197,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	// If a timeout is set, create a new context with the timeout
 	if p.options.Timeout > 0 {
-		ctxTimeout, cancel := context.WithTimeout(grpcCtx, p.options.Timeout)
+		ctxTimeout, cancel := context.WithTimeout(ctx, p.options.Timeout)
 		ctx = ctxTimeout
 		defer cancel()
 	}

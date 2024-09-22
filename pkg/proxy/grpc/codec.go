@@ -2,8 +2,6 @@ package grpc
 
 import (
 	"fmt"
-
-	"google.golang.org/grpc/encoding"
 )
 
 type rawCodec struct{}
@@ -12,7 +10,7 @@ func (c *rawCodec) Marshal(v any) ([]byte, error) {
 	return v.([]byte), nil
 }
 
-func (c *rawCodec) Unmarshal(data []byte, v interface{}) error {
+func (c *rawCodec) Unmarshal(data []byte, v any) error {
 	switch dst := v.(type) {
 	case *[]byte:
 		*dst = data
@@ -27,8 +25,4 @@ func (c *rawCodec) Unmarshal(data []byte, v interface{}) error {
 
 func (c *rawCodec) Name() string {
 	return "raw"
-}
-
-func init() {
-	encoding.RegisterCodec(&rawCodec{})
 }
