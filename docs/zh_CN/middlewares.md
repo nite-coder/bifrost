@@ -8,13 +8,9 @@
 
 另外也可以直接使用原生 Golang 來開發自定義中間件
 
-
 ## 內建中間件
 
 目前支持的中間件有下面
-
-
-
 
 ## 自定義中間件
 
@@ -27,10 +23,10 @@ func (m *AddPrefixMiddleware) ServeHTTP(c context.Context, ctx *app.RequestConte
 ```
 
 開發自定義中間件，分下面幾個步驟
-1. `開發新的中間件`: 新建立一個 middleware
-1. `註冊中間件`: 註冊 middleware 到 gateway
-1. `配置中間件`: 配置 middleware 到 `servers`、`routes`、`services` 這三個配置內
 
+1. `開發新的中間件`: 新建立一個 middleware，需要實現 ServeHTTP(c context.Context, ctx *app.RequestContext) 介面
+1. `註冊中間件`: 註冊 middleware 到 gateway
+1. `配置中間件`: 依照需求，看要配置 middleware 到 `servers`、`routes`、`services` 哪邊
 
 這邊我們將示範如何建立一個中間件，用來紀錄 HTTP 請求進入與返回的時間，並透過返回的 HTTP Header 告知用戶
 
@@ -40,67 +36,65 @@ func (m *AddPrefixMiddleware) ServeHTTP(c context.Context, ctx *app.RequestConte
 package main
 
 import (
-	"context"
-	"strconv"
-	"time"
+ "context"
+ "strconv"
+ "time"
 
-	"github.com/cloudwego/hertz/pkg/app"
+ "github.com/cloudwego/hertz/pkg/app"
 )
 
 type TimingMiddleware struct {
 }
 
 func NewMiddleware() *TimingMiddleware {
-	return &TimingMiddleware{}
+ return &TimingMiddleware{}
 }
 
 func (t *TimingMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	startTime := time.Now().UTC().UnixMicro()
+ startTime := time.Now().UTC().UnixMicro()
 
-	ctx.Next(c)
+ ctx.Next(c)
 
-	endTime := time.Now().UTC().UnixMicro()
+ endTime := time.Now().UTC().UnixMicro()
 
-	ctx.Response.Header.Add("x-time-in", strconv.FormatInt(startTime, 10))
-	ctx.Response.Header.Add("x-time-out", strconv.FormatInt(endTime, 10))
+ ctx.Response.Header.Add("x-time-in", strconv.FormatInt(startTime, 10))
+ ctx.Response.Header.Add("x-time-out", strconv.FormatInt(endTime, 10))
 }
 ```
-
 
 ### 註冊中間件
 
 ```golang
 func main() {
-	options, err := config.Load("./config.yaml")
-	if err != nil {
-		panic(err)
-	}
+ options, err := config.Load("./config.yaml")
+ if err != nil {
+  panic(err)
+ }
 
-	err = registerMiddlewares() // 註冊 middlewares
-	if err != nil {
-		panic(err)
-	}
+ err = registerMiddlewares() // 註冊 middlewares
+ if err != nil {
+  panic(err)
+ }
 
-	err = gateway.Run(options)
-	if err != nil {
-		panic(err)
-	}
+ err = gateway.Run(options)
+ if err != nil {
+  panic(err)
+ }
 }
 
 func registerMiddlewares() error {
     // timing 是向 gateway 說我們這個 middleware 的 type 名稱, 必須要是唯一值
-	err := gateway.RegisterMiddleware("timing", func(param map[string]any) (app.HandlerFunc, error) {
-		m := TimingMiddleware{}
-		return m.ServeHTTP, nil
-	})
-	if err != nil {
-		return err
-	}
+ err := gateway.RegisterMiddleware("timing", func(param map[string]any) (app.HandlerFunc, error) {
+  m := TimingMiddleware{}
+  return m.ServeHTTP, nil
+ })
+ if err != nil {
+  return err
+ }
 
-	return nil
+ return nil
 }
 ```
-
 
 ### 配置中間件
 

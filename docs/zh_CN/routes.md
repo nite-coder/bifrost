@@ -98,8 +98,6 @@ routes:
 原始請求: `/foo` \
 轉發上游: `/api/v1/foo`
 
-
-
 ```yaml
 routes:
   route1:
@@ -119,8 +117,6 @@ routes:
 原始請求: `/api/v1/payment` \
 轉發上游: `/payment`
 
-
-
 ```yaml
 routes:
   route1:
@@ -134,14 +130,12 @@ routes:
             - /api/v1
 ```
 
-
 ### 替換路徑
 
 將原始請求路徑完全替換成別的路徑轉發到上游，如果原始請求有包含 querystring 也將一起帶上並轉發，例如:
 
 原始請求: `/api/v1/user?name=john` \
 轉發上游: `/hoo/user?name=john`
-
 
 ```yaml
 routes:

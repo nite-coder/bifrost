@@ -15,8 +15,24 @@
 1. 支持用 `Go` 寫你的中間件 (`servers`, `routes`, `services` 都可以使用很彈性)
 1. 高性能與低延遲特性 (底層用的 HTTP 框架是使用字節開源的 `Hertz` 框架, 經過大廠驗證)
 1. 修改路由配置後毫秒級熱更新，請求不中斷
-1. 原生支持 `Prometheus`, `OpenTelemetry` 監控套件
-1. 支持 `HTTP1`/`HTTP2`/`H2C`/`Webosocket`/`GRPC` 協議
+1. 內建 `Prometheus` 監控
+1. 內建 `OpenTelemetry` 鏈路追蹤
+1. 支持 `HTTP1.1`/`HTTP2`/`H2C`/`Webosocket`/`GRPC` 協議
+
+## 參考對比
+
+|                             | Bifrost | Nginx |
+| :-------------------------- | ------: | :---: |
+| Golang 寫中間件             |      ✅ |  ❌   |
+| 套件生態支持豐富            |      ✅ |  ❌   |
+| 毫秒級路由熱更新            |      ✅ |  ❌   |
+| 高連線池複用率              |      ✅ |  ❌   |
+| 容易二次開發/現有服務整合   |      ✅ |  ❌   |
+| 內建 Prometheus 監控        |      ✅ |  ❌   |
+| 內建 OpenTelemetry 鏈路追蹤 |      ✅ |  ❌   |
+| 上游 HTTP2 協議支持         |      ✅ |  ❌   |
+| 高效能低延遲                |      ✅ |  ✅   |
+| GRPC Load Balancer          |      ✅ |  ✅   |
 
 ## 技術文件
 

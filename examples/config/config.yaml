@@ -10,20 +10,20 @@ providers:
     watch: true
 
 servers:
-  test-server:
+  api_server:
     bind: ":8001"
 
 routes:
-  test-route:
+  all_routes:
     paths:
       - /
-    service_id: test-service
+    service_id: test_service
 
 services:
-  test-service:
-    url: "http://test-upstream:8000"
+  test_service:
+    url: "http://test_upstream:8000"
 
 upstreams:
-  test-upstream:
+  test_upstream:
     targets:
       - target: "127.0.0.1:8000"

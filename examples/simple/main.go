@@ -10,7 +10,7 @@ func main() {
 	options := config.NewOptions()
 
 	// setup upstream
-	options.Upstreams["test_server"] = config.UpstreamOptions{
+	options.Upstreams["test_upstream"] = config.UpstreamOptions{
 		Strategy: config.RoundRobinStrategy,
 		Targets: []config.TargetOptions{
 			{
@@ -24,11 +24,11 @@ func main() {
 
 	// setup service
 	options.Services["test_service"] = config.ServiceOptions{
-		Url: "http://test_server:8000",
+		Url: "http://test_upstream:8000",
 	}
 
 	// setup route
-	options.Routes["test_route"] = config.RouteOptions{
+	options.Routes["all_routes"] = config.RouteOptions{
 		Paths: []string{
 			"/",
 		},
@@ -36,7 +36,7 @@ func main() {
 	}
 
 	// setup server
-	options.Servers["test_server"] = config.ServerOptions{
+	options.Servers["api_server"] = config.ServerOptions{
 		Bind: ":8001",
 	}
 
