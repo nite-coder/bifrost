@@ -234,7 +234,7 @@ func checkRegexpRoute(setting routeSetting, method string, path string) bool {
 	return setting.regex.MatchString(path)
 }
 
-
+// nolint
 func getHost(ctx *app.RequestContext) func() string {
 	var (
 		host string

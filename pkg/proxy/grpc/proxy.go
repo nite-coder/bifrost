@@ -240,7 +240,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	frame[0] = 0
 
 	// Set the length of the message
-	binary.BigEndian.PutUint64(frame[1:5], uint64(len(respBody)))
+	binary.BigEndian.PutUint32(frame[1:5], uint32(len(respBody)))
 
 	// Copy the response body to the frame
 	copy(frame[5:], respBody)

@@ -61,6 +61,7 @@ func TestLocalLimiter(t *testing.T) {
 		var wg sync.WaitGroup
 
 		wg.Add(concurrentRequests)
+		now := time.Now()
 		for i := 0; i < concurrentRequests; i++ {
 			go func() {
 				defer wg.Done()
@@ -70,6 +71,9 @@ func TestLocalLimiter(t *testing.T) {
 			}()
 		}
 		wg.Wait()
+
+		duration := time.Since(now)
+		fmt.Println(duration)
 
 		if allowedCount.Load() != options.Limit {
 			t.Errorf("Expected %d requests to be allowed, but got %d", options.Limit, allowedCount.Load())

@@ -1,6 +1,7 @@
 package ratelimiting
 
 import (
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 type LocalLimiter struct {
 	options *Options
 	cache   *cache.Cache[string, *atomic.Int64]
+	mu      sync.Mutex
 }
 
 func NewLocalLimiter(options Options) *LocalLimiter {
@@ -20,10 +22,14 @@ func NewLocalLimiter(options Options) *LocalLimiter {
 }
 
 func (l *LocalLimiter) Allow(key string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	counter, found := l.cache.Get(key)
 
 	if found {
-		if counter.Load() >= l.options.Limit {
+		current := counter.Load()
+		if current >= l.options.Limit {
 			return false
 		}
 

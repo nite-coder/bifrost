@@ -17,7 +17,6 @@ func NewMiddleware(prefix string) *AddPrefixMiddleware {
 }
 
 func (m *AddPrefixMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
-	newPath := append(m.prefix, c.Request.Path()...)
-	c.Request.URI().SetPathBytes(newPath)
+	c.Request.URI().SetPathBytes(append(m.prefix, c.Request.Path()...))
 	c.Next(ctx)
 }

@@ -13,7 +13,7 @@ import (
 
 type Engine struct {
 	ID              string
-	bibfrost        *Bifrost
+	bifrost         *Bifrost
 	handlers        app.HandlersChain
 	middlewares     app.HandlersChain
 	notFoundHandler app.HandlerFunc
@@ -43,7 +43,7 @@ func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, erro
 
 	// engine
 	engine := &Engine{
-		bibfrost:        bifrost,
+		bifrost:         bifrost,
 		handlers:        make([]app.HandlerFunc, 0),
 		notFoundHandler: nil,
 		hzOptions:       make([]hzconfig.Option, 0),
@@ -108,6 +108,6 @@ func (e *Engine) Use(middleware ...app.HandlerFunc) {
 	e.middlewares = e.handlers
 
 	if e.notFoundHandler != nil {
-		e.middlewares = append(e.handlers, e.notFoundHandler)
+		e.middlewares = append(e.handlers, e.notFoundHandler) // nolint
 	}
 }
