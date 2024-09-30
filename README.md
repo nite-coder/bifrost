@@ -1,4 +1,4 @@
-# Bifrost
+# Bifrost [![GoDoc][doc-img]][doc] [![Build][ci-img]][ci] [![GoReport][report-img]][report] [![Security][security-img]][security]
 
 一個高效能低延遲的 API Gateway 函式庫，使用 Golang 開發
 
@@ -22,7 +22,7 @@
 ## 參考對比
 
 |                             | Bifrost | Nginx |
-| :-------------------------- | ------: | :---: |
+| :-------------------------- | :------: | :---: |
 | Golang 寫中間件             |      ✅ |  ❌   |
 | 套件生態支持豐富            |      ✅ |  ❌   |
 | 毫秒級路由熱更新            |      ✅ |  ❌   |
@@ -51,3 +51,12 @@
 ## Credit
 
 1. [CloudWeGo](https://www.cloudwego.io/)
+
+[doc-img]: https://godoc.org/github.com/nite-coder/bifrost?status.svg
+[doc]: https://pkg.go.dev/github.com/nite-coder/bifrost?tab=doc
+[ci-img]: https://github.com/nite-coder/bifrost/actions/workflows/build.yml/badge.svg
+[ci]: https://github.com/nite-coder/bifrost/actions
+[report-img]: https://goreportcard.com/badge/github.com/nite-coder/bifrost
+[report]: https://goreportcard.com/report/github.com/nite-coder/bifrost
+[security-img]: https://github.com/nite-coder/bifrost/actions/workflows/codeql-analysis.yml/badge.svg
+[security]: https://github.com/nite-coder/bifrost/security
