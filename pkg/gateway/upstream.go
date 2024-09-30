@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
-	"math/rand"
 	"net"
 	"net/url"
 	"strings"
@@ -28,7 +27,6 @@ type Upstream struct {
 	counter     atomic.Uint64
 	totalWeight uint
 	hasher      hash.Hash32
-	rng         *rand.Rand
 }
 
 func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[string]*Upstream, error) {
@@ -75,7 +73,6 @@ func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opt
 	upstream := &Upstream{
 		opts:    &opts,
 		proxies: make([]proxy.Proxy, 0),
-		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
 		hasher:  fnv.New32a(),
 	}
 
@@ -96,7 +93,7 @@ func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opt
 		if allowDNS(targetHost) {
 			_, err := bifrost.resolver.LookupHost(context.Background(), targetHost)
 			if err != nil {
-				return nil, fmt.Errorf("lookup upstream host error: %v", err)
+				return nil, fmt.Errorf("lookup upstream host error: %w", err)
 			}
 			dnsResolver = bifrost.resolver
 		}
@@ -119,7 +116,7 @@ func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opt
 		case "https":
 			if dnsResolver != nil {
 				clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
-					InsecureSkipVerify: !serviceOpts.TLSVerify,
+					InsecureSkipVerify: !serviceOpts.TLSVerify, //nolint:gosec
 				}))
 				clientOpts = append(clientOpts, client.WithDialer(newHTTPSDialer(dnsResolver)))
 			}
@@ -181,7 +178,6 @@ func createGRPCUpstream(serviceOptions config.ServiceOptions, opts config.Upstre
 	upstream := &Upstream{
 		opts:    &opts,
 		proxies: make([]proxy.Proxy, 0),
-		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
 		hasher:  fnv.New32a(),
 	}
 
@@ -310,10 +306,10 @@ func (u *Upstream) weighted() proxy.Proxy {
 	failedReconds := map[string]bool{}
 
 findLoop:
-	randomWeight := u.rng.Intn(int(u.totalWeight))
+	randomWeight, _ := getRandomNumber(int64(u.totalWeight))
 
 	for _, proxy := range u.proxies {
-		randomWeight -= int(proxy.Weight())
+		randomWeight -= int64(proxy.Weight())
 		if randomWeight < 0 {
 
 			if proxy.IsAvailable() {
@@ -345,7 +341,7 @@ func (u *Upstream) random() proxy.Proxy {
 	failedReconds := map[string]bool{}
 
 findLoop:
-	selectedIndex := u.rng.Intn(len(u.proxies))
+	selectedIndex, _ := getRandomNumber(int64(len(u.proxies)))
 	proxy := u.proxies[selectedIndex]
 
 	if proxy.IsAvailable() {

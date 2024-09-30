@@ -209,7 +209,7 @@ func echoHandler(c context.Context, ctx *app.RequestContext) {
 }
 
 func placeOrderHandler(c context.Context, ctx *app.RequestContext) {
-	//slog.Info("request proto", "proto", ctx.Request.Header.GetProtocol())
+	// slog.Info("request proto", "proto", ctx.Request.Header.GetProtocol())
 
 	ctx.SetContentType("application/json; charset=utf8")
 	ctx.Response.SetStatusCode(200)
@@ -250,14 +250,14 @@ func wssHandler(c context.Context, ctx *app.RequestContext) {
 		for {
 			_, _, err := conn.ReadMessage()
 			if err != nil {
-				//slog.ErrorContext(c, "read err:", "error", err)
+				// slog.ErrorContext(c, "read err:", "error", err)
 				break
 			}
-			//slog.Info("recv", "msg", string(msg))
+			// slog.Info("recv", "msg", string(msg))
 
 			err = conn.WriteMessage(websocket.TextMessage, orderResp)
 			if err != nil {
-				//slog.ErrorContext(c, "write err:", "error", err)
+				// slog.ErrorContext(c, "write err:", "error", err)
 				break
 			}
 		}

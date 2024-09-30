@@ -78,7 +78,7 @@ func New(options Options) (*GRPCProxy, error) {
 
 	client, err := grpc.NewClient(addr.Host, grpcOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("fail to dial backend: %v", err)
+		return nil, fmt.Errorf("fail to dial backend: %w", err)
 	}
 
 	return &GRPCProxy{
@@ -240,7 +240,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	frame[0] = 0
 
 	// Set the length of the message
-	binary.BigEndian.PutUint32(frame[1:5], uint32(len(respBody)))
+	binary.BigEndian.PutUint64(frame[1:5], uint64(len(respBody)))
 
 	// Copy the response body to the frame
 	copy(frame[5:], respBody)
@@ -315,6 +315,7 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 		if err != nil {
 			logger.Warn("upstream server temporarily disabled")
 		}
+	default:
 	}
 
 	// Include detailed information if available

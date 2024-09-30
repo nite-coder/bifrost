@@ -19,7 +19,7 @@ import (
 // Reverse proxy tests.
 const (
 	fakeHopHeader       = "X-Fake-Hop-Header-For-Test"
-	fakeConnectionToken = "X-Fake-Connection-Token"
+	fakeConnectionToken = "X-Fake-Connection-Token" //nolint:gosec
 )
 
 func init() {

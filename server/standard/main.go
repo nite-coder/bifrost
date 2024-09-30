@@ -28,12 +28,6 @@ type ProxyHandler struct {
 }
 
 func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	//log.Printf("Received request: %s %s %s", r.Method, r.URL, r.Proto)
-
-	// if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
-	// 	r.Header.Set("X-Forwarded-Proto", "h2c")
-	// }
-
 	h.proxy.ServeHTTP(w, r)
 }
 
@@ -131,7 +125,7 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 			return net.Dial(network, addr)
 		},
 		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: true, //nolint:gosec
 		},
 	}
 
@@ -141,7 +135,8 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 
 	h2s := &http2.Server{}
 	httpServer := &http.Server{
-		Handler: h2c.NewHandler(handler, h2s),
+		ReadTimeout: 10 * time.Second,
+		Handler:     h2c.NewHandler(handler, h2s),
 	}
 
 	go func() {

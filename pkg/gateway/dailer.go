@@ -24,7 +24,6 @@ func newHTTPDialer(resolver dnscache.DNSResolver) network.Dialer {
 	return &httpDialer{
 		dialer:   netpoll.NewDialer(),
 		resolver: resolver,
-		random:   rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -66,7 +65,6 @@ func newHTTPSDialer(resolver dnscache.DNSResolver) network.Dialer {
 	return &httpsDialer{
 		dialer:   standard.NewDialer(),
 		resolver: resolver,
-		random:   rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 

@@ -123,6 +123,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/nite-coder/blackbear v0.0.0-20240707130328-7cf8dae7750a h1:OmhBq/FMIOQBOMeky2+TVcoVNZapzNQXNgEZzeRGjxI=
 github.com/nite-coder/blackbear v0.0.0-20240707130328-7cf8dae7750a/go.mod h1:wL0IkOVU/E98SDopVnmeeKWx3JOUOueqs3qMSVkMBc0=
+github.com/nite-coder/blackbear v0.0.0-20240930135217-928b225c5a01 h1:0bVBcG6jMpZXU7dJBfoiaxNIrzGGWbpXOm8MyR+LsWQ=
+github.com/nite-coder/blackbear v0.0.0-20240930135217-928b225c5a01/go.mod h1:8dHV5jDE1V1EkzxXxYEh1uiFNII+7JTj0vFbCmUCsvU=
 github.com/nite-coder/hertz v0.0.0-20240906153830-9815bf8dbb53 h1:ZwZko81rEC5gBwJ+42eZUfLcc/fymHsYjuhsDu9OT10=
 github.com/nite-coder/hertz v0.0.0-20240906153830-9815bf8dbb53/go.mod h1:gGVUfJU/BOkJv/ZTzrw7FS7uy7171JeYIZvAyV3wS3o=
 github.com/nite-coder/http2 v0.0.0-20240820122516-bb9df3e1377c h1:0p4RH4XQzoSJGZNy9xTuS708hkpZHR2i5RiSmUjrMA8=

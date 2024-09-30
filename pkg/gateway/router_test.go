@@ -58,10 +58,10 @@ func BenchmarkStatic5(b *testing.B) {
 
 func BenchmarkCode(b *testing.B) {
 	method := "GET"
-	//path1 := "/foo"
-	//path5 := "/foo/bar/baz/qux/quux"
+	// path1 := "/foo"
+	// path5 := "/foo/bar/baz/qux/quux"
 	path10 := "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred"
-	//prefix := "/foo/bar/baz/qux/quux"
+	// prefix := "/foo/bar/baz/qux/quux"
 
 	routeSetting := config.RouteOptions{
 		Methods: []string{method},

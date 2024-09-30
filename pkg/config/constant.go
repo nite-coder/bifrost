@@ -27,7 +27,7 @@ const (
 	TRACE_ID          = "$trace_id"
 	ALLOW             = "$allow"
 
-	//grpc
+	// grpc
 	GRPC_STATUS  = "$grpc_status"
 	GRPC_MESSAGE = "$grpc_message"
 

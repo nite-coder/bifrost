@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"hash/fnv"
-	"math/rand"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -25,7 +24,7 @@ func TestRoundRobin(t *testing.T) {
 	proxy1, _ := httpproxy.New(proxyOptions1, nil)
 	err := proxy1.AddFailedCount(1)
 	assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
-	time.Sleep(1 * time.Second) // wait and proxy1 should be availabe
+	time.Sleep(1 * time.Second) // wait and proxy1 should be available
 
 	proxyOptions2 := httpproxy.Options{
 		Target:      "http://backend2",
@@ -138,7 +137,6 @@ func TestWeighted(t *testing.T) {
 			proxy3,
 		},
 		totalWeight: 6,
-		rng:         rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 
 	t.Run("success", func(t *testing.T) {
@@ -217,7 +215,6 @@ func TestRandom(t *testing.T) {
 			proxy2,
 			proxy3,
 		},
-		rng: rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 
 	t.Run("success", func(t *testing.T) {

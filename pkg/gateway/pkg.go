@@ -2,8 +2,10 @@ package gateway
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"net"
 	"net/http"
 	"os"
@@ -34,10 +36,6 @@ var (
 )
 
 var runTask = gopool.CtxGo
-
-func setRunner(runner func(ctx context.Context, f func())) {
-	runTask = runner
-}
 
 func isValidHTTPMethod(method string) bool {
 	switch method {
@@ -187,14 +185,14 @@ func RunAsDaemon(mainOptions config.Options) error {
 	dir := filepath.Dir(mainOptions.PIDFile)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %v", dir, err)
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
 
 	dir = filepath.Dir(mainOptions.UpgradeSock)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %v", dir, err)
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
 
@@ -207,7 +205,7 @@ func RunAsDaemon(mainOptions config.Options) error {
 	if mainOptions.User != "" {
 		u, err := user.Lookup(mainOptions.User)
 		if err != nil {
-			return fmt.Errorf("failed to lookup user %s: %v", mainOptions.User, err)
+			return fmt.Errorf("failed to lookup user %s: %w", mainOptions.User, err)
 		}
 		uid, _ := strconv.Atoi(u.Uid)
 		gid, _ := strconv.Atoi(u.Gid)
@@ -215,7 +213,7 @@ func RunAsDaemon(mainOptions config.Options) error {
 		if mainOptions.Group != "" {
 			g, err := user.LookupGroup(mainOptions.Group)
 			if err != nil {
-				return fmt.Errorf("failed to lookup group %s: %v", mainOptions.Group, err)
+				return fmt.Errorf("failed to lookup group %s: %w", mainOptions.Group, err)
 			}
 			gid, _ = strconv.Atoi(g.Gid)
 		}
@@ -310,4 +308,12 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	case <-time.After(timeout):
 		return true // timed out
 	}
+}
+
+func getRandomNumber(max int64) (int64, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(max))
+	if err != nil {
+		return 0, err
+	}
+	return n.Int64(), nil
 }

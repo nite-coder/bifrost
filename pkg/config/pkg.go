@@ -260,6 +260,7 @@ func findInNode(node interface{}, path []string, value interface{}, lines []stri
 						return line
 					}
 				}
+			default:
 			}
 			return -1
 		default:

@@ -69,7 +69,7 @@ func (s *grpcTestServer) SayHello(ctx context.Context, in *proto.HelloRequest) (
 }
 
 func createGrpcServer() {
-	lis, err := net.Listen("tcp", ":8500")
+	lis, err := net.Listen("tcp", "127.0.0.1:8500")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestGRPCProxy(t *testing.T) {
 		Target:    "grpc://127.0.0.1:8500",
 		TLSVerify: false,
 		Timeout:   1 * time.Second,
-		Weight: 1,
+		Weight:    1,
 	}
 	proxy, err := New(proxyOptions)
 	assert.NoError(t, err)

@@ -81,7 +81,7 @@ func (z *ZeroDownTime) Close(ctx context.Context) error {
 func (z *ZeroDownTime) Upgrade() error {
 	conn, err := net.Dial("unix", z.options.GetUpgradeSock())
 	if err != nil {
-		return fmt.Errorf("failed to connect to upgrade socket: %v", err)
+		return fmt.Errorf("failed to connect to upgrade socket: %w", err)
 	}
 	defer conn.Close()
 
@@ -184,7 +184,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	_ = z.writePID()
 	socket, err := net.Listen("unix", z.options.GetUpgradeSock())
 	if err != nil {
-		return fmt.Errorf("failed to open upgrade socket: %v", err)
+		return fmt.Errorf("failed to open upgrade socket: %w", err)
 	}
 	defer func() {
 		socket.Close()
@@ -291,7 +291,7 @@ func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
 		// Try to send a null signal to check if the process exists
 		err := process.Signal(syscall.Signal(0))
 		if err != nil {
-			if err == os.ErrProcessDone || err == syscall.ESRCH {
+			if errors.Is(err, os.ErrProcessDone) || errors.Is(err, syscall.ESRCH) {
 				// Process no longer exists
 				return nil
 			}
@@ -310,7 +310,7 @@ func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
 	// Check again if the process has terminated
 	time.Sleep(100 * time.Millisecond)
 	if err := process.Signal(syscall.Signal(0)); err != nil {
-		if err == os.ErrProcessDone || err == syscall.ESRCH {
+		if errors.Is(err, os.ErrProcessDone) || errors.Is(err, syscall.ESRCH) {
 			return nil
 		}
 	}
@@ -320,7 +320,7 @@ func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
 
 func (z *ZeroDownTime) writePID() error {
 	pid := os.Getpid()
-	err := os.WriteFile(z.options.GetPIDFile(), []byte(fmt.Sprintf("%d", pid)), 0644)
+	err := os.WriteFile(z.options.GetPIDFile(), []byte(fmt.Sprintf("%d", pid)), 0600)
 	if err != nil {
 		slog.Error("failed to write PID file", "error", err)
 		return err

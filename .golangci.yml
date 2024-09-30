@@ -1,0 +1,12 @@
+linters:
+  enable:
+    - gosec
+    - misspell
+    - sqlclosecheck
+    - errorlint
+    - exhaustive
+    - gocritic
+
+linters-settings:
+  exhaustive:
+    default-signifies-exhaustive: true

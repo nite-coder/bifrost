@@ -29,8 +29,6 @@ type server struct {
 func (s *server) SayHello(ctx context.Context, in *proto.HelloRequest) (*proto.HelloReply, error) {
 	name := in.GetName()
 
-	//time.Sleep(10 * time.Second)
-
 	if name == "err" {
 		st := status.New(codes.InvalidArgument, "oops....something wrong")
 

@@ -44,13 +44,13 @@ func main() {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("Error sending request: %v", err)
+		panic(err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("Error reading response: %v", err)
+		panic(err)
 	}
 
 	responseData := removeGrpcPrefix(body)

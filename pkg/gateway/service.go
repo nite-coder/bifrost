@@ -287,7 +287,7 @@ func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) 
 	if allowDNS(hostname) {
 		_, err := bifrost.resolver.LookupHost(context.Background(), hostname)
 		if err != nil {
-			return nil, fmt.Errorf("lookup service host error: %v", err)
+			return nil, fmt.Errorf("lookup service host error: %w", err)
 		}
 		dnsResolver = bifrost.resolver
 	}
@@ -300,7 +300,7 @@ func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) 
 	case "https":
 		if dnsResolver != nil {
 			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
-				InsecureSkipVerify: !opts.TLSVerify,
+				InsecureSkipVerify: !opts.TLSVerify, //nolint:gosec
 			}))
 			clientOpts = append(clientOpts, client.WithDialer(newHTTPSDialer(dnsResolver)))
 		}

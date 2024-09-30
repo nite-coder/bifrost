@@ -18,7 +18,7 @@ require (
 	github.com/hertz-contrib/obs-opentelemetry/tracing v0.4.1
 	github.com/hertz-contrib/pprof v0.1.2
 	github.com/hertz-contrib/websocket v0.1.0
-	github.com/nite-coder/blackbear v0.0.0-20240707130328-7cf8dae7750a
+	github.com/nite-coder/blackbear v0.0.0-20240930135217-928b225c5a01
 	github.com/prometheus/client_golang v1.20.4
 	github.com/rs/dnscache v0.0.0-20230804202142-fc85eb664529
 	github.com/stretchr/testify v1.9.0

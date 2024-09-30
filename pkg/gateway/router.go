@@ -50,6 +50,7 @@ func (n *node) addChild(child *node, nodeType nodeType) {
 		n.children[child.path] = child
 	case nodeTypeGeneral:
 		n.generalChildren[child.path] = child
+	default:
 	}
 }
 
@@ -68,6 +69,8 @@ func (n *node) findChildByName(name string, nodeType nodeType) *node {
 		if child, ok := n.generalChildren[name]; ok {
 			return child
 		}
+	default:
+		return nil
 	}
 
 	return nil
@@ -91,6 +94,8 @@ func (n *node) matchChildByName(name string, nodeType nodeType) *node {
 				return general
 			}
 		}
+	default:
+		return nil
 	}
 
 	return nil

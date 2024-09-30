@@ -144,6 +144,7 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 				req.Header.SetProtocol("HTTP/2.0")
 			case config.ProtocolHTTP:
 				req.Header.SetProtocol("HTTP/1.1")
+			default:
 			}
 
 			switch addr.Scheme {
@@ -151,10 +152,11 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 				req.SetIsTLS(false)
 			case "https":
 				req.SetIsTLS(true)
+			default:
 			}
 
 			req.SetRequestURI(cast.B2S(JoinURLPath(req, opts.Target)))
-			//req.Header.SetHostBytes(req.URI().Host())
+			// req.Header.SetHostBytes(req.URI().Host())
 		},
 		client: client,
 	}
@@ -264,9 +266,9 @@ func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			buf := bytebufferpool.Get()
 			defer bytebufferpool.Put(buf)
 
-			buf.Write(tmp)
-			buf.WriteString(", ")
-			buf.WriteString(ip)
+			_, _ = buf.Write(tmp)
+			_, _ = buf.WriteString(", ")
+			_, _ = buf.WriteString(ip)
 			ip = buf.String()
 		}
 		if tmp == nil || string(tmp) != "" {
