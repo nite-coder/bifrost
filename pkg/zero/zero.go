@@ -257,7 +257,7 @@ func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
 		return err
 	}
 
-	pid, err := strconv.ParseInt(string(b), 10, 64)
+	pid, err := strconv.ParseInt(string(b), 10, 32)
 	if err != nil {
 		slog.Error("pid is invalid", "error", err)
 		return err
