@@ -3,7 +3,7 @@ on: [push]
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -19,7 +19,7 @@ jobs:
 
   golangci:
     name: lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: golangci-lint
@@ -31,7 +31,7 @@ jobs:
 
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Test Go code
-        run: go test -race -coverprofile=cover.out -covermode=atomic ./...
+        run: go test -race -coverprofile=cover.out -covermode=atomic ./pkg/...
 
       - name: Upload coverage report to CodeCov
         uses: codecov/codecov-action@v4

@@ -1,10 +1,10 @@
 
 .PHONY: test
 test:
-	go test -race -coverprofile=cover.out -covermode=atomic ./... -v
+	go test -race -coverprofile=cover.out -covermode=atomic ./pkg/... -v
 
 lint:
-	golangci-lint run ./... -v
+	golangci-lint run ./pkg/... -v
 
 docker_lint:
 	docker run -it --rm -v "${LOCAL_WORKSPACE_FOLDER}:/app" -w /app golangci/golangci-lint:v1.59.1-alpine golangci-lint run ./... -v
