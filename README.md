@@ -1,4 +1,4 @@
-# Bifrost [![GoDoc][doc-img]][doc] [![Build][ci-img]][ci] [![GoReport][report-img]][report] [![Security][security-img]][security]
+# Bifrost [![GoDoc][doc-img]][doc] [![Build][ci-img]][ci] [![GoReport][report-img]][report] [![Security][security-img]][security] [![Coverage Status][cov-img]][cov]
 
 一個高效能低延遲的 API Gateway 函式庫，使用 Golang 開發
 
@@ -60,3 +60,5 @@
 [report]: https://goreportcard.com/report/github.com/nite-coder/bifrost
 [security-img]: https://github.com/nite-coder/bifrost/actions/workflows/codeql-analysis.yml/badge.svg
 [security]: https://github.com/nite-coder/bifrost/security
+[cov-img]: https://codecov.io/gh/nite-coder/bifrost/branch/master/graph/badge.svg
+[cov]: https://codecov.io/gh/nite-coder/bifrost/log
