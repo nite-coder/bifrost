@@ -207,15 +207,27 @@ func RunAsDaemon(mainOptions config.Options) error {
 		if err != nil {
 			return fmt.Errorf("failed to lookup user %s: %w", mainOptions.User, err)
 		}
-		uid, _ := strconv.Atoi(u.Uid)
-		gid, _ := strconv.Atoi(u.Gid)
+		uid64, err := strconv.ParseUint(u.Uid, 10, 32)
+		if err != nil {
+			return fmt.Errorf("failed to parse uid %s: %w", u.Uid, err)
+		}
+		uid := uint32(uid64)
+		gid64, err := strconv.ParseUint(u.Gid, 10, 32)
+		if err != nil {
+			return fmt.Errorf("failed to parse gid %s: %w", u.Gid, err)
+		}
+		gid := uint32(gid64)
 
 		if mainOptions.Group != "" {
 			g, err := user.LookupGroup(mainOptions.Group)
 			if err != nil {
 				return fmt.Errorf("failed to lookup group %s: %w", mainOptions.Group, err)
 			}
-			gid, _ = strconv.Atoi(g.Gid)
+			gid64, err = strconv.ParseUint(g.Gid, 10, 32)
+			if err != nil {
+				return fmt.Errorf("failed to parse gid %s: %w", g.Gid, err)
+			}
+			gid = uint32(gid64)
 		}
 
 		setUserAndGroup(cmd, uint32(uid), uint32(gid))
