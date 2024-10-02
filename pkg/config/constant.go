@@ -8,7 +8,6 @@ const (
 	RECEIVED_SIZE     = "$received_size"
 	SEND_SIZE         = "$send_size"
 	STATUS            = "$status"
-	REQUEST           = "$request"
 	REQUEST_PROTOCOL  = "$request_protocol"
 	REQUEST_METHOD    = "$request_method"
 	REQUEST_URI       = "$request_uri"
@@ -26,6 +25,7 @@ const (
 	UPSTREAM_STATUS   = "$upstream_status"
 	TRACE_ID          = "$trace_id"
 	ALLOW             = "$allow"
+	ClientIP          = "$client_ip"
 
 	// grpc
 	GRPC_STATUS  = "$grpc_status"

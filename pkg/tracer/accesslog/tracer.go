@@ -182,18 +182,8 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			replacements = append(replacements, config.REQUEST_URI, buf.String())
 
 		case config.REQUEST_PATH:
-			val, found := c.Get(config.REQUEST_PATH)
-			if found {
-				b, ok := val.([]byte)
-				if ok {
-					replacements = append(replacements, config.REQUEST_PATH, cast.B2S(b))
-					continue
-				} else {
-					replacements = append(replacements, config.REQUEST_PATH, "")
-				}
-				continue
-			}
-			replacements = append(replacements, config.REQUEST_PATH, cast.B2S(c.Request.Path()))
+			path := c.GetString(config.REQUEST_PATH)
+			replacements = append(replacements, config.REQUEST_PATH, path)
 		case config.REQUEST_PROTOCOL:
 			replacements = append(replacements, config.REQUEST_PROTOCOL, c.Request.Header.GetProtocol())
 		case config.REQUEST_BODY:

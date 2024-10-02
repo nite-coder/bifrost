@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware/addprefix"
 	"github.com/nite-coder/bifrost/pkg/middleware/headers"
 	"github.com/nite-coder/bifrost/pkg/middleware/prommetric"
+	"github.com/nite-coder/bifrost/pkg/middleware/ratelimiting"
 	"github.com/nite-coder/bifrost/pkg/middleware/replacepath"
 	"github.com/nite-coder/bifrost/pkg/middleware/replacepathregex"
 	"github.com/nite-coder/bifrost/pkg/middleware/stripprefix"
@@ -36,6 +38,9 @@ func newInitMiddleware(serverID string, logger *slog.Logger) *initMiddleware {
 func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	logger := m.logger
 
+	// save serverID for access log
+	ctx.Set(config.SERVER_ID, m.serverID)
+
 	// save original host
 	host := string(ctx.Request.Host())
 	ctx.Set(config.HOST, host)
@@ -56,9 +61,6 @@ func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		logger = logger.With(slog.String("trace_id", traceID))
 	}
 	c = log.NewContext(c, logger)
-
-	// save serverID for access log
-	ctx.Set(config.SERVER_ID, m.serverID)
 
 	ctx.Next(c)
 }
@@ -207,6 +209,61 @@ func init() {
 
 	_ = RegisterMiddleware("tracing", func(param map[string]any) (app.HandlerFunc, error) {
 		m := tracing.NewMiddleware()
+		return m.ServeHTTP, nil
+	})
+
+	_ = RegisterMiddleware("rate-limiting", func(param map[string]any) (app.HandlerFunc, error) {
+		option := ratelimiting.Options{}
+
+		// strategy
+		strategyVal, found := param["strategy"]
+		if !found {
+			return nil, fmt.Errorf("strategy is not found in rate-limiting middleware")
+		}
+		strategy, err := cast.ToString(strategyVal)
+		if err != nil {
+			return nil, fmt.Errorf("strategy is invalid in rate-limiting middleware")
+		}
+		option.Strategy = strategy
+
+		// limit
+		limitVal, found := param["limit"]
+		if !found {
+			return nil, fmt.Errorf("limit is not found in rate-limiting middleware1")
+		}
+		limit, err := cast.ToUint64(limitVal)
+		if err != nil {
+			return nil, fmt.Errorf("limit is invalid in rate-limiting middleware")
+		}
+		option.Limit = limit
+
+		// limit_by
+		limitByVal, found := param["limit_by"]
+		if !found {
+			return nil, fmt.Errorf("limit_by is not found in rate-limiting middleware")
+		}
+		limitBy, err := cast.ToString(limitByVal)
+		if err != nil {
+			return nil, fmt.Errorf("limit_by is invalid in rate-limiting middleware")
+		}
+		option.LimitBy = limitBy
+
+		// window_size
+		windowSizeVal, found := param["window_size"]
+		if !found {
+			return nil, fmt.Errorf("window_size is not found in rate-limiting middleware")
+		}
+		s, _ := cast.ToString(windowSizeVal)
+		windowSize, err := time.ParseDuration(s)
+		if err != nil {
+			return nil, fmt.Errorf("window_size is invalid in rate-limiting middleware")
+		}
+		option.WindowSize = windowSize
+
+		m, err := ratelimiting.NewMiddleware(option)
+		if err != nil {
+			return nil, err
+		}
 		return m.ServeHTTP, nil
 	})
 

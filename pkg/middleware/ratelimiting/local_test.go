@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLocalLimiter(t *testing.T) {
@@ -17,12 +19,17 @@ func TestLocalLimiter(t *testing.T) {
 
 	t.Run("Basic functionality", func(t *testing.T) {
 		key := "test_key"
-		for i := 0; i < 5; i++ {
-			if !limiter.Allow(key) {
+		for i := 1; i < 6; i++ {
+			result := limiter.Allow(key)
+			if !result.Allow {
 				t.Errorf("Request %d should be allowed", i+1)
 			}
+
+			assert.Equal(t, options.Limit, result.Limit)
+			assert.Equal(t, uint64(5-i), result.Remaining)
 		}
-		if limiter.Allow(key) {
+		result := limiter.Allow(key)
+		if result.Allow {
 			t.Error("6th request should be denied")
 		}
 	})
@@ -30,7 +37,8 @@ func TestLocalLimiter(t *testing.T) {
 	t.Run("Different keys", func(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			key := fmt.Sprintf("key_%d", i)
-			if !limiter.Allow(key) {
+			result := limiter.Allow(key)
+			if !result.Allow {
 				t.Errorf("Request for key %s should be allowed", key)
 			}
 		}
@@ -39,17 +47,21 @@ func TestLocalLimiter(t *testing.T) {
 	t.Run("Window reset", func(t *testing.T) {
 		key := "reset_key"
 		for i := 0; i < 5; i++ {
-			if !limiter.Allow(key) {
+			result := limiter.Allow(key)
+			if !result.Allow {
 				t.Errorf("Request %d should be allowed", i+1)
 			}
 		}
-		if limiter.Allow(key) {
+
+		result := limiter.Allow(key)
+		if result.Allow {
 			t.Error("6th request should be denied")
 		}
 
 		time.Sleep(options.WindowSize)
 
-		if !limiter.Allow(key) {
+		result = limiter.Allow(key)
+		if !result.Allow {
 			t.Error("Request after reset should be allowed")
 		}
 	})
@@ -57,23 +69,21 @@ func TestLocalLimiter(t *testing.T) {
 	t.Run("Concurrent requests", func(t *testing.T) {
 		key := "concurrent_key"
 		concurrentRequests := 100
-		allowedCount := atomic.Int64{}
+		allowedCount := atomic.Uint64{}
 		var wg sync.WaitGroup
 
 		wg.Add(concurrentRequests)
-		now := time.Now()
 		for i := 0; i < concurrentRequests; i++ {
 			go func() {
 				defer wg.Done()
-				if limiter.Allow(key) {
+
+				result := limiter.Allow(key)
+				if result.Allow {
 					allowedCount.Add(1)
 				}
 			}()
 		}
 		wg.Wait()
-
-		duration := time.Since(now)
-		fmt.Println(duration)
 
 		if allowedCount.Load() != options.Limit {
 			t.Errorf("Expected %d requests to be allowed, but got %d", options.Limit, allowedCount.Load())
