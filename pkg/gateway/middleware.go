@@ -260,6 +260,36 @@ func init() {
 		}
 		option.WindowSize = windowSize
 
+		// http status
+		statusVal, found := param["http_status"]
+		if found {
+			status, err := cast.ToInt(statusVal)
+			if err != nil {
+				return nil, fmt.Errorf("http_status is invalid in rate-limiting middleware")
+			}
+			option.HTTPStatus = status
+		}
+
+		// http content type
+		contentTypeVal, found := param["http_content_type"]
+		if found {
+			contentType, err := cast.ToString(contentTypeVal)
+			if err != nil {
+				return nil, fmt.Errorf("http_content_type is invalid in rate-limiting middleware")
+			}
+			option.HTTPContentType = contentType
+		}
+
+		// http body
+		bodyVal, found := param["http_response_body"]
+		if found {
+			body, err := cast.ToString(bodyVal)
+			if err != nil {
+				return nil, fmt.Errorf("http_response_body is invalid in rate-limiting middleware")
+			}
+			option.HTTPResponseBody = body
+		}
+
 		m, err := ratelimiting.NewMiddleware(option)
 		if err != nil {
 			return nil, err

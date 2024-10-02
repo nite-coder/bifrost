@@ -144,6 +144,8 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case config.GRPC_MESSAGE:
 		grpcMessage := c.GetString(config.GRPC_MESSAGE)
 		return grpcMessage, true
+	case config.UserAgent:
+		return c.Request.Header.UserAgent(), true
 	default:
 		return nil, false
 	}

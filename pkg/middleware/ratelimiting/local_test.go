@@ -19,6 +19,7 @@ func TestLocalLimiter(t *testing.T) {
 
 	t.Run("Basic functionality", func(t *testing.T) {
 		key := "test_key"
+		now := time.Now()
 		for i := 1; i < 6; i++ {
 			result := limiter.Allow(key)
 			if !result.Allow {
@@ -27,6 +28,7 @@ func TestLocalLimiter(t *testing.T) {
 
 			assert.Equal(t, options.Limit, result.Limit)
 			assert.Equal(t, uint64(5-i), result.Remaining)
+			assert.LessOrEqual(t, float64(1), result.ResetTime.Sub(now).Seconds())
 		}
 		result := limiter.Allow(key)
 		if result.Allow {

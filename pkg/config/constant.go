@@ -26,6 +26,7 @@ const (
 	TRACE_ID          = "$trace_id"
 	ALLOW             = "$allow"
 	ClientIP          = "$client_ip"
+	UserAgent         = "$user_agent"
 
 	// grpc
 	GRPC_STATUS  = "$grpc_status"

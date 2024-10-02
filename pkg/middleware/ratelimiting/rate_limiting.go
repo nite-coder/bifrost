@@ -25,10 +25,16 @@ type AllowResult struct {
 }
 
 type Options struct {
-	Strategy   string
-	Limit      uint64
-	LimitBy    string
-	WindowSize time.Duration
+	Strategy         string
+	Limit            uint64
+	LimitBy          string
+	WindowSize       time.Duration
+	HeaderLimit      string
+	HeaderRemaining  string
+	HeaderReset      string
+	HTTPStatus       int
+	HTTPContentType  string
+	HTTPResponseBody string
 }
 
 type RateLimitingMiddleware struct {
@@ -38,6 +44,26 @@ type RateLimitingMiddleware struct {
 
 func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 	strategy := strings.ToLower(strings.TrimSpace(options.Strategy))
+
+	if options.HeaderLimit == "" {
+		options.HeaderLimit = "X-RateLimit-Limit"
+	}
+
+	if options.HeaderRemaining == "" {
+		options.HeaderRemaining = "X-RateLimit-Remaining"
+	}
+
+	if options.HeaderReset == "" {
+		options.HeaderReset = "X-RateLimit-Reset"
+	}
+
+	if options.HTTPStatus == 0 {
+		options.HTTPStatus = 429
+	}
+
+	if options.HTTPContentType == "" {
+		options.HeaderReset = "application/json; charset=utf8"
+	}
 
 	m := &RateLimitingMiddleware{
 		options: &options,
@@ -79,15 +105,21 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 
 		if result.Allow {
 			c.Next(ctx)
-			c.Response.Header.Set("X-RateLimit-Limit", strconv.FormatUint(result.Limit, 10))
-			c.Response.Header.Set("X-RateLimit-Remaining", strconv.FormatUint(result.Remaining, 10))
-			c.Response.Header.Set("X-RateLimit-Reset", strconv.FormatInt(result.ResetTime.Unix(), 10))
+			c.Response.Header.Set(m.options.HeaderLimit, strconv.FormatUint(result.Limit, 10))
+			c.Response.Header.Set(m.options.HeaderRemaining, strconv.FormatUint(result.Remaining, 10))
+			c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
 			return
 		} else {
-			c.Response.Header.Set("X-RateLimit-Limit", strconv.FormatUint(result.Limit, 10))
-			c.Response.Header.Set("X-RateLimit-Remaining", strconv.FormatUint(result.Remaining, 10))
-			c.Response.Header.Set("X-RateLimit-Reset", strconv.FormatInt(result.ResetTime.Unix(), 10))
-			c.AbortWithStatus(429)
+			c.Response.Header.Set(m.options.HeaderLimit, strconv.FormatUint(result.Limit, 10))
+			c.Response.Header.Set(m.options.HeaderRemaining, strconv.FormatUint(result.Remaining, 10))
+			c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
+
+			c.SetStatusCode(m.options.HTTPStatus)
+			c.Response.Header.Set("Content-Type", "application/json; charset=utf8")
+			if m.options.HTTPResponseBody != "" {
+				c.Response.SetBody([]byte(m.options.HTTPResponseBody))
+			}
+			c.Abort()
 			return
 		}
 	}
