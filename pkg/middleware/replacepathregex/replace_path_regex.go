@@ -24,10 +24,6 @@ func NewMiddleware(regex, replacement string) *ReplacePathRegexMiddleware {
 
 func (m *ReplacePathRegexMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	newPath := m.regex.ReplaceAll(c.Request.Path(), m.replacement)
-
-	c.Request.Header.Set("X-Replaced-Path", string(c.Request.Path()))
-
 	c.Request.URI().SetPathBytes(newPath)
-
 	c.Next(ctx)
 }
