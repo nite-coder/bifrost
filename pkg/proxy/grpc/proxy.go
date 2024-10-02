@@ -339,6 +339,12 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 func makeGRPCErrorFrame(st *status.Status) []byte {
 	statusProto := st.Proto()
 	serialized, _ := proto.Marshal(statusProto)
+
+	if len(serialized) > (1<<31 - 6) { // Check for potential overflow
+		// Handle the error appropriately, e.g., log and return an empty frame
+		return []byte{}
+	}
+
 	frame := make([]byte, len(serialized)+5)
 	frame[0] = 0 // 0: no compression
 	binary.BigEndian.PutUint32(frame[1:5], uint32(len(serialized)))
