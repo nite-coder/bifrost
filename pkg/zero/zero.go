@@ -162,7 +162,7 @@ func (z *ZeroDownTime) Listener(ctx context.Context, network string, address str
 
 	info := &listenInfo{
 		listener: listener,
-		Key:      address,
+		Key:      listener.Addr().String(),
 	}
 
 	z.mu.Lock()

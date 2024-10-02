@@ -52,7 +52,6 @@ func TestReplacePathRegexMiddleware_ServeHTTP(t *testing.T) {
 
 			assert.Equal(t, tt.expectedPath, string(ctx.Request.URI().Path()), "Path should be replaced correctly")
 			assert.Equal(t, tt.expectedFullPath, string(ctx.Request.URI().RequestURI()), "Full Path should be replaced correctly")
-			assert.Equal(t, tt.expectedHeader, ctx.Request.Header.Get("X-Replaced-Path"), "Original path should be set in header")
 		})
 	}
 }

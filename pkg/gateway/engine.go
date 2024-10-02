@@ -92,11 +92,11 @@ func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, erro
 	return engine, nil
 }
 
-func (e *Engine) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	ctx.SetIndex(-1)
-	ctx.SetHandlers(e.middlewares)
-	ctx.Next(c)
-	ctx.Abort()
+func (e *Engine) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+	c.SetIndex(-1)
+	c.SetHandlers(e.middlewares)
+	c.Next(ctx)
+	c.Abort()
 }
 
 func (e *Engine) OnShutdown() {
