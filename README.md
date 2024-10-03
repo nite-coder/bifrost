@@ -28,7 +28,7 @@
 | 毫秒級路由熱更新            |      ✅ |  ❌   |
 | 新舊服務藍綠部屬            |      ✅ |  ❌   |
 | 高連線池複用率              |      ✅ |  ❌   |
-| 容易二次開發/現有服務整合   |      ✅ |  ❌   |
+| 容易二次開發/整合現有服務   |      ✅ |  ❌   |
 | 內建 Prometheus 監控        |      ✅ |  ❌   |
 | 內建 OpenTelemetry 鏈路追蹤 |      ✅ |  ❌   |
 | 上游 HTTP2 協議支持         |      ✅ |  ❌   |
@@ -60,5 +60,5 @@
 [report]: https://goreportcard.com/report/github.com/nite-coder/bifrost
 [security-img]: https://github.com/nite-coder/bifrost/actions/workflows/codeql-analysis.yml/badge.svg
 [security]: https://github.com/nite-coder/bifrost/security
-[cov-img]: https://codecov.io/gh/nite-coder/bifrost/branch/master/graph/badge.svg
-[cov]: https://codecov.io/gh/nite-coder/bifrost
+[cov-img]: https://codecov.io/github/nite-coder/bifrost/graph/badge.svg
+[cov]: https://codecov.io/github/nite-coder/bifrost

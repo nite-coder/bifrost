@@ -28,7 +28,7 @@ func Get(key string, c *app.RequestContext) (val any, found bool) {
 	}
 
 	if strings.HasPrefix(key, "$var.") {
-		key = key[4:]
+		key = key[5:]
 		return c.Get(key)
 	}
 
@@ -37,13 +37,6 @@ func Get(key string, c *app.RequestContext) (val any, found bool) {
 }
 
 func directive(key string, c *app.RequestContext) (val any, found bool) {
-	key = strings.TrimSpace(key)
-	key = strings.ToLower(key)
-
-	if key == "" || key[0] != '$' || c == nil {
-		return nil, false
-	}
-
 	switch key {
 	case config.TIME:
 		now := timecache.Now()
@@ -52,6 +45,11 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		return c.ClientIP(), true
 	case config.HOST:
 		host := c.GetString(config.HOST)
+
+		if host == "" {
+			host = string(c.Request.Host())
+		}
+
 		return host, true
 	case config.SERVER_ID:
 		serverID := c.GetString(config.SERVER_ID)
@@ -68,13 +66,21 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 		return ip, true
 	case config.RECEIVED_SIZE:
-		httpStats := c.GetTraceInfo().Stats()
+		traceInfo := c.GetTraceInfo()
+		if traceInfo == nil {
+			return nil, false
+		}
+		httpStats := traceInfo.Stats()
 		if httpStats == nil {
 			return 0, false
 		}
 		return httpStats.RecvSize(), true
 	case config.SEND_SIZE:
-		httpStats := c.GetTraceInfo().Stats()
+		traceInfo := c.GetTraceInfo()
+		if traceInfo == nil {
+			return nil, false
+		}
+		httpStats := traceInfo.Stats()
 		if httpStats == nil {
 			return 0, false
 		}
@@ -83,6 +89,11 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		return c.Request.Header.GetProtocol(), true
 	case config.REQUEST_PATH:
 		path := c.GetString(config.REQUEST_PATH)
+
+		if path == "" {
+			path = string(c.Request.URI().Path())
+		}
+
 		return path, true
 	case config.REQUEST_METHOD:
 		method := string(c.Request.Method())
@@ -124,7 +135,11 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		addr := c.GetString(config.UPSTREAM_ADDR)
 		return addr, true
 	case config.DURATION:
-		httpStats := c.GetTraceInfo().Stats()
+		traceInfo := c.GetTraceInfo()
+		if traceInfo == nil {
+			return nil, false
+		}
+		httpStats := traceInfo.Stats()
 		httpStart := httpStats.GetEvent(stats.HTTPStart)
 		if httpStart == nil {
 			return nil, false
