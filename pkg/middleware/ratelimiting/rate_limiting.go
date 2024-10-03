@@ -14,7 +14,7 @@ import (
 )
 
 type Limter interface {
-	Allow(key string) AllowResult
+	Allow(ctx context.Context, namespace string) *AllowResult
 }
 
 type AllowResult struct {
@@ -101,7 +101,7 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 	namespace := builder.String()
 
 	if found {
-		result := m.limter.Allow(namespace)
+		result := m.limter.Allow(ctx, namespace)
 
 		if result.Allow {
 			c.Next(ctx)

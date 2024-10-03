@@ -61,4 +61,4 @@
 [security-img]: https://github.com/nite-coder/bifrost/actions/workflows/codeql-analysis.yml/badge.svg
 [security]: https://github.com/nite-coder/bifrost/security
 [cov-img]: https://codecov.io/gh/nite-coder/bifrost/branch/master/graph/badge.svg
-[cov]: https://codecov.io/gh/nite-coder/bifrost/log
+[cov]: https://codecov.io/gh/nite-coder/bifrost

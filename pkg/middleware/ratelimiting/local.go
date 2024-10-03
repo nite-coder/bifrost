@@ -1,6 +1,7 @@
 package ratelimiting
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -26,11 +27,11 @@ func NewLocalLimiter(options Options) *LocalLimiter {
 	}
 }
 
-func (l *LocalLimiter) Allow(namespace string) AllowResult {
+func (l *LocalLimiter) Allow(ctx context.Context, namespace string) *AllowResult {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	result := AllowResult{
+	result := &AllowResult{
 		Limit: l.options.Limit,
 	}
 	itemVal, found := l.cache.Get(namespace)

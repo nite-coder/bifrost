@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
+	"math"
 	"net"
 	"net/url"
 	"strings"
@@ -306,6 +307,11 @@ func (u *Upstream) weighted() proxy.Proxy {
 	failedReconds := map[string]bool{}
 
 findLoop:
+
+	if u.totalWeight > math.MaxInt64 {
+		u.totalWeight = math.MaxInt64
+	}
+
 	randomWeight, _ := getRandomNumber(int64(u.totalWeight))
 
 	for _, proxy := range u.proxies {

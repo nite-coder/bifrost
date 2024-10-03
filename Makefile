@@ -4,10 +4,10 @@ test:
 	go test -race -coverprofile=cover.out -covermode=atomic ./pkg/... -v
 
 lint:
-	golangci-lint run ./pkg/... -v
+	golangci-lint run --timeout 5m --verbose ./pkg/... -v
 
 docker_lint:
-	docker run -it --rm -v "${LOCAL_WORKSPACE_FOLDER}:/app" -w /app golangci/golangci-lint:v1.59.1-alpine golangci-lint run ./... -v
+	docker run -it --rm -v "${LOCAL_WORKSPACE_FOLDER}:/app" -w /app golangci/golangci-lint:v1.61.0-alpine golangci-lint run --timeout 5m --verbose ./...
 
 
 build:

@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/url"
 	"sync"
 	"time"
@@ -240,7 +241,15 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	frame[0] = 0
 
 	// Set the length of the message
-	binary.BigEndian.PutUint32(frame[1:5], uint32(len(respBody)))
+	val := len(respBody)
+	if val > math.MaxUint32 || val < 0 {
+		logger.Error("proxy: grpc proxy response payload is overflow")
+		err := fmt.Errorf("proxy: grpc proxy response payload is overflow")
+		_ = c.Error(err)
+		return
+	}
+
+	binary.BigEndian.PutUint32(frame[1:5], uint32(val))
 
 	// Copy the response body to the frame
 	copy(frame[5:], respBody)
@@ -340,14 +349,16 @@ func makeGRPCErrorFrame(st *status.Status) []byte {
 	statusProto := st.Proto()
 	serialized, _ := proto.Marshal(statusProto)
 
-	if len(serialized) > (1<<31 - 6) { // Check for potential overflow
+	val := len(serialized)
+	if val > math.MaxUint32-6 || val < 0 {
+		// Check for potential overflow
 		// Handle the error appropriately, e.g., log and return an empty frame
 		return []byte{}
 	}
 
-	frame := make([]byte, len(serialized)+5)
+	frame := make([]byte, val+5)
 	frame[0] = 0 // 0: no compression
-	binary.BigEndian.PutUint32(frame[1:5], uint32(len(serialized)))
+	binary.BigEndian.PutUint32(frame[1:5], uint32(val))
 	copy(frame[5:], serialized)
 	return frame
 }
