@@ -350,7 +350,7 @@ func makeGRPCErrorFrame(st *status.Status) []byte {
 	serialized, _ := proto.Marshal(statusProto)
 
 	val := len(serialized)
-	if val > math.MaxUint32-6 || val < 0 {
+	if val < 0 || uint64(val) > math.MaxUint32-5 {
 		// Check for potential overflow
 		// Handle the error appropriately, e.g., log and return an empty frame
 		return []byte{}
