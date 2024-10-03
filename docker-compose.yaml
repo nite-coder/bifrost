@@ -11,10 +11,34 @@ services:
       - 4317:4317 # OTLP gRPC receiver
       - 4318:4318 # OTLP http receiver
       - 55679:55679 # zpages extension
-    networks:
-      - dev-network
 
 
-networks:
-  dev-network:
-    driver: bridge
+  redis-node-0:
+    image: bitnami/redis-cluster:latest
+    ports:
+      - '7000:6379'
+    environment:
+      - REDIS_PASSWORD=bitnami
+      - REDISCLI_AUTH=bitnami
+      - REDIS_NODES=redis-node-0 redis-node-1 redis-node-2
+      - REDIS_CLUSTER_REPLICAS=0
+      - REDIS_CLUSTER_CREATOR=yes
+
+  redis-node-1:
+    image: bitnami/redis-cluster:latest
+    ports:
+      - '7001:6379'
+    environment:
+      - REDIS_PASSWORD=bitnami
+      - REDIS_NODES=redis-node-0 redis-node-1 redis-node-2
+      - REDIS_CLUSTER_REPLICAS=0
+
+  redis-node-2:
+    image: bitnami/redis-cluster:latest
+    ports:
+      - '7002:6379'
+    environment:
+      - REDIS_PASSWORD=bitnami
+      - REDIS_NODES=redis-node-0 redis-node-1 redis-node-2
+      - REDIS_CLUSTER_REPLICAS=0
+

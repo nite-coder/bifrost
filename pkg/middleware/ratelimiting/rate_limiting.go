@@ -13,8 +13,8 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
-type Limter interface {
-	Allow(ctx context.Context, namespace string) *AllowResult
+type Limiter interface {
+	Allow(ctx context.Context, key string) *AllowResult
 }
 
 type AllowResult struct {
@@ -39,7 +39,7 @@ type Options struct {
 
 type RateLimitingMiddleware struct {
 	options *Options
-	limter  Limter
+	limter  Limiter
 }
 
 func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {

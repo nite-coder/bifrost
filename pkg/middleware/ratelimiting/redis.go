@@ -48,14 +48,14 @@ const (
     `
 )
 
-func (l *RedisLimiter) Allow(ctx context.Context, namespace string) *AllowResult {
+func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 	logger := log.FromContext(ctx)
 
 	tokens := 1
 
 	now := timecache.Now()
 	t := now.UnixNano() / int64(time.Millisecond)
-	result, err := l.client.Eval(ctx, luaScript, []string{namespace}, tokens, l.options.Limit, int(l.options.WindowSize.Seconds()), t).Result()
+	result, err := l.client.Eval(ctx, luaScript, []string{key}, tokens, l.options.Limit, int(l.options.WindowSize.Seconds()), t).Result()
 
 	if err != nil {
 		logger.Error("ratelimiting: redis eval error", "error", err)
@@ -71,7 +71,7 @@ func (l *RedisLimiter) Allow(ctx context.Context, namespace string) *AllowResult
 
 	current, _ := cast.ToUint64(resultArray[0])
 	remaining, _ := cast.ToUint64(resultArray[2])
-	resetTime := time.Unix(0, resultArray[3].(int64)*int64(time.Millisecond))
+	resetTime := time.UnixMilli(resultArray[3].(int64) * int64(time.Millisecond))
 
 	return &AllowResult{
 		Allow:     current <= l.options.Limit,

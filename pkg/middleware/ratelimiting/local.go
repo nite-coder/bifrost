@@ -27,14 +27,14 @@ func NewLocalLimiter(options Options) *LocalLimiter {
 	}
 }
 
-func (l *LocalLimiter) Allow(ctx context.Context, namespace string) *AllowResult {
+func (l *LocalLimiter) Allow(ctx context.Context, key string) *AllowResult {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	result := &AllowResult{
 		Limit: l.options.Limit,
 	}
-	itemVal, found := l.cache.Get(namespace)
+	itemVal, found := l.cache.Get(key)
 
 	if !found {
 		now := timecache.Now()
@@ -44,7 +44,7 @@ func (l *LocalLimiter) Allow(ctx context.Context, namespace string) *AllowResult
 			counter:    1,
 		}
 
-		l.cache.PutWithTTL(namespace, val, l.options.WindowSize)
+		l.cache.PutWithTTL(key, val, l.options.WindowSize)
 		result.Allow = true
 		result.Remaining = l.options.Limit - val.counter
 		result.ResetTime = val.expiration
