@@ -6,6 +6,7 @@ import (
 
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/timecache"
+	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -67,14 +68,14 @@ func (l *RedisLimiter) Allow(ctx context.Context, namespace string) *AllowResult
 	}
 
 	resultArray := result.([]any)
-	current := uint64(resultArray[0].(int64))
-	limit := uint64(resultArray[1].(int64))
-	remaining := uint64(resultArray[2].(int64))
+
+	current, _ := cast.ToUint64(resultArray[0])
+	remaining, _ := cast.ToUint64(resultArray[2])
 	resetTime := time.Unix(0, resultArray[3].(int64)*int64(time.Millisecond))
 
 	return &AllowResult{
-		Allow:     current <= limit,
-		Limit:     limit,
+		Allow:     current <= l.options.Limit,
+		Limit:     l.options.Limit,
 		Remaining: remaining,
 		ResetTime: resetTime,
 	}

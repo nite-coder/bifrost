@@ -26,7 +26,7 @@ type Upstream struct {
 	opts        *config.UpstreamOptions
 	proxies     []proxy.Proxy
 	counter     atomic.Uint64
-	totalWeight uint
+	totalWeight uint32
 	hasher      hash.Hash32
 }
 
@@ -279,8 +279,14 @@ func (u *Upstream) roundRobin() proxy.Proxy {
 	failedReconds := map[string]bool{}
 
 findLoop:
-	index := u.counter.Add(1)
-	proxy := u.proxies[(int(index)-1)%len(u.proxies)]
+	u.counter.Add(1)
+
+	if u.counter.Load() > uint64(math.MaxUint64) {
+		u.counter.Store(math.MaxUint64)
+	}
+
+	index := (u.counter.Load() - 1) % uint64(len(u.proxies))
+	proxy := u.proxies[index]
 
 	if proxy.IsAvailable() {
 		return proxy
@@ -308,11 +314,12 @@ func (u *Upstream) weighted() proxy.Proxy {
 
 findLoop:
 
-	if u.totalWeight > math.MaxInt64 {
-		u.totalWeight = math.MaxInt64
+	if u.totalWeight > math.MaxInt32 {
+		u.totalWeight = math.MaxInt32
 	}
+	val := int64(u.totalWeight)
 
-	randomWeight, _ := getRandomNumber(int64(u.totalWeight))
+	randomWeight, _ := getRandomNumber(val)
 
 	for _, proxy := range u.proxies {
 		randomWeight -= int64(proxy.Weight())

@@ -14,5 +14,5 @@ linters-settings:
     excludes:
       - G101 # Potential hardcoded credentials (false positives)
       - G402 # TLS MinVersion too low
-      - G115 # integer overflow conversion (TODO: verify these)
+      #- G115 # integer overflow conversion (TODO: verify these)
       - G204 # iSubprocess launched with a potential tainted input or cmd arguments

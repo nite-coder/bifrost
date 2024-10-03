@@ -46,7 +46,7 @@
 
 ## Roadmap
 
-1. support proxy protcol
+1. 支持集群管理
 
 ## Credit
 

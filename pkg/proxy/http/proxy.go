@@ -72,7 +72,7 @@ type HTTPProxy struct {
 
 	targetHost string
 
-	weight       uint
+	weight       uint32
 	failedCount  uint
 	failExpireAt time.Time
 }
@@ -80,7 +80,7 @@ type HTTPProxy struct {
 type Options struct {
 	Target      string
 	Protocol    config.Protocol
-	Weight      uint
+	Weight      uint32
 	MaxFails    uint
 	FailTimeout time.Duration
 }
@@ -354,7 +354,7 @@ func (r *HTTPProxy) SetTransferTrailer(b bool) {
 	r.transferTrailer = b
 }
 
-func (p *HTTPProxy) Weight() uint {
+func (p *HTTPProxy) Weight() uint32 {
 	return p.weight
 }
 

@@ -18,13 +18,13 @@ func TestRoundRobin(t *testing.T) {
 		Target:      "http://backend1",
 		Protocol:    config.ProtocolHTTP,
 		Weight:      1,
-		FailTimeout: 1 * time.Second,
+		FailTimeout: time.Second,
 		MaxFails:    1,
 	}
 	proxy1, _ := httpproxy.New(proxyOptions1, nil)
 	err := proxy1.AddFailedCount(1)
 	assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
-	time.Sleep(1 * time.Second) // wait and proxy1 should be available
+	time.Sleep(2 * time.Second) // wait and proxy1 should be available
 
 	proxyOptions2 := httpproxy.Options{
 		Target:      "http://backend2",

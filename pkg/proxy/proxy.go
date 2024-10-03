@@ -14,7 +14,7 @@ var (
 type Proxy interface {
 	ID() string
 	Target() string
-	Weight() uint
+	Weight() uint32
 	IsAvailable() bool
 	AddFailedCount(count uint) error
 	ServeHTTP(c context.Context, ctx *app.RequestContext)

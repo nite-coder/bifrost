@@ -49,7 +49,7 @@ type GRPCProxy struct {
 	// target is set as a reverse proxy address
 	target       string
 	targetHost   string
-	weight       uint
+	weight       uint32
 	failedCount  uint
 	failExpireAt time.Time
 }
@@ -135,7 +135,7 @@ func (p *GRPCProxy) ID() string {
 	return p.id
 }
 
-func (p *GRPCProxy) Weight() uint {
+func (p *GRPCProxy) Weight() uint32 {
 	return p.weight
 }
 
@@ -350,7 +350,7 @@ func makeGRPCErrorFrame(st *status.Status) []byte {
 	serialized, _ := proto.Marshal(statusProto)
 
 	val := len(serialized)
-	if val < 0 || uint64(val) > math.MaxUint32-5 {
+	if val < 0 || val > math.MaxUint32-5 {
 		// Check for potential overflow
 		// Handle the error appropriately, e.g., log and return an empty frame
 		return []byte{}

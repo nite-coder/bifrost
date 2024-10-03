@@ -147,7 +147,7 @@ type TargetOptions struct {
 	Target      string        `yaml:"target" json:"target"`
 	MaxFails    uint          `yaml:"max_fails" json:"max_fails"`
 	FailTimeout time.Duration `yaml:"fail_timeout" json:"fail_timeout"`
-	Weight      uint          `yaml:"weight" json:"weight"`
+	Weight      uint32          `yaml:"weight" json:"weight"`
 }
 
 type UpstreamOptions struct {

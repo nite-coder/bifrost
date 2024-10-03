@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -36,11 +37,14 @@ func TestBifrost(t *testing.T) {
 
 	// setup server
 	options.Servers["api_server"] = config.ServerOptions{
-		Bind: "localhost:8001",
+		Bind: "localhost:8881",
 	}
 
 	bifrost, err := NewBifrost(options, false)
 	assert.NoError(t, err)
+
+	go bifrost.Run()
+	time.Sleep(3 * time.Second)
 
 	err = bifrost.Shutdown(context.Background())
 	assert.NoError(t, err)
