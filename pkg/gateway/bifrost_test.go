@@ -22,6 +22,27 @@ type TestOrder struct {
 func TestBifrost(t *testing.T) {
 	// setup upstream
 	options := config.NewOptions()
+
+	options.AccessLogs["main"] = config.AccessLogOptions{
+		Enabled: true,
+		Output:  "stderr",
+		Template: `      {"time":"$time",
+      "remote_addr":"$remote_addr",
+      "host": "$host",
+      "request_uri":"$request_method $request_uri $request_protocol",
+      "req_body":"$request_body",
+      "x_forwarded_for":"$header_X-Forwarded-For",
+      "upstream_addr":"$upstream_addr",
+      "upstream_uri":"$upstream_method $upstream_uri $upstream_protocol",
+      "upstream_duration":$upstream_duration,
+      "upstream_status":$upstream_status,
+      "status":$status,
+      "grpc_status":"$grpc_status",
+      "grpc_messaage":"$grpc_message",
+      "duration":$duration,
+      "trace_id":"$trace_id"}`,
+	}
+
 	options.Upstreams["backend"] = config.UpstreamOptions{
 		Strategy: config.RoundRobinStrategy,
 		Targets: []config.TargetOptions{
@@ -50,7 +71,17 @@ func TestBifrost(t *testing.T) {
 		ReusePort:   true,
 		TCPQuickAck: true,
 		TCPFastOpen: true,
+		Backlog:     4096,
 		PPROF:       true,
+		AccessLogID: "main",
+		Middlewares: []config.MiddlwareOptions{
+			{
+				Type: "prom_metric",
+				Params: map[string]any{
+					"path": "/metrics",
+				},
+			},
+		},
 	}
 
 	options.Servers["apiv1_tls"] = config.ServerOptions{
@@ -127,5 +158,17 @@ func TestBifrost(t *testing.T) {
 			assert.Equal(t, "1", testOrder.ID)
 			assert.Equal(t, "100", testOrder.Price)
 		}
+	})
+
+	t.Run("test metric endpoint", func(t *testing.T) {
+		client := resty.New()
+		client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+
+		resp, err := client.R().
+			Get("http://localhost:8080/metrics")
+
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode())
+		t.Log(resp.String())
 	})
 }

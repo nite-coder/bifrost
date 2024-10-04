@@ -30,5 +30,6 @@ func (m *PromMetricMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCont
 
 		h := promhttp.Handler()
 		h.ServeHTTP(httpResp, httpReq)
+		c.Abort()
 	}
 }

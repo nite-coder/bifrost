@@ -341,11 +341,11 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 
 	// Optionally write error information to the response body
 	// Note: Some gRPC clients may not expect a response body in error cases
-	errorFrame := makeGRPCErrorFrame(st)
+	errorFrame := makeGRPCErrorFrame(ctx, st)
 	c.Response.SetBody(errorFrame)
 }
 
-func makeGRPCErrorFrame(st *status.Status) []byte {
+func makeGRPCErrorFrame(ctx context.Context, st *status.Status) []byte {
 	statusProto := st.Proto()
 	serialized, _ := proto.Marshal(statusProto)
 
@@ -353,6 +353,8 @@ func makeGRPCErrorFrame(st *status.Status) []byte {
 	if val > math.MaxUint32-5 {
 		// Check for potential overflow
 		// Handle the error appropriately, e.g., log and return an empty frame
+		logger := log.FromContext(ctx)
+		logger.Error("proxy: Serialized data too large to create gRPC error frame")
 		return []byte{}
 	}
 
