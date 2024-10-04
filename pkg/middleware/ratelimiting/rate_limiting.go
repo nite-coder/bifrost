@@ -92,16 +92,18 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 	}
 
 	key, found := variable.Get(m.options.LimitBy, c)
-	keyStr, _ := cast.ToString(key)
-
-	builder := strings.Builder{}
-	builder.WriteString(m.options.LimitBy)
-	builder.WriteString(":")
-	builder.WriteString(keyStr)
-	namespace := builder.String()
 
 	if found {
-		result := m.limter.Allow(ctx, namespace)
+		val, _ := cast.ToString(key)
+
+		builder := strings.Builder{}
+		builder.WriteString("rate_limit:")
+		builder.WriteString(m.options.LimitBy)
+		builder.WriteString(":")
+		builder.WriteString(val)
+		key := builder.String()
+
+		result := m.limter.Allow(ctx, key)
 
 		if result.Allow {
 			c.Next(ctx)

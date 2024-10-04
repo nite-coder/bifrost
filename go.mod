@@ -11,6 +11,7 @@ require (
 	github.com/cloudwego/hertz v0.9.3
 	github.com/cloudwego/netpoll v0.6.4
 	github.com/fsnotify/fsnotify v1.7.0
+	github.com/go-resty/resty/v2 v2.15.3
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/google/uuid v1.6.0
 	github.com/hertz-contrib/http2 v0.1.8
