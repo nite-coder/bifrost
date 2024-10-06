@@ -2,6 +2,8 @@ protoc -I=. --go_out=plugins=grpc:. --go_opt=paths=source_relative ./server/test
 
 curl http://localhost:8999/metrics
 
+curl --http2 --insecure -v https://localhost:8443/spot/orders
+
 grpcurl -plaintext -vv localhost:8003 helloworld.Greeter/SayHello
 
 grpcurl -plaintext localhost:8003 list

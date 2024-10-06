@@ -16,7 +16,7 @@
 
 因為 bifrost 底層使用 `hertz` HTTP 框架，所以中間件標準介面可以參考 [Hertz](https://www.cloudwego.io/docs/hertz/overview/)
 
-```golang
+```go
 func (m *AddPrefixMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 }

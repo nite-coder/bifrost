@@ -20,11 +20,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/zero"
-
 	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/cloudwego/hertz/pkg/protocol"
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/zero"
 	"github.com/valyala/bytebufferpool"
 )
 

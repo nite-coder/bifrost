@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"net"
+	"net/http"
 	"testing"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/http2"
 )
 
 type TestOrder struct {
@@ -137,7 +140,7 @@ func TestBifrost(t *testing.T) {
 
 	t.Run("get order", func(t *testing.T) {
 		client := resty.New()
-		client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+		client = client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 
 		urls := []string{
 			"http://localhost:8080/api/v1/orders",
@@ -145,6 +148,19 @@ func TestBifrost(t *testing.T) {
 		}
 
 		for _, url := range urls {
+
+			if url == "https://localhost:8442/api/v1/orders" {
+				client.SetTransport(&http2.Transport{
+					AllowHTTP: true,
+					TLSClientConfig: &tls.Config{
+						InsecureSkipVerify: true,
+					},
+					DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+						return net.Dial(network, addr)
+					},
+				})
+			}
+
 			resp, err := client.R().
 				Get(url)
 
@@ -157,7 +173,21 @@ func TestBifrost(t *testing.T) {
 			assert.Equal(t, 200, resp.StatusCode())
 			assert.Equal(t, "1", testOrder.ID)
 			assert.Equal(t, "100", testOrder.Price)
+
+			t.Log(resp.Request.RawRequest.Proto)
 		}
+	})
+
+	t.Run("test http2", func(t *testing.T) {
+		client := http.Client{
+			Transport: &http2.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}
+
+		resp, err := client.Get("https://localhost:8442/spot/orders")
+		assert.NoError(t, err)
+		assert.Equal(t, "HTTP/2.0", resp.Proto)
 	})
 
 	t.Run("test metric endpoint", func(t *testing.T) {

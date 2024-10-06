@@ -19,7 +19,7 @@ var (
 
 func main() {
 	app := &cli.App{
-		Version: "0.0.1",
+		Version: "0.1.0",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",

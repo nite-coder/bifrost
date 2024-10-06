@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/bytedance/sonic"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 
@@ -308,6 +309,8 @@ func escape(s string, escapeType config.EscapeType) string {
 		s = escapeJSON(s)
 	case config.NoneEscape, "":
 		return s
+	default:
+		return s
 	}
 
 	return s
@@ -331,29 +334,35 @@ func escapeString(s string) string {
 	return b.String()
 }
 
-// escapeJSON function to escape characters for JSON strings
 func escapeJSON(comp string) string {
-	for i := 0; i < len(comp); i++ {
-		if !isSafePathKeyChar(comp[i]) {
-			ncomp := make([]byte, len(comp)+1)
-			copy(ncomp, comp[:i])
-			ncomp = ncomp[:i]
-			for ; i < len(comp); i++ {
-				if !isSafePathKeyChar(comp[i]) {
-					ncomp = append(ncomp, '\\')
-				}
-				ncomp = append(ncomp, comp[i])
-			}
-			return string(ncomp)
-		}
-	}
-	return comp
+	b, _ := sonic.Marshal(comp)
+	return string(b[1 : len(b)-1])
 }
 
-// isSafePathKeyChar returns true if the input character is safe for not
-// needing escaping.
-func isSafePathKeyChar(c byte) bool {
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-		(c >= '0' && c <= '9') || c <= ' ' || c > '~' || c == '_' ||
-		c == '-' || c == ':'
-}
+// TODO: replace json.Marshal for better performance
+// // escapeJSON function to escape characters for JSON strings
+// func escapeJSON(comp string) string {
+// 	for i := 0; i < len(comp); i++ {
+// 		if !isSafePathKeyChar(comp[i]) {
+// 			ncomp := make([]byte, len(comp)+1)
+// 			copy(ncomp, comp[:i])
+// 			ncomp = ncomp[:i]
+// 			for ; i < len(comp); i++ {
+// 				if !isSafePathKeyChar(comp[i]) {
+// 					ncomp = append(ncomp, '\\')
+// 				}
+// 				ncomp = append(ncomp, comp[i])
+// 			}
+// 			return string(ncomp)
+// 		}
+// 	}
+// 	return comp
+// }
+
+// // isSafePathKeyChar returns true if the input character is safe for not
+// // needing escaping.
+// func isSafePathKeyChar(c byte) bool {
+// 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+// 		(c >= '0' && c <= '9') || c <= ' ' || c > '~' || c == '_' ||
+// 		c == '-' || c == ':' || c == '{' || c == '}'
+// }
