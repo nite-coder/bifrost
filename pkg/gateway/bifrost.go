@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -184,13 +185,13 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 
 	for id, server := range mainOptions.Servers {
 		if id == "" {
-			return nil, fmt.Errorf("http server id can't be empty")
+			return nil, errors.New("http server id can't be empty")
 		}
 
 		server.ID = id
 
 		if server.Bind == "" {
-			return nil, fmt.Errorf("http server bind can't be empty")
+			return nil, errors.New("http server bind can't be empty")
 		}
 
 		_, found := bifrsot.HttpServers[id]

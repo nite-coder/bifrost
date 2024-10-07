@@ -204,9 +204,12 @@ func (p *HTTPProxy) AddFailedCount(count uint) error {
 }
 
 func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+	logger := log.FromContext(c)
+
 	defer func() {
 		if r := recover(); r != nil {
-			slog.ErrorContext(c, "proxy: http proxy panic recovered", slog.Any("error", r))
+			stackTrace := getStackTrace()
+			logger.ErrorContext(c, "proxy: http proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
 			ctx.Abort()
 		}
 

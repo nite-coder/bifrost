@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -177,11 +178,11 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		}
 
 		if serverOpts.TLS.CertPEM == "" {
-			return nil, fmt.Errorf("cert_pem can't be empty")
+			return nil, errors.New("cert_pem can't be empty")
 		}
 
 		if serverOpts.TLS.KeyPEM == "" {
-			return nil, fmt.Errorf("key_pem can't be empty")
+			return nil, errors.New("key_pem can't be empty")
 		}
 
 		certPEM, err := os.ReadFile(serverOpts.TLS.CertPEM)

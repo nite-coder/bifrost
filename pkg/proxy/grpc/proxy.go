@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -149,7 +150,8 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			logger.ErrorContext(ctx, "proxy: grpc proxy panic recovered", slog.Any("error", r))
+			stackTrace := getStackTrace()
+			logger.ErrorContext(ctx, "proxy: grpc proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
 			c.Abort()
 		}
 	}()
@@ -244,7 +246,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	val := len(respBody)
 	if val > math.MaxUint32 || val < 0 {
 		logger.Error("proxy: grpc proxy response payload is overflow")
-		err := fmt.Errorf("proxy: grpc proxy response payload is overflow")
+		err := errors.New("proxy: grpc proxy response payload is overflow")
 		_ = c.Error(err)
 		return
 	}
@@ -291,7 +293,7 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 
 	c.Set(config.GRPC_STATUS, uint32(st.Code()))
 
-	logger.Error("fail to invoke grpc server", "error",
+	logger.Error("fail to invoke grpc server",
 		slog.String("error", err.Error()),
 		slog.String("original_path", originalPath),
 		slog.String("upstream", p.targetHost+string(c.Request.Path())),

@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -84,13 +85,13 @@ func loadMiddlewares(opts map[string]config.MiddlwareOptions) (map[string]app.Ha
 	for id, middlewareOpts := range opts {
 
 		if len(id) == 0 {
-			return nil, fmt.Errorf("middleware id can't be empty")
+			return nil, errors.New("middleware id can't be empty")
 		}
 
 		middlewareOpts.ID = id
 
 		if len(middlewareOpts.Type) == 0 {
-			return nil, fmt.Errorf("middleware type can't be empty")
+			return nil, errors.New("middleware type can't be empty")
 		}
 
 		handler, found := middlewareFactory[middlewareOpts.Type]
@@ -125,7 +126,7 @@ func init() {
 	_ = RegisterMiddleware("add_prefix", func(params map[string]any) (app.HandlerFunc, error) {
 		prefix, ok := params["prefix"].(string)
 		if !ok {
-			return nil, fmt.Errorf("prefix is not set or prefix is invalid")
+			return nil, errors.New("prefix is not set or prefix is invalid")
 		}
 		m := addprefix.NewMiddleware(prefix)
 		return m.ServeHTTP, nil
@@ -134,7 +135,7 @@ func init() {
 	_ = RegisterMiddleware("replace_path", func(params map[string]any) (app.HandlerFunc, error) {
 		newPath, ok := params["path"].(string)
 		if !ok {
-			return nil, fmt.Errorf("path is not set or path is invalid")
+			return nil, errors.New("path is not set or path is invalid")
 		}
 		m := replacepath.NewMiddleware(newPath)
 		return m.ServeHTTP, nil
@@ -143,11 +144,11 @@ func init() {
 	_ = RegisterMiddleware("replace_path_regex", func(params map[string]any) (app.HandlerFunc, error) {
 		regex, ok := params["regex"].(string)
 		if !ok {
-			return nil, fmt.Errorf("regex is not set or regex is invalid")
+			return nil, errors.New("regex is not set or regex is invalid")
 		}
 		replacement, ok := params["replacement"].(string)
 		if !ok {
-			return nil, fmt.Errorf("replacement is not set or replacement is invalid")
+			return nil, errors.New("replacement is not set or replacement is invalid")
 		}
 		m := replacepathregex.NewMiddleware(regex, replacement)
 		return m.ServeHTTP, nil
@@ -156,7 +157,7 @@ func init() {
 	_ = RegisterMiddleware("prom_metric", func(param map[string]any) (app.HandlerFunc, error) {
 		path, ok := param["path"].(string)
 		if !ok {
-			return nil, fmt.Errorf("path is not set or path is invalid")
+			return nil, errors.New("path is not set or path is invalid")
 		}
 
 		m := prommetric.New(path)
@@ -169,7 +170,7 @@ func init() {
 		if found {
 			headers, ok := val.(map[string]any)
 			if !ok {
-				return nil, fmt.Errorf("request_headers is not set or request_headers is invalid")
+				return nil, errors.New("request_headers is not set or request_headers is invalid")
 			}
 
 			for k, v := range headers {
@@ -186,7 +187,7 @@ func init() {
 		if found {
 			headers, ok := val.(map[string]any)
 			if !ok {
-				return nil, fmt.Errorf("response_headers is not set or response_headers is invalid")
+				return nil, errors.New("response_headers is not set or response_headers is invalid")
 			}
 
 			for k, v := range headers {
@@ -218,45 +219,45 @@ func init() {
 		// strategy
 		strategyVal, found := param["strategy"]
 		if !found {
-			return nil, fmt.Errorf("strategy is not found in rate-limiting middleware")
+			return nil, errors.New("strategy is not found in rate-limiting middleware")
 		}
 		strategy, err := cast.ToString(strategyVal)
 		if err != nil {
-			return nil, fmt.Errorf("strategy is invalid in rate-limiting middleware")
+			return nil, errors.New("strategy is invalid in rate-limiting middleware")
 		}
 		option.Strategy = strategy
 
 		// limit
 		limitVal, found := param["limit"]
 		if !found {
-			return nil, fmt.Errorf("limit is not found in rate-limiting middleware1")
+			return nil, errors.New("limit is not found in rate-limiting middleware1")
 		}
 		limit, err := cast.ToUint64(limitVal)
 		if err != nil {
-			return nil, fmt.Errorf("limit is invalid in rate-limiting middleware")
+			return nil, errors.New("limit is invalid in rate-limiting middleware")
 		}
 		option.Limit = limit
 
 		// limit_by
 		limitByVal, found := param["limit_by"]
 		if !found {
-			return nil, fmt.Errorf("limit_by is not found in rate-limiting middleware")
+			return nil, errors.New("limit_by is not found in rate-limiting middleware")
 		}
 		limitBy, err := cast.ToString(limitByVal)
 		if err != nil {
-			return nil, fmt.Errorf("limit_by is invalid in rate-limiting middleware")
+			return nil, errors.New("limit_by is invalid in rate-limiting middleware")
 		}
 		option.LimitBy = limitBy
 
 		// window_size
 		windowSizeVal, found := param["window_size"]
 		if !found {
-			return nil, fmt.Errorf("window_size is not found in rate-limiting middleware")
+			return nil, errors.New("window_size is not found in rate-limiting middleware")
 		}
 		s, _ := cast.ToString(windowSizeVal)
 		windowSize, err := time.ParseDuration(s)
 		if err != nil {
-			return nil, fmt.Errorf("window_size is invalid in rate-limiting middleware")
+			return nil, errors.New("window_size is invalid in rate-limiting middleware")
 		}
 		option.WindowSize = windowSize
 
@@ -265,7 +266,7 @@ func init() {
 		if found {
 			status, err := cast.ToInt(statusVal)
 			if err != nil {
-				return nil, fmt.Errorf("http_status is invalid in rate-limiting middleware")
+				return nil, errors.New("http_status is invalid in rate-limiting middleware")
 			}
 			option.HTTPStatus = status
 		}
@@ -275,7 +276,7 @@ func init() {
 		if found {
 			contentType, err := cast.ToString(contentTypeVal)
 			if err != nil {
-				return nil, fmt.Errorf("http_content_type is invalid in rate-limiting middleware")
+				return nil, errors.New("http_content_type is invalid in rate-limiting middleware")
 			}
 			option.HTTPContentType = contentType
 		}
@@ -285,7 +286,7 @@ func init() {
 		if found {
 			body, err := cast.ToString(bodyVal)
 			if err != nil {
-				return nil, fmt.Errorf("http_response_body is invalid in rate-limiting middleware")
+				return nil, errors.New("http_response_body is invalid in rate-limiting middleware")
 			}
 			option.HTTPResponseBody = body
 		}

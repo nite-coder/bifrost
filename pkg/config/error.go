@@ -1,7 +1,5 @@
 package config
 
-import "fmt"
-
 type ErrInvalidConfig struct {
 	FullPath []string
 	Value    any
@@ -17,5 +15,5 @@ func newInvalidConfig(fullPath []string, value any, message string) ErrInvalidCo
 }
 
 func (e ErrInvalidConfig) Error() string {
-	return fmt.Sprintf("invalid config: %s", e.Message)
+	return "invalid config: " + e.Message
 }

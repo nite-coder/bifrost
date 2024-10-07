@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -37,7 +38,7 @@ func loadServices(bifrost *Bifrost, middlewares map[string]app.HandlerFunc) (map
 	for id, serviceOpts := range bifrost.options.Services {
 
 		if len(id) == 0 {
-			return nil, fmt.Errorf("service id can't be empty")
+			return nil, errors.New("service id can't be empty")
 		}
 
 		serviceOpts.ID = id
@@ -131,7 +132,6 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 
 func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	logger := log.FromContext(c)
-	defer ctx.Abort()
 	done := make(chan bool)
 
 	runTask(c, func() {
@@ -139,7 +139,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			done <- true
 			if r := recover(); r != nil {
 				stackTrace := getStackTrace()
-				logger.ErrorContext(c, "proxy panic recovered", slog.Any("panic", r), "stack", stackTrace)
+				logger.ErrorContext(c, "service panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
 				ctx.Abort()
 			}
 		}()

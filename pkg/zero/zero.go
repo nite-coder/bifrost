@@ -232,7 +232,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 			}
 
 			cmd := exec.Command(os.Args[0], os.Args[1:]...)
-			cmd.Env = append(os.Environ(), "UPGRADE=1", fmt.Sprintf("LISTENERS=%s", string(b)))
+			cmd.Env = append(os.Environ(), "UPGRADE=1", "LISTENERS="+string(b))
 			cmd.Stdin = nil
 			cmd.Stdout = nil
 			cmd.Stderr = nil
@@ -315,12 +315,13 @@ func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	return fmt.Errorf("process did not terminate within the timeout period")
+	return errors.New("process did not terminate within the timeout period")
 }
 
 func (z *ZeroDownTime) writePID() error {
 	pid := os.Getpid()
-	err := os.WriteFile(z.options.GetPIDFile(), []byte(fmt.Sprintf("%d", pid)), 0600)
+	data := []byte(strconv.Itoa(pid))
+	err := os.WriteFile(z.options.GetPIDFile(), data, 0600)
 	if err != nil {
 		slog.Error("failed to write PID file", "error", err)
 		return err

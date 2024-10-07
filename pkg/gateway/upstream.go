@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"hash"
 	"hash/fnv"
@@ -248,7 +249,7 @@ func createGRPCUpstream(serviceOptions config.ServiceOptions, opts config.Upstre
 func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opts config.UpstreamOptions) (*Upstream, error) {
 
 	if len(opts.ID) == 0 {
-		return nil, fmt.Errorf("upstream id can't be empty")
+		return nil, errors.New("upstream id can't be empty")
 	}
 
 	if len(opts.Targets) == 0 {

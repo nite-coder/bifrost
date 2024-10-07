@@ -2,6 +2,7 @@ package ratelimiting
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -78,7 +79,7 @@ func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 	}
 
 	if options.WindowSize == 0 {
-		return nil, fmt.Errorf("window_size must be greater than 0")
+		return nil, errors.New("window_size must be greater than 0")
 	}
 
 	return m, nil

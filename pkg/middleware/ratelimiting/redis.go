@@ -8,6 +8,9 @@ import (
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel"
+	otelcodes "go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type RedisLimiter struct {
@@ -55,10 +58,22 @@ func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 
 	now := timecache.Now()
 	t := now.UnixNano() / int64(time.Millisecond)
-	result, err := l.client.Eval(ctx, luaScript, []string{key}, tokens, l.options.Limit, int(l.options.WindowSize.Seconds()), t).Result()
 
+	tracer := otel.Tracer("bifrost")
+	var span trace.Span
+	if tracer != nil {
+		spanOptions := []trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindClient),
+		}
+
+		ctx, span = tracer.Start(ctx, "ratelimiting_redis", spanOptions...)
+	}
+
+	result, err := l.client.Eval(ctx, luaScript, []string{key}, tokens, l.options.Limit, int(l.options.WindowSize.Seconds()), t).Result()
 	if err != nil {
 		logger.Error("ratelimiting: redis eval error", "error", err)
+		span.SetStatus(otelcodes.Error, err.Error())
+		span.End()
 		return &AllowResult{
 			Allow:     true,
 			Limit:     l.options.Limit,
@@ -66,6 +81,9 @@ func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 			ResetTime: now.Add(l.options.WindowSize),
 		}
 	}
+
+	span.SetStatus(otelcodes.Ok, "")
+	span.End()
 
 	resultArray := result.([]any)
 

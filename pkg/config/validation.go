@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -10,11 +11,11 @@ import (
 // ValidateMapping checks if the config's value mapping is valid.  For example, the server in route must be finded in the servers
 func ValidateMapping(mainOpts Options) error {
 	if len(mainOpts.Servers) == 0 {
-		return fmt.Errorf("no server found")
+		return errors.New("no server found")
 	}
 
 	if len(mainOpts.Routes) == 0 {
-		return fmt.Errorf("no route found")
+		return errors.New("no route found")
 	}
 
 	for routeID, route := range mainOpts.Routes {
