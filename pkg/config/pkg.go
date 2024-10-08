@@ -48,7 +48,7 @@ func Load(path string) (Options, error) {
 
 	dynamicProvider, mainOpts, err = LoadDynamic(mainOpts)
 	if err != nil {
-		return mainOpts, err
+		return mainOpts, fmt.Errorf("fail to load dynamic config: %w", err)
 	}
 
 	err = ValidateMapping(mainOpts)

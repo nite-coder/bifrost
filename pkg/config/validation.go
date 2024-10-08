@@ -11,11 +11,7 @@ import (
 // ValidateMapping checks if the config's value mapping is valid.  For example, the server in route must be finded in the servers
 func ValidateMapping(mainOpts Options) error {
 	if len(mainOpts.Servers) == 0 {
-		return errors.New("no server found")
-	}
-
-	if len(mainOpts.Routes) == 0 {
-		return errors.New("no route found")
+		return errors.New("no server found.  please add one server at lease")
 	}
 
 	for routeID, route := range mainOpts.Routes {
@@ -27,7 +23,6 @@ func ValidateMapping(mainOpts Options) error {
 	}
 
 	return nil
-
 }
 
 // ValidateConfig checks if the config's values are valid, but does not check if the config's value mapping is valid
