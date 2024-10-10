@@ -3,15 +3,17 @@ package config
 import "time"
 
 type Options struct {
+	from            string                      `yaml:"-" json:"-"`
 	Version         string                      `yaml:"version" json:"version"`
 	PIDFile         string                      `yaml:"pid_file" json:"pid_file"`
 	UpgradeSock     string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
 	Gopool          bool                        `yaml:"gopool" json:"gopool"`
+	Watch           *bool                       `yaml:"watch" json:"watch"`
 	IsDaemon        bool                        `yaml:"-" json:"-"`
 	User            string                      `yaml:"user" json:"user"`
 	Group           string                      `yaml:"group" json:"group"`
 	Providers       ProviderOtions              `yaml:"providers" json:"providers"`
-	TimerResolution time.Duration               `yaml:"timer_resolution " json:"timer_resolution "`
+	TimerResolution time.Duration               `yaml:"timer_resolution" json:"timer_resolution"`
 	Logging         LoggingOtions               `yaml:"logging" json:"logging"`
 	Metrics         MetricsOptions              `yaml:"metrics" json:"metrics"`
 	Tracing         TracingOptions              `yaml:"tracing" json:"tracing"`
@@ -37,6 +39,18 @@ func NewOptions() Options {
 	return mainOptions
 }
 
+func (opt Options) IsWatch() bool {
+	if opt.Watch == nil {
+		return true
+	}
+
+	return *opt.Watch
+}
+
+func (opt Options) From() string {
+	return opt.from
+}
+
 type ProviderOtions struct {
 	File FileProviderOptions `yaml:"file" json:"file"`
 }
@@ -44,7 +58,6 @@ type ProviderOtions struct {
 type FileProviderOptions struct {
 	Enabled    bool     `yaml:"enabled" json:"enabled"`
 	Paths      []string `yaml:"paths" json:"paths"`
-	Watch      bool     `yaml:"watch" json:"watch"`
 	Extensions []string `yaml:"extensions" json:"extensions"`
 }
 
@@ -147,7 +160,7 @@ type TargetOptions struct {
 	Target      string        `yaml:"target" json:"target"`
 	MaxFails    uint          `yaml:"max_fails" json:"max_fails"`
 	FailTimeout time.Duration `yaml:"fail_timeout" json:"fail_timeout"`
-	Weight      uint32          `yaml:"weight" json:"weight"`
+	Weight      uint32        `yaml:"weight" json:"weight"`
 }
 
 type UpstreamOptions struct {

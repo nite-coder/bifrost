@@ -10,64 +10,64 @@
 
 1. 建立一個配置文件 `config.yaml`
 
-	```yaml
-	providers:
-	  file:
-		enabled: true
-		extensions:
-		- ".yaml"
-		- ".yml"
-		- ".json"
-		paths:
-		- "."
-		watch: true
+```yaml
+version: 1
+watch: true
 
-	servers:
-	  api-server:
-		bind: ":8001"
+servers:
+  api_server:
+    bind: ":8001"
 
-	routes:
-	  test-route:
-		paths:
-		- /
-		service_id: test-service
+routes:
+  all_routes:
+    paths:
+      - /
+    service_id: test_service
 
-	services:
-	  test-service:
-		url: "http://test-upstream:8000"
+services:
+  test_service:
+    url: "http://test_upstream:8000"
 
-	upstreams:
-	  test-upstream:
-		targets:
-		- target: "127.0.0.1:8000"
-	```
+upstreams:
+  test_upstream:
+    targets:
+      - target: "127.0.0.1:8000"
+```
 
 1. 建立一個 `main.go`
 
-	```Go
-	func main() {
-		options, err := config.Load("./config.yaml")
-		if err != nil {
-			panic(err)
-		}
+ ```Go
+package main
 
-		err = gateway.Run(options)
-		if err != nil {
-			panic(err)
-		}
+import (
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/gateway"
+)
+
+func main() {
+	options, err := config.Load("./config.yaml")
+	if err != nil {
+		panic(err)
 	}
-	```
+
+	err = gateway.Run(options)
+	if err != nil {
+		panic(err)
+	}
+}
+ ```
+
 1. 執行
 
-	```shell
-	go run .
-	```
-	您將看到，這樣表示服務已成功運行, 你可以發送請求到本地端口 `8001`
-	```shell
-	time=2024-08-25T09:54:19.014Z level=INFO msg="starting server" id=test_server bind=:8001
-	time=2024-08-25T09:54:19.015Z level=INFO msg="bifrost started successfully" pid=5825
-	```
+ ```shell
+ go run .
+ ```
 
+	您將看到，這樣表示服務已成功運行, 你可以發送請求到本地端口 `8001`
+ ```shell
+ time=2024-08-25T09:54:19.014Z level=INFO msg="starting server" id=test_server bind=:8001
+ time=2024-08-25T09:54:19.015Z level=INFO msg="bifrost started successfully" pid=5825
+ ```
 
 ## 代碼模式
 
@@ -115,12 +115,15 @@ func main() {
  }
 }
 ```
+
 2. 執行
 
 ```shell
 go run .
 ```
+
 您將看到，這樣表示服務已成功運行, 你可以發送請求到本地端口 `8001`
+
 ```shell
 time=2024-08-25T09:54:19.014Z level=INFO msg="starting server" id=api_server bind=:8001 transporter=netpoll
 time=2024-08-25T09:54:19.015Z level=INFO msg="bifrost started successfully" pid=5825

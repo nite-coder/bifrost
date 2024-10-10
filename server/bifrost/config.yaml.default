@@ -1,29 +1,30 @@
 version: 1
-timer_resolution: 1ms
+watch: true
+#timer_resolution: 1ms
 # pid_file: ./logs1/bifrost.pid
 # upgrade_sock: ./logs1/bifrost.sock
 # user: vscode
 # group: vscode
 
-providers:
-  file:
-    enabled: true
-    extensions:
-      - ".yaml"
-      - ".yml"
-      - ".json"
-    paths:
-      - "./conf"
-    watch: true
+# providers:
+#   file:
+#     enabled: true
+#     extensions:
+#       - ".yaml"
+#       - ".yml"
+#       - ".json"
+#     paths:
+#       - "./conf"
 
 logging:
   handler: text
   level: debug
   output: stderr
+  #output: "./logs/bifrost.log"
 
 metrics:
   prometheus:
-    enabled: true
+    enabled: false
     buckets: [0.01, 0.03, 0.05, 0.1]
 
 tracing:
@@ -32,14 +33,16 @@ tracing:
     http:
       endpoint: otel-collector:4318
       insecure: true
-
+    # grpc:
+    #   endpoint: otel-collector:4317
+    #   insecure: true
 
 access_logs:
   my_access_log:
     enabled: true
     output: stderr
     buffering_size: 65536
-    time_format: "2006-01-02T15:04:05"
+    time_format: "2006-01-02T15:04:05.999999"
     escape: json
     template: >
       {"time":"$time",
@@ -48,6 +51,7 @@ access_logs:
       "request_uri":"$request_method $request_uri $request_protocol",
       "req_body":"$request_body",
       "x_forwarded_for":"$header_X-Forwarded-For",
+      "service": "$service",
       "upstream_addr":"$upstream_addr",
       "upstream_uri":"$upstream_method $upstream_uri $upstream_protocol",
       "upstream_duration":$upstream_duration,
@@ -59,25 +63,26 @@ access_logs:
       "trace_id":"$trace_id"}
 
 servers:
-  extenal:
+  apiv1:
     bind: ":8001"
     reuse_port: true
     tcp_fast_open: true
     tcp_quick_ack: true
+    backlog: 4096
     http2: false
     logging:
-      level: info
+      level: debug
       handler: text
       output: stderr
     timeout:
       keepalive: 60s
-      read: 3s
-      write: 3s
-      #graceful: 3s
-    #access_log_id: my_access_log
-    #middlewares:
-    #- type: tracing
-  extenal_tls:
+      read: 10s
+      write: 10s
+      graceful: 3s
+    access_log_id: my_access_log
+    # middlewares:
+    #   - type: tracing
+  apiv1_tls:
     bind: ":8443"
     reuse_port: true
     tcp_fast_open: true
@@ -88,11 +93,11 @@ servers:
     http2: true
     timeout:
       keepalive: 60s
-      read: 3s
-      write: 3s
-      #graceful: 3s
+      read: 10s
+      write: 10s
+      graceful: 3s
     #access_log_id: my_access_log
-  metrics:
+  apiv1_metrics:
     bind: ":8999"
     reuse_port: false
     pprof: true
@@ -100,3 +105,30 @@ servers:
       - type: prom_metric
         params:
           path: /metrics
+
+routes:
+  place_orders:
+    methods: []
+    paths:
+      - /
+    servers: ["apiv1", "apiv1_tls"]
+    service_id: orders
+
+services:
+  orders:
+    timeout:
+      read: 7s
+      write: 7s
+      idle: 600s
+      dail: 7s
+    tls_verify: false
+    protocol: http
+    url: http://order_server:8000
+
+upstreams:
+  order_server:
+    targets:
+      - target: "127.0.0.1:8000"
+        max_fails: 10
+        fail_timeout: 1m
+        weight: 3

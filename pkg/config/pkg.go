@@ -19,6 +19,7 @@ type ChangeFunc func() error
 var (
 	OnChanged       provider.ChangeFunc
 	dynamicProvider provider.Provider
+	mainProvider    provider.Provider
 )
 
 func Load(path string) (Options, error) {
@@ -56,21 +57,23 @@ func Load(path string) (Options, error) {
 		return mainOpts, err
 	}
 
+	mainOpts.from = path
+
+	fileProviderOpts := file.Options{
+		Paths: []string{path},
+	}
+	mainProvider = file.NewProvider(fileProviderOpts)
+
 	return mainOpts, nil
 }
 
 func LoadDynamic(mainOptions Options) (provider.Provider, Options, error) {
 
-	mainOptions.Routes = nil
-	mainOptions.Services = nil
-	mainOptions.Middlewares = nil
-	mainOptions.Upstreams = nil
-
 	// use file provider if enabled
 	if mainOptions.Providers.File.Enabled {
 
 		if len(mainOptions.Providers.File.Paths) == 0 {
-			mainOptions.Providers.File.Paths = []string{"./"}
+			return nil, mainOptions, nil
 		}
 
 		fileProviderOpts := file.Options{
@@ -108,9 +111,14 @@ func LoadDynamic(mainOptions Options) (provider.Provider, Options, error) {
 }
 
 func Watch() error {
+	if mainProvider != nil {
+		mainProvider.SetOnChanged(OnChanged)
+		_ = mainProvider.Watch()
+	}
+
 	if dynamicProvider != nil {
 		dynamicProvider.SetOnChanged(OnChanged)
-		return dynamicProvider.Watch()
+		_ = dynamicProvider.Watch()
 	}
 
 	return nil
@@ -195,8 +203,8 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 	return mainOpts, nil
 }
 
-func findConfigurationLine(content string, fullPath []string, value interface{}) int {
-	var node interface{}
+func findConfigurationLine(content string, fullPath []string, value any) int {
+	var node any
 	var err error
 
 	err = json.Unmarshal([]byte(content), &node)
@@ -214,10 +222,10 @@ func findConfigurationLine(content string, fullPath []string, value interface{})
 	return findInNode(node, fullPath, value, lines)
 }
 
-func findInNode(node interface{}, path []string, value interface{}, lines []string) int {
+func findInNode(node any, path []string, value any, lines []string) int {
 	for i, key := range path {
 		switch n := node.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			if val, ok := n[key]; ok {
 				if i == len(path)-1 {
 					if fmt.Sprintf("%v", val) == fmt.Sprintf("%v", value) {
@@ -229,7 +237,7 @@ func findInNode(node interface{}, path []string, value interface{}, lines []stri
 			} else {
 				return -1
 			}
-		case []interface{}:
+		case []any:
 			for _, item := range n {
 				if line := findInNode(item, path[i:], value, lines); line != -1 {
 					return line
@@ -270,7 +278,7 @@ func findInNode(node interface{}, path []string, value interface{}, lines []stri
 	return -1
 }
 
-func findLineNumber(lines []string, key string, value interface{}) int {
+func findLineNumber(lines []string, key string, value any) int {
 	searchStr := fmt.Sprintf(`"%s": %v`, key, value)
 	for i, line := range lines {
 		if strings.Contains(line, searchStr) {

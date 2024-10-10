@@ -194,7 +194,7 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 		if len(routeOpts.Methods) == 0 {
 			for _, method := range httpMethods {
 				err = r.router.add(method, path, nodeType, middlewares...)
-				if err != nil && !errors.Is(err, ErrAlreadyExists) {
+				if err != nil {
 					return err
 				}
 			}

@@ -1,13 +1,5 @@
-providers:
-  file:
-    enabled: true
-    extensions:
-      - ".yaml"
-      - ".yml"
-      - ".json"
-    paths:
-      - "."
-    watch: true
+version: 1
+watch: true
 
 servers:
   api_server:

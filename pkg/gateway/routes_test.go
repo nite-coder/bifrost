@@ -263,7 +263,7 @@ func TestRoutes(t *testing.T) {
 	}
 }
 
-func TestDuplicateHTTPMethods(t *testing.T) {
+func TestDuplicateRoutes(t *testing.T) {
 	route := newRoutes()
 
 	err := route.Add(config.RouteOptions{
@@ -282,5 +282,17 @@ func TestDuplicateHTTPMethods(t *testing.T) {
 		Methods: []string{},
 		Paths:   []string{"/foo"},
 	}, exactkHandler)
+	assert.ErrorIs(t, err, ErrAlreadyExists)
+
+	err = route.Add(config.RouteOptions{
+		Methods: []string{"GET"},
+		Paths:   []string{"/"},
+	}, exactkHandler)
 	assert.NoError(t, err)
+
+	err = route.Add(config.RouteOptions{
+		Methods: []string{"GET"},
+		Paths:   []string{"/"},
+	}, exactkHandler)
+	assert.ErrorIs(t, err, ErrAlreadyExists)
 }

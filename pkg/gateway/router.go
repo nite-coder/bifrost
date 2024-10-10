@@ -152,6 +152,11 @@ func (r *Router) add(method, path string, nodeType nodeType, middleware ...app.H
 			currentNode = childNode
 		}
 
+		handlers := currentNode.findHandler(method)
+		if len(handlers) > 0 {
+			return fmt.Errorf("router: duplicate route http_method:%s path:'%s' %w", method, originalPath, ErrAlreadyExists)
+		}
+
 		currentNode.addHandler(method, middleware)
 		return nil
 	}
@@ -198,7 +203,7 @@ func (r *Router) add(method, path string, nodeType nodeType, middleware ...app.H
 
 	handlers := currentNode.findHandler(method)
 	if len(handlers) > 0 {
-		return fmt.Errorf("router: duplicate route http_method:%s path:%s. %w", method, originalPath, ErrAlreadyExists)
+		return fmt.Errorf("router: duplicate route http_method:%s path:'%s' %w", method, originalPath, ErrAlreadyExists)
 	}
 
 	// Add handler functions to the final node

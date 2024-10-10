@@ -87,19 +87,15 @@ func Run(mainOptions config.Options) (err error) {
 	config.OnChanged = func() error {
 		slog.Debug("reloading...")
 
-		_, mainOpts, err := config.LoadDynamic(mainOptions)
-		if err != nil {
-			slog.Error("fail to load config", "error", err)
-			return err
+		if mainOptions.From() != "" {
+			mainOptions, err = config.Load(mainOptions.From())
+			if err != nil {
+				slog.Error("fail to load config", "error", err)
+				return err
+			}
 		}
 
-		err = config.ValidateConfig(mainOpts)
-		if err != nil {
-			slog.Error("fail to validate config", "error", err)
-			return err
-		}
-
-		newBifrost, err := NewBifrost(mainOpts, true)
+		newBifrost, err := NewBifrost(mainOptions, true)
 		if err != nil {
 			return err
 		}
@@ -122,9 +118,11 @@ func Run(mainOptions config.Options) (err error) {
 		return nil
 	}
 
-	err = config.Watch()
-	if err != nil {
-		return err
+	if mainOptions.IsWatch() {
+		err = config.Watch()
+		if err != nil {
+			return err
+		}
 	}
 
 	go func() {
