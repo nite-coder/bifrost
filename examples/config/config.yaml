@@ -3,7 +3,7 @@ watch: true
 
 servers:
   api_server:
-    bind: ":8001"
+    bind: "127.0.0.1:8001"
 
 routes:
   all_routes:
