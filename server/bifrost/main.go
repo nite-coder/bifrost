@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -14,10 +15,14 @@ import (
 )
 
 var (
-	Revision = "fafafaf"
+	Build = "commit_id"
 )
 
 func main() {
+	cli.VersionPrinter = func(cCtx *cli.Context) {
+		fmt.Printf("version=%s, build=%s\n", cCtx.App.Version, Build)
+	}
+
 	app := &cli.App{
 		Version: "0.1.0",
 		Flags: []cli.Flag{

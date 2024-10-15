@@ -64,7 +64,7 @@ access_logs:
 
 servers:
   apiv1:
-    bind: ":8001"
+    bind: "127.0.0.1:8001"
     reuse_port: true
     tcp_fast_open: true
     tcp_quick_ack: true
@@ -83,7 +83,7 @@ servers:
     # middlewares:
     #   - type: tracing
   apiv1_tls:
-    bind: ":8443"
+    bind: "127.0.0.1:8443"
     reuse_port: true
     tcp_fast_open: true
     tcp_quick_ack: true
@@ -98,7 +98,7 @@ servers:
       graceful: 3s
     #access_log_id: my_access_log
   apiv1_metrics:
-    bind: ":8999"
+    bind: "127.0.0.1:8999"
     reuse_port: false
     pprof: true
     middlewares:

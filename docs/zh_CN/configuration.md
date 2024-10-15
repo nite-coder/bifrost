@@ -7,6 +7,7 @@
 
 ## 目錄
 
+* [watch](#watch)
 * [timer_resolution](#timer_resolution)
 * [pid_file](#pid_file)
 * [upgrade_sock](#upgrade_sock)
@@ -21,9 +22,21 @@
 * [services](#services)
 * [upstreams](#upstreams)
 
+## watch
+
+是否開啟配置監控，如果當配置文件被修改後, `動態配置` 部分的配置可以立即生效
+
+```yaml
+watch: true #立即生效
+```
+
 ## timer_resolution
 
-配置緩存時間的更新間隔，降低調用系同時間來提升效率，在 Bifrost 的時間是經過緩存的，預設值是1秒，這個配置最低可以調整到 1毫秒 (ms)
+配置網關時間精度，目前預設值是 1 秒，這個配置最低可以調整到 1毫秒 (ms)
+
+```yaml
+timer_resolution: 1ms
+```
 
 ## pid_file
 
@@ -53,7 +66,6 @@ providers:
       - ".json"
     paths:
       - "./conf"
-    watch: true
 ```
 
 | 欄位       | 預設值                 | 說明                                                         |
@@ -61,7 +73,7 @@ providers:
 | enabled    | false                  | 是否開啟 file provider                                       |
 | extensions | `.yaml`,`.yml`, `json` | 哪些檔案的附檔名才可以被載入                                 |
 | paths      | `.`                    | 有哪些目錄或檔案文件需要被載入, 如果沒有配置則為當前目錄路徑 |
-| watch      | false                  | 是否開啟監控，開啟後動態配置文件修改後將立即生效             |
+
 
 ## logging
 
@@ -177,7 +189,7 @@ access_logs:
 | -------------- | ------ | -------------------------------------------- |
 | enabled        | false  | 是否開啟請求日誌                             |
 | output         |        | 輸出; 目前支持 `stderr` 或文件路徑           |
-| buffering_size | 64 KB  | 輸出緩衝；單位 byte                         |
+| buffering_size | 64 KB  | 輸出緩衝；單位 byte                          |
 | time_format    |        | 時間格式                                     |
 | escape         | none   | 字元跳脫; 目前支持 `none`, `json`, `default` |
 | template       |        | 請求日誌格式                                 |

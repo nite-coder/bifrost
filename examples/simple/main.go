@@ -37,7 +37,7 @@ func main() {
 
 	// setup server
 	options.Servers["api_server"] = config.ServerOptions{
-		Bind: ":8001",
+		Bind: "127.0.0.1:8001",
 	}
 
 	err := gateway.Run(options)

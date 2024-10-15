@@ -2,7 +2,16 @@
 
 ## 介紹
 
-將在本地建立一個 api gateway 端口使用本地 `8001` 端口，把全部的 HTTP 請求轉發到後端的上游服務, 假設上游服務有兩台主機, 分別是 `127.0.0.1:8000`, `127.0.0.1:80`, 將採用 `round_robin` 分流算法把請求平均分到兩台的上游服務
+這邊將教你如何在本地建立一個簡單的 API 網關
+
+前置條件:
+
+1. 佔用本地 `127.0.0.1:8001` 端口 (外部 HTTP 請求往這邊發)
+1. 假設有兩個上游服務 IP，分別為 `127.0.0.1:8000`, `127.0.0.1:80`
+
+需求：
+
+把全部的 HTTP 請求轉發到後端的上游服務, 假設上游服務有兩台主機, 將採用 `round_robin` 算法把請求平均分到兩台的上游服務
 
 這邊有兩種配置模式，一種是使用配置文件 (目前只支持 `yaml`)，另一種是使用代碼模式
 
@@ -16,7 +25,7 @@ watch: true
 
 servers:
   api_server:
-    bind: ":8001"
+    bind: "127.0.0.1:8001"
 
 routes:
   all_routes:
@@ -65,8 +74,8 @@ func main() {
 
 	您將看到，這樣表示服務已成功運行, 你可以發送請求到本地端口 `8001`
  ```shell
- time=2024-08-25T09:54:19.014Z level=INFO msg="starting server" id=test_server bind=:8001
- time=2024-08-25T09:54:19.015Z level=INFO msg="bifrost started successfully" pid=5825
+ time=2024-08-25T09:54:19.014Z level=INFO msg="starting server" id=api_server bind=127.0.0.1:8001 transporter=netpoll
+ time=2024-08-25T09:54:19.015Z level=INFO msg="bifrost started successfully" pid=3667
  ```
 
 ## 代碼模式
@@ -106,7 +115,7 @@ func main() {
 
  // setup server
  options.Servers["api_server"] = config.ServerOptions{
-  Bind: ":8001",
+  Bind: "127.0.0.1:8001",
  }
 
  err := gateway.Run(options)
@@ -125,6 +134,6 @@ go run .
 您將看到，這樣表示服務已成功運行, 你可以發送請求到本地端口 `8001`
 
 ```shell
-time=2024-08-25T09:54:19.014Z level=INFO msg="starting server" id=api_server bind=:8001 transporter=netpoll
+time=2024-08-25T09:54:19.014Z level=INFO msg="starting server" id=api_server bind=127.0.0.1:8001 transporter=netpoll
 time=2024-08-25T09:54:19.015Z level=INFO msg="bifrost started successfully" pid=5825
 ```
