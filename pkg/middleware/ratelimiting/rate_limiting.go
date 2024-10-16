@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/config/redisclient"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
@@ -25,8 +26,15 @@ type AllowResult struct {
 	ResetTime time.Time
 }
 
+type StrategyMode string
+
+const (
+	Local StrategyMode = "local"
+	Redis StrategyMode = "redis"
+)
+
 type Options struct {
-	Strategy         string
+	Strategy         StrategyMode
 	Limit            uint64
 	LimitBy          string
 	WindowSize       time.Duration
@@ -36,6 +44,7 @@ type Options struct {
 	HTTPStatus       int
 	HTTPContentType  string
 	HTTPResponseBody string
+	RedisID          string
 }
 
 type RateLimitingMiddleware struct {
@@ -44,7 +53,6 @@ type RateLimitingMiddleware struct {
 }
 
 func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
-	strategy := strings.ToLower(strings.TrimSpace(options.Strategy))
 
 	if options.HeaderLimit == "" {
 		options.HeaderLimit = "X-RateLimit-Limit"
@@ -66,20 +74,25 @@ func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 		options.HeaderReset = "application/json; charset=utf8"
 	}
 
+	if options.WindowSize == 0 {
+		return nil, errors.New("window_size must be greater than 0")
+	}
+
 	m := &RateLimitingMiddleware{
 		options: &options,
 	}
 
-	switch strategy {
-	case "local":
+	switch options.Strategy {
+	case Local:
 		m.limter = NewLocalLimiter(options)
-	case "redis":
+	case Redis:
+		client, found := redisclient.Get(options.RedisID)
+		if !found {
+			return nil, fmt.Errorf("redis id '%s' not found in ratelimiting middleware", options.RedisID)
+		}
+		m.limter = NewRedisLimiter(client, options)
 	default:
-		return nil, fmt.Errorf("strategy '%s' is invalid", strategy)
-	}
-
-	if options.WindowSize == 0 {
-		return nil, errors.New("window_size must be greater than 0")
+		return nil, fmt.Errorf("strategy '%s' is invalid", options.Strategy)
 	}
 
 	return m, nil

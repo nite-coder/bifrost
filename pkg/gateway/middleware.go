@@ -225,7 +225,7 @@ func init() {
 		if err != nil {
 			return nil, errors.New("strategy is invalid in rate-limiting middleware")
 		}
-		option.Strategy = strategy
+		option.Strategy = ratelimiting.StrategyMode(strategy)
 
 		// limit
 		limitVal, found := param["limit"]
@@ -289,6 +289,20 @@ func init() {
 				return nil, errors.New("http_response_body is invalid in rate-limiting middleware")
 			}
 			option.HTTPResponseBody = body
+		}
+
+		// redis id
+		if option.Strategy == ratelimiting.Redis {
+			redisIDVal, found := param["redis_id"]
+			if found {
+				redisID, err := cast.ToString(redisIDVal)
+				if err != nil {
+					return nil, errors.New("redis_id is invalid in rate-limiting middleware")
+				}
+				option.RedisID = redisID
+			} else {
+				return nil, errors.New("redis_id is not found in rate-limiting middleware")
+			}
 		}
 
 		m, err := ratelimiting.NewMiddleware(option)

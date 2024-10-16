@@ -23,6 +23,7 @@ type Options struct {
 	Middlewares     map[string]MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
 	Services        map[string]ServiceOptions   `yaml:"services" json:"services"`
 	Upstreams       map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
+	Redis           []RedisOptions              `yaml:"redis" json:"redis"`
 }
 
 func NewOptions() Options {
@@ -209,4 +210,13 @@ type TLSOptions struct {
 	MinVersion string `yaml:"min_version" json:"min_version"`
 	CertPEM    string `yaml:"cert_pem" json:"cert_pem"`
 	KeyPEM     string `yaml:"key_pem" json:"key_pem"`
+}
+
+type RedisOptions struct {
+	ID       string   `yaml:"id" json:"id"`
+	Addrs    []string `yaml:"addrs" json:"addrs"`
+	Username string   `yaml:"username" json:"username"`
+	Password string   `yaml:"password" json:"password"`
+	DB       int      `yaml:"db" json:"db"`
+	SkipPing bool     `yaml:"skip_ping" json:"skip_ping"`
 }
