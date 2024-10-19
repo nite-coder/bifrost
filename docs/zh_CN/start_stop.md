@@ -1,6 +1,6 @@
-# 啟動與結束 API Gateway
+# 啟動與結束
 
-Bifrost 支持 command line 的啟動、檢查等功能，完整的 API Gateway
+Bifrost 支持 command line 的啟動、檢查等功能，完整的 API Gateway 可以參考 [Gateway](./../../examples/gateway/main.go)
 
 ## 啟動
 
