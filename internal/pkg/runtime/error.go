@@ -1,4 +1,4 @@
-package grpc
+package runtime
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func getStackTrace() string {
+func StackTrace() string {
 	stackBuf := make([]uintptr, 50)
 	length := runtime.Callers(3, stackBuf)
 	stack := stackBuf[:length]

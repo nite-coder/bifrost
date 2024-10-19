@@ -13,9 +13,7 @@ import (
 	"os/signal"
 	"os/user"
 	"path/filepath"
-	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -43,28 +41,6 @@ func isValidHTTPMethod(method string) bool {
 	default:
 		return false
 	}
-}
-
-func getStackTrace() string {
-	stackBuf := make([]uintptr, 50)
-	length := runtime.Callers(3, stackBuf)
-	stack := stackBuf[:length]
-
-	var b strings.Builder
-	frames := runtime.CallersFrames(stack)
-
-	for {
-		frame, more := frames.Next()
-
-		if !strings.Contains(frame.File, "runtime/") {
-			_, _ = b.WriteString(fmt.Sprintf("\n\tFile: %s, Line: %d. Function: %s", frame.File, frame.Line, frame.Function))
-		}
-
-		if !more {
-			break
-		}
-	}
-	return b.String()
 }
 
 // Run starts the bifrost server with the given options.
@@ -160,16 +136,21 @@ func Run(mainOptions config.Options) (err error) {
 		}
 	}()
 
+	var sigl os.Signal
 	defer func() {
 		// shutdown bifrost
-		_ = shutdown(ctx)
+		if sigl == syscall.SIGINT {
+			_ = shutdown(ctx, true)
+			return
+		}
+		_ = shutdown(ctx, false)
 	}()
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	<-sigChan
+	sigl = <-sigChan
 
-	slog.Debug("received shutdown signal", "pid", os.Getpid())
+	slog.Debug("received shutdown signal", "signal", sigl, "pid", os.Getpid())
 	return nil
 }
 
@@ -281,9 +262,17 @@ func Upgrade(mainOptions config.Options) error {
 	return nil
 }
 
-func shutdown(ctx context.Context) error {
+func shutdown(ctx context.Context, now bool) error {
 	if bifrost != nil {
-		if err := bifrost.Shutdown(ctx); err != nil {
+		var err error
+
+		if now {
+			err = bifrost.ShutdownNow(ctx)
+		} else {
+			err = bifrost.Shutdown(ctx)
+		}
+
+		if err != nil {
 			slog.ErrorContext(ctx, "failed to shutdown server", "error", err)
 			return err
 		}

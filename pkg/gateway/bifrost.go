@@ -50,6 +50,14 @@ func (b *Bifrost) Stop() {
 }
 
 func (b *Bifrost) Shutdown(ctx context.Context) error {
+	return b.shutdown(ctx, false)
+}
+
+func (b *Bifrost) ShutdownNow(ctx context.Context) error {
+	return b.shutdown(ctx, true)
+}
+
+func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 	b.Stop()
 
 	wg := &sync.WaitGroup{}
@@ -78,9 +86,10 @@ func (b *Bifrost) Shutdown(ctx context.Context) error {
 		}(server)
 	}
 
+	if now {
+		maxTimeout = 500 * time.Millisecond
+	}
 	waitTimeout(wg, maxTimeout)
-
-	slog.Debug("http server is closed")
 	return b.zero.Close(ctx)
 }
 

@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/proxy"
@@ -150,7 +151,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			stackTrace := getStackTrace()
+			stackTrace := runtime.StackTrace()
 			logger.ErrorContext(ctx, "proxy: grpc proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
 			c.Abort()
 		}

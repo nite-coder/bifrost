@@ -22,7 +22,7 @@ require (
 	github.com/hertz-contrib/websocket v0.1.0
 	github.com/nite-coder/blackbear v0.0.0-20240930140346-76863193d6d4
 	github.com/ory/dockertest/v3 v3.11.0
-	github.com/prometheus/client_golang v1.20.4
+	github.com/prometheus/client_golang v1.20.5
 	github.com/redis/go-redis/v9 v9.6.2
 	github.com/rs/dnscache v0.0.0-20230804202142-fc85eb664529
 	github.com/stretchr/testify v1.9.0

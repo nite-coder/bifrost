@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/proxy"
@@ -138,7 +139,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		defer func() {
 			done <- true
 			if r := recover(); r != nil {
-				stackTrace := getStackTrace()
+				stackTrace := runtime.StackTrace()
 				logger.ErrorContext(c, "service panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
 				ctx.Abort()
 			}

@@ -131,7 +131,7 @@ func TestBifrost(t *testing.T) {
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
-		_ = bifrost.Shutdown(ctx)
+		_ = bifrost.ShutdownNow(ctx)
 
 		ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
