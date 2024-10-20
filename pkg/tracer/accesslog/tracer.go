@@ -58,7 +58,7 @@ func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 	writer := bufio.NewWriterSize(logFile, opts.BufferSize)
 
 	if opts.Flush.Seconds() <= 0 {
-		opts.Flush = 1 * time.Second
+		opts.Flush = 1 * time.Minute
 	}
 
 	tracer := &Tracer{

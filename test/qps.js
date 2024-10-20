@@ -5,11 +5,11 @@ export const options = {
     scenarios: {
         constant_request_rate: {
             executor: 'constant-arrival-rate',
-            rate: 50000,
+            rate: 10000,
             timeUnit: '1s',
             duration: '10s',
-            preAllocatedVUs: 500,
-            maxVUs: 500,
+            preAllocatedVUs: 100,
+            maxVUs: 100,
         },
     },
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(75)', 'p(95)', 'p(99)', 'count'],

@@ -218,7 +218,7 @@ func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		if ctx.Response.StatusCode() >= 500 {
 			err := p.AddFailedCount(1)
 			if err != nil {
-				slog.Warn("upstream server temporarily disabled")
+				slog.Warn("upstream server temporarily disabled", "id", p.id)
 			}
 		}
 	}()

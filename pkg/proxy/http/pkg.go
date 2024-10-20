@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/protocol"
@@ -33,9 +32,9 @@ func JoinURLPath(req *protocol.Request, target string) (path []byte) {
 		// default redirect to local
 		bslash = strings.HasPrefix(target, "/")
 		if bslash {
-			target = fmt.Sprintf("%s%s", req.Host(), target)
+			target = string(req.Host()) + target
 		} else {
-			target = fmt.Sprintf("%s/%s", req.Host(), target)
+			target = string(req.Host()) + "/" + target
 		}
 		bslash = strings.HasSuffix(target, "/")
 	}

@@ -74,7 +74,6 @@ providers:
 | extensions | `.yaml`,`.yml`, `json` | 哪些檔案的附檔名才可以被載入                                 |
 | paths      | `.`                    | 有哪些目錄或檔案文件需要被載入, 如果沒有配置則為當前目錄路徑 |
 
-
 ## logging
 
 錯誤日誌
@@ -169,6 +168,7 @@ access_logs:
     buffering_size: 65536
     time_format: "2006-01-02T15:04:05"
     escape: json
+    flush: 1m
     template: >
       {"time":"$time",
       "remote_addr":"$remote_addr",
@@ -193,6 +193,7 @@ access_logs:
 | time_format    |        | 時間格式                                     |
 | escape         | none   | 字元跳脫; 目前支持 `none`, `json`, `default` |
 | template       |        | 請求日誌格式                                 |
+| flush          | 1m     | 定時多久把日誌寫入到 disk                    |
 
 ## servers
 
