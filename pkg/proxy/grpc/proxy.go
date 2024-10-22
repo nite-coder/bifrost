@@ -17,6 +17,8 @@ import (
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/timecache"
+	"github.com/nite-coder/bifrost/pkg/variable"
+	"github.com/nite-coder/blackbear/pkg/cast"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
@@ -284,7 +286,8 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 
 	logger := log.FromContext(ctx)
 
-	originalPath := c.GetString(config.REQUEST_PATH)
+	val, _ := variable.Get(config.REQUEST_PATH, c)
+	originalPath, _ := cast.ToString(val)
 
 	st, ok := status.FromError(err)
 	if !ok {

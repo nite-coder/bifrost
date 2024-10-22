@@ -44,12 +44,15 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case config.ClientIP:
 		return c.ClientIP(), true
 	case config.HOST:
-		host := c.GetString(config.HOST)
+		val, found := c.Get(config.HOST)
 
-		if host == "" {
-			host = string(c.Request.Host())
+		if found {
+			b := val.([]byte)
+			host := cast.B2S(b)
+			return host, true
 		}
 
+		host := string(c.Request.Host())
 		return host, true
 	case config.SERVER_ID:
 		serverID := c.GetString(config.SERVER_ID)
@@ -88,12 +91,15 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case config.REQUEST_PROTOCOL:
 		return c.Request.Header.GetProtocol(), true
 	case config.REQUEST_PATH:
-		path := c.GetString(config.REQUEST_PATH)
+		val, found := c.Get(config.REQUEST_PATH)
 
-		if path == "" {
-			path = string(c.Request.URI().Path())
+		if found {
+			b := val.([]byte)
+			path := cast.B2S(b)
+			return path, true
 		}
 
+		path := string(c.Request.Path())
 		return path, true
 	case config.REQUEST_METHOD:
 		method := string(c.Request.Method())

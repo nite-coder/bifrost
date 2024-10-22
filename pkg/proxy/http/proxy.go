@@ -19,6 +19,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/timecache"
+	"github.com/nite-coder/bifrost/pkg/variable"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
@@ -374,7 +375,9 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 	logger := log.FromContext(ctx)
 
 	fullURI := fullURI(&c.Request)
-	originalPath := c.GetString(config.REQUEST_PATH)
+
+	val, _ := variable.Get(config.REQUEST_PATH, c)
+	originalPath, _ := cast.ToString(val)
 
 	logger.ErrorContext(ctx, "fail to send request to upstream",
 		slog.String("error", err.Error()),

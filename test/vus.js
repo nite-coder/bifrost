@@ -10,7 +10,7 @@ export const options = {
         },
     },
     insecureSkipTLSVerify: true,
-    summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(75)', 'p(95)', 'p(99)', 'count'],
+    summaryTrendStats: ['avg', 'min', 'max', 'p(50)', 'p(75)', 'p(95)', 'p(99)', 'count'],
 };
 
 export default function () {

@@ -15,6 +15,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/timecache"
+	"github.com/nite-coder/bifrost/pkg/variable"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
@@ -152,7 +153,8 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			}
 			replacements = append(replacements, config.REMOTE_ADDR, ip)
 		case config.HOST:
-			host := c.GetString(config.HOST)
+			val, _ := variable.Get(config.HOST, c)
+			host, _ := cast.ToString(val)
 			replacements = append(replacements, config.HOST, host)
 		case config.REQUEST_METHOD:
 			replacements = append(replacements, config.REQUEST_METHOD, cast.B2S(c.Request.Method()))
@@ -162,9 +164,9 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 
 			val, found := c.Get(config.REQUEST_PATH)
 			if found {
-				path, ok := val.(string)
+				b, ok := val.([]byte)
 				if ok {
-					_, _ = buf.WriteString(path)
+					_, _ = buf.Write(b)
 					if len(c.Request.QueryString()) > 0 {
 						_, _ = buf.Write(questionByte)
 						_, _ = buf.Write(c.Request.QueryString())
@@ -183,7 +185,8 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			replacements = append(replacements, config.REQUEST_URI, buf.String())
 
 		case config.REQUEST_PATH:
-			path := c.GetString(config.REQUEST_PATH)
+			val, _ := variable.Get(config.REQUEST_PATH, c)
+			path, _ := cast.ToString(val)
 			replacements = append(replacements, config.REQUEST_PATH, path)
 		case config.REQUEST_PROTOCOL:
 			replacements = append(replacements, config.REQUEST_PROTOCOL, c.Request.Header.GetProtocol())

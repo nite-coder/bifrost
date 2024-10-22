@@ -43,7 +43,8 @@ func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	ctx.Set(config.SERVER_ID, m.serverID)
 
 	// save original host
-	host := string(ctx.Request.Host())
+	host := make([]byte, len(ctx.Request.Host()))
+	copy(host, ctx.Request.Host())
 	ctx.Set(config.HOST, host)
 
 	if len(ctx.Request.Header.Get("X-Forwarded-For")) > 0 {
@@ -51,7 +52,9 @@ func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	}
 
 	// save original path
-	ctx.Set(config.REQUEST_PATH, string(ctx.Request.Path()))
+	path := make([]byte, len(ctx.Request.Path()))
+	copy(path, ctx.Request.Path())
+	ctx.Set(config.REQUEST_PATH, path)
 
 	// add trace_id to logger
 	spanCtx := trace.SpanContextFromContext(c)

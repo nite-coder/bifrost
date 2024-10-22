@@ -5,6 +5,8 @@ import (
 	"strconv"
 
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/variable"
+	"github.com/nite-coder/blackbear/pkg/cast"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
@@ -30,7 +32,8 @@ func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(c.Response.Header.StatusCode()), unknownLabelValue)
 
-	originalPath := c.GetString(config.REQUEST_PATH)
+	val, _ := variable.Get(config.REQUEST_PATH, c)
+	originalPath, _ := cast.ToString(val)
 	labels[labelPath] = defaultValIfEmpty(originalPath, unknownLabelValue)
 
 	return labels
