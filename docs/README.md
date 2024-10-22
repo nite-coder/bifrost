@@ -1,10 +1,10 @@
 # Bifrost
 
-## 架構
+## Overview
 
 ![flow](/docs/images/bifrost_arch.png)
 
-## 目錄
+## Index
 
 1. [Get Started](./get_started.md)
 1. [Configuration](./configuration.md)
