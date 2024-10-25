@@ -20,6 +20,7 @@ import (
 
 	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/cloudwego/hertz/pkg/protocol"
+	"github.com/cloudwego/netpoll"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/zero"
 	"github.com/valyala/bytebufferpool"
@@ -50,6 +51,17 @@ func isValidHTTPMethod(method string) bool {
 func Run(mainOptions config.Options) (err error) {
 	if !mainOptions.Gopool {
 		_ = DisableGopool()
+	}
+
+	netpollConfig := netpoll.Config{}
+
+	if mainOptions.PollerNum > 0 {
+		netpollConfig.PollerNum = mainOptions.PollerNum
+	}
+
+	err = netpoll.Configure(netpollConfig)
+	if err != nil {
+		return err
 	}
 
 	bifrost, err = NewBifrost(mainOptions, false)

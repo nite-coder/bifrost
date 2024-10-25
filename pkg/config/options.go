@@ -8,6 +8,7 @@ type Options struct {
 	PIDFile         string                      `yaml:"pid_file" json:"pid_file"`
 	UpgradeSock     string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
 	Gopool          bool                        `yaml:"gopool" json:"gopool"`
+	PollerNum       int                         `yaml:"poller_num" json:"poller_num"`
 	Watch           *bool                       `yaml:"watch" json:"watch"`
 	IsDaemon        bool                        `yaml:"-" json:"-"`
 	User            string                      `yaml:"user" json:"user"`
