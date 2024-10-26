@@ -77,9 +77,19 @@ func startRedisCluster(t *testing.T) func() {
 		t.Fatalf("Failed to start Dockertest: %+v", err)
 	}
 
-	network, err := pool.CreateNetwork("redis-cluster-network")
+	networks, err := pool.NetworksByName("redis-cluster-network")
 	if err != nil {
-		t.Fatalf("Could not create docker network: %s", err)
+		t.Fatalf("Could not find docker network: %s", err)
+	}
+
+	var network *dockertest.Network
+	if len(networks) > 0 {
+		network = &networks[0]
+	} else {
+		network, err = pool.CreateNetwork("redis-cluster-network")
+		if err != nil {
+			t.Fatalf("Could not create docker network: %s", err)
+		}
 	}
 
 	node0, err := pool.RunWithOptions(&dockertest.RunOptions{

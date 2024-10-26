@@ -1,24 +1,19 @@
 package accesslog
 
 import (
-	"bufio"
 	"bytes"
 	"context"
-	"log/slog"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/bytedance/sonic"
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/variable"
-
-	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
 )
@@ -26,9 +21,7 @@ import (
 type Tracer struct {
 	opts      config.AccessLogOptions
 	matchVars []string
-	logChan   chan []string
-	logFile   *os.File
-	writer    *bufio.Writer
+	writer    *BufferedLogger
 }
 
 func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
@@ -39,61 +32,16 @@ func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 	words := strings.Fields(opts.Template)
 	opts.Template = strings.Join(words, " ") + "\n"
 
-	var err error
-	var logFile *os.File
-
-	switch opts.Output {
-	case "stderr", "":
-		logFile = os.Stderr
-	default:
-		logFile, err = os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if opts.BufferSize <= 0 {
-		opts.BufferSize = 64 * 1024
-	}
-
-	writer := bufio.NewWriterSize(logFile, opts.BufferSize)
-
-	if opts.Flush.Seconds() <= 0 {
-		opts.Flush = 1 * time.Minute
+	bufferedLogger, err := NewBufferedLogger(opts)
+	if err != nil {
+		return nil, err
 	}
 
 	tracer := &Tracer{
 		opts:      opts,
-		logChan:   make(chan []string, 1000000),
 		matchVars: parseVariables(opts.Template),
-		logFile:   logFile,
-		writer:    writer,
+		writer:    bufferedLogger,
 	}
-
-	go func(t *Tracer) {
-		flushTimer := time.NewTimer(opts.Flush)
-
-		for {
-			flushTimer.Reset(opts.Flush)
-
-			select {
-			case server, ok := <-t.logChan:
-				if !ok {
-					// Channel closed, flush remaining data
-					_ = writer.Flush()
-					_ = t.logFile.Sync()
-					return
-				}
-
-				replacer := strings.NewReplacer(server...)
-				result := replacer.Replace(opts.Template)
-				_, _ = writer.WriteString(result)
-			case <-flushTimer.C:
-				_ = writer.Flush()
-				_ = t.logFile.Sync()
-			}
-		}
-	}(tracer)
 
 	return tracer, nil
 }
@@ -103,31 +51,25 @@ func (t *Tracer) Start(ctx context.Context, c *app.RequestContext) context.Conte
 }
 
 func (t *Tracer) Finish(ctx context.Context, c *app.RequestContext) {
-	result := t.buildReplacer(c)
-	if result == nil {
+	vals := t.buildReplacer(c)
+	if vals == nil {
 		return
 	}
 
-	select {
-	case t.logChan <- result:
-	case <-time.After(1 * time.Second):
-		slog.Info("access log queue is full", "length", len(t.logChan))
-	}
+	replacer := strings.NewReplacer(vals...)
+	result := replacer.Replace(t.opts.Template)
+	t.writer.Write(result)
 }
 
-func (t *Tracer) Shutdown() {
-	close(t.logChan)
-	t.writer.Flush()
-	_ = t.logFile.Sync()
-	t.logFile.Close()
+func (t *Tracer) Close() error {
+	return t.writer.Close()
 }
 
 func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
-	// TODO: there is a weird request without any information...
-	// therefore, we try to get trace info to ensure the request is real
 	httpStats := c.GetTraceInfo().Stats()
 	httpStart := httpStats.GetEvent(stats.HTTPStart)
 	if httpStart == nil {
+		// if the request is closed, the `Finish` is called, and HTTPStart event will be nil
 		return nil
 	}
 
@@ -337,35 +279,47 @@ func escapeString(s string) string {
 	return b.String()
 }
 
+// For json escaping, all characters not allowed in JSON strings will be escaped: characters “"” and “\” are escaped as “\"” and “\\”,
+// characters with values less than 32 are escaped as “\n”, “\r”, “\t”, “\b”, “\f”, or “\u00XX”.
 func escapeJSON(comp string) string {
-	b, _ := sonic.Marshal(comp)
-	return string(b[1 : len(b)-1])
+	for i := 0; i < len(comp); i++ {
+		if needsEscape(comp[i]) {
+			ncomp := make([]byte, 0, len(comp)*2) // allocate enough space
+			ncomp = append(ncomp, comp[:i]...)
+
+			for ; i < len(comp); i++ {
+				switch comp[i] {
+				case '"':
+					ncomp = append(ncomp, '\\', '"')
+				case '\\':
+					ncomp = append(ncomp, '\\', '\\')
+				case '\n':
+					ncomp = append(ncomp, '\\', 'n')
+				case '\r':
+					ncomp = append(ncomp, '\\', 'r')
+				case '\t':
+					ncomp = append(ncomp, '\\', 't')
+				case '\b':
+					ncomp = append(ncomp, '\\', 'b')
+				case '\f':
+					ncomp = append(ncomp, '\\', 'f')
+				default:
+					if comp[i] < 32 {
+						ncomp = append(ncomp, '\\', 'u', '0', '0',
+							hexChars[comp[i]>>4], hexChars[comp[i]&0xF])
+					} else {
+						ncomp = append(ncomp, comp[i])
+					}
+				}
+			}
+			return string(ncomp)
+		}
+	}
+	return comp
 }
 
-// TODO: replace json.Marshal for better performance
-// // escapeJSON function to escape characters for JSON strings
-// func escapeJSON(comp string) string {
-// 	for i := 0; i < len(comp); i++ {
-// 		if !isSafePathKeyChar(comp[i]) {
-// 			ncomp := make([]byte, len(comp)+1)
-// 			copy(ncomp, comp[:i])
-// 			ncomp = ncomp[:i]
-// 			for ; i < len(comp); i++ {
-// 				if !isSafePathKeyChar(comp[i]) {
-// 					ncomp = append(ncomp, '\\')
-// 				}
-// 				ncomp = append(ncomp, comp[i])
-// 			}
-// 			return string(ncomp)
-// 		}
-// 	}
-// 	return comp
-// }
+func needsEscape(c byte) bool {
+	return c == '"' || c == '\\' || c < 32
+}
 
-// // isSafePathKeyChar returns true if the input character is safe for not
-// // needing escaping.
-// func isSafePathKeyChar(c byte) bool {
-// 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-// 		(c >= '0' && c <= '9') || c <= ' ' || c > '~' || c == '_' ||
-// 		c == '-' || c == ':' || c == '{' || c == '}'
-// }
+var hexChars = []byte("0123456789ABCDEF")
