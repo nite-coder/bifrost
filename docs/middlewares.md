@@ -1,20 +1,20 @@
-# 中間件 (Middlewares)
+# Middlewares
 
-目前 bifrost 是支持一些內建的中間件與自定義中間件，在 `servers`、`routes`、`services` 這三個配置內可以使用。
+Bifrost supports both built-in and custom middlewares that can be applied within `servers`, `routes`, and `services` configurations.
 
-* `servers`: 這代表每一個 HTTP 請求通過這個 server 進來的，將會執行這個中間件
-* `routes`: 這代表符合這個路由的請求，將會執行這個中間件
-* `services`: 這代表符合這個業務服務的請求，將會執行這個中間件
+* `servers`: Middleware in this scope is executed for every HTTP request that passes through this server.
+* `routes`: Middleware applied here will execute for requests matching this route.
+* `services`: Middleware applied here will execute for requests matching this business service.
 
-另外也可以直接使用原生 Golang 來開發自定義中間件
+You can also develop custom middlewares directly in native Golang.
 
-## 內建中間件
+## Built-In Middlewares
 
-目前支持的中間件有下面
+Currently supported middleware options are listed below.
 
-## 自定義中間件
+## Custom Middlewares
 
-因為 bifrost 底層使用 `hertz` HTTP 框架，所以中間件標準介面可以參考 [Hertz](https://www.cloudwego.io/docs/hertz/overview/)
+Since Bifrost uses the hertz HTTP framework at its core, the middleware interface standards can be found in [Hertz](https://www.cloudwego.io/docs/hertz/overview/)
 
 ```go
 func (m *AddPrefixMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
@@ -22,15 +22,15 @@ func (m *AddPrefixMiddleware) ServeHTTP(c context.Context, ctx *app.RequestConte
 }
 ```
 
-開發自定義中間件，分下面幾個步驟
+To develop a custom middleware, follow these steps:
 
-1. `開發新的中間件`: 新建立一個 middleware，需要實現 ServeHTTP(c context.Context, ctx *app.RequestContext) 介面
-1. `註冊中間件`: 註冊 middleware 到 gateway
-1. `配置中間件`: 依照需求，看要配置 middleware 到 `servers`、`routes`、`services` 哪邊
+1. `Develop a New Middleware`: Create a new middleware implementing the ServeHTTP(c context.Context, ctx *app.RequestContext) interface.
+1. `Register Middleware`: Register the middleware with the gateway.
+1. `Configure Middleware`: Apply the middleware to `servers`、`routes`、`services` as needed.
 
-這邊我們將示範如何建立一個中間件，用來紀錄 HTTP 請求進入與返回的時間，並透過返回的 HTTP Header 告知用戶
+Here’s an example of building a middleware that records the request’s entry and exit time and returns this information in HTTP headers.
 
-### 開發新的中間件
+### Developing a New Middleware
 
 ```golang
 package main
@@ -62,7 +62,7 @@ func (t *TimingMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext)
 }
 ```
 
-### 註冊中間件
+### Registering Middleware
 
 ```golang
 func main() {
@@ -71,7 +71,7 @@ func main() {
   panic(err)
  }
 
- err = registerMiddlewares() // 註冊 middlewares
+ err = registerMiddlewares() // Register middlewares
  if err != nil {
   panic(err)
  }
@@ -83,7 +83,7 @@ func main() {
 }
 
 func registerMiddlewares() error {
-    // timing 是向 gateway 說我們這個 middleware 的 type 名稱, 必須要是唯一值
+    // 'timing' represents the unique identifier for this middleware in the gateway
  err := gateway.RegisterMiddleware("timing", func(param map[string]any) (app.HandlerFunc, error) {
   m := TimingMiddleware{}
   return m.ServeHTTP, nil
@@ -96,9 +96,9 @@ func registerMiddlewares() error {
 }
 ```
 
-### 配置中間件
+### Configuring Middleware
 
-這邊我們配置到 `servers`, 這樣每一個 HTTP 請求的返回 `x-time-in`、`x-time-out` 這兩個 header
+In this example, we configure it for `servers`, which adds the `x-time-in` and `x-time-out` headers to every HTTP response.
 
 ```yaml
 servers:

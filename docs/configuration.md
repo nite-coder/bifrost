@@ -1,11 +1,11 @@
-# 配置文件
+# Configuration File
 
-在配置文件的部分，目前有分兩種類型，`靜態配置` 與`動態配置`。
+This configuration file is divided into two primary types: `static configuration` and `dynamic configuration`.
 
-* `靜態配置`: 這種配置的內容無法動態更新，如果想要更新則必須要重啟服務後配置才會生效，例如更換 servers 端口等
-* `動態配置`: 屬於這一類的配置，當內容修改後，則配置會立即生效，目前只有 `routes`, `services`, `upstreams`, `middlewares` 配置屬於這配置屬於這類型
+* `static configuration`: This configuration does not update dynamically. To apply any changes, the process must be restarted; only then will the configuration take effect. Examples include modifying server ports.
+* `dynamic configuration`: This configuration takes effect immediately upon modification. Currently, only `routes`, `services`, `upstreams`, and `middlewares` fall under this category.
 
-## 目錄
+## Table of Contents
 
 * [watch](#watch)
 * [timer_resolution](#timer_resolution)
@@ -24,15 +24,15 @@
 
 ## watch
 
-是否開啟配置監控，如果當配置文件被修改後, `動態配置` 部分的配置可以立即生效
+Determines if configuration monitoring is enabled. When enabled, `dynamic configuration` changes take effect immediately upon file modification.
 
 ```yaml
-watch: true #立即生效
+watch: true # Immediate effect
 ```
 
 ## timer_resolution
 
-配置網關時間精度，目前預設值是 1 秒，這個配置最低可以調整到 1毫秒 (ms)
+Sets the precision of the gateway's time settings. The default is 1 second, with a minimum setting of 1 millisecond (ms).
 
 ```yaml
 timer_resolution: 1ms
@@ -40,21 +40,21 @@ timer_resolution: 1ms
 
 ## pid_file
 
-當 bifrost 程序是透過背景任務 (daemon) 來運作的，系統會把當前的 `process` 的 pid 記錄到這個檔案中
+When the gateway process runs as a background task (daemon), the system records the current process's PID in this file.
 
 ## upgrade_sock
 
-這個檔案是兩個 bifrost process 再升級的過程中透過 unix socket 來溝通的方式
+Facilitates communication between two gateway processes during upgrades via a UNIX socket.
 
 ## providers
 
-Providers 提供與不同的服務對接，可以用來管理配置文件與服務發現等，目前只支持 `file` Provider
+Providers enable integration with various services, managing configuration files and service discovery. Currently, only the `file` provider is supported.
 
 ### file
 
-可以透過文件來配置網關
+Allows gateway configuration through files.
 
-範例:
+Example:
 
 ```yaml
 providers:
@@ -68,17 +68,17 @@ providers:
       - "./conf"
 ```
 
-| 欄位       | 預設值                 | 說明                                                         |
-| ---------- | ---------------------- | ------------------------------------------------------------ |
-| enabled    | false                  | 是否開啟 file provider                                       |
-| extensions | `.yaml`,`.yml`, `json` | 哪些檔案的附檔名才可以被載入                                 |
-| paths      | `.`                    | 有哪些目錄或檔案文件需要被載入, 如果沒有配置則為當前目錄路徑 |
+| Field      | Default                | Description                                                                |
+| ---------- | ---------------------- | -------------------------------------------------------------------------- |
+| enabled    | false                  | Enables the file provider                                                  |
+| extensions | `.yaml`,`.yml`, `json` | Allowed file extensions                                                    |
+| paths      | `.`                    | Directories or files to load, defaults to current directory if unspecified |
 
 ## logging
 
-錯誤日誌
+Error logging configuration.
 
-範例:
+Example:
 
 ```yaml
 logging:
@@ -87,17 +87,17 @@ logging:
   output: stderr
 ```
 
-| 欄位    | 預設值 | 說明                                                                  |
-| ------- | ------ | --------------------------------------------------------------------- |
-| handler | text   | 日誌格式，目前支持的格式有 `text`, `json`                             |
-| level   |        | 日誌等級，目前支持的有 `debug`, `info`, `warn`, `error`，預設是不開啟 |
-| output  | `.`    | 日誌輸出地方，目前有 `stderr`，文件路徑                               |
+| Field   | Default | Description                                                                      |
+| ------- | ------- | -------------------------------------------------------------------------------- |
+| handler | text    | Log format; supports `text` and `json`                                           |
+| level   |         | Log level; options are  `debug`, `info`, `warn`, `error`. Not enabled by default |
+| output  | `.`     | Log output location, currently supports `stderr` or file path                    |
 
 ## metrics
 
-監控指標，目前支持 `prometheus`
+Monitoring indicators; currently supports `prometheus`.
 
-範例:
+Example:
 
 ```yaml
 metrics:
@@ -106,16 +106,16 @@ metrics:
     buckets: [0.005000, 0.010000, 0.025000, 0.050000, 0.10000, 0.250000, 0.500000, 1.00000, 2.50000, 5.000000, 10.000000]
 ```
 
-| 欄位               | 預設值                                                                                                     | 說明                     |
-| ------------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------ |
-| prometheus.enabled | false                                                                                                      | 是否開啟 prometheus 支持 |
-| prometheus.buckets | 0.005000, 0.010000, 0.025000, 0.050000, 0.10000, 0.250000, 0.500000, 1.00000, 2.50000, 5.000000, 10.000000 | 延遲等級分類             |
+| Field              | Default                                                                                                    | Description                |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- | -------------------------- |
+| prometheus.enabled | false                                                                                                      | Enables prometheus support |
+| prometheus.buckets | 0.005000, 0.010000, 0.025000, 0.050000, 0.10000, 0.250000, 0.500000, 1.00000, 2.50000, 5.000000, 10.000000 | Latency bucket levels      |
 
 ## tracing
 
-鏈路追蹤，目前支持 `opentelemetry` 標準，這邊的配置只包含把日誌往 otel server 傳遞，如需要開啟鏈路追蹤功能需要搭配 `tracing` 的中間件
+Supports `opentelemetry` for tracing, passing logs to an otel collector server. To enable tracing features, configure it with the tracing middleware.
 
-範例:
+Example:
 
 ```yaml
 tracing:
@@ -129,40 +129,40 @@ tracing:
       insecure: true
 ```
 
-| 欄位               | 預設值 | 說明                                |
-| ------------------ | ------ | ----------------------------------- |
-| otlp.enabled       | false  | 是否開啟 opentelemetry tracing 支持 |
-| otlp.http.endpoint |        | otlp collector http 端口            |
-| otlp.http.insecure | false  | 是否驗證憑證                        |
-| otlp.grpc.endpoint |        | otlp collector grpc 端口            |
-| otlp.grpc.insecure | false  | 是否驗證憑證                        |
+| Field              | Default | Description                           |
+| ------------------ | ------- | ------------------------------------- |
+| otlp.enabled       | false   | Enables opentelemetry tracing support |
+| otlp.http.endpoint |         | otlp collector http port              |
+| otlp.http.insecure | false   | Certificate verification              |
+| otlp.grpc.endpoint |         | otlp collector grpc port              |
+| otlp.grpc.insecure | false   | Certificate verification              |
 
 ## middlewares
 
-中間件(插件)，支持使用原生 Golang 開發自定義外部中間件，細節可以參考[中間件](./middlewares.md)
+Supports custom middleware development with Golang for external middleware. Details are available in the [middlewares](./middlewares.md)
 
-範例:
+Example:
 
 ```yaml
 middlewares:
-  timing:  #中間件名稱，必須是唯一值
+  timing:  # Middleware name, must be unique
     type: timing_logger
 ```
 
-| 欄位   | 預設值 | 說明           |
-| ------ | ------ | -------------- |
-| type   |        | 中間件類型     |
-| params |        | 中間件配置參數 |
+| Field  | Default | Description           |
+| ------ | ------- | --------------------- |
+| type   |         | Middleware type       |
+| params |         | Middleware parameters |
 
 ## access_logs
 
-請求日誌; 詳細變量支持可參考[請求日誌](./access_logs.md)
+Request logging; variables are detailed in the [access logs](./access_logs.md)
 
-範例:
+Example:
 
 ```yaml
 access_logs:
-  my_access_log: #請求日誌名稱, 可透過名稱複用，必須是唯一值
+  my_access_log: # Unique request log name for reuse
     enabled: true
     output: stderr
     buffering_size: 65536
@@ -185,23 +185,23 @@ access_logs:
       "trace_id":"$trace_id"}
 ```
 
-| 欄位           | 預設值 | 說明                                         |
-| -------------- | ------ | -------------------------------------------- |
-| enabled        | false  | 是否開啟請求日誌                             |
-| output         |        | 輸出; 目前支持 `stderr` 或文件路徑           |
-| buffering_size | 64 KB  | 輸出緩衝；單位 byte                          |
-| time_format    |        | 時間格式                                     |
-| escape         | none   | 字元跳脫; 目前支持 `none`, `json`, `default` |
-| template       |        | 請求日誌格式                                 |
-| flush          | 1m     | 定時多久把日誌寫入到 disk                    |
+| Field          | Default | Description                                              |
+| -------------- | ------- | -------------------------------------------------------- |
+| enabled        | false   | Enables request logging                                  |
+| output         |         | Output location; supports `stderr` or file path          |
+| buffering_size | 64 KB   | Output buffer size, in bytes                             |
+| time_format    |         | Time format                                              |
+| escape         | none    | Escape characters; options are `none`, `json`, `default` |
+| template       |         | Request log format                                       |
+| flush          | 1m      | Time interval for writing logs to disk                   |
 
 ## servers
 
-服務器組態，支持 `middlwares` 使用，用來控制哪個端口需要對外等，`server` 名稱必須是唯一值
+Server configuration, supporting `middlewares` for port control and other settings. Server names must be unique.
 
 ```yaml
 servers:
-  my-wallet:  # server 名稱必須是唯一值
+  my-wallet:  # Unique server name
     bind: ":8001"
     reuse_port: false
     tcp_fast_open: false
@@ -221,30 +221,30 @@ servers:
       - type: tracing
 ```
 
-| 欄位              | 預設值 | 說明                                                                  |
-| ----------------- | ------ | --------------------------------------------------------------------- |
-| bind              |        | 端口綁定                                                              |
-| reuse_port        | false  | 是否使用 reuse port; (僅支持 linux)                                   |
-| tcp_fast_open     | false  | 是否開啟 tcp fast open; (僅支持 linux)                                |
-| tcp_quick_ack     | false  | 是否開啟 tcp quickack (僅支持 linux)                                  |
-| backlog           |        | 限制 tcp backlog 數量 (僅支持 linux)                                  |
-| http2             | false  | 是否開啟 http2                                                        |
-| logging.handler   | text   | 日誌格式，目前支持的格式有 `text`, `json`                             |
-| logging.level     | ""     | 日誌等級，目前支持的有 `debug`, `info`, `warn`, `error`，預設是不開啟 |
-| logging.output    | `.`    | 日誌輸出地方，目前有 `stderr`，文件路徑                               |
-| timeout.keepalive | 60s    | keepalive 超時時間                                                    |
-| timeout.read      | 60s    | 讀取的超時時間                                                        |
-| timeout.write     | 60s    | 寫入的超時時間                                                        |
-| timeout.graceful  | 10s    | 優雅關閉的超時時間                                                    |
-| access_log_id     |        | 使用哪個請求日誌                                                      |
+| Field             | Default | Description                                                                     |
+| ----------------- | ------- | ------------------------------------------------------------------------------- |
+| bind              |         | Port binding                                                                    |
+| reuse_port        | false   | Enables reuse port; Linux only                                                  |
+| tcp_fast_open     | false   | Enables TCP fast open; Linux only                                               |
+| tcp_quick_ack     | false   | Enables TCP quick ack; Linux only                                               |
+| backlog           |         | Limits TCP backlog count; Linux only                                            |
+| http2             | false   | Enables HTTP2                                                                   |
+| logging.handler   | text    | Log format; supports `text`, `json`                                             |
+| logging.level     | ""      | Log level; options are `debug`, `info`, `warn`, `error`. Not enabled by default |
+| logging.output    | `.`     | Log output location; `stderr` or file path                                      |
+| timeout.keepalive | 60s     | Keepalive timeout                                                               |
+| timeout.read      | 60s     | Read timeout                                                                    |
+| timeout.write     | 60s     | Write timeout                                                                   |
+| timeout.graceful  | 10s     | Graceful shutdown timeout                                                       |
+| access_log_id     |         | Specifies the access log to use                                                 |
 
 ## routes
 
-路由組態，用來控制請求路徑的轉發規則到哪一個 `service` 上，支持 middlwares 使用，路由名稱必須是唯一值，更詳細的用法可以參考[路由用法](./routes.md)
+Routing configuration, controlling request path forwarding rules to a specified `service`. Supports middlewares. Route names must be unique. Details in the [Routing Guide](./routes.md)
 
 ```yaml
 routes:
-  spot-orders: # 路由名稱必須是唯一值
+  spot-orders: # Unique route name
     methods: []
     paths:
       - /api/v1
@@ -254,20 +254,20 @@ routes:
       - type: tracing
 ```
 
-| 欄位       | 預設值 | 說明                                                              |
-| ---------- | ------ | ----------------------------------------------------------------- |
-| methods    |        | http method; 為空則支持全部 http method                           |
-| paths      |        | http path                                                         |
-| servers    |        | 選擇路由要套用到哪個 server 端口上，如果為空則全部 servers 都支持 |
-| service_id |        | 服務 ID                                                           |
+| Field      | Default | Description                                      |
+| ---------- | ------- | ------------------------------------------------ |
+| methods    |         | HTTP methods; if empty, all methods supported    |
+| paths      |         | http path                                        |
+| servers    |         | Servers to apply the route; all servers if empty |
+| service_id |         | Service ID                                       |
 
 ## services
 
-業務服務組態，用來控制服務配置，例如協議資訊等，不同業務可以共用同一個 `upstream`，同時可以依照業務屬性配置不同的 service 參數等，服務名稱必須要是唯一值
+Defines business services, managing configuration, protocol details, and other settings. Services can share the same `upstream`. Service names must be unique.
 
 ```yaml
 services:
-  api-service: # 服務名稱必須是唯一值
+  api-service: # Unique service name
     timeout:
       read: 3s
       write: 3s
@@ -279,25 +279,25 @@ services:
     url: http://test-server:8000
 ```
 
-| 欄位               | 預設值 | 說明                                          |
-| ------------------ | ------ | --------------------------------------------- |
-| timeout.read       | 60s    | 讀取的超時時間                                |
-| timeout.write      | 60s    | 寫入的超時時間                                |
-| timeout.idle       | 60s    | 閒置超時時間                                  |
-| timeout.dail       | 60s    | 撥接超時時間                                  |
-| timeout.grpc       | 0      | `grpc` 請求超時時間                           |
-| max_conns_per_host | 1024   | 連線上游每台主機的最多連線數                  |
-| tls_verify         | false  | 是否驗證憑證                                  |
-| protocol           | http   | 轉發上游協議; 支持 `http`, `http2`, `grpc`    |
-| url                |        | 轉發上游路徑，支持使用 `upstream` 名稱當 host |
+| Field              | Default | Description                                                  |
+| ------------------ | ------- | ------------------------------------------------------------ |
+| timeout.read       | 60s     | Read timeout                                                 |
+| timeout.write      | 60s     | Write timeout                                                |
+| timeout.idle       | 60s     | Idle timeout                                                 |
+| timeout.dail       | 60s     | Dial timeout                                                 |
+| timeout.grpc       | 0       | `grpc` request timeout                                       |
+| max_conns_per_host | 1024    | Maximum connections per host, no limit if `0`                |
+| tls_verify         | false   | Validates server certificate                                 |
+| protocol           | http    | Protocol for upstream, `http`, `http2`, `grpc` are supported |
+| url                |         | Upstream URL                                                 |
 
 ## upstreams
 
-上游組態，用來控制後端主機的負載均衡規則等，上游名稱必須是唯一值
+The upstream configuration defines load balancing rules for backend servers. The upstream name must be unique.
 
 ```yaml
 upstreams:
-  test-server: # 上游名稱必須是唯一值
+  test-server: # Unique upstream name
     strategy: "round_robin"
     hash_on: ""
     targets:
@@ -307,11 +307,11 @@ upstreams:
         weight: 1
 ```
 
-| 欄位                 | 預設值      | 說明                                                                 |
-| -------------------- | ----------- | -------------------------------------------------------------------- |
-| strategy             | round_robin | 負載均衡算法; 目前支持`round_robin`、`random`、`weighted`、`hashing` |
-| hash_on              |             | 依照哪個變量來計算哈希負載均衡，僅當 strategy 為 `hashing` 生效      |
-| targets.target       |             | 目標 IP                                                              |
-| targets.max_fails    | 0           | 失敗次數; `0`- 無限制                                                |
-| targets.fail_timeout | 10s         | 失敗次數的有效時間範圍                                               |
-| targets.weight       | 1           | 權重                                                                 |
+| Field                | Default     | Description                                                                          |
+| -------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| strategy             | round_robin | Load balancing algorithm; supports `round_robin`、`random`、`weighted`、`hashing`    |
+| hash_on              |             | Variable used for hash-based load balancing, effective only if strategy is `hashing` |
+| targets.target       |             | Target IP                                                                            |
+| targets.max_fails    | 0           | Maximum failure count; `0` - indicates no limit                                      |
+| targets.fail_timeout | 10s         | Time window for tracking failure counts                                              |
+| targets.weight       | 1           | Weight for load balancing                                                            |

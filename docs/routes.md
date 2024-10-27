@@ -1,19 +1,19 @@
-# 路由 (Routes)
+# Routes
 
-Bifrost 的路由設計跟 nginx 類似，主要分四種
+Bifrost's routing design is similar to NGINX, with four main types:
 
-1. 精準匹配 `=` ( exact match )
-1. 前缀匹配 `^=` ( prefix match )
-1. 正则匹配 `~`( regexp Match )
-1. 通用匹配 （genernal Match）
+1. Exact match `=`
+1. Prefix match `^=`
+1. Regular expression match `~`
+1. General match
 
-## 匹配優先順序
+## Match Priority
 
-精準匹配 > 前缀匹配 > 正则匹配 > 通配符匹配
+Exact match > Prefix match > Regular expression match > General match
 
-### 精準匹配
+### Exact Match
 
-Path 的首字符是用 `=`，下面這個範例如果請求跟 `/spot/orders` 完全一樣才會被匹配到
+The route begins with `=`. In the following example, the request will only be matched if it exactly matches `/spot/orders`.
 
 ```yaml
 routes:
@@ -22,9 +22,9 @@ routes:
       - "= /spot/orders"
 ```
 
-### 前缀匹配
+### Prefix Match
 
-Path 的起頭是用 `^=`，下面這個這個範例配置如果請求是 `/api/v1` 開頭的都會被匹配到
+Paths that start with `^=` are prefix matches. In this example, any request starting with `/api/v1` will be matched.
 
 ```yaml
 routes:
@@ -34,7 +34,7 @@ routes:
     service_id: service1
 ```
 
-如果有一個請求，同時符合兩個前缀匹配規則，則會以規則路由最長的優先級最高，下面範例如果有一個請求是 `GET /api/v1/orders/12345`，兩個規則都符合時取最長的也就是 `testRoute2` 會被選中
+If a request meets two prefix match rules, the longest matching rule takes priority. In the example below, a request GET `/api/v1/orders/12345` will match `testRoute2`.
 
 ```yaml
 routes:
@@ -49,9 +49,9 @@ routes:
     service_id: service2
 ```
 
-### 正則匹配
+### Regular Expression Match
 
-Path 的首字符是用 `~` 代表正則匹配，下面這個範例如果請求的路徑是 `/api/v2/my_orders` 的則會符合下面的正則規則，多個正則規則執行的優先順序是依照配置文件的由上往下的順序
+Paths that begin with `~` denote a regular expression match. In this example, requests with paths like `/api/v2/my_orders` will match. Multiple regex rules follow the order in the configuration file from top to bottom.
 
 ```yaml
 routes:
@@ -60,9 +60,9 @@ routes:
       - "~ /api/(v1|v2)"
 ```
 
-### 通用匹配
+### General Match
 
-下面這個這個範例如果請求是 `/api/v3/time` 開頭的都會匹配到 `testRoute`
+In this example, any request starting with `/api/v3/time` will match `testRoute`.
 
 ```yaml
 routes:
@@ -72,7 +72,7 @@ routes:
     service_id: service1
 ```
 
-如果有一個請求，同時符合兩個前缀匹配規則，則會以規則路由最長的優先級最高，下面範例如果有一個請求是 `GET /api/v1/orders/12345`，兩個規則都符合時取最長的也就是 `testRoute2` 會被選中
+If a request matches two prefix rules, the longest rule takes priority. For example, GET `/api/v1/orders/12345` will match `testRoute2`.
 
 ```yaml
 routes:
@@ -87,16 +87,16 @@ routes:
     service_id: service2
 ```
 
-## 路由改寫
+## Route Rewriting
 
-內建一些 middlwares 支持常見的路由改寫
+Built-in middlewares support common route rewriting.
 
-### 增加前綴
+### Add Prefix
 
-將原始請求路徑加入前綴後轉發到上游，例如:
+Adds a prefix to the original request path before forwarding upstream.
 
-原始請求: `/foo` \
-轉發上游: `/api/v1/foo`
+Original request: `/foo` \
+Forwarded upstream: `/api/v1/foo`
 
 ```yaml
 routes:
@@ -110,12 +110,12 @@ routes:
           prefix: /api/v1
 ```
 
-### 移除前綴
+### Strip Prefix
 
-將原始請求路徑移除某部分之後轉發到上游，例如:
+Removes a part of the original request path before forwarding upstream.
 
-原始請求: `/api/v1/payment` \
-轉發上游: `/payment`
+Original request: `/api/v1/payment` \
+Forwarded upstream: `/payment`
 
 ```yaml
 routes:
@@ -130,12 +130,12 @@ routes:
             - /api/v1
 ```
 
-### 替換路徑
+### Replace Path
 
-將原始請求路徑完全替換成別的路徑轉發到上游，如果原始請求有包含 querystring 也將一起帶上並轉發，例如:
+Replaces the entire original request path with a different path before forwarding upstream. If the original request includes a query string, it will also be forwarded.
 
-原始請求: `/api/v1/user?name=john` \
-轉發上游: `/hoo/user?name=john`
+Original request: `/api/v1/user?name=john` \
+Forwarded upstream: `/hoo/user?name=john`
 
 ```yaml
 routes:
