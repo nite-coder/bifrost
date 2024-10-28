@@ -1,15 +1,15 @@
 package file
 
 import (
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/provider"
-
 	"github.com/fsnotify/fsnotify"
+	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
 type ContentInfo struct {
@@ -20,7 +20,6 @@ type ContentInfo struct {
 type Options struct {
 	Enabled    bool     `yaml:"enabled" json:"enabled"`
 	Paths      []string `yaml:"paths" json:"paths"`
-	Watch      bool     `yaml:"watch" json:"watch"`
 	Extensions []string `yaml:"extensions" json:"extensions"`
 }
 
@@ -54,12 +53,12 @@ func (p *FileProvider) Open() ([]*ContentInfo, error) {
 	var contents []*ContentInfo
 
 	for _, path := range p.options.Paths {
-		err := filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
+		err := filepath.WalkDir(path, func(filePath string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
 
-			if !info.IsDir() {
+			if !d.IsDir() {
 				fileExtension := filepath.Ext(filePath)
 
 				if len(fileExtension) == 0 {

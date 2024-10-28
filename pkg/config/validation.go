@@ -17,8 +17,33 @@ func ValidateMapping(mainOpts Options) error {
 	for routeID, route := range mainOpts.Routes {
 		for _, serverID := range route.Servers {
 			if _, found := mainOpts.Servers[serverID]; !found {
-				return fmt.Errorf("the server '%s' can't be found in the route '%s'", serverID, routeID)
+				return fmt.Errorf("can't find the server '%s' in the route '%s'", serverID, routeID)
 			}
+		}
+
+		for _, middleware := range route.Middlewares {
+			if len(middleware.Use) > 0 {
+				if _, found := mainOpts.Middlewares[middleware.Use]; !found {
+					return fmt.Errorf("can't find the middleware '%s' in the route '%s'", middleware.Use, routeID)
+				}
+			}
+		}
+	}
+
+	// TODO: check middlewares
+	for serverID, server := range mainOpts.Servers {
+		for _, middleware := range server.Middlewares {
+			if len(middleware.Use) > 0 {
+				if _, found := mainOpts.Middlewares[middleware.Use]; !found {
+					return fmt.Errorf("can't find the middleware '%s' in the server '%s'", middleware.Use, serverID)
+				}
+			}
+
+			// if len(middleware.Type) > 0 {
+			// 	if _, found := middlewareFactory[middleware.Type]; !found {
+			// 		return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", middleware.Type, serverID)
+			// 	}
+			// }
 		}
 	}
 

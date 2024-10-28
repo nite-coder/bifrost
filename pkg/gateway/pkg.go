@@ -55,8 +55,8 @@ func Run(mainOptions config.Options) (err error) {
 
 	netpollConfig := netpoll.Config{}
 
-	if mainOptions.PollerNum > 0 {
-		netpollConfig.PollerNum = mainOptions.PollerNum
+	if mainOptions.NumLoops > 0 {
+		netpollConfig.PollerNum = mainOptions.NumLoops
 	}
 
 	err = netpoll.Configure(netpollConfig)

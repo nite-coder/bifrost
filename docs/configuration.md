@@ -9,6 +9,7 @@ This configuration file is divided into two primary types: `static configuration
 
 * [watch](#watch)
 * [timer_resolution](#timer_resolution)
+* [num_loops](#num_loops)
 * [pid_file](#pid_file)
 * [upgrade_sock](#upgrade_sock)
 * [providers](#providers)
@@ -36,6 +37,14 @@ Sets the precision of the gateway's time settings. The default is 1 second, with
 
 ```yaml
 timer_resolution: 1ms
+```
+
+## num_loops
+
+This represents the number of epoll created by bifrost, which has been automatically adjusted according to the number of P (runtime.GOMAXPROCS(0)) by default, and users generally don’t need to care.
+
+```yaml
+num_loops: 4
 ```
 
 ## pid_file
@@ -68,11 +77,11 @@ providers:
       - "./conf"
 ```
 
-| Field      | Default                | Description                                                                |
-| ---------- | ---------------------- | -------------------------------------------------------------------------- |
-| enabled    | false                  | Enables the file provider                                                  |
-| extensions | `.yaml`,`.yml`, `json` | Allowed file extensions                                                    |
-| paths      | `.`                    | Directories or files to load, defaults to current directory if unspecified |
+| Field      | Default                | Description                                                                                                         |
+| ---------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| enabled    | false                  | Enables the file provider                                                                                           |
+| extensions | `.yaml`,`.yml`, `json` | Allowed file extensions                                                                                             |
+| paths      |                        | Directories or files to be loaded.  Recursively traverse all subdirectories and files under the specified directory |
 
 ## logging
 

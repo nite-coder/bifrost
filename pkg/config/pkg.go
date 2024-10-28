@@ -77,7 +77,8 @@ func LoadDynamic(mainOptions Options) (provider.Provider, Options, error) {
 		}
 
 		fileProviderOpts := file.Options{
-			Paths: []string{},
+			Paths:      []string{},
+			Extensions: mainOptions.Providers.File.Extensions,
 		}
 		fileProvider := file.NewProvider(fileProviderOpts)
 
