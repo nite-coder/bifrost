@@ -3,8 +3,9 @@
 Bifrost's routing design is similar to NGINX, with four main types:
 
 1. Exact match `=`
-1. Prefix match `^=`
-1. Regular expression match `~`
+1. Prefix match `^~`
+1. Regular expression match `~` (case sensitive)
+1. Regular expression match `~*` (case insensitive)
 1. General match
 
 ## Match Priority
@@ -24,13 +25,13 @@ routes:
 
 ### Prefix Match
 
-Paths that start with `^=` are prefix matches. In this example, any request starting with `/api/v1` will be matched.
+Paths that start with `^~` are prefix matches. In this example, any request starting with `/api/v1` will be matched.
 
 ```yaml
 routes:
   testRoute:
     paths:
-      - "^= /api/v1"
+      - "^~ /api/v1"
     service_id: service1
 ```
 
@@ -40,18 +41,18 @@ If a request meets two prefix match rules, the longest matching rule takes prior
 routes:
   testRoute1:
     paths:
-      - "^= /api/v1"
+      - "^~ /api/v1"
     service_id: service1
 
   testRoute2:
     paths:
-      - "^= /api/v1/orders"
+      - "^~ /api/v1/orders"
     service_id: service2
 ```
 
 ### Regular Expression Match
 
-Paths that begin with `~` denote a regular expression match. In this example, requests with paths like `/api/v2/my_orders` will match. Multiple regex rules follow the order in the configuration file from top to bottom.
+Paths that begin with `~` denote a regular expression match (case sensitive). In this example, requests with paths like `/api/v2/my_orders` will match. Multiple regex rules follow the order in the configuration file from top to bottom.
 
 ```yaml
 routes:

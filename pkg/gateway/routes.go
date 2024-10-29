@@ -154,6 +154,22 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 		var nodeType nodeType
 
 		switch {
+		case strings.HasPrefix(path, "~*"):
+			expr := strings.TrimSpace(path[2:])
+			if len(expr) == 0 {
+				return fmt.Errorf("router: regexp expression route can't be empty in route: '%s'", routeOpts.ID)
+			}
+			regx, err := regexp.Compile(`(?i)` + expr)
+			if err != nil {
+				return err
+			}
+
+			r.regexpRoutes = append(r.regexpRoutes, routeSetting{
+				regex:      regx,
+				route:      &routeOpts,
+				middleware: middlewares,
+			})
+			continue
 		case strings.HasPrefix(path, "~"):
 			expr := strings.TrimSpace(path[1:])
 			if len(expr) == 0 {
@@ -176,8 +192,7 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 			if len(path) == 0 {
 				return fmt.Errorf("router: exact route can't be empty in route: '%s'", routeOpts.ID)
 			}
-
-		case strings.HasPrefix(path, "^="):
+		case strings.HasPrefix(path, "^~"):
 			nodeType = nodeTypePrefix
 			path = strings.TrimSpace(path[2:])
 			if len(path) == 0 {

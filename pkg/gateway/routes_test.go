@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"regexp"
 	"testing"
 
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -34,11 +35,15 @@ func registerByNodeType(route *Routes, nodeType nodeType) *Routes {
 		}, exactkHandler)
 	case nodeTypePrefix:
 		_ = route.Add(config.RouteOptions{
-			Paths: []string{"^= /market/btc", "^= /"},
+			Paths: []string{"^~ /market/btc", "^~ /"},
 		}, prefixHandler)
 	case nodeTypeRegex:
 		_ = route.Add(config.RouteOptions{
 			Paths: []string{"~ /market/(btc|usdt|eth)$", "~ ^/$"},
+		}, regexkHandler)
+
+		_ = route.Add(config.RouteOptions{
+			Paths: []string{"~* /HELLO/WORLD/aaa/bbb"},
 		}, regexkHandler)
 
 		_ = route.Add(config.RouteOptions{
@@ -137,6 +142,14 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 		if statusCode != 203 {
 			t.Errorf("Expected %v for path %s, but got %v", 203, "/", statusCode)
 		}
+
+		c.Request.URI().SetPath("/hello/world/aaa/bbb")
+		route.ServeHTTP(context.Background(), c)
+		statusCode = c.Response.StatusCode()
+
+		if statusCode != 203 {
+			t.Errorf("Expected %v for path %s, but got %v", 203, "/", statusCode)
+		}
 	})
 
 	t.Run("general match", func(t *testing.T) {
@@ -177,7 +190,7 @@ func TestRootRoute(t *testing.T) {
 	}, exactkHandler)
 
 	_ = route.Add(config.RouteOptions{
-		Paths: []string{"^= /"},
+		Paths: []string{"^~ /"},
 	}, prefixHandler)
 
 	_ = route.Add(config.RouteOptions{
@@ -211,7 +224,7 @@ func TestRoutes(t *testing.T) {
 	route := newRoutes()
 
 	err := route.Add(config.RouteOptions{
-		Paths: []string{"^= /market/btc", "^= /spot"},
+		Paths: []string{"^~ /market/btc", "^~ /spot"},
 	}, prefixHandler)
 	assert.NoError(t, err)
 
@@ -295,4 +308,26 @@ func TestDuplicateRoutes(t *testing.T) {
 		Paths:   []string{"/"},
 	}, exactkHandler)
 	assert.ErrorIs(t, err, ErrAlreadyExists)
+}
+
+var testString = `/hello/world/you/bbb/dddd`
+
+var pattern = `/hello/world/(You|aaa|ccc)`
+
+func BenchmarkCaseSensitive(b *testing.B) {
+	re := regexp.MustCompile(pattern)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		result := re.MatchString(testString)
+		assert.False(b, result)
+	}
+}
+
+func BenchmarkCaseInsensitive(b *testing.B) {
+	re := regexp.MustCompile(`(?i)` + pattern)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		result := re.MatchString(testString)
+		assert.True(b, result)
+	}
 }
