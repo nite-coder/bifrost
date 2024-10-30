@@ -15,6 +15,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware/ratelimiting"
 	"github.com/nite-coder/bifrost/pkg/middleware/replacepath"
 	"github.com/nite-coder/bifrost/pkg/middleware/replacepathregex"
+	"github.com/nite-coder/bifrost/pkg/middleware/response"
 	"github.com/nite-coder/bifrost/pkg/middleware/stripprefix"
 	"github.com/nite-coder/bifrost/pkg/middleware/timinglogger"
 	"github.com/nite-coder/bifrost/pkg/middleware/tracing"
@@ -213,6 +214,39 @@ func init() {
 
 	_ = RegisterMiddleware("tracing", func(param map[string]any) (app.HandlerFunc, error) {
 		m := tracing.NewMiddleware()
+		return m.ServeHTTP, nil
+	})
+
+	_ = RegisterMiddleware("response", func(param map[string]any) (app.HandlerFunc, error) {
+		options := response.ResponseOptions{}
+		val, found := param["status_code"]
+		if found {
+			statusCode, err := cast.ToInt(val)
+			if err != nil {
+				return nil, errors.New("status_code is invalid in response middleware")
+			}
+			options.StatusCode = statusCode
+		}
+
+		val, found = param["content_type"]
+		if found {
+			contentType, err := cast.ToString(val)
+			if err != nil {
+				return nil, errors.New("content_type is invalid in response middleware")
+			}
+			options.ContentType = contentType
+		}
+
+		val, found = param["content"]
+		if found {
+			content, err := cast.ToString(val)
+			if err != nil {
+				return nil, errors.New("content is invalid in response middleware")
+			}
+			options.Content = content
+		}
+
+		m := response.NewMiddleware(options)
 		return m.ServeHTTP, nil
 	})
 
