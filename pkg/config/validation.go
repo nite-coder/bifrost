@@ -1,11 +1,15 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/nite-coder/bifrost/pkg/dns"
 )
 
 // ValidateMapping checks if the config's value mapping is valid.  For example, the server in route must be finded in the servers
@@ -45,6 +49,11 @@ func ValidateMapping(mainOpts Options) error {
 			// 	}
 			// }
 		}
+	}
+
+	err := validateFQDN(mainOpts)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -216,4 +225,77 @@ func validateUpstreams(options map[string]UpstreamOptions) error {
 	}
 
 	return nil
+}
+
+func validateFQDN(mainOpts Options) error {
+	if mainOpts.Resolver.SkipTest {
+		return nil
+	}
+
+	// check target FQDN
+	resolver, err := dns.NewResolver(dns.Options{
+		AddrPort: mainOpts.Resolver.AddrPort,
+		Valid:    mainOpts.Resolver.Valid,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	for _, upstream := range mainOpts.Upstreams {
+		for _, target := range upstream.Targets {
+			if dns.AllowDNSQuery(target.Target) {
+				addr := extractAddr(target.Target)
+				_, err := resolver.Lookup(context.Background(), addr)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	for serviceID, service := range mainOpts.Services {
+		addr, err := url.Parse(service.Url)
+		if err != nil {
+			return err
+		}
+
+		hostname := addr.Hostname()
+
+		// validate
+		if len(hostname) == 0 {
+			return fmt.Errorf("the hostname is invalid in service url. service_id: %s", serviceID)
+		}
+
+		// dynamic upstream
+		if hostname[0] == '$' {
+			continue
+		}
+
+		// exist upstream
+		_, found := mainOpts.Upstreams[hostname]
+		if found {
+			continue
+		}
+
+		if dns.AllowDNSQuery(hostname) {
+			addr := extractAddr(hostname)
+			_, err := resolver.Lookup(context.Background(), addr)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func extractAddr(addrport string) string {
+	parts := strings.Split(addrport, ":")
+
+	if len(parts) == 1 {
+		return addrport
+	}
+
+	return parts[0]
 }

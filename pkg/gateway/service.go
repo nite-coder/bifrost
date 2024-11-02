@@ -12,6 +12,7 @@ import (
 
 	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
@@ -285,7 +286,7 @@ func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) 
 	hostname := addr.Hostname()
 
 	var dnsResolver dnscache.DNSResolver
-	if allowDNS(hostname) {
+	if dns.AllowDNSQuery(hostname) {
 		_, err := bifrost.resolver.LookupHost(context.Background(), hostname)
 		if err != nil {
 			return nil, fmt.Errorf("lookup service host error: %w", err)

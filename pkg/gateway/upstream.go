@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
@@ -92,7 +93,7 @@ func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, opt
 		}
 
 		var dnsResolver dnscache.DNSResolver
-		if allowDNS(targetHost) {
+		if dns.AllowDNSQuery(targetHost) {
 			_, err := bifrost.resolver.LookupHost(context.Background(), targetHost)
 			if err != nil {
 				return nil, fmt.Errorf("lookup upstream host error: %w", err)
@@ -283,7 +284,7 @@ findLoop:
 	u.counter.Add(1)
 
 	if u.counter.Load() > uint64(math.MaxUint64) {
-		u.counter.Store(math.MaxUint64)
+		u.counter.Store(0)
 	}
 
 	index := (u.counter.Load() - 1) % uint64(len(u.proxies))
@@ -422,18 +423,4 @@ findLoop:
 
 	failedReconds[proxy.ID()] = true
 	goto findLoop
-}
-
-func allowDNS(address string) bool {
-
-	ip := net.ParseIP(address)
-	if ip != nil {
-		return false
-	}
-
-	if address == "localhost" || address == "[::1]" {
-		return false
-	}
-
-	return true
 }
