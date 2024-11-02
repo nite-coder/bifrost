@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"math"
 	"net/url"
@@ -145,6 +146,20 @@ func (p *GRPCProxy) Weight() uint32 {
 
 func (p *GRPCProxy) Target() string {
 	return p.target
+}
+
+func (p *GRPCProxy) Close() error {
+	if p.client != nil {
+		if closer, ok := p.client.(io.Closer); ok {
+			err := closer.Close()
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	p = nil
+	return nil
 }
 
 // ServeHTTP implements the http.Handler interface

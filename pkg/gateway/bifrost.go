@@ -8,23 +8,21 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudwego/hertz/pkg/common/tracer"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/tracer/accesslog"
 	"github.com/nite-coder/bifrost/pkg/tracer/opentelemetry"
 	"github.com/nite-coder/bifrost/pkg/tracer/prometheus"
 	"github.com/nite-coder/bifrost/pkg/zero"
-
-	"github.com/cloudwego/hertz/pkg/common/tracer"
-	"github.com/rs/dnscache"
 )
 
 type Bifrost struct {
 	options     *config.Options
 	HttpServers map[string]*HTTPServer
-	resolver    *dnscache.Resolver
-	stopCh      chan bool
+	dnsResolver *dns.Resolver
 	zero        *zero.ZeroDownTime
 }
 
@@ -45,10 +43,6 @@ func (b *Bifrost) ZeroDownTime() *zero.ZeroDownTime {
 	return b.zero
 }
 
-func (b *Bifrost) Stop() {
-	b.stopCh <- true
-}
-
 func (b *Bifrost) Shutdown(ctx context.Context) error {
 	return b.shutdown(ctx, false)
 }
@@ -58,8 +52,6 @@ func (b *Bifrost) ShutdownNow(ctx context.Context) error {
 }
 
 func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
-	b.Stop()
-
 	wg := &sync.WaitGroup{}
 
 	maxTimeout := 10 * time.Second
@@ -126,28 +118,22 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 		PIDFile:     mainOptions.PIDFile,
 	}
 
-	bifrsot := &Bifrost{
-		resolver:    &dnscache.Resolver{},
-		HttpServers: make(map[string]*HTTPServer),
-		options:     &mainOptions,
-		stopCh:      make(chan bool),
-		zero:        zero.New(zeroOptions),
+	resolveOptions := dns.Options{
+		AddrPort: mainOptions.Resolver.AddrPort,
+		Valid:    mainOptions.Resolver.Valid,
 	}
 
-	go func() {
-		t := time.NewTimer(1 * time.Hour)
-		defer t.Stop()
+	dnsResolver, err := dns.NewResolver(resolveOptions)
+	if err != nil {
+		return nil, err
+	}
 
-		for {
-			select {
-			case <-t.C:
-				bifrsot.resolver.Refresh(true)
-				slog.Info("refresh dns cache successfully")
-			case <-bifrsot.stopCh:
-				return
-			}
-		}
-	}()
+	bifrsot := &Bifrost{
+		dnsResolver: dnsResolver,
+		HttpServers: make(map[string]*HTTPServer),
+		options:     &mainOptions,
+		zero:        zero.New(zeroOptions),
+	}
 
 	tracers := []tracer.Tracer{}
 

@@ -367,6 +367,15 @@ func (p *HTTPProxy) Target() string {
 	return p.target
 }
 
+func (p *HTTPProxy) Close() error {
+	if p.client != nil {
+		p.client.CloseIdleConnections()
+		p.client = nil
+	}
+
+	return nil
+}
+
 func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err error) {
 	if err == nil {
 		return

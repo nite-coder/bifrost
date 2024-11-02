@@ -229,10 +229,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 	h.OnShutdown = append(h.OnShutdown, func(ctx context.Context) {
 		for _, tracer := range tracers {
 			if closer, ok := tracer.(io.Closer); ok {
-				err := closer.Close()
-				if err != nil {
-					slog.Error("failed to close tracer", "err", err)
-				}
+				_ = closer.Close()
 			}
 		}
 	})

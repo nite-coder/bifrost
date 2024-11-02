@@ -244,12 +244,10 @@ func validateFQDN(mainOpts Options) error {
 
 	for _, upstream := range mainOpts.Upstreams {
 		for _, target := range upstream.Targets {
-			if dns.AllowDNSQuery(target.Target) {
-				addr := extractAddr(target.Target)
-				_, err := resolver.Lookup(context.Background(), addr)
-				if err != nil {
-					return err
-				}
+			addr := extractAddr(target.Target)
+			_, err := resolver.Lookup(context.Background(), addr)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -278,12 +276,10 @@ func validateFQDN(mainOpts Options) error {
 			continue
 		}
 
-		if dns.AllowDNSQuery(hostname) {
-			addr := extractAddr(hostname)
-			_, err := resolver.Lookup(context.Background(), addr)
-			if err != nil {
-				return err
-			}
+		host := extractAddr(hostname)
+		_, err = resolver.Lookup(context.Background(), host)
+		if err != nil {
+			return err
 		}
 	}
 

@@ -12,7 +12,6 @@ import (
 
 	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
@@ -22,7 +21,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/nite-coder/blackbear/pkg/cast"
-	"github.com/rs/dnscache"
 )
 
 type Service struct {
@@ -283,30 +281,13 @@ func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) 
 		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*opts.MaxConnsPerHost))
 	}
 
+	if strings.EqualFold(addr.Scheme, "https") {
+		clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
+			InsecureSkipVerify: !opts.TLSVerify, //nolint:gosec
+		}))
+	}
+
 	hostname := addr.Hostname()
-
-	var dnsResolver dnscache.DNSResolver
-	if dns.AllowDNSQuery(hostname) {
-		_, err := bifrost.resolver.LookupHost(context.Background(), hostname)
-		if err != nil {
-			return nil, fmt.Errorf("lookup service host error: %w", err)
-		}
-		dnsResolver = bifrost.resolver
-	}
-
-	switch strings.ToLower(addr.Scheme) {
-	case "http":
-		if dnsResolver != nil {
-			clientOpts = append(clientOpts, client.WithDialer(newHTTPDialer(dnsResolver)))
-		}
-	case "https":
-		if dnsResolver != nil {
-			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
-				InsecureSkipVerify: !opts.TLSVerify, //nolint:gosec
-			}))
-			clientOpts = append(clientOpts, client.WithDialer(newHTTPSDialer(dnsResolver)))
-		}
-	}
 
 	url := fmt.Sprintf("%s://%s%s", addr.Scheme, hostname, addr.Path)
 	if addr.Port() != "" {

@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	bifrost           *Bifrost
+	defaultBifrost    *Bifrost
 	spaceByte                                            = []byte{byte(' ')}
 	middlewareFactory map[string]CreateMiddlewareHandler = make(map[string]CreateMiddlewareHandler)
 	httpMethods                                          = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch, http.MethodHead, http.MethodOptions, http.MethodTrace, http.MethodConnect}
@@ -64,7 +64,7 @@ func Run(mainOptions config.Options) (err error) {
 		return err
 	}
 
-	bifrost, err = NewBifrost(mainOptions, false)
+	defaultBifrost, err = NewBifrost(mainOptions, false)
 	if err != nil {
 		slog.Error("fail to start bifrost", "error", err)
 		return err
@@ -87,13 +87,10 @@ func Run(mainOptions config.Options) (err error) {
 		if err != nil {
 			return err
 		}
-		defer func() {
-			newBifrost.Stop()
-		}()
 
 		isReloaded := false
 
-		for id, httpServer := range bifrost.HttpServers {
+		for id, httpServer := range defaultBifrost.HttpServers {
 			newHTTPServer, found := newBifrost.HttpServers[id]
 			if found && httpServer.Bind() == newHTTPServer.Bind() {
 				httpServer.SetEngine(newHTTPServer.Engine())
@@ -114,11 +111,11 @@ func Run(mainOptions config.Options) (err error) {
 	}
 
 	go func() {
-		bifrost.Run()
+		defaultBifrost.Run()
 	}()
 
 	go func() {
-		for _, httpServer := range bifrost.HttpServers {
+		for _, httpServer := range defaultBifrost.HttpServers {
 			for {
 				conn, err := net.Dial("tcp", httpServer.Bind())
 				if err == nil {
@@ -131,7 +128,7 @@ func Run(mainOptions config.Options) (err error) {
 
 		slog.Info("bifrost started successfully", "pid", os.Getpid())
 
-		zeroDT := bifrost.ZeroDownTime()
+		zeroDT := defaultBifrost.ZeroDownTime()
 
 		if zeroDT != nil && zeroDT.IsUpgraded() {
 			err := zeroDT.Shutdown(ctx)
@@ -141,7 +138,7 @@ func Run(mainOptions config.Options) (err error) {
 		}
 
 		if mainOptions.IsDaemon {
-			if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
+			if err := defaultBifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
 				slog.Error("failed to upgrade process", "error", err)
 				return
 			}
@@ -275,13 +272,13 @@ func Upgrade(mainOptions config.Options) error {
 }
 
 func shutdown(ctx context.Context, now bool) error {
-	if bifrost != nil {
+	if defaultBifrost != nil {
 		var err error
 
 		if now {
-			err = bifrost.ShutdownNow(ctx)
+			err = defaultBifrost.ShutdownNow(ctx)
 		} else {
-			err = bifrost.Shutdown(ctx)
+			err = defaultBifrost.Shutdown(ctx)
 		}
 
 		if err != nil {

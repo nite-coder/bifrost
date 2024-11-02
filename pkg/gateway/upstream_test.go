@@ -44,14 +44,17 @@ func TestRoundRobin(t *testing.T) {
 	}
 	proxy3, _ := httpproxy.New(proxyOptions3, nil)
 
+	proxies := []proxy.Proxy{
+		proxy1,
+		proxy2,
+		proxy3,
+	}
+
 	upstream := &Upstream{
-		proxies: []proxy.Proxy{
-			proxy1,
-			proxy2,
-			proxy3,
-		},
 		counter: atomic.Uint64{},
 	}
+
+	upstream.proxies.Store(proxies)
 
 	t.Run("success", func(t *testing.T) {
 		expected := []string{"http://backend1", "http://backend2", "http://backend3"}
@@ -93,7 +96,8 @@ func TestRoundRobin(t *testing.T) {
 		err = proxy3.AddFailedCount(100)
 		assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
 
-		upstream.proxies = []proxy.Proxy{proxy1, proxy2, proxy3}
+		proxyies := []proxy.Proxy{proxy1, proxy2, proxy3}
+		upstream.proxies.Store(proxyies)
 
 		for i := 0; i < 6000; i++ {
 			proxy := upstream.roundRobin()
@@ -130,14 +134,17 @@ func TestWeighted(t *testing.T) {
 	}
 	proxy3, _ := httpproxy.New(proxyOptions3, nil)
 
+	proxies := []proxy.Proxy{
+		proxy1,
+		proxy2,
+		proxy3,
+	}
+
 	upstream := &Upstream{
-		proxies: []proxy.Proxy{
-			proxy1,
-			proxy2,
-			proxy3,
-		},
 		totalWeight: 6,
 	}
+
+	upstream.proxies.Store(proxies)
 
 	t.Run("success", func(t *testing.T) {
 		hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
@@ -209,13 +216,15 @@ func TestRandom(t *testing.T) {
 	}
 	proxy3, _ := httpproxy.New(proxyOptions3, nil)
 
-	upstream := &Upstream{
-		proxies: []proxy.Proxy{
-			proxy1,
-			proxy2,
-			proxy3,
-		},
+	upstream := &Upstream{}
+
+	proxies := []proxy.Proxy{
+		proxy1,
+		proxy2,
+		proxy3,
 	}
+
+	upstream.proxies.Store(proxies)
 
 	t.Run("success", func(t *testing.T) {
 		hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
@@ -289,14 +298,17 @@ func TestHashing(t *testing.T) {
 	}
 	proxy3, _ := httpproxy.New(proxyOptions3, nil)
 
+	proxies := []proxy.Proxy{
+		proxy1,
+		proxy2,
+		proxy3,
+	}
+
 	upstream := &Upstream{
-		proxies: []proxy.Proxy{
-			proxy1,
-			proxy2,
-			proxy3,
-		},
 		hasher: fnv.New32a(),
 	}
+
+	upstream.proxies.Store(proxies)
 
 	t.Run("success", func(t *testing.T) {
 		keys := []string{"key1", "key2", "key3"}

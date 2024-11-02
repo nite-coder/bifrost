@@ -13,9 +13,8 @@ func TestQueryHost(t *testing.T) {
 	assert.NoError(t, err)
 
 	result, err := r.Lookup(context.Background(), "www.google.com")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+	t.Log(result)
 	assert.GreaterOrEqual(t, len(result), 1)
 
 	result, err = r.Lookup(context.Background(), "www.xxx.xxxssssssss")
@@ -26,4 +25,5 @@ func TestQueryHost(t *testing.T) {
 func TestLocalNameServer(t *testing.T) {
 	servers := GetDNSServers()
 	assert.GreaterOrEqual(t, len(servers), 1)
+	t.Log(servers)
 }

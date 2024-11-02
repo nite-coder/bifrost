@@ -3,6 +3,7 @@ package accesslog
 import (
 	"bytes"
 	"context"
+	"log/slog"
 	"net"
 	"strconv"
 	"strings"
@@ -62,7 +63,15 @@ func (t *Tracer) Finish(ctx context.Context, c *app.RequestContext) {
 }
 
 func (t *Tracer) Close() error {
-	return t.writer.Close()
+	if strings.EqualFold(t.opts.Output, "stderr") {
+		return nil
+	}
+
+	err := t.writer.Close()
+	if err != nil {
+		slog.Debug("failed to close access log writer", "error", err)
+	}
+	return err
 }
 
 func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
