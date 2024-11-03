@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/blackbear/pkg/cast"
@@ -42,32 +43,32 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 
 		routeMiddlewares := make([]app.HandlerFunc, 0)
 
-		for _, middleware := range routeOpts.Middlewares {
-			if len(middleware.Use) > 0 {
-				val, found := middlewares[middleware.Use]
+		for _, m := range routeOpts.Middlewares {
+			if len(m.Use) > 0 {
+				val, found := middlewares[m.Use]
 				if !found {
-					return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", middleware.Use, routeOpts.ID)
+					return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", m.Use, routeOpts.ID)
 				}
 
 				routeMiddlewares = append(routeMiddlewares, val)
 				continue
 			}
 
-			if len(middleware.Type) == 0 {
+			if len(m.Type) == 0 {
 				return nil, fmt.Errorf("middleware kind can't be empty in route: '%s'", routeOpts.Paths)
 			}
 
-			handler, found := middlewareFactory[middleware.Type]
-			if !found {
-				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", middleware.Type, routeOpts.Paths)
+			handler := middleware.FindHandlerByType(m.Type)
+			if handler == nil {
+				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", m.Type, routeOpts.Paths)
 			}
 
-			m, err := handler(middleware.Params)
+			appHandler, err := handler(m.Params)
 			if err != nil {
-				return nil, fmt.Errorf("create middleware handler '%s' failed in route: '%s'", middleware.Type, routeOpts.Paths)
+				return nil, fmt.Errorf("create middleware handler '%s' failed in route: '%s'", m.Type, routeOpts.Paths)
 			}
 
-			routeMiddlewares = append(routeMiddlewares, m)
+			routeMiddlewares = append(routeMiddlewares, appHandler)
 		}
 
 		// dynamic service

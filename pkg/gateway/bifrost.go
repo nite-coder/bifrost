@@ -8,10 +8,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/log"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/tracer/accesslog"
 	"github.com/nite-coder/bifrost/pkg/tracer/opentelemetry"
@@ -20,6 +22,7 @@ import (
 )
 
 type Bifrost struct {
+	middlewares map[string]app.HandlerFunc
 	options     *config.Options
 	HttpServers map[string]*HTTPServer
 	dnsResolver *dns.Resolver
@@ -128,7 +131,13 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 		return nil, err
 	}
 
+	middlewares, err := middleware.LoadMiddlewares(mainOptions.Middlewares)
+	if err != nil {
+		return nil, err
+	}
+
 	bifrsot := &Bifrost{
+		middlewares: middlewares,
 		dnsResolver: dnsResolver,
 		HttpServers: make(map[string]*HTTPServer),
 		options:     &mainOptions,

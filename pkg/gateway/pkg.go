@@ -27,10 +27,9 @@ import (
 )
 
 var (
-	defaultBifrost    *Bifrost
-	spaceByte                                            = []byte{byte(' ')}
-	middlewareFactory map[string]CreateMiddlewareHandler = make(map[string]CreateMiddlewareHandler)
-	httpMethods                                          = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch, http.MethodHead, http.MethodOptions, http.MethodTrace, http.MethodConnect}
+	defaultBifrost *Bifrost
+	spaceByte      = []byte{byte(' ')}
+	httpMethods    = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch, http.MethodHead, http.MethodOptions, http.MethodTrace, http.MethodConnect}
 )
 
 var runTask = gopool.CtxGo

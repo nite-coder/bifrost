@@ -26,6 +26,10 @@ func Load(path string) (Options, error) {
 	// load main config
 	var mainOpts Options
 
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return mainOpts, errors.New("config file not found")
+	}
+
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return mainOpts, err

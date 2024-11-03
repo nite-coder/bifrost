@@ -9,6 +9,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/log"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/urfave/cli/v2"
@@ -119,7 +120,7 @@ func (f *FindMyHome) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 }
 
 func registerMiddlewares() error {
-	err := gateway.RegisterMiddleware("find_upstream", func(param map[string]any) (app.HandlerFunc, error) {
+	err := middleware.RegisterMiddleware("find_upstream", func(param map[string]any) (app.HandlerFunc, error) {
 		m := FindMyHome{}
 		return m.ServeHTTP, nil
 	})

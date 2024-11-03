@@ -70,8 +70,10 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 	}
 
 	// First, check the hosts cache
-	if ips, ok := r.hostsCache[host]; ok && len(ips) > 0 {
-		return ips, nil
+	if len(r.hostsCache) > 0 {
+		if ips, ok := r.hostsCache[host]; ok && len(ips) > 0 {
+			return ips, nil
+		}
 	}
 
 	// Second, check the result cache
@@ -103,6 +105,10 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 }
 
 func (r *Resolver) loadHostsFile() error {
+	if _, err := os.Stat("/etc/hosts"); errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+
 	file, err := os.Open("/etc/hosts")
 	if err != nil {
 		return err

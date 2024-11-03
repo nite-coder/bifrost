@@ -6,6 +6,7 @@ import (
 
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
@@ -17,26 +18,19 @@ type Engine struct {
 	handlers        app.HandlersChain
 	middlewares     app.HandlersChain
 	notFoundHandler app.HandlerFunc
-
-	hzOptions []hzconfig.Option
+	hzOptions       []hzconfig.Option
 }
 
 func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, error) {
 
-	// middlewares
-	middlewares, err := loadMiddlewares(bifrost.options.Middlewares)
-	if err != nil {
-		return nil, err
-	}
-
 	// services
-	services, err := loadServices(bifrost, middlewares)
+	services, err := loadServices(bifrost, bifrost.middlewares)
 	if err != nil {
 		return nil, err
 	}
 
 	// routes
-	route, err := loadRoutes(bifrost, serverOpts, services, middlewares)
+	route, err := loadRoutes(bifrost, serverOpts, services, bifrost.middlewares)
 	if err != nil {
 		return nil, err
 	}
@@ -58,33 +52,33 @@ func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, erro
 	engine.Use(initMiddleware.ServeHTTP)
 
 	// set server's middlewares
-	for _, middleware := range serverOpts.Middlewares {
+	for _, m := range serverOpts.Middlewares {
 
-		if len(middleware.Use) > 0 {
-			val, found := middlewares[middleware.Use]
+		if len(m.Use) > 0 {
+			val, found := bifrost.middlewares[m.Use]
 			if !found {
-				return nil, fmt.Errorf("middleware '%s' was not found in server id: '%s'", middleware.Use, serverOpts.ID)
+				return nil, fmt.Errorf("middleware '%s' was not found in server id: '%s'", m.Use, serverOpts.ID)
 			}
 
 			engine.Use(val)
 			continue
 		}
 
-		if len(middleware.Type) == 0 {
+		if len(m.Type) == 0 {
 			return nil, fmt.Errorf("middleware type can't be empty in server id: '%s'", serverOpts.ID)
 		}
 
-		handler, found := middlewareFactory[middleware.Type]
-		if !found {
-			return nil, fmt.Errorf("middleware type '%s' was not found in server id: '%s'", middleware.Type, serverOpts.ID)
+		handler := middleware.FindHandlerByType(m.Type)
+		if handler == nil {
+			return nil, fmt.Errorf("middleware type '%s' was not found in server id: '%s'", m.Type, serverOpts.ID)
 		}
 
-		m, err := handler(middleware.Params)
+		apphandler, err := handler(m.Params)
 		if err != nil {
-			return nil, fmt.Errorf("middleware type '%s' params is invalid in server id: '%s'. error: %w", middleware.Type, serverOpts.ID, err)
+			return nil, fmt.Errorf("middleware type '%s' params is invalid in server id: '%s'. error: %w", m.Type, serverOpts.ID, err)
 		}
 
-		engine.Use(m)
+		engine.Use(apphandler)
 	}
 
 	engine.Use(route.ServeHTTP)
