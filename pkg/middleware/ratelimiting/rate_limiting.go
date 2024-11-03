@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/config/redisclient"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
@@ -100,7 +99,7 @@ func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 }
 
 func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
-	isAllow := c.GetBool(config.ALLOW)
+	isAllow := c.GetBool(variable.ALLOW)
 	if isAllow {
 		c.Next(ctx)
 		return

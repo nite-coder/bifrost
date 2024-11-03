@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/nite-coder/blackbear/pkg/cast"
 
@@ -27,12 +26,12 @@ const (
 func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 	labels := make(prom.Labels)
 
-	serverID := c.GetString(config.SERVER_ID)
+	serverID := c.GetString(variable.SERVER_ID)
 	labels[labelServer] = defaultValIfEmpty(serverID, unknownLabelValue)
 	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(c.Response.Header.StatusCode()), unknownLabelValue)
 
-	val, _ := variable.Get(config.REQUEST_PATH, c)
+	val, _ := variable.Get(variable.REQUEST_PATH, c)
 	originalPath, _ := cast.ToString(val)
 	labels[labelPath] = defaultValIfEmpty(originalPath, unknownLabelValue)
 
@@ -42,11 +41,11 @@ func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 func genUpstreamDurationLabels(c *app.RequestContext) prom.Labels {
 	labels := make(prom.Labels)
 
-	serverID := c.GetString(config.SERVER_ID)
+	serverID := c.GetString(variable.SERVER_ID)
 	labels[labelServer] = defaultValIfEmpty(serverID, unknownLabelValue)
 	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
 
-	UPSTREAM_STATUS := c.GetInt(config.UPSTREAM_STATUS)
+	UPSTREAM_STATUS := c.GetInt(variable.UPSTREAM_STATUS)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(UPSTREAM_STATUS), unknownLabelValue)
 
 	path := c.Request.Path()
@@ -75,7 +74,7 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	}
 
 	info := c.GetTraceInfo().Stats()
-	serverID := c.GetString(config.SERVER_ID)
+	serverID := c.GetString(variable.SERVER_ID)
 
 	httpStart := info.GetEvent(stats.HTTPStart)
 	httpFinish := info.GetEvent(stats.HTTPFinish)
@@ -87,7 +86,7 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	_ = counterAdd(s.requestTotalCounter, 1, genRequestDurationLabels(c))
 	_ = histogramObserve(s.requestDurationHistogram, reqDuration, genRequestDurationLabels(c))
 
-	upstreamDuration := c.GetDuration(config.UPSTREAM_DURATION)
+	upstreamDuration := c.GetDuration(variable.UPSTREAM_DURATION)
 	_ = histogramObserve(s.upstreamDurationHistogram, upstreamDuration, genUpstreamDurationLabels(c))
 
 	serverLabel := make(prom.Labels)

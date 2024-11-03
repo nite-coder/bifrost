@@ -1,4 +1,4 @@
-package config
+package variable
 
 const (
 	SERVER_ID         = "$server_id"

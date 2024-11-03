@@ -8,7 +8,6 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
@@ -38,13 +37,13 @@ func Get(key string, c *app.RequestContext) (val any, found bool) {
 
 func directive(key string, c *app.RequestContext) (val any, found bool) {
 	switch key {
-	case config.TIME:
+	case TIME:
 		now := timecache.Now()
 		return now, true
-	case config.ClientIP:
+	case ClientIP:
 		return c.ClientIP(), true
-	case config.HOST:
-		val, found := c.Get(config.HOST)
+	case HOST:
+		val, found := c.Get(HOST)
 
 		if found {
 			b := val.([]byte)
@@ -54,10 +53,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 		host := string(c.Request.Host())
 		return host, true
-	case config.SERVER_ID:
-		serverID := c.GetString(config.SERVER_ID)
+	case SERVER_ID:
+		serverID := c.GetString(SERVER_ID)
 		return serverID, true
-	case config.REMOTE_ADDR:
+	case REMOTE_ADDR:
 		var ip string
 		switch addr := c.RemoteAddr().(type) {
 		case *net.UDPAddr:
@@ -68,7 +67,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return "", false
 		}
 		return ip, true
-	case config.RECEIVED_SIZE:
+	case RECEIVED_SIZE:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {
 			return nil, false
@@ -78,7 +77,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return 0, false
 		}
 		return httpStats.RecvSize(), true
-	case config.SEND_SIZE:
+	case SEND_SIZE:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {
 			return nil, false
@@ -88,10 +87,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return 0, false
 		}
 		return httpStats.SendSize(), true
-	case config.REQUEST_PROTOCOL:
+	case REQUEST_PROTOCOL:
 		return c.Request.Header.GetProtocol(), true
-	case config.REQUEST_PATH:
-		val, found := c.Get(config.REQUEST_PATH)
+	case REQUEST_PATH:
+		val, found := c.Get(REQUEST_PATH)
 
 		if found {
 			b := val.([]byte)
@@ -101,10 +100,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 		path := string(c.Request.Path())
 		return path, true
-	case config.REQUEST_METHOD:
+	case REQUEST_METHOD:
 		method := string(c.Request.Method())
 		return method, true
-	case config.REQUEST_BODY:
+	case REQUEST_BODY:
 		// if content type is grpc, the $request_body will be ignored
 		contentType := c.Request.Header.ContentType()
 		if bytes.Equal(contentType, grpcContentType) {
@@ -112,13 +111,13 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 
 		return cast.B2S(c.Request.Body()), true
-	case config.TRACE_ID:
-		traceID := c.GetString(config.TRACE_ID)
+	case TRACE_ID:
+		traceID := c.GetString(TRACE_ID)
 		return traceID, true
-	case config.UPSTREAM:
-		upstream := c.GetString(config.UPSTREAM)
+	case UPSTREAM:
+		upstream := c.GetString(UPSTREAM)
 		return upstream, true
-	case config.UPSTREAM_URI:
+	case UPSTREAM_URI:
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
 
@@ -130,17 +129,17 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 
 		return buf.String(), true
-	case config.UPSTREAM_PROTOCOL:
+	case UPSTREAM_PROTOCOL:
 		return c.Request.Header.GetProtocol(), true
-	case config.UPSTREAM_METHOD:
+	case UPSTREAM_METHOD:
 		method := string(c.Request.Method())
 		return method, true
-	case config.UPSTREAM_PATH:
+	case UPSTREAM_PATH:
 		return cast.B2S(c.Request.Path()), true
-	case config.UPSTREAM_ADDR:
-		addr := c.GetString(config.UPSTREAM_ADDR)
+	case UPSTREAM_ADDR:
+		addr := c.GetString(UPSTREAM_ADDR)
 		return addr, true
-	case config.DURATION:
+	case DURATION:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {
 			return nil, false
@@ -159,13 +158,13 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		dur := httpFinish.Time().Sub(httpStart.Time()).Microseconds()
 		duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
 		return duration, true
-	case config.GRPC_STATUS:
-		status := c.GetString(config.GRPC_STATUS)
+	case GRPC_STATUS:
+		status := c.GetString(GRPC_STATUS)
 		return status, true
-	case config.GRPC_MESSAGE:
-		grpcMessage := c.GetString(config.GRPC_MESSAGE)
+	case GRPC_MESSAGE:
+		grpcMessage := c.GetString(GRPC_MESSAGE)
 		return grpcMessage, true
-	case config.UserAgent:
+	case UserAgent:
 		return c.Request.Header.UserAgent(), true
 	default:
 		return nil, false

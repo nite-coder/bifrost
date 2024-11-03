@@ -3,8 +3,8 @@ package tracing
 import (
 	"context"
 
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/middleware"
+	"github.com/nite-coder/bifrost/pkg/variable"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"go.opentelemetry.io/otel"
@@ -69,7 +69,7 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 	}()
 
 	traceID := span.SpanContext().TraceID()
-	c.Set(config.TRACE_ID, traceID.String())
+	c.Set(variable.TRACE_ID, traceID.String())
 
 	c.Next(ctx)
 }

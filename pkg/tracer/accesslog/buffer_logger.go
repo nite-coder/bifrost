@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 type BufferedLogger struct {
@@ -32,7 +33,7 @@ func NewBufferedLogger(opts config.AccessLogOptions) (*BufferedLogger, error) {
 	}
 
 	if opts.BufferSize <= 0 {
-		opts.BufferSize = 64 * config.KB
+		opts.BufferSize = 64 * variable.KB
 	}
 
 	writer := bufio.NewWriterSize(logFile, opts.BufferSize)

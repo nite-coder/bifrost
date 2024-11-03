@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 func BenchmarkSaveByte(b *testing.B) {
@@ -19,7 +19,7 @@ func BenchmarkSaveByte(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b := []byte{}
 		copy(b, path)
-		c.Set(config.REQUEST_PATH, b)
+		c.Set(variable.REQUEST_PATH, b)
 	}
 }
 
@@ -34,6 +34,6 @@ func BenchmarkSaveString(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		p := string(path)
-		c.Set(config.REQUEST_PATH, p)
+		c.Set(variable.REQUEST_PATH, p)
 	}
 }

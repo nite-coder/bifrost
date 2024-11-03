@@ -17,6 +17,7 @@ import (
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 	"github.com/nite-coder/bifrost/pkg/timecache"
+	"github.com/nite-coder/bifrost/pkg/variable"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
@@ -164,7 +165,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 		proxy := svc.proxy
 		if svc.upstream != nil && proxy == nil {
-			ctx.Set(config.UPSTREAM, svc.upstream.opts.ID)
+			ctx.Set(variable.UPSTREAM, svc.upstream.opts.ID)
 
 			switch svc.upstream.opts.Strategy {
 			case config.RoundRobinStrategy, "":
@@ -203,13 +204,13 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		mic := dur.Microseconds()
 		duration := float64(mic) / 1e6
 		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
-		ctx.Set(config.UPSTREAM_DURATION, responseTime)
+		ctx.Set(variable.UPSTREAM_DURATION, responseTime)
 
 		// the upstream target timeout and we need to response http status 504 back to client
 		if ctx.GetBool("target_timeout") {
 			ctx.Response.SetStatusCode(504)
 		} else {
-			ctx.Set(config.UPSTREAM_STATUS, ctx.Response.StatusCode())
+			ctx.Set(variable.UPSTREAM_STATUS, ctx.Response.StatusCode())
 		}
 	})
 

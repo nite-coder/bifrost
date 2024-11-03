@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/stretchr/testify/assert"
 )
@@ -12,9 +11,9 @@ import (
 func TestGetDirective(t *testing.T) {
 	hzCtx := app.NewContext(0)
 
-	hzCtx.Set(config.SERVER_ID, "serverA")
+	hzCtx.Set(SERVER_ID, "serverA")
 	hzCtx.Request.Header.SetUserAgentBytes([]byte("my_user_agent"))
-	hzCtx.Set(config.TRACE_ID, "trace_id")
+	hzCtx.Set(TRACE_ID, "trace_id")
 	hzCtx.SetClientIPFunc(func(ctx *app.RequestContext) string {
 		return "127.0.0.1"
 	})
@@ -25,25 +24,25 @@ func TestGetDirective(t *testing.T) {
 	assert.True(t, found)
 	assert.Equal(t, "127.0.0.1", val)
 
-	val, found = Get(config.SERVER_ID, hzCtx)
+	val, found = Get(SERVER_ID, hzCtx)
 	assert.True(t, found)
 	assert.Equal(t, "serverA", val)
 
-	val, found = Get(config.REQUEST_PATH, hzCtx)
+	val, found = Get(REQUEST_PATH, hzCtx)
 	assert.True(t, found)
 	assert.Equal(t, "/foo", val)
 
-	val, found = Get(config.UserAgent, hzCtx)
+	val, found = Get(UserAgent, hzCtx)
 	userAgent, _ := cast.ToString(val)
 	assert.True(t, found)
 	assert.Equal(t, "my_user_agent", userAgent)
 
-	val, found = Get(config.TRACE_ID, hzCtx)
+	val, found = Get(TRACE_ID, hzCtx)
 	traceID, _ := cast.ToString(val)
 	assert.True(t, found)
 	assert.Equal(t, "trace_id", traceID)
 
-	val, found = Get(config.DURATION, hzCtx)
+	val, found = Get(DURATION, hzCtx)
 	assert.False(t, found)
 	assert.Nil(t, val)
 

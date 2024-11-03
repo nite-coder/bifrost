@@ -10,6 +10,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
+	"github.com/nite-coder/bifrost/pkg/variable"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -29,12 +30,12 @@ func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	logger := m.logger
 
 	// save serverID for access log
-	ctx.Set(config.SERVER_ID, m.serverID)
+	ctx.Set(variable.SERVER_ID, m.serverID)
 
 	// save original host
 	host := make([]byte, len(ctx.Request.Host()))
 	copy(host, ctx.Request.Host())
-	ctx.Set(config.HOST, host)
+	ctx.Set(variable.HOST, host)
 
 	if len(ctx.Request.Header.Get("X-Forwarded-For")) > 0 {
 		ctx.Set("X-Forwarded-For", ctx.Request.Header.Get("X-Forwarded-For"))
@@ -43,13 +44,13 @@ func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	// save original path
 	path := make([]byte, len(ctx.Request.Path()))
 	copy(path, ctx.Request.Path())
-	ctx.Set(config.REQUEST_PATH, path)
+	ctx.Set(variable.REQUEST_PATH, path)
 
 	// add trace_id to logger
 	spanCtx := trace.SpanContextFromContext(c)
 	if spanCtx.HasTraceID() {
 		traceID := spanCtx.TraceID().String()
-		ctx.Set(config.TRACE_ID, traceID)
+		ctx.Set(variable.TRACE_ID, traceID)
 
 		logger = logger.With(slog.String("trace_id", traceID))
 	}
