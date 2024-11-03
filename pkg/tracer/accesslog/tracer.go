@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
-	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -16,7 +15,6 @@ import (
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/nite-coder/blackbear/pkg/cast"
-	"github.com/valyala/bytebufferpool"
 )
 
 type Tracer struct {
@@ -95,14 +93,9 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			now := timeNow.Format(t.opts.TimeFormat)
 			replacements = append(replacements, variable.TIME, now)
 		case variable.REMOTE_ADDR:
-			var ip string
-			switch addr := c.RemoteAddr().(type) {
-			case *net.UDPAddr:
-				ip = addr.IP.String()
-			case *net.TCPAddr:
-				ip = addr.IP.String()
-			}
-			replacements = append(replacements, variable.REMOTE_ADDR, ip)
+			val, _ := variable.Get(variable.REMOTE_ADDR, c)
+			remoteAddr, _ := cast.ToString(val)
+			replacements = append(replacements, variable.REMOTE_ADDR, remoteAddr)
 		case variable.HOST:
 			val, _ := variable.Get(variable.HOST, c)
 			host, _ := cast.ToString(val)
@@ -110,31 +103,9 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 		case variable.REQUEST_METHOD:
 			replacements = append(replacements, variable.REQUEST_METHOD, cast.B2S(c.Request.Method()))
 		case variable.REQUEST_URI:
-			buf := bytebufferpool.Get()
-			defer bytebufferpool.Put(buf)
-
-			val, found := c.Get(variable.REQUEST_PATH)
-			if found {
-				b, ok := val.([]byte)
-				if ok {
-					_, _ = buf.Write(b)
-					if len(c.Request.QueryString()) > 0 {
-						_, _ = buf.Write(questionByte)
-						_, _ = buf.Write(c.Request.QueryString())
-					}
-
-					replacements = append(replacements, variable.REQUEST_URI, buf.String())
-				}
-				continue
-			}
-
-			_, _ = buf.Write(c.Request.Path())
-			if len(c.Request.QueryString()) > 0 {
-				_, _ = buf.Write(questionByte)
-				_, _ = buf.Write(c.Request.QueryString())
-			}
-			replacements = append(replacements, variable.REQUEST_URI, buf.String())
-
+			val, _ := variable.Get(variable.REQUEST_URI, c)
+			uri, _ := cast.ToString(val)
+			replacements = append(replacements, variable.REQUEST_URI, uri)
 		case variable.REQUEST_PATH:
 			val, _ := variable.Get(variable.REQUEST_PATH, c)
 			path, _ := cast.ToString(val)
@@ -164,17 +135,9 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 		case variable.UPSTREAM_METHOD:
 			replacements = append(replacements, variable.UPSTREAM_METHOD, cast.B2S(c.Request.Method()))
 		case variable.UPSTREAM_URI:
-			buf := bytebufferpool.Get()
-			defer bytebufferpool.Put(buf)
-
-			_, _ = buf.Write(c.Request.Path())
-
-			if len(c.Request.QueryString()) > 0 {
-				_, _ = buf.Write(questionByte)
-				_, _ = buf.Write(c.Request.QueryString())
-			}
-
-			replacements = append(replacements, variable.UPSTREAM_URI, buf.String())
+			val, _ := variable.Get(variable.UPSTREAM_URI, c)
+			uri, _ := cast.ToString(val)
+			replacements = append(replacements, variable.UPSTREAM_URI, uri)
 		case variable.UPSTREAM_PATH:
 			replacements = append(replacements, variable.UPSTREAM_PATH, cast.B2S(c.Request.Path()))
 		case variable.UPSTREAM_ADDR:

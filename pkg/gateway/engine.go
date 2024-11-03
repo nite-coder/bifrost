@@ -21,16 +21,16 @@ type Engine struct {
 	hzOptions       []hzconfig.Option
 }
 
-func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, error) {
+func newEngine(bifrost *Bifrost, serverOptions config.ServerOptions) (*Engine, error) {
 
 	// services
-	services, err := loadServices(bifrost, bifrost.middlewares)
+	services, err := loadServices(bifrost)
 	if err != nil {
 		return nil, err
 	}
 
 	// routes
-	route, err := loadRoutes(bifrost, serverOpts, services, bifrost.middlewares)
+	route, err := loadRoutes(bifrost, serverOptions, services)
 	if err != nil {
 		return nil, err
 	}
@@ -44,20 +44,20 @@ func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, erro
 	}
 
 	// init middlewares
-	logger, err := log.NewLogger(serverOpts.Logging)
+	logger, err := log.NewLogger(serverOptions.Logging)
 	if err != nil {
 		return nil, err
 	}
-	initMiddleware := newInitMiddleware(serverOpts.ID, logger)
+	initMiddleware := newInitMiddleware(serverOptions.ID, logger)
 	engine.Use(initMiddleware.ServeHTTP)
 
 	// set server's middlewares
-	for _, m := range serverOpts.Middlewares {
+	for _, m := range serverOptions.Middlewares {
 
 		if len(m.Use) > 0 {
 			val, found := bifrost.middlewares[m.Use]
 			if !found {
-				return nil, fmt.Errorf("middleware '%s' was not found in server id: '%s'", m.Use, serverOpts.ID)
+				return nil, fmt.Errorf("middleware '%s' was not found in server id: '%s'", m.Use, serverOptions.ID)
 			}
 
 			engine.Use(val)
@@ -65,17 +65,17 @@ func newEngine(bifrost *Bifrost, serverOpts config.ServerOptions) (*Engine, erro
 		}
 
 		if len(m.Type) == 0 {
-			return nil, fmt.Errorf("middleware type can't be empty in server id: '%s'", serverOpts.ID)
+			return nil, fmt.Errorf("middleware type can't be empty in server id: '%s'", serverOptions.ID)
 		}
 
 		handler := middleware.FindHandlerByType(m.Type)
 		if handler == nil {
-			return nil, fmt.Errorf("middleware type '%s' was not found in server id: '%s'", m.Type, serverOpts.ID)
+			return nil, fmt.Errorf("middleware type '%s' was not found in server id: '%s'", m.Type, serverOptions.ID)
 		}
 
 		apphandler, err := handler(m.Params)
 		if err != nil {
-			return nil, fmt.Errorf("middleware type '%s' params is invalid in server id: '%s'. error: %w", m.Type, serverOpts.ID, err)
+			return nil, fmt.Errorf("middleware type '%s' params is invalid in server id: '%s'. error: %w", m.Type, serverOptions.ID, err)
 		}
 
 		engine.Use(apphandler)

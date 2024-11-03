@@ -7,7 +7,6 @@ import (
 
 var (
 	reIsVariable    = regexp.MustCompile(`\$\w+(-\w+)*`)
-	questionByte    = []byte{byte('?')}
 	grpcContentType = []byte("application/grpc")
 )
 

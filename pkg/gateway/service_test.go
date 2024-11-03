@@ -158,7 +158,7 @@ func TestDynamicService(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	services, err := loadServices(bifrost, nil)
+	services, err := loadServices(bifrost)
 	assert.NoError(t, err)
 
 	dynamicService := newDynamicService("$dd", services)
@@ -168,4 +168,41 @@ func TestDynamicService(t *testing.T) {
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
 	dynamicService.ServeHTTP(ctx, hzCtx)
 	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
+}
+
+func TestDynamicServiceMiddleware(t *testing.T) {
+
+	bifrost := &Bifrost{
+		options: &config.Options{
+			Services: map[string]config.ServiceOptions{
+				"testService": {
+					Url: "http://127.0.0.1:8088",
+					Middlewares: []config.MiddlwareOptions{
+						{
+							Use: "testMiddleware",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	hit := 0
+	bifrost.middlewares = map[string]app.HandlerFunc{
+		"testMiddleware": func(ctx context.Context, c *app.RequestContext) {
+			hit++
+			c.Abort()
+		},
+	}
+
+	ctx := context.Background()
+	services, err := loadServices(bifrost)
+	assert.NoError(t, err)
+
+	dynamicService := newDynamicService("$dd", services)
+	hzCtx := app.NewContext(0)
+	hzCtx.Set("$dd", "testService")
+	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
+	dynamicService.ServeHTTP(ctx, hzCtx)
+	assert.Equal(t, 1, hit)
 }

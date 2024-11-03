@@ -18,7 +18,7 @@ func TestGetDirective(t *testing.T) {
 		return "127.0.0.1"
 	})
 	hzCtx.Request.SetMethod("GET")
-	hzCtx.Request.URI().SetPath("/foo")
+	hzCtx.Request.SetRequestURI("/foo?bar=baz")
 
 	val, found := Get("$client_ip", hzCtx)
 	assert.True(t, found)
@@ -31,6 +31,10 @@ func TestGetDirective(t *testing.T) {
 	val, found = Get(REQUEST_PATH, hzCtx)
 	assert.True(t, found)
 	assert.Equal(t, "/foo", val)
+
+	val, found = Get(REQUEST_URI, hzCtx)
+	assert.True(t, found)
+	assert.Equal(t, "/foo?bar=baz", val)
 
 	val, found = Get(UserAgent, hzCtx)
 	userAgent, _ := cast.ToString(val)

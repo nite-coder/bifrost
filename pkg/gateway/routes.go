@@ -17,12 +17,12 @@ import (
 )
 
 type routeSetting struct {
-	regex      *regexp.Regexp
-	route      *config.RouteOptions
-	middleware []app.HandlerFunc
+	regex       *regexp.Regexp
+	route       *config.RouteOptions
+	middlewares []app.HandlerFunc
 }
 
-func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[string]*Service, middlewares map[string]app.HandlerFunc) (*Routes, error) {
+func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[string]*Service) (*Routes, error) {
 	route := newRoutes()
 
 	for routeID, routeOpts := range bifrost.options.Routes {
@@ -45,7 +45,7 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 
 		for _, m := range routeOpts.Middlewares {
 			if len(m.Use) > 0 {
-				val, found := middlewares[m.Use]
+				val, found := bifrost.middlewares[m.Use]
 				if !found {
 					return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", m.Use, routeOpts.ID)
 				}
@@ -55,7 +55,7 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 			}
 
 			if len(m.Type) == 0 {
-				return nil, fmt.Errorf("middleware kind can't be empty in route: '%s'", routeOpts.Paths)
+				return nil, fmt.Errorf("middleware type can't be empty in route: '%s'", routeOpts.Paths)
 			}
 
 			handler := middleware.FindHandlerByType(m.Type)
@@ -65,20 +65,24 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 
 			appHandler, err := handler(m.Params)
 			if err != nil {
-				return nil, fmt.Errorf("create middleware handler '%s' failed in route: '%s'", m.Type, routeOpts.Paths)
+				return nil, fmt.Errorf("fail to create middleware '%s' failed in route: '%s'", m.Type, routeOpts.Paths)
 			}
 
 			routeMiddlewares = append(routeMiddlewares, appHandler)
 		}
 
-		// dynamic service
 		if routeOpts.ServiceID[0] == '$' {
+			// dynamic service
 			dynamicService := newDynamicService(routeOpts.ServiceID, services)
 			routeMiddlewares = append(routeMiddlewares, dynamicService.ServeHTTP)
 		} else {
 			service, found := services[routeOpts.ServiceID]
 			if !found {
 				return nil, fmt.Errorf("service_id '%s' was not found in route: %s", routeOpts.ServiceID, routeOpts.ID)
+			}
+
+			if len(service.middlewares) > 0 {
+				routeMiddlewares = append(routeMiddlewares, service.middlewares...)
 			}
 			routeMiddlewares = append(routeMiddlewares, service.ServeHTTP)
 		}
@@ -109,11 +113,11 @@ func (r *Routes) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	method := cast.B2S(ctx.Method())
 	path := cast.B2S(ctx.Request.Path())
 
-	middleware, isDefered := r.router.find(method, path)
+	middlewares, isDefered := r.router.find(method, path)
 
-	if len(middleware) > 0 && !isDefered {
+	if len(middlewares) > 0 && !isDefered {
 		ctx.SetIndex(-1)
-		ctx.SetHandlers(middleware)
+		ctx.SetHandlers(middlewares)
 		ctx.Next(c)
 		ctx.Abort()
 		return
@@ -123,7 +127,7 @@ func (r *Routes) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	for _, route := range r.regexpRoutes {
 		if checkRegexpRoute(route, method, path) {
 			ctx.SetIndex(-1)
-			ctx.SetHandlers(route.middleware)
+			ctx.SetHandlers(route.middlewares)
 			ctx.Next(c)
 			ctx.Abort()
 			return
@@ -131,9 +135,9 @@ func (r *Routes) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	}
 
 	// general routes
-	if len(middleware) > 0 {
+	if len(middlewares) > 0 {
 		ctx.SetIndex(-1)
-		ctx.SetHandlers(middleware)
+		ctx.SetHandlers(middlewares)
 		ctx.Next(c)
 		ctx.Abort()
 		return
@@ -166,9 +170,9 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 			}
 
 			r.regexpRoutes = append(r.regexpRoutes, routeSetting{
-				regex:      regx,
-				route:      &routeOpts,
-				middleware: middlewares,
+				regex:       regx,
+				route:       &routeOpts,
+				middlewares: middlewares,
 			})
 			continue
 		case strings.HasPrefix(path, "~"):
@@ -182,9 +186,9 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 			}
 
 			r.regexpRoutes = append(r.regexpRoutes, routeSetting{
-				regex:      regx,
-				route:      &routeOpts,
-				middleware: middlewares,
+				regex:       regx,
+				route:       &routeOpts,
+				middlewares: middlewares,
 			})
 			continue
 		case strings.HasPrefix(path, "="):

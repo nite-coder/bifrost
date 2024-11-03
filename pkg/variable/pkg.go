@@ -98,8 +98,11 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return path, true
 		}
 
-		path := string(c.Request.Path())
+		path := string(c.Request.URI().Path())
 		return path, true
+	case REQUEST_URI:
+		val := string(c.Request.URI().RequestURI())
+		return val, true
 	case REQUEST_METHOD:
 		method := string(c.Request.Method())
 		return method, true

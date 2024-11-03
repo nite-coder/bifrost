@@ -396,7 +396,7 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 	)
 
 	if errors.Is(err, hzerrors.ErrTimeout) {
-		c.Set("target_timeout", true)
+		c.Set(variable.TARGET_TIMEOUT, true)
 	}
 
 	c.Response.Header.SetStatusCode(http.StatusBadGateway)

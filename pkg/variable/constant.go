@@ -27,6 +27,7 @@ const (
 	ALLOW             = "$allow"
 	ClientIP          = "$client_ip"
 	UserAgent         = "$user_agent"
+	TARGET_TIMEOUT    = "target_timeout"
 
 	// grpc
 	GRPC_STATUS  = "$grpc_status"

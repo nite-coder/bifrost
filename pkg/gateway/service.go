@@ -13,6 +13,7 @@ import (
 	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
@@ -34,36 +35,26 @@ type Service struct {
 	middlewares     []app.HandlerFunc
 }
 
-func loadServices(bifrost *Bifrost, middlewares map[string]app.HandlerFunc) (map[string]*Service, error) {
+func loadServices(bifrost *Bifrost) (map[string]*Service, error) {
 	services := map[string]*Service{}
-	for id, serviceOpts := range bifrost.options.Services {
 
+	for id, serviceOptions := range bifrost.options.Services {
 		if len(id) == 0 {
 			return nil, errors.New("service id can't be empty")
 		}
 
-		serviceOpts.ID = id
+		serviceOptions.ID = id
 
-		_, found := services[serviceOpts.ID]
+		_, found := services[serviceOptions.ID]
 		if found {
-			return nil, fmt.Errorf("service '%s' already exists", serviceOpts.ID)
+			return nil, fmt.Errorf("service '%s' already exists", serviceOptions.ID)
 		}
 
-		service, err := newService(bifrost, serviceOpts)
+		service, err := newService(bifrost, serviceOptions)
 		if err != nil {
 			return nil, err
 		}
-		services[serviceOpts.ID] = service
-
-		if len(serviceOpts.Middlewares) > 0 {
-			for _, middlewareOpts := range serviceOpts.Middlewares {
-				middleware, found := middlewares[middlewareOpts.ID]
-				if !found {
-					return nil, fmt.Errorf("middleware '%s' not found", middlewareOpts)
-				}
-				service.middlewares = append(service.middlewares, middleware)
-			}
-		}
+		services[serviceOptions.ID] = service
 	}
 
 	return services, nil
@@ -85,6 +76,34 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 		options:     &serviceOptions,
 		upstreams:   upstreams,
 		middlewares: make([]app.HandlerFunc, 0),
+	}
+
+	for _, middlewareOpts := range serviceOptions.Middlewares {
+
+		if len(middlewareOpts.Use) > 0 {
+			m, found := bifrost.middlewares[middlewareOpts.Use]
+			if !found {
+				return nil, fmt.Errorf("middleware '%s' not found in service: '%s'", middlewareOpts, serviceOptions.ID)
+			}
+			svc.middlewares = append(svc.middlewares, m)
+			continue
+		}
+
+		if len(middlewareOpts.Type) == 0 {
+			return nil, fmt.Errorf("middleware kind can't be empty in service: '%s'", serviceOptions.ID)
+		}
+
+		handler := middleware.FindHandlerByType(middlewareOpts.Type)
+		if handler == nil {
+			return nil, fmt.Errorf("middleware handler '%s' was not found in service: '%s'", middlewareOpts.Type, serviceOptions.ID)
+		}
+
+		appHandler, err := handler(middlewareOpts.Params)
+		if err != nil {
+			return nil, fmt.Errorf("fail to create middleware '%s' in route: '%s'", middlewareOpts.Type, serviceOptions.ID)
+		}
+
+		svc.middlewares = append(svc.middlewares, appHandler)
 	}
 
 	addr, err := url.Parse(serviceOptions.Url)
@@ -207,7 +226,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		ctx.Set(variable.UPSTREAM_DURATION, responseTime)
 
 		// the upstream target timeout and we need to response http status 504 back to client
-		if ctx.GetBool("target_timeout") {
+		if ctx.GetBool(variable.TARGET_TIMEOUT) {
 			ctx.Response.SetStatusCode(504)
 		} else {
 			ctx.Set(variable.UPSTREAM_STATUS, ctx.Response.StatusCode())
@@ -256,7 +275,11 @@ func (svc *DynamicService) ServeHTTP(c context.Context, ctx *app.RequestContext)
 		return
 	}
 
-	service.ServeHTTP(c, ctx)
+	service.middlewares = append(service.middlewares, service.ServeHTTP)
+
+	ctx.SetIndex(-1)
+	ctx.SetHandlers(service.middlewares)
+	ctx.Next(c)
 }
 
 func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) (proxy.Proxy, error) {
