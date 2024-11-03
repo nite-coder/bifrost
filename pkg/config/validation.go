@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/nite-coder/bifrost/pkg/dns"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
 // ValidateMapping checks if the config's value mapping is valid.  For example, the server in route must be finded in the servers
@@ -36,18 +37,19 @@ func ValidateMapping(mainOpts Options) error {
 
 	// TODO: check middlewares
 	for serverID, server := range mainOpts.Servers {
-		for _, middleware := range server.Middlewares {
-			if len(middleware.Use) > 0 {
-				if _, found := mainOpts.Middlewares[middleware.Use]; !found {
-					return fmt.Errorf("can't find the middleware '%s' in the server '%s'", middleware.Use, serverID)
+		for _, m := range server.Middlewares {
+			if len(m.Use) > 0 {
+				if _, found := mainOpts.Middlewares[m.Use]; !found {
+					return fmt.Errorf("can't find the middleware '%s' in the server '%s'", m.Use, serverID)
 				}
 			}
 
-			// if len(middleware.Type) > 0 {
-			// 	if _, found := middlewareFactory[middleware.Type]; !found {
-			// 		return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", middleware.Type, serverID)
-			// 	}
-			// }
+			if len(m.Type) > 0 {
+				hander := middleware.FindHandlerByType(m.Type)
+				if hander == nil {
+					return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Type, serverID)
+				}
+			}
 		}
 	}
 

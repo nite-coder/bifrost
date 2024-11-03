@@ -6,7 +6,16 @@ import (
 
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
-
+	_ "github.com/nite-coder/bifrost/pkg/middleware/addprefix"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/headers"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/prommetric"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/ratelimiting"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepath"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepathregex"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/response"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/stripprefix"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/timinglogger"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/tracing"
 	"github.com/urfave/cli/v2"
 )
 

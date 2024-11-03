@@ -5,7 +5,22 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 )
+
+func init() {
+	_ = middleware.RegisterMiddleware("strip_prefix", func(params map[string]any) (app.HandlerFunc, error) {
+		val := params["prefixes"].([]any)
+
+		prefixes := make([]string, 0)
+		for _, v := range val {
+			prefixes = append(prefixes, v.(string))
+		}
+
+		m := NewMiddleware(prefixes)
+		return m.ServeHTTP, nil
+	})
+}
 
 type StripPrefixMiddleware struct {
 	prefixes [][]byte

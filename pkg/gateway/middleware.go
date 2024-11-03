@@ -2,11 +2,14 @@ package gateway
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -53,4 +56,36 @@ func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	c = log.NewContext(c, logger)
 
 	ctx.Next(c)
+}
+
+func loadMiddlewares(middlewareOptions map[string]config.MiddlwareOptions) (map[string]app.HandlerFunc, error) {
+
+	middlewares := map[string]app.HandlerFunc{}
+	for id, middlewareOpts := range middlewareOptions {
+
+		if len(id) == 0 {
+			return nil, errors.New("middleware id can't be empty")
+		}
+
+		middlewareOpts.ID = id
+
+		if len(middlewareOpts.Type) == 0 {
+			return nil, fmt.Errorf("middleware type can't be empty in middleware id: '%s'", middlewareOpts.ID)
+		}
+
+		handler := middleware.FindHandlerByType(middlewareOpts.Type)
+
+		if handler == nil {
+			return nil, fmt.Errorf("middleware type '%s' was not found in middleware id: '%s'", middlewareOpts.Type, middlewareOpts.ID)
+		}
+
+		m, err := handler(middlewareOpts.Params)
+		if err != nil {
+			return nil, fmt.Errorf("middleware type '%s' params is invalid in middleware id: '%s'. error: %w", middlewareOpts.Type, middlewareOpts.ID, err)
+		}
+
+		middlewares[middlewareOpts.ID] = m
+	}
+
+	return middlewares, nil
 }

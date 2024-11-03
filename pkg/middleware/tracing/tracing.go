@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"go.opentelemetry.io/otel"
@@ -11,6 +12,13 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
+
+func init() {
+	_ = middleware.RegisterMiddleware("tracing", func(param map[string]any) (app.HandlerFunc, error) {
+		m := NewMiddleware()
+		return m.ServeHTTP, nil
+	})
+}
 
 type TracingMiddleware struct {
 	tracer trace.Tracer

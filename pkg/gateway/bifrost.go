@@ -13,7 +13,6 @@ import (
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/log"
-	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/tracer/accesslog"
 	"github.com/nite-coder/bifrost/pkg/tracer/opentelemetry"
@@ -131,7 +130,7 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 		return nil, err
 	}
 
-	middlewares, err := middleware.LoadMiddlewares(mainOptions.Middlewares)
+	middlewares, err := loadMiddlewares(mainOptions.Middlewares)
 	if err != nil {
 		return nil, err
 	}

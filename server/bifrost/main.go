@@ -6,12 +6,21 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
-
-	"github.com/cloudwego/hertz/pkg/app"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/addprefix"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/headers"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/prommetric"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/ratelimiting"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepath"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepathregex"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/response"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/stripprefix"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/timinglogger"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/tracing"
 	"github.com/urfave/cli/v2"
 )
 
@@ -20,8 +29,8 @@ var (
 )
 
 func main() {
-	cli.VersionPrinter = func(cCtx *cli.Context) {
-		fmt.Printf("version=%s, build=%s\n", cCtx.App.Version, Build)
+	cli.VersionPrinter = func(cliCtx *cli.Context) {
+		fmt.Printf("version=%s, build=%s\n", cliCtx.App.Version, Build)
 	}
 
 	app := &cli.App{
@@ -61,6 +70,11 @@ func main() {
 		Action: func(cCtx *cli.Context) error {
 			var err error
 
+			err = registerMiddlewares()
+			if err != nil {
+				return err
+			}
+
 			configPath := cCtx.String("config")
 			isTest := cCtx.Bool("test")
 
@@ -94,11 +108,6 @@ func main() {
 				if os.Getenv("DAEMONIZED") == "" {
 					return gateway.RunAsDaemon(mainOptions)
 				}
-			}
-
-			err = registerMiddlewares()
-			if err != nil {
-				return err
 			}
 
 			return gateway.Run(mainOptions)

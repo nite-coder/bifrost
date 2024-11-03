@@ -13,6 +13,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/go-resty/resty/v2"
 	"github.com/nite-coder/bifrost/pkg/config"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/prommetric"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/http2"
 )
