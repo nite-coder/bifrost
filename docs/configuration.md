@@ -10,6 +10,7 @@ This configuration file is divided into two primary types: `static configuration
 * [watch](#watch)
 * [timer_resolution](#timer_resolution)
 * [num_loops](#num_loops)
+* [resolver](#resolver)
 * [pid_file](#pid_file)
 * [upgrade_sock](#upgrade_sock)
 * [providers](#providers)
@@ -46,6 +47,25 @@ This represents the number of epoll created by bifrost, which has been automatic
 ```yaml
 num_loops: 4
 ```
+
+## resolver
+
+The DNS resolver configuration.  By default, Bifrost will resolve all domain name and cache all IPs at beginning.  The cache won't be refresh until the gateway is restarted or reloaded.
+
+Example:
+
+```yaml
+resolver:
+  addr_port: "8.8.8.8:53"
+  valid: 5s
+  skip_test: false
+```
+
+| Field     | Default | Description                                                     |
+| --------- | ------- | --------------------------------------------------------------- |
+| addr_port |         | DNS server address and port                                     |
+| valid     | 0       | Time to refresh the DNS cache.  At least greater than 1 second. |
+| skip_test | false   | Skip the dns check during testing                               |
 
 ## pid_file
 

@@ -1,6 +1,8 @@
 version: 1
 watch: true
 #timer_resolution: 1ms
+# resolver:
+#   valid: 2s
 # pid_file: ./logs1/bifrost.pid
 # upgrade_sock: ./logs1/bifrost.sock
 # user: vscode

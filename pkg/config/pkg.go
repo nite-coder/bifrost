@@ -149,6 +149,10 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 		return mainOpts, err
 	}
 
+	if mainOpts.Servers == nil {
+		mainOpts.Servers = make(map[string]ServerOptions)
+	}
+
 	if mainOpts.Routes == nil {
 		mainOpts.Routes = make(map[string]RouteOptions)
 	}
@@ -203,6 +207,16 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 		}
 
 		mainOpts.Upstreams[k] = v
+	}
+
+	for k, v := range newOptions.Servers {
+		if _, found := mainOpts.Servers[k]; found {
+			msg := fmt.Sprintf("server '%s' is duplicate", k)
+			fullpath := []string{"servers", k}
+			return mainOpts, newInvalidConfig(fullpath, "", msg)
+		}
+
+		mainOpts.Servers[k] = v
 	}
 
 	return mainOpts, nil
