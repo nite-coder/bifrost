@@ -21,6 +21,7 @@ import (
 	_ "github.com/nite-coder/bifrost/pkg/middleware/stripprefix"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/timinglogger"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/tracing"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/trafficsplitter"
 	"github.com/urfave/cli/v2"
 )
 
