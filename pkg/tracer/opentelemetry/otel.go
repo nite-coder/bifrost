@@ -8,7 +8,6 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
-	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -56,12 +55,6 @@ func newTraceGRPCExporter(opts config.TracingOptions) (trace.SpanExporter, error
 	}
 
 	return exporter, nil
-}
-
-func newPropagator() propagation.TextMapPropagator {
-	return propagation.NewCompositeTextMapPropagator(
-		propagation.TraceContext{},
-	)
 }
 
 func newTraceProvider(traceExporter []trace.SpanExporter) *trace.TracerProvider {

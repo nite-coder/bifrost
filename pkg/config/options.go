@@ -84,9 +84,10 @@ type TracingOptions struct {
 }
 
 type OTLPOptions struct {
-	Enabled bool            `yaml:"enabled" json:"enabled"`
-	HTTP    OTLPHTTPOptions `yaml:"http" json:"http"`
-	GRPC    OTLPGRPCOptions `yaml:"grpc" json:"grpc"`
+	Enabled     bool            `yaml:"enabled" json:"enabled"`
+	Propagators []string        `yaml:"propagators" json:"propagators"`
+	HTTP        OTLPHTTPOptions `yaml:"http" json:"http"`
+	GRPC        OTLPGRPCOptions `yaml:"grpc" json:"grpc"`
 }
 
 type OTLPHTTPOptions struct {
