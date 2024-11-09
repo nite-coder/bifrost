@@ -75,8 +75,10 @@ type LoggingOtions struct {
 }
 
 type PrometheusOptions struct {
-	Enabled bool      `yaml:"enabled" json:"enabled"`
-	Buckets []float64 `yaml:"buckets" json:"buckets"`
+	Enabled  bool      `yaml:"enabled" json:"enabled"`
+	ServerID string    `yaml:"server_id" json:"server_id"`
+	Path     string    `yaml:"path" json:"path"`
+	Buckets  []float64 `yaml:"buckets" json:"buckets"`
 }
 
 type TracingOptions struct {

@@ -132,13 +132,17 @@ Example:
 metrics:
   prometheus:
     enabled: true
+    server_id: "apiv1"
+    path: "/metrics"
     buckets: [0.005000, 0.010000, 0.025000, 0.050000, 0.10000, 0.250000, 0.500000, 1.00000, 2.50000, 5.000000, 10.000000]
 ```
 
-| Field              | Default                                                                                                    | Description                |
-| ------------------ | ---------------------------------------------------------------------------------------------------------- | -------------------------- |
-| prometheus.enabled | false                                                                                                      | Enables prometheus support |
-| prometheus.buckets | 0.005000, 0.010000, 0.025000, 0.050000, 0.10000, 0.250000, 0.500000, 1.00000, 2.50000, 5.000000, 10.000000 | Latency bucket levels      |
+| Field                | Default                                                                                                    | Description                    |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| prometheus.enabled   | false                                                                                                      | Enables prometheus support     |
+| prometheus.server_id |                                                                                                            | Server  used to expose metrics |
+| prometheus.path      | `/metrics`                                                                                                 | set the metric                 |
+| prometheus.buckets   | 0.005000, 0.010000, 0.025000, 0.050000, 0.10000, 0.250000, 0.500000, 1.00000, 2.50000, 5.000000, 10.000000 | Latency bucket levels          |
 
 ## tracing
 

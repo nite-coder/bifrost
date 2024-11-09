@@ -64,7 +64,12 @@ func ValidateMapping(mainOpts Options) error {
 // ValidateConfig checks if the config's values are valid, but does not check if the config's value mapping is valid
 func ValidateConfig(mainOpts Options) error {
 
-	err := validateLogging(mainOpts.Logging)
+	err := validateMetrics(mainOpts)
+	if err != nil {
+		return err
+	}
+
+	err = validateLogging(mainOpts.Logging)
 	if err != nil {
 		return err
 	}
@@ -223,6 +228,21 @@ func validateUpstreams(options map[string]UpstreamOptions) error {
 			msg := fmt.Sprintf("the hash_on can't be empty for the upstream '%s'", upstreamID)
 			fullpath := []string{"upstreams", upstreamID, "hash_on"}
 			return newInvalidConfig(fullpath, "", msg)
+		}
+	}
+
+	return nil
+}
+
+func validateMetrics(options Options) error {
+	if options.Metrics.Prometheus.Enabled {
+		if options.Metrics.Prometheus.ServerID == "" {
+			return errors.New("the server_id can't be empty for the prometheus")
+		}
+
+		_, found := options.Servers[options.Metrics.Prometheus.ServerID]
+		if !found {
+			return fmt.Errorf("the server_id '%s' for the prometheus is not found", options.Metrics.Prometheus.ServerID)
 		}
 	}
 

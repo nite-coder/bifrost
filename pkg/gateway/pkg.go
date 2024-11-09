@@ -27,6 +27,7 @@ import (
 )
 
 var (
+	httpGET        = []byte("GET")
 	defaultBifrost *Bifrost
 	spaceByte      = []byte{byte(' ')}
 	httpMethods    = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch, http.MethodHead, http.MethodOptions, http.MethodTrace, http.MethodConnect}

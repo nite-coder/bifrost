@@ -14,11 +14,10 @@ import (
 )
 
 const (
-	labelServer     = "server"
-	labelMethod     = "method"
-	labelPath       = "path"
-	labelStatusCode = "statusCode"
-
+	labelServer       = "server"
+	labelMethod       = "method"
+	labelPath         = "path"
+	labelStatusCode   = "statusCode"
 	unknownLabelValue = "unknown"
 )
 
@@ -59,6 +58,7 @@ type serverTracer struct {
 	respoonseSizeTotalCounter *prom.CounterVec
 	requestTotalCounter       *prom.CounterVec
 	requestDurationHistogram  *prom.HistogramVec
+	bifrostDurationHistogram  *prom.HistogramVec
 	upstreamDurationHistogram *prom.HistogramVec
 }
 
@@ -88,6 +88,9 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 
 	upstreamDuration := c.GetDuration(variable.UPSTREAM_DURATION)
 	_ = histogramObserve(s.upstreamDurationHistogram, upstreamDuration, genUpstreamDurationLabels(c))
+
+	bifrostDuration := reqDuration - upstreamDuration
+	_ = histogramObserve(s.bifrostDurationHistogram, bifrostDuration, genUpstreamDurationLabels(c))
 
 	serverLabel := make(prom.Labels)
 	serverLabel[labelServer] = serverID
@@ -128,7 +131,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 	requestTotalCounter := prom.NewCounterVec(
 		prom.CounterOpts{
 			Name: "bifrost_request_total",
-			Help: "Total number of HTTPs completed by the server, regardless of success or failure.",
+			Help: "Total number of HTTPs completed by the server, regardless of success or failure",
 		},
 		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
 	)
@@ -137,17 +140,27 @@ func NewTracer(opts ...Option) tracer.Tracer {
 	requestDurationHistogram := prom.NewHistogramVec(
 		prom.HistogramOpts{
 			Name:    "bifrost_request_duration",
-			Help:    "Latency (seconds) of HTTP that had been application-level handled by the server.",
+			Help:    "Latency (seconds) of HTTP that had been application-level handled by the server",
 			Buckets: cfg.buckets,
 		},
 		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
 	)
 	prom.MustRegister(requestDurationHistogram)
 
+	bifrostDurationHistogram := prom.NewHistogramVec(
+		prom.HistogramOpts{
+			Name:    "bifrost_bifrost_duration",
+			Help:    "Time taken for Bifrost to route a request and run all configured middlewares",
+			Buckets: cfg.buckets,
+		},
+		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
+	)
+	prom.MustRegister(bifrostDurationHistogram)
+
 	upstreamDurationHistogram := prom.NewHistogramVec(
 		prom.HistogramOpts{
 			Name:    "bifrost_upstream_duration",
-			Help:    "Latency (seconds) of HTTP that had been sent to upstream server from server.",
+			Help:    "Latency (seconds) of HTTP that had been sent to upstream server from server",
 			Buckets: cfg.buckets,
 		},
 		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
@@ -161,6 +174,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 		respoonseSizeTotalCounter: responseSizeTotalCounter,
 		requestTotalCounter:       requestTotalCounter,
 		requestDurationHistogram:  requestDurationHistogram,
+		bifrostDurationHistogram:  bifrostDurationHistogram,
 		upstreamDurationHistogram: upstreamDurationHistogram,
 	}
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/addprefix"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/headers"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/prommetric"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/ratelimiting"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepath"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepathregex"

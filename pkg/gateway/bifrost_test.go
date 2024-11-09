@@ -13,7 +13,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/go-resty/resty/v2"
 	"github.com/nite-coder/bifrost/pkg/config"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/prommetric"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/timinglogger"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/http2"
 )
@@ -26,6 +26,9 @@ type TestOrder struct {
 func TestBifrost(t *testing.T) {
 	// setup upstream
 	options := config.NewOptions()
+
+	options.Metrics.Prometheus.Enabled = true
+	options.Metrics.Prometheus.ServerID = "apiv1"
 
 	options.AccessLogs["main"] = config.AccessLogOptions{
 		Enabled: true,
@@ -80,10 +83,7 @@ func TestBifrost(t *testing.T) {
 		AccessLogID: "main",
 		Middlewares: []config.MiddlwareOptions{
 			{
-				Type: "prom_metric",
-				Params: map[string]any{
-					"path": "/metrics",
-				},
+				Type: "timing_logger",
 			},
 		},
 	}

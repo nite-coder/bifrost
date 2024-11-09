@@ -81,6 +81,16 @@ func newEngine(bifrost *Bifrost, serverOptions config.ServerOptions) (*Engine, e
 		engine.Use(apphandler)
 	}
 
+	// set prom metric middleware
+	if bifrost.options.Metrics.Prometheus.Enabled && serverOptions.ID == bifrost.options.Metrics.Prometheus.ServerID {
+		if bifrost.options.Metrics.Prometheus.Path == "" {
+			bifrost.options.Metrics.Prometheus.Path = "/metrics"
+		}
+
+		m := newPromMetricMiddleware(bifrost.options.Metrics.Prometheus.Path)
+		engine.Use(m.ServeHTTP)
+	}
+
 	engine.Use(route.ServeHTTP)
 
 	return engine, nil
