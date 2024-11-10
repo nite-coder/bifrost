@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -21,17 +22,22 @@ import (
 )
 
 type Bifrost struct {
-	middlewares map[string]app.HandlerFunc
+	state       uint32
 	options     *config.Options
-	HttpServers map[string]*HTTPServer
 	dnsResolver *dns.Resolver
 	zero        *zero.ZeroDownTime
+	middlewares map[string]app.HandlerFunc
+	services    map[string]*Service
+	httpServers map[string]*HTTPServer
 }
 
+// Run starts all HTTP servers in the Bifrost instance. The last server is started
+// in the current goroutine, and the function will block until the last server
+// stops. The other servers are started in separate goroutines.
 func (b *Bifrost) Run() {
 	i := 0
-	for _, server := range b.HttpServers {
-		if i == len(b.HttpServers)-1 {
+	for _, server := range b.httpServers {
+		if i == len(b.httpServers)-1 {
 			// last server need to blocked
 			server.Run()
 			return
@@ -45,6 +51,9 @@ func (b *Bifrost) ZeroDownTime() *zero.ZeroDownTime {
 	return b.zero
 }
 
+// Shutdown shuts down all HTTP servers in the Bifrost instance gracefully.
+// It blocks until all servers finish their shutdown process.
+// The function returns an error if any server fails to shut down.
 func (b *Bifrost) Shutdown(ctx context.Context) error {
 	return b.shutdown(ctx, false)
 }
@@ -53,12 +62,36 @@ func (b *Bifrost) ShutdownNow(ctx context.Context) error {
 	return b.shutdown(ctx, true)
 }
 
-func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
-	wg := &sync.WaitGroup{}
+// Service retrieves a service by its ID from the Bifrost instance.
+// It returns a pointer to the Service and a boolean indicating whether
+// the service was found. If the serviceID does not exist, the returned
+// Service pointer will be nil and the boolean will be false.
+func (b *Bifrost) Service(serviceID string) (*Service, bool) {
+	result, found := b.services[serviceID]
+	return result, found
+}
 
+// IsActive returns whether the Bifrost is active or not. It returns true if the Bifrost is active, false otherwise.
+func (b *Bifrost) IsActive() bool {
+	return atomic.LoadUint32(&b.state) == 1
+}
+
+// SetActive sets whether the Bifrost is active or not. If the value is true, Bifrost will be set to active, otherwise it will be set to inactive.
+func (b *Bifrost) SetActive(value bool) {
+	if value {
+		atomic.StoreUint32(&b.state, 1)
+	} else {
+		atomic.StoreUint32(&b.state, 0)
+	}
+}
+
+func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
+	b.SetActive(false)
+
+	wg := &sync.WaitGroup{}
 	maxTimeout := 10 * time.Second
 
-	for _, server := range b.HttpServers {
+	for _, server := range b.httpServers {
 		wg.Add(1)
 
 		if server.options.Timeout.Graceful > 0 && server.options.Timeout.Graceful > maxTimeout {
@@ -135,13 +168,20 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 		return nil, err
 	}
 
-	bifrsot := &Bifrost{
+	bifrost := &Bifrost{
+		options:     &mainOptions,
 		middlewares: middlewares,
 		dnsResolver: dnsResolver,
-		HttpServers: make(map[string]*HTTPServer),
-		options:     &mainOptions,
+		httpServers: make(map[string]*HTTPServer),
 		zero:        zero.New(zeroOptions),
 	}
+
+	// services
+	services, err := loadServices(bifrost)
+	if err != nil {
+		return nil, err
+	}
+	bifrost.services = services
 
 	tracers := []tracer.Tracer{}
 
@@ -197,7 +237,7 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 			return nil, errors.New("http server bind can't be empty")
 		}
 
-		_, found := bifrsot.HttpServers[id]
+		_, found := bifrost.httpServers[id]
 		if found {
 			return nil, fmt.Errorf("http server '%s' already exists", id)
 		}
@@ -214,13 +254,14 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 			}
 		}
 
-		httpServer, err := newHTTPServer(bifrsot, server, tracers, isReload)
+		httpServer, err := newHTTPServer(bifrost, server, tracers, isReload)
 		if err != nil {
 			return nil, err
 		}
 
-		bifrsot.HttpServers[id] = httpServer
+		bifrost.httpServers[id] = httpServer
 	}
 
-	return bifrsot, nil
+	bifrost.SetActive(true)
+	return bifrost, nil
 }

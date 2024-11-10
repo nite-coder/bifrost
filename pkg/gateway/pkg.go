@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -27,13 +28,27 @@ import (
 )
 
 var (
+	defaultBifrost = &atomic.Value{}
+	runTask        = gopool.CtxGo
 	httpGET        = []byte("GET")
-	defaultBifrost *Bifrost
 	spaceByte      = []byte{byte(' ')}
 	httpMethods    = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch, http.MethodHead, http.MethodOptions, http.MethodTrace, http.MethodConnect}
 )
 
-var runTask = gopool.CtxGo
+// GetBifrost retrieves the current instance of Bifrost.
+// It returns a pointer to the Bifrost instance stored in the defaultBifrost atomic value.
+func GetBifrost() *Bifrost {
+	val, _ := defaultBifrost.Load().(*Bifrost)
+	return val
+}
+
+// SetBifrost sets the current instance of Bifrost.
+// It stores the given Bifrost instance in the defaultBifrost atomic value.
+// This function is used to set the Bifrost instance after it has been created.
+// It is typically called by the top-level application code to initialize the Bifrost instance.
+func SetBifrost(bifrost *Bifrost) {
+	defaultBifrost.Store(bifrost)
+}
 
 func isValidHTTPMethod(method string) bool {
 	switch method {
@@ -64,11 +79,12 @@ func Run(mainOptions config.Options) (err error) {
 		return err
 	}
 
-	defaultBifrost, err = NewBifrost(mainOptions, false)
+	bifrost, err := NewBifrost(mainOptions, false)
 	if err != nil {
 		slog.Error("fail to start bifrost", "error", err)
 		return err
 	}
+	SetBifrost(bifrost)
 
 	ctx := context.Background()
 
@@ -90,8 +106,8 @@ func Run(mainOptions config.Options) (err error) {
 
 		isReloaded := false
 
-		for id, httpServer := range defaultBifrost.HttpServers {
-			newHTTPServer, found := newBifrost.HttpServers[id]
+		for id, httpServer := range bifrost.httpServers {
+			newHTTPServer, found := newBifrost.httpServers[id]
 			if found && httpServer.Bind() == newHTTPServer.Bind() {
 				httpServer.SetEngine(newHTTPServer.Engine())
 				isReloaded = true
@@ -111,11 +127,11 @@ func Run(mainOptions config.Options) (err error) {
 	}
 
 	go func() {
-		defaultBifrost.Run()
+		bifrost.Run()
 	}()
 
 	go func() {
-		for _, httpServer := range defaultBifrost.HttpServers {
+		for _, httpServer := range bifrost.httpServers {
 			for {
 				conn, err := net.Dial("tcp", httpServer.Bind())
 				if err == nil {
@@ -128,7 +144,7 @@ func Run(mainOptions config.Options) (err error) {
 
 		slog.Info("bifrost started successfully", "pid", os.Getpid())
 
-		zeroDT := defaultBifrost.ZeroDownTime()
+		zeroDT := bifrost.ZeroDownTime()
 
 		if zeroDT != nil && zeroDT.IsUpgraded() {
 			err := zeroDT.Shutdown(ctx)
@@ -138,7 +154,7 @@ func Run(mainOptions config.Options) (err error) {
 		}
 
 		if mainOptions.IsDaemon {
-			if err := defaultBifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
+			if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
 				slog.Error("failed to upgrade process", "error", err)
 				return
 			}
@@ -272,13 +288,14 @@ func Upgrade(mainOptions config.Options) error {
 }
 
 func shutdown(ctx context.Context, now bool) error {
+	bifrost := GetBifrost()
 	if defaultBifrost != nil {
 		var err error
 
 		if now {
-			err = defaultBifrost.ShutdownNow(ctx)
+			err = bifrost.ShutdownNow(ctx)
 		} else {
-			err = defaultBifrost.Shutdown(ctx)
+			err = bifrost.Shutdown(ctx)
 		}
 
 		if err != nil {

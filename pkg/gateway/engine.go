@@ -23,14 +23,8 @@ type Engine struct {
 
 func newEngine(bifrost *Bifrost, serverOptions config.ServerOptions) (*Engine, error) {
 
-	// services
-	services, err := loadServices(bifrost)
-	if err != nil {
-		return nil, err
-	}
-
 	// routes
-	route, err := loadRoutes(bifrost, serverOptions, services)
+	route, err := loadRoutes(bifrost, serverOptions, bifrost.services)
 	if err != nil {
 		return nil, err
 	}

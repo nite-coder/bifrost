@@ -85,6 +85,7 @@ type Options struct {
 	Weight      uint32
 	MaxFails    uint
 	FailTimeout time.Duration
+	HeaderHost  string
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -157,6 +158,9 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 			default:
 			}
 
+			if opts.HeaderHost != "" {
+				req.Header.Set("Host", opts.HeaderHost)
+			}
 			req.SetRequestURI(cast.B2S(JoinURLPath(req, opts.Target)))
 			// req.Header.SetHostBytes(req.URI().Host())
 		},
@@ -308,6 +312,7 @@ func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	// }
 
 ProxyPassLoop:
+
 	err = p.client.Do(c, outReq, outResp)
 	if err != nil {
 		if errors.Is(err, hzerrors.ErrBadPoolConn) {

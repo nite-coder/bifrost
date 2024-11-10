@@ -65,6 +65,13 @@ func TestMiddlewarePipeline(t *testing.T) {
 		},
 	}
 
+	// services
+	services, err := loadServices(bifrost)
+	assert.NoError(t, err)
+	bifrost.services = services
+
+	NewBifrost(*bifrost.options, false)
+
 	engine, err := newEngine(bifrost, bifrost.options.Servers["testServer"])
 	assert.NoError(t, err)
 

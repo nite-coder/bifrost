@@ -305,17 +305,27 @@ func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) 
 		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*opts.MaxConnsPerHost))
 	}
 
+	hostname := addr.Hostname()
+
 	if strings.EqualFold(addr.Scheme, "https") {
 		clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
+			ServerName:         hostname,
 			InsecureSkipVerify: !opts.TLSVerify, //nolint:gosec
 		}))
 	}
 
-	hostname := addr.Hostname()
+	ips, err := bifrost.dnsResolver.Lookup(context.Background(), hostname)
+	if err != nil {
+		return nil, fmt.Errorf("lookup host '%s' error: %w", hostname, err)
+	}
 
-	url := fmt.Sprintf("%s://%s%s", addr.Scheme, hostname, addr.Path)
+	if len(ips) == 0 {
+		return nil, fmt.Errorf("lookup host '%s' error: no ip found", hostname)
+	}
+
+	url := fmt.Sprintf("%s://%s%s", addr.Scheme, ips[0], addr.Path)
 	if addr.Port() != "" {
-		url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, hostname, addr.Port(), addr.Path)
+		url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, ips[0], addr.Port(), addr.Path)
 	}
 
 	clientOptions := httpproxy.ClientOptions{
@@ -330,9 +340,10 @@ func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) 
 	}
 
 	proxyOptions := httpproxy.Options{
-		Target:   url,
-		Protocol: opts.Protocol,
-		Weight:   0,
+		Target:     url,
+		Protocol:   opts.Protocol,
+		Weight:     0,
+		HeaderHost: hostname,
 	}
 
 	httpProxy, err := httpproxy.New(proxyOptions, client)

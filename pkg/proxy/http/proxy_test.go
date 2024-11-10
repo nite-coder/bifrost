@@ -57,6 +57,10 @@ func TestReverseProxy(t *testing.T) {
 			t.Errorf("handler got Proxy-Connection header value %q", c)
 		}
 
+		if c := ctx.Request.Header.Get("Host"); c != "127.0.0.1" {
+			t.Errorf("handler got Host header value %q", c)
+		}
+
 		ctx.Response.Header.Set("Trailers", "not a special header field name")
 		ctx.Response.Header.Set("Trailer", "X-Trailer")
 		ctx.Response.Header.Set("X-Foo", "bar")
@@ -75,9 +79,10 @@ func TestReverseProxy(t *testing.T) {
 	})
 
 	proxyOptions := Options{
-		Target:   "http://127.0.0.1:9990/proxy",
-		Protocol: config.ProtocolHTTP,
-		Weight:   1,
+		Target:     "http://127.0.0.1:9990/proxy",
+		Protocol:   config.ProtocolHTTP,
+		Weight:     1,
+		HeaderHost: "127.0.0.1",
 	}
 
 	proxy, err := New(proxyOptions, nil)

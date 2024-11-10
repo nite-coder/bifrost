@@ -343,7 +343,7 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 
 		ips, err := bifrost.dnsResolver.Lookup(context.Background(), targetHost)
 		if err != nil {
-			return fmt.Errorf("lookup upstream host error: %w", err)
+			return fmt.Errorf("lookup upstream host '%s' error: %w", targetHost, err)
 		}
 
 		for _, ip := range ips {
@@ -359,6 +359,7 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 
 			if strings.EqualFold(addr.Scheme, "https") {
 				clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
+					ServerName:         targetHost,
 					InsecureSkipVerify: !serviceOptions.TLSVerify, //nolint:gosec
 				}))
 			}
@@ -386,6 +387,7 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 				Weight:      targetOpts.Weight,
 				MaxFails:    targetOpts.MaxFails,
 				FailTimeout: targetOpts.FailTimeout,
+				HeaderHost:  targetHost,
 			}
 
 			proxy, err := httpproxy.New(proxyOptions, client)
