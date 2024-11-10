@@ -100,7 +100,7 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 
 		appHandler, err := handler(middlewareOpts.Params)
 		if err != nil {
-			return nil, fmt.Errorf("fail to create middleware '%s' in route: '%s'", middlewareOpts.Type, serviceOptions.ID)
+			return nil, fmt.Errorf("fail to create middleware '%s' in route: '%s', error: %w", middlewareOpts.Type, serviceOptions.ID, err)
 		}
 
 		svc.middlewares = append(svc.middlewares, appHandler)
@@ -148,6 +148,10 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	}
 
 	return svc, nil
+}
+
+func (svc *Service) Middlewares() []app.HandlerFunc {
+	return svc.middlewares
 }
 
 func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {

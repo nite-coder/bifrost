@@ -2,30 +2,64 @@ package mirror
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/mitchellh/mapstructure"
 	"github.com/nite-coder/bifrost/pkg/gateway"
+	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
 func init() {
-	_ = middleware.RegisterMiddleware("mirror", func(param map[string]any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("mirror", func(params map[string]any) (app.HandlerFunc, error) {
 
-		m := NewMiddleware("xyz")
+		opts := &Options{}
+
+		config := &mapstructure.DecoderConfig{
+			Metadata: nil,
+			Result:   opts,
+			TagName:  "mapstructure",
+		}
+
+		decoder, err := mapstructure.NewDecoder(config)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := decoder.Decode(params); err != nil {
+			return nil, err
+		}
+
+		if opts.ServiceID == "" {
+			return nil, errors.New("mirror: service_id can't be empty")
+		}
+
+		m := NewMiddleware(*opts)
+
 		return m.ServeHTTP, nil
 	})
 }
 
-type MirrorMiddleware struct {
-	serviceID string
-	queue     chan *app.RequestContext
+type Options struct {
+	ServiceID string `mapstructure:"service_id"`
 }
 
-func NewMiddleware(serviceID string) *MirrorMiddleware {
+type MirrorMiddleware struct {
+	options *Options
+	queue   chan *mirrorContext
+}
+
+type mirrorContext struct {
+	logger *slog.Logger
+	hzCtx  *app.RequestContext
+}
+
+func NewMiddleware(options Options) *MirrorMiddleware {
 	m := &MirrorMiddleware{
-		serviceID: serviceID,
-		queue:     make(chan *app.RequestContext, 1000),
+		options: &options,
+		queue:   make(chan *mirrorContext, 10000),
 	}
 
 	go m.Run()
@@ -33,7 +67,7 @@ func NewMiddleware(serviceID string) *MirrorMiddleware {
 }
 
 func (m *MirrorMiddleware) Run() {
-	for c := range m.queue {
+	for mctx := range m.queue {
 		bifrost := gateway.GetBifrost()
 
 		if bifrost == nil {
@@ -44,21 +78,35 @@ func (m *MirrorMiddleware) Run() {
 			break
 		}
 
-		slog.Info("mirror service", "service_id", m.serviceID)
-		svc, found := bifrost.Service(m.serviceID)
+		svc, found := bifrost.Service(m.options.ServiceID)
 
 		if !found {
-			slog.Warn("mirror: service not found", "service_id", m.serviceID)
+			slog.Warn("mirror: service not found", "service_id", m.options.ServiceID)
 			continue
 		}
 
-		svc.ServeHTTP(context.Background(), c)
-		slog.Info("mirror resp", "req", c.Request.URI().FullURI(), "method", c.Request.Method(), "req_body", c.Request.Body(), "status", c.Response.StatusCode(), "content", c.Response.Body())
+		middlewares := svc.Middlewares()
+		middlewares = append(middlewares, svc.ServeHTTP)
+
+		ctx := log.NewContext(context.Background(), mctx.logger)
+
+		c := mctx.hzCtx
+		c.SetIndex(-1)
+		c.SetHandlers(middlewares)
+		c.Next(ctx)
 	}
 }
 
 func (m *MirrorMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
-	newC := c.Copy()
-	m.queue <- newC
+	mctx := &mirrorContext{
+		logger: log.FromContext(ctx),
+		hzCtx:  c.Copy(),
+	}
+
+	select {
+	case m.queue <- mctx:
+	default:
+	}
+
 	c.Next(ctx)
 }

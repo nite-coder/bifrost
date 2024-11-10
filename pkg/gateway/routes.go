@@ -65,7 +65,7 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 
 			appHandler, err := handler(m.Params)
 			if err != nil {
-				return nil, fmt.Errorf("fail to create middleware '%s' failed in route: '%s'", m.Type, routeOpts.Paths)
+				return nil, fmt.Errorf("fail to create middleware '%s' failed in route: '%s', error: %w", m.Type, routeOpts.Paths, err)
 			}
 
 			routeMiddlewares = append(routeMiddlewares, appHandler)
