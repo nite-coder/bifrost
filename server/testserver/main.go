@@ -209,6 +209,7 @@ func echoHandler(c context.Context, ctx *app.RequestContext) {
 }
 
 func placeOrderHandler(c context.Context, ctx *app.RequestContext) {
+	time.Sleep(5 * time.Millisecond)
 	// slog.Info("request proto", "proto", ctx.Request.Header.GetProtocol())
 
 	ctx.SetContentType("application/json; charset=utf8")
