@@ -16,7 +16,7 @@ export const options = {
 }
 
 export default function () {
-    const url = 'http://localhost:8001/spot/orders?a=b';
+    const url = 'http://localhost:8001/spot/orders?mode=b';
 
     const payload = JSON.stringify({
         "market": "BTC_USDT",

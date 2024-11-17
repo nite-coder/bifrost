@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -208,8 +209,20 @@ func echoHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.Response.SetBody(ctx.Request.Body())
 }
 
+var placeOrderCounter atomic.Uint64
+
 func placeOrderHandler(c context.Context, ctx *app.RequestContext) {
-	time.Sleep(5 * time.Millisecond)
+	mode := ctx.Query("mode")
+
+	if len(mode) > 0 {
+		if (placeOrderCounter.Load() % 99) == 0 {
+			time.Sleep(100 * time.Millisecond)
+		} else {
+			time.Sleep(5 * time.Millisecond)
+		}
+		placeOrderCounter.Add(1)
+	}
+
 	// slog.Info("request proto", "proto", ctx.Request.Header.GetProtocol())
 
 	ctx.SetContentType("application/json; charset=utf8")
