@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -20,6 +21,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gopkg/util/gopool"
+	"github.com/bytedance/sonic"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/netpoll"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -96,6 +98,27 @@ func Run(mainOptions config.Options) (err error) {
 			if err != nil {
 				slog.Error("fail to load config", "error", err)
 				return err
+			}
+		}
+
+		b, err := sonic.Marshal(mainOptions)
+		if err != nil {
+			return err
+		}
+
+		oldBifrost := GetBifrost()
+		if oldBifrost != nil {
+			b1, err := sonic.Marshal(oldBifrost.options)
+			if err != nil {
+				return err
+			}
+
+			sha256sum := sha256.Sum256(b)
+			sha256sum1 := sha256.Sum256(b1)
+			if sha256sum == sha256sum1 {
+				// the content of config is not changed
+				slog.Info("bifrost is reloaded successfully", "isReloaded", false)
+				return nil
 			}
 		}
 

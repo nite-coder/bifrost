@@ -52,6 +52,8 @@ import (
 )
 
 func main() {
+     _ = initialize.Middleware()
+
     options, err := config.Load("./config.yaml")
     if err != nil {
       panic(err)

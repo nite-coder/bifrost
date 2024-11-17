@@ -1,10 +1,11 @@
 package main
 
 import (
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
+	"github.com/nite-coder/bifrost/pkg/initialize"
 	"github.com/nite-coder/bifrost/pkg/middleware"
-	"github.com/cloudwego/hertz/pkg/app"
 )
 
 func registerMiddlewares() error {
@@ -20,6 +21,8 @@ func registerMiddlewares() error {
 }
 
 func main() {
+	_ = initialize.Middleware()
+
 	err := registerMiddlewares()
 	if err != nil {
 		panic(err)

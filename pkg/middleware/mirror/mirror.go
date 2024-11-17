@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"

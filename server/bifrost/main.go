@@ -9,19 +9,9 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
+	"github.com/nite-coder/bifrost/pkg/initialize"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/addprefix"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/headers"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/mirror"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/ratelimiting"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepath"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepathregex"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/response"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/stripprefix"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/timinglogger"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/tracing"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/trafficsplitter"
 	"github.com/urfave/cli/v2"
 )
 
@@ -70,6 +60,8 @@ func main() {
 		},
 		Action: func(cCtx *cli.Context) error {
 			var err error
+
+			_ = initialize.Middleware()
 
 			err = registerMiddlewares()
 			if err != nil {

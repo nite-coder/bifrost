@@ -3,9 +3,11 @@ package main
 import (
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
+	"github.com/nite-coder/bifrost/pkg/initialize"
 )
 
 func main() {
+	_ = initialize.Middleware()
 
 	options := config.NewOptions()
 

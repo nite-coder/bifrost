@@ -5,7 +5,7 @@ import (
 	"math/big"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 

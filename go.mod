@@ -13,6 +13,7 @@ require (
 	github.com/cloudwego/netpoll v0.6.4
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-resty/resty/v2 v2.15.3
+	github.com/go-viper/mapstructure/v2 v2.2.1
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/google/uuid v1.6.0
 	github.com/hertz-contrib/http2 v0.1.8
@@ -21,7 +22,6 @@ require (
 	github.com/hertz-contrib/pprof v0.1.2
 	github.com/hertz-contrib/websocket v0.1.0
 	github.com/miekg/dns v1.1.62
-	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nite-coder/blackbear v0.0.0-20240930140346-76863193d6d4
 	github.com/ory/dockertest/v3 v3.11.0
 	github.com/prometheus/client_golang v1.20.5
@@ -71,7 +71,6 @@ require (
 	github.com/felixge/fgprof v0.9.5 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/pprof v0.0.0-20241009165004-a3522334989c // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
