@@ -1,4 +1,4 @@
-package opentelemetry
+package gateway
 
 import (
 	"testing"
@@ -23,7 +23,7 @@ func TestTracer(t *testing.T) {
 		},
 	}
 
-	tracer, err := NewTracer(options)
+	tracer, err := newTracer(options)
 	assert.NoError(t, err)
 	assert.NotNil(t, tracer)
 }

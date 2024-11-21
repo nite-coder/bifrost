@@ -1,4 +1,4 @@
-package opentelemetry
+package gateway
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
@@ -18,11 +17,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type Tracer struct {
-	tracer trace.Tracer
-}
-
-func NewTracer(opts config.TracingOptions) (*Tracer, error) {
+func newTracer(opts config.TracingOptions) (trace.Tracer, error) {
 	if !opts.OTLP.Enabled {
 		return nil, nil
 	}
@@ -111,16 +106,7 @@ func NewTracer(opts config.TracingOptions) (*Tracer, error) {
 
 	tracer := otel.Tracer("bifrost")
 
-	t := &Tracer{tracer: tracer}
-
-	return t, nil
-}
-
-func (t *Tracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
-	return ctx
-}
-
-func (t *Tracer) Finish(ctx context.Context, c *app.RequestContext) {
+	return tracer, nil
 }
 
 func newTraceProvider(exporter sdktrace.SpanExporter, options config.OTLPOptions) *sdktrace.TracerProvider {

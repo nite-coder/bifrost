@@ -16,13 +16,14 @@ import (
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/tracer/accesslog"
-	"github.com/nite-coder/bifrost/pkg/tracer/opentelemetry"
 	"github.com/nite-coder/bifrost/pkg/tracer/prometheus"
 	"github.com/nite-coder/bifrost/pkg/zero"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Bifrost struct {
 	state       uint32
+	tracer      trace.Tracer
 	options     *config.Options
 	dnsResolver *dns.Resolver
 	zero        *zero.ZeroDownTime
@@ -219,11 +220,11 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 
 	if mainOptions.Tracing.OTLP.Enabled {
 		// otel tracing
-		t, err := opentelemetry.NewTracer(mainOptions.Tracing)
+		tracer, err := newTracer(mainOptions.Tracing)
 		if err != nil {
 			return nil, err
 		}
-		tracers = append(tracers, t)
+		bifrost.tracer = tracer
 	}
 
 	for id, server := range mainOptions.Servers {
