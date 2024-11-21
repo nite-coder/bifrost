@@ -86,20 +86,14 @@ type TracingOptions struct {
 }
 
 type OTLPOptions struct {
-	Enabled     bool            `yaml:"enabled" json:"enabled"`
-	Propagators []string        `yaml:"propagators" json:"propagators"`
-	HTTP        OTLPHTTPOptions `yaml:"http" json:"http"`
-	GRPC        OTLPGRPCOptions `yaml:"grpc" json:"grpc"`
-}
-
-type OTLPHTTPOptions struct {
-	Endpoint string `yaml:"endpoint" json:"endpoint"`
-	Insecure bool   `yaml:"insecure" json:"insecure"`
-}
-
-type OTLPGRPCOptions struct {
-	Endpoint string `yaml:"endpoint" json:"endpoint"`
-	Insecure bool   `yaml:"insecure" json:"insecure"`
+	Enabled      bool          `yaml:"enabled" json:"enabled"`
+	Propagators  []string      `yaml:"propagators" json:"propagators"`
+	Endpoint     string        `yaml:"endpoint" json:"endpoint"`
+	Insecure     bool          `yaml:"insecure" json:"insecure"`
+	SamplingRate float64       `yaml:"sampling_rate" json:"sampling_rate"`
+	BatchSize    int64         `yaml:"batch_size" json:"batch_size"`
+	QueueSize    int64         `yaml:"queue_size" json:"queue_size"`
+	Flush        time.Duration `yaml:"flush" json:"flush"`
 }
 
 type ServerOptions struct {

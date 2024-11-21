@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
@@ -26,37 +27,45 @@ func newInitMiddleware(serverID string, logger *slog.Logger) *initMiddleware {
 	}
 }
 
-func (m *initMiddleware) ServeHTTP(c context.Context, ctx *app.RequestContext) {
+func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := m.logger
 
+	defer func() {
+		if r := recover(); r != nil {
+			stackTrace := runtime.StackTrace()
+			logger.Error("error recovered", slog.Any("unhandled error", r), slog.String("stack", stackTrace))
+			c.Abort()
+		}
+	}()
+
 	// save serverID for access log
-	ctx.Set(variable.SERVER_ID, m.serverID)
+	c.Set(variable.SERVER_ID, m.serverID)
 
 	// save original host
-	host := make([]byte, len(ctx.Request.Host()))
-	copy(host, ctx.Request.Host())
-	ctx.Set(variable.HOST, host)
+	host := make([]byte, len(c.Request.Host()))
+	copy(host, c.Request.Host())
+	c.Set(variable.HOST, host)
 
-	if len(ctx.Request.Header.Get("X-Forwarded-For")) > 0 {
-		ctx.Set("X-Forwarded-For", ctx.Request.Header.Get("X-Forwarded-For"))
+	if len(c.Request.Header.Get("X-Forwarded-For")) > 0 {
+		c.Set("X-Forwarded-For", c.Request.Header.Get("X-Forwarded-For"))
 	}
 
 	// save original path
-	path := make([]byte, len(ctx.Request.Path()))
-	copy(path, ctx.Request.Path())
-	ctx.Set(variable.REQUEST_PATH, path)
+	path := make([]byte, len(c.Request.Path()))
+	copy(path, c.Request.Path())
+	c.Set(variable.REQUEST_PATH, path)
 
 	// add trace_id to logger
-	spanCtx := trace.SpanContextFromContext(c)
+	spanCtx := trace.SpanContextFromContext(ctx)
 	if spanCtx.HasTraceID() {
 		traceID := spanCtx.TraceID().String()
-		ctx.Set(variable.TRACE_ID, traceID)
+		c.Set(variable.TRACE_ID, traceID)
 
 		logger = logger.With(slog.String("trace_id", traceID))
 	}
-	c = log.NewContext(c, logger)
+	ctx = log.NewContext(ctx, logger)
 
-	ctx.Next(c)
+	c.Next(ctx)
 }
 
 func loadMiddlewares(middlewareOptions map[string]config.MiddlwareOptions) (map[string]app.HandlerFunc, error) {

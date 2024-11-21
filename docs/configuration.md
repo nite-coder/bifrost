@@ -153,24 +153,26 @@ Example:
 ```yaml
 tracing:
   otlp:
-    enabled: true
+    enabled: false
     propagators: ["tracecontext", "baggage"]
-    http:
-      endpoint: otel-collector:4318
-      insecure: true
-    grpc:
-      endpoint: otel-collector:4317
-      insecure: true
+    endpoint: otel-collector:4317
+    insecure: true
+    sampling_rate: 1.0
+    batch_size: 500
+    flush: 2s
+    queue_size: 50000
 ```
 
-| Field              | Default                   | Description                                                              |
-| ------------------ | ------------------------- | ------------------------------------------------------------------------ |
-| otlp.enabled       | false                     | Enables opentelemetry tracing support                                    |
-| otlp.propagators   | `tracecontext`, `baggage` | The supported propagators are: `tracecontext`, `baggage`, `b3`, `jaeger` |
-| otlp.http.endpoint |                           | otlp collector http port                                                 |
-| otlp.http.insecure | false                     | Certificate verification                                                 |
-| otlp.grpc.endpoint |                           | otlp collector grpc port                                                 |
-| otlp.grpc.insecure | false                     | Certificate verification                                                 |
+| Field              | Default                   | Description                                                                    |
+| ------------------ | ------------------------- | ------------------------------------------------------------------------------ |
+| otlp.enabled       | false                     | Enables opentelemetry tracing support                                          |
+| otlp.propagators   | `tracecontext`, `baggage` | The supported propagators are: `tracecontext`, `baggage`, `b3`, `jaeger`       |
+| otlp.endpoint      | `localhost:4318`          | otlp collector http port                                                       |
+| otlp.insecure      | false                     | Certificate verification                                                       |
+| otlp.sampling_rate | 1.0                       | otlp collector grpc port                                                       |
+| otlp.batch_size    | 100                       | Maximum number of spans to be sent in a single batch export                    |
+| otlp.flush         | `5s`                      | Maximum time to wait before sending a batch of spans, regardless of batch size |
+| otlp.queue_size    | 10000                     | Maximum number of spans that can be queued before being dropped                |
 
 ## middlewares
 
