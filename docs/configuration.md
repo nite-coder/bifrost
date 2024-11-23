@@ -119,8 +119,8 @@ logging:
 | Field   | Default | Description                                                                      |
 | ------- | ------- | -------------------------------------------------------------------------------- |
 | handler | text    | Log format; supports `text` and `json`                                           |
-| level   |         | Log level; options are  `debug`, `info`, `warn`, `error`. Not enabled by default |
-| output  | `.`     | Log output location, currently supports `stderr` or file path                    |
+| level   | info    | Log level; options are  `debug`, `info`, `warn`, `error`. Not enabled by default |
+| output  |         | Log output location, currently supports `stderr` or file path                    |
 
 ## metrics
 
@@ -268,8 +268,8 @@ servers:
 | backlog           |         | Limits TCP backlog count; Linux only                                            |
 | http2             | false   | Enables HTTP2                                                                   |
 | logging.handler   | text    | Log format; supports `text`, `json`                                             |
-| logging.level     | ""      | Log level; options are `debug`, `info`, `warn`, `error`. Not enabled by default |
-| logging.output    | `.`     | Log output location; `stderr` or file path                                      |
+| logging.level     | info    | Log level; options are `debug`, `info`, `warn`, `error`. Not enabled by default |
+| logging.output    |         | Log output location; `stderr` or file path                                      |
 | timeout.keepalive | 60s     | Keepalive timeout                                                               |
 | timeout.read      | 60s     | Read timeout                                                                    |
 | timeout.write     | 60s     | Write timeout                                                                   |
