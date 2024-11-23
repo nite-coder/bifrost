@@ -163,16 +163,17 @@ tracing:
     queue_size: 50000
 ```
 
-| Field              | Default                   | Description                                                                    |
-| ------------------ | ------------------------- | ------------------------------------------------------------------------------ |
-| otlp.enabled       | false                     | Enables opentelemetry tracing support                                          |
-| otlp.propagators   | `tracecontext`, `baggage` | The supported propagators are: `tracecontext`, `baggage`, `b3`, `jaeger`       |
-| otlp.endpoint      | `localhost:4318`          | otlp collector http port                                                       |
-| otlp.insecure      | false                     | Certificate verification                                                       |
-| otlp.sampling_rate | 1.0                       | otlp collector grpc port                                                       |
-| otlp.batch_size    | 100                       | Maximum number of spans to be sent in a single batch export                    |
-| otlp.flush         | `5s`                      | Maximum time to wait before sending a batch of spans, regardless of batch size |
-| otlp.queue_size    | 10000                     | Maximum number of spans that can be queued before being dropped                |
+| Field              | Default                   | Description                                                                                                              |
+| ------------------ | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| otlp.enabled       | false                     | Enables opentelemetry tracing support                                                                                    |
+| otlp.propagators   | `tracecontext`, `baggage` | The supported propagators are: `tracecontext`, `baggage`, `b3`, `jaeger`                                                 |
+| otlp.endpoint      | `localhost:4318`          | otlp collector http port                                                                                                 |
+| otlp.insecure      | false                     | Certificate verification                                                                                                 |
+| otlp.sampling_rate | 1.0                       | otlp collector grpc port                                                                                                 |
+| otlp.batch_size    | 100                       | Maximum number of spans to be sent in a single batch export                                                              |
+| otlp.flush         | `5s`                      | Maximum time to wait before sending a batch of spans, regardless of batch size                                           |
+| otlp.queue_size    | 10000                     | Maximum number of spans that can be queued before being dropped                                                          |
+| otlp.timeout       | `10s`                     | Maximum duration allowed for the entire trace export operation, including connection establishment and data transmission |
 
 ## middlewares
 

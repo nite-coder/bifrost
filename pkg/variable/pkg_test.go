@@ -36,9 +36,7 @@ func TestGetDirective(t *testing.T) {
 	assert.True(t, found)
 	assert.Equal(t, "/foo?bar=baz", val)
 
-	val, found = Get(UserAgent, hzCtx)
-	userAgent, _ := cast.ToString(val)
-	assert.True(t, found)
+	userAgent := GetString(UserAgent, hzCtx)
 	assert.Equal(t, "my_user_agent", userAgent)
 
 	val, found = Get(TRACE_ID, hzCtx)

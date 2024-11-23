@@ -94,6 +94,7 @@ type OTLPOptions struct {
 	BatchSize    int64         `yaml:"batch_size" json:"batch_size"`
 	QueueSize    int64         `yaml:"queue_size" json:"queue_size"`
 	Flush        time.Duration `yaml:"flush" json:"flush"`
+	Timeout      time.Duration `yaml:"timeout" json:"timeout"`
 }
 
 type ServerOptions struct {

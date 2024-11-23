@@ -35,6 +35,15 @@ func Get(key string, c *app.RequestContext) (val any, found bool) {
 
 }
 
+func GetString(key string, c *app.RequestContext) string {
+	val, found := Get(key, c)
+	if !found {
+		return ""
+	}
+	result, _ := cast.ToString(val)
+	return result
+}
+
 func directive(key string, c *app.RequestContext) (val any, found bool) {
 	switch key {
 	case TIME:

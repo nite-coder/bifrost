@@ -23,7 +23,7 @@ func TestTracer(t *testing.T) {
 		},
 	}
 
-	tracer, err := newTracer(options)
+	tracer, err := initTracerProvider(options)
 	assert.NoError(t, err)
 	assert.NotNil(t, tracer)
 }

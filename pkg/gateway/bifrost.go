@@ -18,18 +18,18 @@ import (
 	"github.com/nite-coder/bifrost/pkg/tracer/accesslog"
 	"github.com/nite-coder/bifrost/pkg/tracer/prometheus"
 	"github.com/nite-coder/bifrost/pkg/zero"
-	"go.opentelemetry.io/otel/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 type Bifrost struct {
-	state       uint32
-	tracer      trace.Tracer
-	options     *config.Options
-	dnsResolver *dns.Resolver
-	zero        *zero.ZeroDownTime
-	middlewares map[string]app.HandlerFunc
-	services    map[string]*Service
-	httpServers map[string]*HTTPServer
+	state          uint32
+	tracerProvider *sdktrace.TracerProvider
+	options        *config.Options
+	dnsResolver    *dns.Resolver
+	zero           *zero.ZeroDownTime
+	middlewares    map[string]app.HandlerFunc
+	services       map[string]*Service
+	httpServers    map[string]*HTTPServer
 }
 
 // Run starts all HTTP servers in the Bifrost instance. The last server is started
@@ -88,6 +88,10 @@ func (b *Bifrost) SetActive(value bool) {
 
 func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 	b.SetActive(false)
+
+	if b.tracerProvider != nil {
+		_ = b.tracerProvider.Shutdown(ctx)
+	}
 
 	wg := &sync.WaitGroup{}
 	maxTimeout := 10 * time.Second
@@ -220,11 +224,11 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 
 	if mainOptions.Tracing.OTLP.Enabled {
 		// otel tracing
-		tracer, err := newTracer(mainOptions.Tracing)
+		tp, err := initTracerProvider(mainOptions.Tracing)
 		if err != nil {
 			return nil, err
 		}
-		bifrost.tracer = tracer
+		bifrost.tracerProvider = tp
 	}
 
 	for id, server := range mainOptions.Servers {

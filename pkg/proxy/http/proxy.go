@@ -209,18 +209,18 @@ func (p *HTTPProxy) AddFailedCount(count uint) error {
 	return nil
 }
 
-func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	logger := log.FromContext(c)
+func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+	logger := log.FromContext(ctx)
 
 	defer func() {
 		if r := recover(); r != nil {
 			stackTrace := runtime.StackTrace()
-			logger.ErrorContext(c, "proxy: http proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
-			ctx.Abort()
+			logger.ErrorContext(ctx, "proxy: http proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
+			c.Abort()
 		}
 
 		// check upstream health
-		if ctx.Response.StatusCode() >= 500 {
+		if c.Response.StatusCode() >= 500 {
 			err := p.AddFailedCount(1)
 			if err != nil {
 				slog.Warn("upstream server temporarily disabled", "id", p.id)
@@ -228,14 +228,14 @@ func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		}
 	}()
 
-	outReq := &ctx.Request
-	outResp := &ctx.Response
+	outReq := &c.Request
+	outResp := &c.Response
 
 	var err error
-	ctx.Set(variable.UPSTREAM_ADDR, p.targetHost)
+	c.Set(variable.UPSTREAM_ADDR, p.targetHost)
 
 	if p.director != nil {
-		p.director(&ctx.Request)
+		p.director(&c.Request)
 	}
 
 	outReq.Header.ResetConnectionClose()
@@ -247,11 +247,11 @@ func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 	reqUpType := upgradeReqType(&outReq.Header)
 	if !IsASCIIPrint(reqUpType) { // We know reqUpType is ASCII, it's checked by the caller.
-		p.handleError(c, ctx, fmt.Errorf("backend tried to switch to invalid protocol %q", reqUpType))
+		p.handleError(ctx, c, fmt.Errorf("backend tried to switch to invalid protocol %q", reqUpType))
 		return
 	}
 
-	removeRequestConnHeaders(ctx)
+	removeRequestConnHeaders(c)
 	// Remove hop-by-hop headers to the backend. Especially
 	// important is "Connection" because we want a persistent
 	// connection, regardless of what the client sent to us.
@@ -268,7 +268,7 @@ func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	}
 
 	// prepare request(replace headers and some URL host)
-	if ip, _, err := net.SplitHostPort(ctx.RemoteAddr().String()); err == nil {
+	if ip, _, err := net.SplitHostPort(c.RemoteAddr().String()); err == nil {
 		tmp := outReq.Header.Peek("X-Forwarded-For")
 
 		if len(tmp) > 0 {
@@ -288,7 +288,7 @@ func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	// After stripping all the hop-by-hop connection headers above, add back any
 	// necessary for protocol upgrades, such as for websockets.
 	if reqUpType != "" {
-		outCtx := ctx.Copy()
+		outCtx := c.Copy()
 
 		outReq = &outCtx.Request
 		outResp = &outCtx.Response
@@ -296,9 +296,9 @@ func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		outReq.Header.Set("Connection", "Upgrade")
 		outReq.Header.Set("Upgrade", reqUpType)
 
-		err = p.roundTrip(c, ctx, outReq, outResp)
+		err = p.roundTrip(ctx, c, outReq, outResp)
 		if err != nil {
-			p.handleError(c, ctx, err)
+			p.handleError(ctx, c, err)
 			return
 		}
 		return
@@ -313,19 +313,19 @@ func (p *HTTPProxy) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 ProxyPassLoop:
 
-	err = p.client.Do(c, outReq, outResp)
+	err = p.client.Do(ctx, outReq, outResp)
 	if err != nil {
 		if errors.Is(err, hzerrors.ErrBadPoolConn) {
 			goto ProxyPassLoop
 		}
 
-		p.handleError(c, ctx, err)
+		p.handleError(ctx, c, err)
 		return
 	}
 
 	announcedTrailers := outResp.Header.Peek("Trailer")
 
-	removeResponseConnHeaders(ctx)
+	removeResponseConnHeaders(c)
 
 	for _, h := range hopHeaders {
 		if p.transferTrailer && h == "Trailer" {

@@ -14,10 +14,9 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
 )
 
-func newTracer(opts config.TracingOptions) (trace.Tracer, error) {
+func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, error) {
 	if !opts.OTLP.Enabled {
 		return nil, nil
 	}
@@ -39,6 +38,10 @@ func newTracer(opts config.TracingOptions) (trace.Tracer, error) {
 		opts.OTLP.QueueSize = 10000
 	}
 
+	if opts.OTLP.Timeout.Seconds() <= 0 {
+		opts.OTLP.Timeout = 10 * time.Second
+	}
+
 	addr, err := url.Parse(opts.OTLP.Endpoint)
 	if err != nil {
 		return nil, err
@@ -51,6 +54,7 @@ func newTracer(opts config.TracingOptions) (trace.Tracer, error) {
 	if strings.EqualFold(addr.Scheme, "https") || strings.EqualFold(addr.Scheme, "http") {
 		tracingOptions := []otlptracehttp.Option{
 			otlptracehttp.WithEndpoint(opts.OTLP.Endpoint),
+			otlptracehttp.WithTimeout(opts.OTLP.Timeout),
 		}
 
 		if opts.OTLP.Insecure {
@@ -65,6 +69,7 @@ func newTracer(opts config.TracingOptions) (trace.Tracer, error) {
 		// grpc
 		tracingOptions := []otlptracegrpc.Option{
 			otlptracegrpc.WithEndpoint(opts.OTLP.Endpoint),
+			otlptracegrpc.WithTimeout(opts.OTLP.Timeout),
 		}
 
 		if opts.OTLP.Insecure {
@@ -104,9 +109,7 @@ func newTracer(opts config.TracingOptions) (trace.Tracer, error) {
 
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagators...))
 
-	tracer := otel.Tracer("bifrost")
-
-	return tracer, nil
+	return tracerProvider, nil
 }
 
 func newTraceProvider(exporter sdktrace.SpanExporter, options config.OTLPOptions) *sdktrace.TracerProvider {
@@ -120,8 +123,6 @@ func newTraceProvider(exporter sdktrace.SpanExporter, options config.OTLPOptions
 		sdktrace.WithMaxExportBatchSize(int(options.BatchSize)),
 		sdktrace.WithBatchTimeout(options.Flush),
 	)
-
-	// TODO: add resources
 
 	tracerOptions := []sdktrace.TracerProviderOption{
 		sdktrace.WithSampler(sampler),
