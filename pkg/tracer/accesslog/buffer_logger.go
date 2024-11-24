@@ -2,7 +2,9 @@ package accesslog
 
 import (
 	"bufio"
+	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,13 +22,16 @@ type BufferedLogger struct {
 
 func NewBufferedLogger(opts config.AccessLogOptions) (*BufferedLogger, error) {
 	var err error
-	var logFile *os.File
+	var logFile io.Writer
 
-	switch opts.Output {
-	case "stderr", "":
+	output := strings.ToLower(opts.Output)
+	switch output {
+	case "":
+		logFile = io.Discard
+	case "stderr":
 		logFile = os.Stderr
 	default:
-		logFile, err = os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		logFile, err = os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 		if err != nil {
 			return nil, err
 		}
