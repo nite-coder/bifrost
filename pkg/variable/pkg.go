@@ -44,6 +44,51 @@ func GetString(key string, c *app.RequestContext) string {
 	return result
 }
 
+func GetInt64(key string, c *app.RequestContext) int64 {
+	val, found := Get(key, c)
+	if !found {
+		return 0
+	}
+	result, _ := cast.ToInt64(val)
+	return result
+}
+
+func GetInt32(key string, c *app.RequestContext) int32 {
+	val, found := Get(key, c)
+	if !found {
+		return 0
+	}
+	result, _ := cast.ToInt32(val)
+	return result
+}
+
+func GetFloat64(key string, c *app.RequestContext) float64 {
+	val, found := Get(key, c)
+	if !found {
+		return 0
+	}
+	result, _ := cast.ToFloat64(val)
+	return result
+}
+
+func GetFloat32(key string, c *app.RequestContext) float32 {
+	val, found := Get(key, c)
+	if !found {
+		return 0
+	}
+	result, _ := cast.ToFloat32(val)
+	return result
+}
+
+func GetBool(key string, c *app.RequestContext) bool {
+	val, found := Get(key, c)
+	if !found {
+		return false
+	}
+	result, _ := cast.ToBool(val)
+	return result
+}
+
 func directive(key string, c *app.RequestContext) (val any, found bool) {
 	switch key {
 	case TIME:
