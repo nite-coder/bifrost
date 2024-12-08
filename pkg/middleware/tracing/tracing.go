@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"go.opentelemetry.io/otel"
@@ -13,19 +14,42 @@ import (
 )
 
 func init() {
-	_ = middleware.RegisterMiddleware("tracing", func(param map[string]any) (app.HandlerFunc, error) {
-		m := NewMiddleware()
+	_ = middleware.RegisterMiddleware("tracing", func(params map[string]any) (app.HandlerFunc, error) {
+		opts := &Options{}
+
+		config := &mapstructure.DecoderConfig{
+			Metadata: nil,
+			Result:   opts,
+			TagName:  "mapstructure",
+		}
+
+		decoder, err := mapstructure.NewDecoder(config)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := decoder.Decode(params); err != nil {
+			return nil, err
+		}
+
+		m := NewMiddleware(*opts)
 		return m.ServeHTTP, nil
 	})
 }
 
 type TracingMiddleware struct {
-	tracer trace.Tracer
+	tracer  trace.Tracer
+	options *Options
 }
 
-func NewMiddleware() *TracingMiddleware {
+type Options struct {
+	ResponseHeader string `mapstructure:"response_header"`
+}
+
+func NewMiddleware(options Options) *TracingMiddleware {
 	return &TracingMiddleware{
-		tracer: otel.Tracer("bifrost"),
+		options: &options,
+		tracer:  otel.Tracer("bifrost"),
 	}
 }
 
@@ -55,7 +79,6 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 
 		labels := []attribute.KeyValue{
 			attribute.String("server_id", serverID),
-			attribute.String("remote_addr", remoteAddr),
 			attribute.String("route_id", routeID),
 			attribute.String("service_id", serviceID),
 			attribute.String("http.scheme", string(c.Request.Scheme())),
@@ -65,6 +88,7 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 			attribute.String("http.user_agent", string(c.Request.Header.UserAgent())),
 			attribute.String("protocol", c.Request.Header.GetProtocol()),
 			attribute.String("client_ip", c.ClientIP()),
+			attribute.String("remote_addr", remoteAddr),
 			attribute.Int("http.status", c.Response.StatusCode()),
 		}
 
@@ -82,4 +106,8 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 	c.Set(variable.TraceID, traceID.String())
 
 	c.Next(ctx)
+
+	if m.options.ResponseHeader != "" {
+		c.Response.Header.Set(m.options.ResponseHeader, traceID.String())
+	}
 }
