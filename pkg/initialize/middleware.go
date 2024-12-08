@@ -8,6 +8,7 @@ import (
 	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepath"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepathregex"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/response"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/setvars"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/stripprefix"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/timinglogger"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/tracing"

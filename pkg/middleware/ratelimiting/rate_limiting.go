@@ -105,9 +105,9 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 		return
 	}
 
-	key, found := variable.Get(m.options.LimitBy, c)
+	key := variable.GetString(m.options.LimitBy, c)
 
-	if found {
+	if len(key) > 0 {
 		val, _ := cast.ToString(key)
 
 		builder := strings.Builder{}

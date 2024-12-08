@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/nite-coder/blackbear/pkg/cast"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
@@ -30,9 +29,11 @@ func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(c.Response.Header.StatusCode()), unknownLabelValue)
 
-	val, _ := variable.Get(variable.REQUEST_PATH, c)
-	originalPath, _ := cast.ToString(val)
-	labels[labelPath] = defaultValIfEmpty(originalPath, unknownLabelValue)
+	path := variable.GetString(variable.REQUEST_PATH_ALIAS, c)
+	if path == "" {
+		path = variable.GetString(variable.REQUEST_PATH, c)
+	}
+	labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
 
 	return labels
 }
@@ -47,8 +48,11 @@ func genUpstreamDurationLabels(c *app.RequestContext) prom.Labels {
 	UPSTREAM_STATUS := c.GetInt(variable.UPSTREAM_STATUS)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(UPSTREAM_STATUS), unknownLabelValue)
 
-	path := c.Request.Path()
-	labels[labelPath] = defaultValIfEmpty(string(path), unknownLabelValue)
+	path := variable.GetString(variable.UPSTREAM_PATH_ALIAS, c)
+	if path == "" {
+		path = variable.GetString(variable.UPSTREAM_PATH, c)
+	}
+	labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
 
 	return labels
 }
@@ -90,7 +94,7 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	_ = histogramObserve(s.upstreamDurationHistogram, upstreamDuration, genUpstreamDurationLabels(c))
 
 	bifrostDuration := reqDuration - upstreamDuration
-	_ = histogramObserve(s.bifrostDurationHistogram, bifrostDuration, genUpstreamDurationLabels(c))
+	_ = histogramObserve(s.bifrostDurationHistogram, bifrostDuration, genRequestDurationLabels(c))
 
 	serverLabel := make(prom.Labels)
 	serverLabel[labelServer] = serverID
