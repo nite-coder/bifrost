@@ -1,8 +1,8 @@
-# 請求日誌 ( Access logs)
+# Access logs
 
 The request log currently supports the following variables:
 
-| 變量                 | 說明                                                                                                |
+| Directive            | Description                                                                                         |
 | :------------------- | :-------------------------------------------------------------------------------------------------- |
 | `$time`              | Time the request log is generated                                                                   |
 | `$remote_addr`       | Client IP address                                                                                   |
