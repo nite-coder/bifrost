@@ -91,13 +91,13 @@ func GetBool(key string, c *app.RequestContext) bool {
 
 func directive(key string, c *app.RequestContext) (val any, found bool) {
 	switch key {
-	case TIME:
+	case Time:
 		now := timecache.Now()
 		return now, true
 	case ClientIP:
 		return c.ClientIP(), true
-	case HOST:
-		val, found := c.Get(HOST)
+	case Host:
+		val, found := c.Get(Host)
 
 		if found {
 			b := val.([]byte)
@@ -107,10 +107,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 		host := string(c.Request.Host())
 		return host, true
-	case SERVER_ID:
-		serverID := c.GetString(SERVER_ID)
+	case ServerID:
+		serverID := c.GetString(ServerID)
 		return serverID, true
-	case REMOTE_ADDR:
+	case RemoteAddr:
 		var ip string
 		switch addr := c.RemoteAddr().(type) {
 		case *net.UDPAddr:
@@ -121,7 +121,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return "", false
 		}
 		return ip, true
-	case RECEIVED_SIZE:
+	case ReceivedSize:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {
 			return nil, false
@@ -131,7 +131,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return 0, false
 		}
 		return httpStats.RecvSize(), true
-	case SEND_SIZE:
+	case SendSize:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {
 			return nil, false
@@ -141,10 +141,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return 0, false
 		}
 		return httpStats.SendSize(), true
-	case REQUEST_PROTOCOL:
+	case RequestProtocol:
 		return c.Request.Header.GetProtocol(), true
-	case REQUEST_PATH:
-		val, found := c.Get(REQUEST_PATH)
+	case RequestPath:
+		val, found := c.Get(RequestPath)
 
 		if found {
 			b := val.([]byte)
@@ -154,13 +154,13 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 		path := string(c.Request.URI().Path())
 		return path, true
-	case REQUEST_URI:
+	case RequestURI:
 		val := string(c.Request.URI().RequestURI())
 		return val, true
-	case REQUEST_METHOD:
+	case RequestMethod:
 		method := string(c.Request.Method())
 		return method, true
-	case REQUEST_BODY:
+	case RequestBody:
 		// if content type is grpc, the $request_body will be ignored
 		contentType := c.Request.Header.ContentType()
 		if bytes.Equal(contentType, grpcContentType) {
@@ -168,13 +168,19 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 
 		return cast.B2S(c.Request.Body()), true
-	case TRACE_ID:
-		traceID := c.GetString(TRACE_ID)
+	case TraceID:
+		traceID := c.GetString(TraceID)
 		return traceID, true
-	case UPSTREAM:
-		upstream := c.GetString(UPSTREAM)
+	case RouteID:
+		routeID := c.GetString(RouteID)
+		return routeID, true
+	case ServiceID:
+		serviceID := c.GetString(ServiceID)
+		return serviceID, true
+	case Upstream:
+		upstream := c.GetString(Upstream)
 		return upstream, true
-	case UPSTREAM_URI:
+	case UpstreamURI:
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
 
@@ -186,17 +192,17 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 
 		return buf.String(), true
-	case UPSTREAM_PROTOCOL:
+	case UpstreamProtocol:
 		return c.Request.Header.GetProtocol(), true
-	case UPSTREAM_METHOD:
+	case UpstreamMethod:
 		method := string(c.Request.Method())
 		return method, true
-	case UPSTREAM_PATH:
+	case UpstreamPath:
 		return cast.B2S(c.Request.Path()), true
-	case UPSTREAM_ADDR:
-		addr := c.GetString(UPSTREAM_ADDR)
+	case UpstreamAddr:
+		addr := c.GetString(UpstreamAddr)
 		return addr, true
-	case DURATION:
+	case Duration:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {
 			return nil, false
@@ -215,11 +221,11 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		dur := httpFinish.Time().Sub(httpStart.Time()).Microseconds()
 		duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
 		return duration, true
-	case GRPC_STATUS:
-		status := c.GetString(GRPC_STATUS)
+	case GRPCStatus:
+		status := c.GetString(GRPCStatus)
 		return status, true
-	case GRPC_MESSAGE:
-		grpcMessage := c.GetString(GRPC_MESSAGE)
+	case GRPCMessage:
+		grpcMessage := c.GetString(GRPCMessage)
 		return grpcMessage, true
 	case UserAgent:
 		return c.Request.Header.UserAgent(), true

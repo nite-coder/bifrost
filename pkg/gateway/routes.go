@@ -43,6 +43,9 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 
 		routeMiddlewares := make([]app.HandlerFunc, 0)
 
+		initRouteMiddleware := newInitRouteMiddleware(routeID, routeOpts.ServiceID)
+		routeMiddlewares = append(routeMiddlewares, initRouteMiddleware.ServeHTTP)
+
 		for _, m := range routeOpts.Middlewares {
 			if len(m.Use) > 0 {
 				val, found := bifrost.middlewares[m.Use]

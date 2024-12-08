@@ -6,7 +6,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/nite-coder/blackbear/pkg/cast"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -47,15 +46,18 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 	ctx, span := m.tracer.Start(ctx, method+" "+path, spanOptions...)
 
 	defer func() {
-		serverID := ""
+		serverID := variable.GetString(variable.ServerID, c)
+		routeID := variable.GetString(variable.RouteID, c)
+		serviceID := variable.GetString(variable.ServiceID, c)
+		remoteAddr := variable.GetString(variable.RemoteAddr, c)
 
-		svrID, found := variable.Get(variable.SERVER_ID, c)
-		if found {
-			serverID, _ = cast.ToString(svrID)
-		}
+		span.SetName(routeID)
 
 		labels := []attribute.KeyValue{
-			attribute.String("server_id", string(serverID)),
+			attribute.String("server_id", serverID),
+			attribute.String("remote_addr", remoteAddr),
+			attribute.String("route_id", routeID),
+			attribute.String("service_id", serviceID),
 			attribute.String("http.scheme", string(c.Request.Scheme())),
 			attribute.String("http.host", string(c.Request.Host())),
 			attribute.String("http.method", method),
@@ -77,7 +79,7 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 	}()
 
 	traceID := span.SpanContext().TraceID()
-	c.Set(variable.TRACE_ID, traceID.String())
+	c.Set(variable.TraceID, traceID.String())
 
 	c.Next(ctx)
 }

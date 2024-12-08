@@ -29,8 +29,9 @@ type AllowResult struct {
 type StrategyMode string
 
 const (
-	Local StrategyMode = "local"
-	Redis StrategyMode = "redis"
+	Local           StrategyMode = "local"
+	Redis           StrategyMode = "redis"
+	LocalAsyncRedis StrategyMode = "local-async-redis" // nolint
 )
 
 type Options struct {
@@ -41,7 +42,7 @@ type Options struct {
 	HeaderLimit      string
 	HeaderRemaining  string
 	HeaderReset      string
-	HTTPStatus       int
+	HTTPStatusCode   int
 	HTTPContentType  string
 	HTTPResponseBody string
 	RedisID          string
@@ -66,8 +67,8 @@ func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 		options.HeaderReset = "X-RateLimit-Reset"
 	}
 
-	if options.HTTPStatus == 0 {
-		options.HTTPStatus = 429
+	if options.HTTPStatusCode == 0 {
+		options.HTTPStatusCode = 429
 	}
 
 	if options.HTTPContentType == "" {
@@ -99,7 +100,7 @@ func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 }
 
 func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
-	isAllow := c.GetBool(variable.ALLOW)
+	isAllow := c.GetBool(variable.Allow)
 	if isAllow {
 		c.Next(ctx)
 		return
@@ -130,7 +131,7 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 			c.Response.Header.Set(m.options.HeaderRemaining, strconv.FormatUint(result.Remaining, 10))
 			c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
 
-			c.SetStatusCode(m.options.HTTPStatus)
+			c.SetStatusCode(m.options.HTTPStatusCode)
 			c.Response.Header.Set("Content-Type", "application/json; charset=utf8")
 			if m.options.HTTPResponseBody != "" {
 				c.Response.SetBody([]byte(m.options.HTTPResponseBody))
@@ -199,7 +200,7 @@ func init() {
 			if err != nil {
 				return nil, errors.New("http_status is invalid in rate-limiting middleware")
 			}
-			option.HTTPStatus = status
+			option.HTTPStatusCode = status
 		}
 
 		// http content type

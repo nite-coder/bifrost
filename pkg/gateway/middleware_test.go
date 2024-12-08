@@ -19,7 +19,7 @@ func BenchmarkSaveByte(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b := []byte{}
 		copy(b, path)
-		c.Set(variable.REQUEST_PATH, b)
+		c.Set(variable.RequestPath, b)
 	}
 }
 
@@ -34,6 +34,6 @@ func BenchmarkSaveString(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		p := string(path)
-		c.Set(variable.REQUEST_PATH, p)
+		c.Set(variable.RequestPath, p)
 	}
 }

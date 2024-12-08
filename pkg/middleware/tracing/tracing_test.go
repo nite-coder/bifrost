@@ -35,7 +35,7 @@ func TestServeHTTP(t *testing.T) {
 
 	middleware.ServeHTTP(context.Background(), req)
 
-	traceID, found := variable.Get(variable.TRACE_ID, req)
+	traceID, found := variable.Get(variable.TraceID, req)
 	assert.True(t, found)
 	assert.NotEmpty(t, traceID)
 }

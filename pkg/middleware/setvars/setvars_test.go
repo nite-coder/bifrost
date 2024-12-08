@@ -14,8 +14,8 @@ func TestSetVarsMiddleware(t *testing.T) {
 	h := middleware.FindHandlerByType("setvars")
 
 	params := map[string]any{
-		variable.REQUEST_PATH_ALIAS:  "/orders/{order_id}",
-		variable.UPSTREAM_PATH_ALIAS: "/backend/orders/{order_id}",
+		variable.RequestPathAlias:  "/orders/{order_id}",
+		variable.UpstreamPathAlias: "/backend/orders/{order_id}",
 	}
 
 	m, err := h(params)
@@ -27,6 +27,6 @@ func TestSetVarsMiddleware(t *testing.T) {
 	hzCtx.Request.URI().SetPath("/orders/123")
 	m(ctx, hzCtx)
 
-	assert.Equal(t, "/orders/{order_id}", hzCtx.GetString(variable.REQUEST_PATH_ALIAS))
-	assert.Equal(t, "/backend/orders/{order_id}", hzCtx.GetString(variable.UPSTREAM_PATH_ALIAS))
+	assert.Equal(t, "/orders/{order_id}", hzCtx.GetString(variable.RequestPathAlias))
+	assert.Equal(t, "/backend/orders/{order_id}", hzCtx.GetString(variable.UpstreamPathAlias))
 }

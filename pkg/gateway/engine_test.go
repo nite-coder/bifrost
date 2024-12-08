@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -82,4 +83,13 @@ func TestMiddlewarePipeline(t *testing.T) {
 	assert.Equal(t, 1, hit2)
 	assert.Equal(t, 1, hit3)
 
+	// get variables
+	serverID := variable.GetString(variable.ServerID, hzCtx)
+	assert.Equal(t, "testServer", serverID)
+
+	routeID := variable.GetString(variable.RouteID, hzCtx)
+	assert.Equal(t, "testRoute", routeID)
+
+	serviceID := variable.GetString(variable.ServiceID, hzCtx)
+	assert.Equal(t, "testService", serviceID)
 }

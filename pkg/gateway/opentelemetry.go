@@ -22,7 +22,7 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 	}
 
 	if opts.OTLP.Endpoint == "" {
-		// default we use grpc
+		// use grpc as default
 		opts.OTLP.Endpoint = "localhost:4317"
 	}
 
@@ -53,7 +53,7 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 
 	if strings.EqualFold(addr.Scheme, "https") || strings.EqualFold(addr.Scheme, "http") {
 		tracingOptions := []otlptracehttp.Option{
-			otlptracehttp.WithEndpoint(opts.OTLP.Endpoint),
+			otlptracehttp.WithEndpoint(addr.Host),
 			otlptracehttp.WithTimeout(opts.OTLP.Timeout),
 		}
 

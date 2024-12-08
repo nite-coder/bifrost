@@ -39,12 +39,12 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}()
 
 	// save serverID for access log
-	c.Set(variable.SERVER_ID, m.serverID)
+	c.Set(variable.ServerID, m.serverID)
 
 	// save original host
 	host := make([]byte, len(c.Request.Host()))
 	copy(host, c.Request.Host())
-	c.Set(variable.HOST, host)
+	c.Set(variable.Host, host)
 
 	if len(c.Request.Header.Get("X-Forwarded-For")) > 0 {
 		c.Set("X-Forwarded-For", c.Request.Header.Get("X-Forwarded-For"))
@@ -53,19 +53,36 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// save original path
 	path := make([]byte, len(c.Request.Path()))
 	copy(path, c.Request.Path())
-	c.Set(variable.REQUEST_PATH, path)
+	c.Set(variable.RequestPath, path)
 
 	// add trace_id to logger
 	spanCtx := trace.SpanContextFromContext(ctx)
 	if spanCtx.HasTraceID() {
 		traceID := spanCtx.TraceID().String()
-		c.Set(variable.TRACE_ID, traceID)
+		c.Set(variable.TraceID, traceID)
 
 		logger = logger.With(slog.String("trace_id", traceID))
 	}
 	ctx = log.NewContext(ctx, logger)
 
 	c.Next(ctx)
+}
+
+type initRouteMiddleware struct {
+	routeID   string
+	serviceID string
+}
+
+func newInitRouteMiddleware(routeID, serviceID string) *initRouteMiddleware {
+	return &initRouteMiddleware{
+		routeID:   routeID,
+		serviceID: serviceID,
+	}
+}
+
+func (m *initRouteMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+	c.Set(variable.RouteID, m.routeID)
+	c.Set(variable.ServiceID, m.serviceID)
 }
 
 func loadMiddlewares(middlewareOptions map[string]config.MiddlwareOptions) (map[string]app.HandlerFunc, error) {

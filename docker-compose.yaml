@@ -11,6 +11,7 @@ services:
       - 4317:4317 # OTLP gRPC receiver
       - 4318:4318 # OTLP http receiver
       - 55679:55679 # zpages extension
+    network_mode: "host"
 
 
   redis-node-0:

@@ -232,7 +232,7 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	outResp := &c.Response
 
 	var err error
-	c.Set(variable.UPSTREAM_ADDR, p.targetHost)
+	c.Set(variable.UpstreamAddr, p.targetHost)
 
 	if p.director != nil {
 		p.director(&c.Request)
@@ -390,7 +390,7 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 
 	fullURI := fullURI(&c.Request)
 
-	val, _ := variable.Get(variable.REQUEST_PATH, c)
+	val, _ := variable.Get(variable.RequestPath, c)
 	originalPath, _ := cast.ToString(val)
 
 	logger.ErrorContext(ctx, "fail to send request to upstream",
@@ -401,7 +401,7 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 	)
 
 	if errors.Is(err, hzerrors.ErrTimeout) {
-		c.Set(variable.TARGET_TIMEOUT, true)
+		c.Set(variable.TargetTimeout, true)
 	}
 
 	c.Response.Header.SetStatusCode(http.StatusBadGateway)

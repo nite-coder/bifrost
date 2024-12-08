@@ -89,39 +89,39 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 
 	for _, matchVal := range t.matchVars {
 		switch matchVal {
-		case variable.TIME:
+		case variable.Time:
 			now := timeNow.Format(t.opts.TimeFormat)
-			replacements = append(replacements, variable.TIME, now)
-		case variable.REMOTE_ADDR:
-			val, _ := variable.Get(variable.REMOTE_ADDR, c)
+			replacements = append(replacements, variable.Time, now)
+		case variable.RemoteAddr:
+			val, _ := variable.Get(variable.RemoteAddr, c)
 			remoteAddr, _ := cast.ToString(val)
-			replacements = append(replacements, variable.REMOTE_ADDR, remoteAddr)
-		case variable.HOST:
-			val, _ := variable.Get(variable.HOST, c)
+			replacements = append(replacements, variable.RemoteAddr, remoteAddr)
+		case variable.Host:
+			val, _ := variable.Get(variable.Host, c)
 			host, _ := cast.ToString(val)
-			replacements = append(replacements, variable.HOST, host)
-		case variable.REQUEST_METHOD:
-			replacements = append(replacements, variable.REQUEST_METHOD, cast.B2S(c.Request.Method()))
-		case variable.REQUEST_URI:
-			val, _ := variable.Get(variable.REQUEST_URI, c)
+			replacements = append(replacements, variable.Host, host)
+		case variable.RequestMethod:
+			replacements = append(replacements, variable.RequestMethod, cast.B2S(c.Request.Method()))
+		case variable.RequestURI:
+			val, _ := variable.Get(variable.RequestURI, c)
 			uri, _ := cast.ToString(val)
-			replacements = append(replacements, variable.REQUEST_URI, uri)
-		case variable.REQUEST_PATH:
-			val, _ := variable.Get(variable.REQUEST_PATH, c)
+			replacements = append(replacements, variable.RequestURI, uri)
+		case variable.RequestPath:
+			val, _ := variable.Get(variable.RequestPath, c)
 			path, _ := cast.ToString(val)
-			replacements = append(replacements, variable.REQUEST_PATH, path)
-		case variable.REQUEST_PROTOCOL:
-			replacements = append(replacements, variable.REQUEST_PROTOCOL, c.Request.Header.GetProtocol())
-		case variable.REQUEST_BODY:
+			replacements = append(replacements, variable.RequestPath, path)
+		case variable.RequestProtocol:
+			replacements = append(replacements, variable.RequestProtocol, c.Request.Header.GetProtocol())
+		case variable.RequestBody:
 			// if content type is grpc, the $request_body will be ignored
 			if bytes.Equal(contentType, grpcContentType) {
-				replacements = append(replacements, variable.REQUEST_BODY, "")
+				replacements = append(replacements, variable.RequestBody, "")
 				continue
 			}
 
 			body := escape(cast.B2S(c.Request.Body()), t.opts.Escape)
-			replacements = append(replacements, variable.REQUEST_BODY, body)
-		case variable.STATUS:
+			replacements = append(replacements, variable.RequestBody, body)
+		case variable.Status:
 			status := strconv.Itoa(c.Response.StatusCode())
 
 			// this case for http2 client disconnected
@@ -129,52 +129,52 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 				status = strconv.Itoa(499)
 			}
 
-			replacements = append(replacements, variable.STATUS, status)
-		case variable.UPSTREAM_PROTOCOL:
-			replacements = append(replacements, variable.UPSTREAM_PROTOCOL, c.Request.Header.GetProtocol())
-		case variable.UPSTREAM_METHOD:
-			replacements = append(replacements, variable.UPSTREAM_METHOD, cast.B2S(c.Request.Method()))
-		case variable.UPSTREAM_URI:
-			val, _ := variable.Get(variable.UPSTREAM_URI, c)
+			replacements = append(replacements, variable.Status, status)
+		case variable.UpstreamProtocol:
+			replacements = append(replacements, variable.UpstreamProtocol, c.Request.Header.GetProtocol())
+		case variable.UpstreamMethod:
+			replacements = append(replacements, variable.UpstreamMethod, cast.B2S(c.Request.Method()))
+		case variable.UpstreamURI:
+			val, _ := variable.Get(variable.UpstreamURI, c)
 			uri, _ := cast.ToString(val)
-			replacements = append(replacements, variable.UPSTREAM_URI, uri)
-		case variable.UPSTREAM_PATH:
-			replacements = append(replacements, variable.UPSTREAM_PATH, cast.B2S(c.Request.Path()))
-		case variable.UPSTREAM_ADDR:
-			addr := c.GetString(variable.UPSTREAM_ADDR)
-			replacements = append(replacements, variable.UPSTREAM_ADDR, addr)
-		case variable.UPSTREAM_STATUS:
-			code := c.GetInt(variable.UPSTREAM_STATUS)
-			replacements = append(replacements, variable.UPSTREAM_STATUS, strconv.Itoa(code))
-		case variable.UPSTREAM_DURATION:
-			dur := c.GetString(variable.UPSTREAM_DURATION)
+			replacements = append(replacements, variable.UpstreamURI, uri)
+		case variable.UpstreamPath:
+			replacements = append(replacements, variable.UpstreamPath, cast.B2S(c.Request.Path()))
+		case variable.UpstreamAddr:
+			addr := c.GetString(variable.UpstreamAddr)
+			replacements = append(replacements, variable.UpstreamAddr, addr)
+		case variable.UpstreamStatus:
+			code := c.GetInt(variable.UpstreamStatus)
+			replacements = append(replacements, variable.UpstreamStatus, strconv.Itoa(code))
+		case variable.UpstreamDuration:
+			dur := c.GetString(variable.UpstreamDuration)
 			if len(dur) == 0 {
 				dur = "0"
 			}
-			replacements = append(replacements, variable.UPSTREAM_DURATION, dur)
-		case variable.DURATION:
+			replacements = append(replacements, variable.UpstreamDuration, dur)
+		case variable.Duration:
 			dur := httpFinish.Time().Sub(httpStart.Time()).Microseconds()
 			duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
-			replacements = append(replacements, variable.DURATION, duration)
-		case variable.RECEIVED_SIZE:
-			replacements = append(replacements, variable.RECEIVED_SIZE, strconv.Itoa(httpStats.RecvSize()))
-		case variable.SEND_SIZE:
-			replacements = append(replacements, variable.SEND_SIZE, strconv.Itoa(httpStats.SendSize()))
-		case variable.TRACE_ID:
-			traceID := c.GetString(variable.TRACE_ID)
-			replacements = append(replacements, variable.TRACE_ID, traceID)
-		case variable.GRPC_STATUS:
+			replacements = append(replacements, variable.Duration, duration)
+		case variable.ReceivedSize:
+			replacements = append(replacements, variable.ReceivedSize, strconv.Itoa(httpStats.RecvSize()))
+		case variable.SendSize:
+			replacements = append(replacements, variable.SendSize, strconv.Itoa(httpStats.SendSize()))
+		case variable.TraceID:
+			traceID := c.GetString(variable.TraceID)
+			replacements = append(replacements, variable.TraceID, traceID)
+		case variable.GRPCStatus:
 			status := ""
 
-			val, found := c.Get(variable.GRPC_STATUS)
+			val, found := c.Get(variable.GRPCStatus)
 			if found {
 				status, _ = cast.ToString(val)
 			}
 
-			replacements = append(replacements, variable.GRPC_STATUS, status)
-		case variable.GRPC_MESSAGE:
-			grpcMessage := c.GetString(variable.GRPC_MESSAGE)
-			replacements = append(replacements, variable.GRPC_MESSAGE, grpcMessage)
+			replacements = append(replacements, variable.GRPCStatus, status)
+		case variable.GRPCMessage:
+			grpcMessage := c.GetString(variable.GRPCMessage)
+			replacements = append(replacements, variable.GRPCMessage, grpcMessage)
 		default:
 
 			if strings.HasPrefix(matchVal, "$upstream_header_") {

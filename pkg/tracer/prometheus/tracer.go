@@ -24,14 +24,14 @@ const (
 func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 	labels := make(prom.Labels)
 
-	serverID := c.GetString(variable.SERVER_ID)
+	serverID := c.GetString(variable.ServerID)
 	labels[labelServer] = defaultValIfEmpty(serverID, unknownLabelValue)
 	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(c.Response.Header.StatusCode()), unknownLabelValue)
 
-	path := variable.GetString(variable.REQUEST_PATH_ALIAS, c)
+	path := variable.GetString(variable.RequestPathAlias, c)
 	if path == "" {
-		path = variable.GetString(variable.REQUEST_PATH, c)
+		path = variable.GetString(variable.RequestPath, c)
 	}
 	labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
 
@@ -41,16 +41,16 @@ func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 func genUpstreamDurationLabels(c *app.RequestContext) prom.Labels {
 	labels := make(prom.Labels)
 
-	serverID := c.GetString(variable.SERVER_ID)
+	serverID := c.GetString(variable.ServerID)
 	labels[labelServer] = defaultValIfEmpty(serverID, unknownLabelValue)
 	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
 
-	UPSTREAM_STATUS := c.GetInt(variable.UPSTREAM_STATUS)
+	UPSTREAM_STATUS := c.GetInt(variable.UpstreamStatus)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(UPSTREAM_STATUS), unknownLabelValue)
 
-	path := variable.GetString(variable.UPSTREAM_PATH_ALIAS, c)
+	path := variable.GetString(variable.UpstreamPathAlias, c)
 	if path == "" {
-		path = variable.GetString(variable.UPSTREAM_PATH, c)
+		path = variable.GetString(variable.UpstreamPath, c)
 	}
 	labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
 
@@ -78,7 +78,7 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	}
 
 	info := c.GetTraceInfo().Stats()
-	serverID := c.GetString(variable.SERVER_ID)
+	serverID := c.GetString(variable.ServerID)
 
 	httpStart := info.GetEvent(stats.HTTPStart)
 	httpFinish := info.GetEvent(stats.HTTPFinish)
@@ -90,7 +90,7 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	_ = counterAdd(s.requestTotalCounter, 1, genRequestDurationLabels(c))
 	_ = histogramObserve(s.requestDurationHistogram, reqDuration, genRequestDurationLabels(c))
 
-	upstreamDuration := c.GetDuration(variable.UPSTREAM_DURATION)
+	upstreamDuration := c.GetDuration(variable.UpstreamDuration)
 	_ = histogramObserve(s.upstreamDurationHistogram, upstreamDuration, genUpstreamDurationLabels(c))
 
 	bifrostDuration := reqDuration - upstreamDuration

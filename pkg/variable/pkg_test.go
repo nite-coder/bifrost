@@ -10,12 +10,12 @@ import (
 func TestGetDirective(t *testing.T) {
 	hzCtx := app.NewContext(0)
 
-	hzCtx.Set(SERVER_ID, "serverA")
+	hzCtx.Set(ServerID, "serverA")
 	hzCtx.Set("user_id", 98765)
 	hzCtx.Set("enabled", true)
 	hzCtx.Set("money", "123.456")
 	hzCtx.Request.Header.SetUserAgentBytes([]byte("my_user_agent"))
-	hzCtx.Set(TRACE_ID, "trace_id")
+	hzCtx.Set(TraceID, "trace_id")
 	hzCtx.SetClientIPFunc(func(ctx *app.RequestContext) string {
 		return "127.0.0.1"
 	})
@@ -40,22 +40,22 @@ func TestGetDirective(t *testing.T) {
 	clientIP := GetString("$client_ip", hzCtx)
 	assert.Equal(t, "127.0.0.1", clientIP)
 
-	serverA := GetString(SERVER_ID, hzCtx)
+	serverA := GetString(ServerID, hzCtx)
 	assert.Equal(t, "serverA", serverA)
 
-	path := GetString(REQUEST_PATH, hzCtx)
+	path := GetString(RequestPath, hzCtx)
 	assert.Equal(t, "/foo", path)
 
-	uri := GetString(REQUEST_URI, hzCtx)
+	uri := GetString(RequestURI, hzCtx)
 	assert.Equal(t, "/foo?bar=baz", uri)
 
 	userAgent := GetString(UserAgent, hzCtx)
 	assert.Equal(t, "my_user_agent", userAgent)
 
-	traceID := GetString(TRACE_ID, hzCtx)
+	traceID := GetString(TraceID, hzCtx)
 	assert.Equal(t, "trace_id", traceID)
 
-	val, found := Get(DURATION, hzCtx)
+	val, found := Get(Duration, hzCtx)
 	assert.False(t, found)
 	assert.Nil(t, val)
 
