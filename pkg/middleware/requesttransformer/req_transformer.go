@@ -37,24 +37,36 @@ func (m *RequestTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.R
 
 	if len(m.options.Remove.Headers) > 0 {
 		for _, header := range m.options.Remove.Headers {
+			if header == "" {
+				continue
+			}
 			c.Request.Header.Del(header)
 		}
 	}
 
 	if len(m.options.Remove.Querystring) > 0 {
 		for _, qs := range m.options.Remove.Querystring {
+			if qs == "" {
+				continue
+			}
 			c.Request.URI().QueryArgs().Del(qs)
 		}
 	}
 
 	if len(m.options.Add.Headers) > 0 {
 		for k, v := range m.options.Add.Headers {
+			if k == "" {
+				continue
+			}
 			c.Request.Header.Set(k, v)
 		}
 	}
 
 	if len(m.options.Add.Querystring) > 0 {
 		for k, v := range m.options.Add.Querystring {
+			if k == "" {
+				continue
+			}
 			c.Request.URI().QueryArgs().Add(k, v)
 		}
 	}
@@ -62,7 +74,7 @@ func (m *RequestTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.R
 
 func init() {
 	_ = middleware.RegisterMiddleware("request-transformer", func(params map[string]any) (app.HandlerFunc, error) {
-		opts := Options{}
+		opts := &Options{}
 
 		config := &mapstructure.DecoderConfig{
 			Metadata: nil,
@@ -79,7 +91,7 @@ func init() {
 			return nil, err
 		}
 
-		m := NewMiddleware(opts)
+		m := NewMiddleware(*opts)
 
 		return m.ServeHTTP, nil
 	})

@@ -31,6 +31,9 @@ func NewMiddleware(vars map[string]any) *SetVarsMiddlware {
 
 func (m *SetVarsMiddlware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	for k, v := range m.vars {
+		if k == "" {
+			continue
+		}
 		c.Set(k, v)
 	}
 }

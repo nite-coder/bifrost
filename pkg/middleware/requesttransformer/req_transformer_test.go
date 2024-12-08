@@ -5,26 +5,29 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRemove(t *testing.T) {
+	h := middleware.FindHandlerByType("request-transformer")
 
-	options := Options{
-		Remove: RemoveOptions{
-			Headers:     []string{"x-user-id"},
-			Querystring: []string{"mode"},
+	params := map[string]any{
+		"remove": map[string]any{
+			"headers":     []string{"x-user-id"},
+			"querystring": []string{"mode"},
 		},
 	}
 
-	m := NewMiddleware(options)
+	m, err := h(params)
+	assert.NoError(t, err)
 
 	ctx := context.Background()
 	hzCtx := app.NewContext(0)
 	hzCtx.Request.SetMethod("GET")
 	hzCtx.Request.URI().SetPath("/foo?mode=1")
 	hzCtx.Request.Header.Set("x-user-id", "1")
-	m.ServeHTTP(ctx, hzCtx)
+	m(ctx, hzCtx)
 
 	userID := hzCtx.Request.Header.Get("x-user-id")
 	assert.Empty(t, userID)
@@ -34,25 +37,27 @@ func TestRemove(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
+	h := middleware.FindHandlerByType("request-transformer")
 
-	options := Options{
-		Add: AddOptions{
-			Headers: map[string]string{
+	params := map[string]any{
+		"add": map[string]any{
+			"headers": map[string]string{
 				"source": "web",
 			},
-			Querystring: map[string]string{
+			"querystring": map[string]string{
 				"mode": "1",
 			},
 		},
 	}
 
-	m := NewMiddleware(options)
+	m, err := h(params)
+	assert.NoError(t, err)
 
 	ctx := context.Background()
 	hzCtx := app.NewContext(0)
 	hzCtx.Request.SetMethod("GET")
 	hzCtx.Request.URI().SetPath("/foo")
-	m.ServeHTTP(ctx, hzCtx)
+	m(ctx, hzCtx)
 
 	mode := hzCtx.Query("mode")
 	assert.Equal(t, "1", mode)
