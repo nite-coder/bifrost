@@ -2,9 +2,11 @@ package tracing
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"go.opentelemetry.io/otel"
@@ -54,6 +56,8 @@ func NewMiddleware(options Options) *TracingMiddleware {
 }
 
 func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+	logger := log.FromContext(ctx)
+
 	if m.tracer == nil {
 		c.Next(ctx)
 		return
@@ -102,12 +106,19 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 		span.End()
 	}()
 
-	traceID := span.SpanContext().TraceID()
-	c.Set(variable.TraceID, traceID.String())
+	traceID := span.SpanContext().TraceID().String()
+
+	if len(traceID) > 0 {
+		c.Set(variable.TraceID, traceID)
+
+		// add trace_id to logger
+		logger = logger.With(slog.String("trace_id", traceID))
+		ctx = log.NewContext(ctx, logger)
+	}
 
 	c.Next(ctx)
 
-	if m.options.ResponseHeader != "" {
-		c.Response.Header.Set(m.options.ResponseHeader, traceID.String())
+	if m.options.ResponseHeader != "" && len(traceID) > 0 {
+		c.Response.Header.Set(m.options.ResponseHeader, traceID)
 	}
 }

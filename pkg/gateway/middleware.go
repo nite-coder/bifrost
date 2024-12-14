@@ -9,10 +9,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type initMiddleware struct {
@@ -50,27 +48,13 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	reqInfo := &variable.ReqInfo{
 		Host:        host,
-		Path:        c.Request.Path(),
+		Path:        path,
 		Protocol:    c.Request.Header.GetProtocol(),
 		Method:      c.Request.Method(),
 		Querystring: c.Request.QueryString(),
 	}
 
 	c.Set(variable.RequestInfo, reqInfo)
-
-	if len(c.Request.Header.Get("X-Forwarded-For")) > 0 {
-		c.Set("X-Forwarded-For", c.Request.Header.Get("X-Forwarded-For"))
-	}
-
-	// add trace_id to logger
-	spanCtx := trace.SpanContextFromContext(ctx)
-	if spanCtx.HasTraceID() {
-		traceID := spanCtx.TraceID().String()
-		c.Set(variable.TraceID, traceID)
-
-		logger = logger.With(slog.String("trace_id", traceID))
-	}
-	ctx = log.NewContext(ctx, logger)
 
 	c.Next(ctx)
 }
