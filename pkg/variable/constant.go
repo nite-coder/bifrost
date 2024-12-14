@@ -1,6 +1,7 @@
 package variable
 
 type ReqInfo struct {
+	ServerID    string
 	Host        []byte
 	Path        []byte
 	Protocol    string

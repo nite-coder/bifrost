@@ -97,21 +97,20 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			remoteAddr, _ := cast.ToString(val)
 			replacements = append(replacements, variable.RemoteAddr, remoteAddr)
 		case variable.Host:
-			val, _ := variable.Get(variable.Host, c)
-			host, _ := cast.ToString(val)
-			replacements = append(replacements, variable.Host, host)
+			host := variable.GetString(variable.Host, c)
+			replacements = append(replacements, variable.RequestURI, host)
 		case variable.RequestMethod:
-			replacements = append(replacements, variable.RequestMethod, cast.B2S(c.Request.Method()))
+			method := variable.GetString(variable.RequestMethod, c)
+			replacements = append(replacements, variable.RequestURI, method)
 		case variable.RequestURI:
-			val, _ := variable.Get(variable.RequestURI, c)
-			uri, _ := cast.ToString(val)
+			uri := variable.GetString(variable.RequestURI, c)
 			replacements = append(replacements, variable.RequestURI, uri)
 		case variable.RequestPath:
-			val, _ := variable.Get(variable.RequestPath, c)
-			path, _ := cast.ToString(val)
+			path := variable.GetString(variable.RequestPath, c)
 			replacements = append(replacements, variable.RequestPath, path)
 		case variable.RequestProtocol:
-			replacements = append(replacements, variable.RequestProtocol, c.Request.Header.GetProtocol())
+			protocol := variable.GetString(variable.RequestProtocol, c)
+			replacements = append(replacements, variable.RequestProtocol, protocol)
 		case variable.RequestBody:
 			// if content type is grpc, the $request_body will be ignored
 			if bytes.Equal(contentType, grpcContentType) {

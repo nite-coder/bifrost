@@ -97,19 +97,21 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case ClientIP:
 		return c.ClientIP(), true
 	case Host:
-		val, found := c.Get(Host)
-
-		if found {
-			b := val.([]byte)
-			host := cast.B2S(b)
-			return host, true
+		val, found := c.Get(RequestInfo)
+		if !found {
+			return nil, false
 		}
+		info := (val).(*ReqInfo)
 
-		host := string(c.Request.Host())
+		host := cast.B2S(info.Host)
 		return host, true
 	case ServerID:
-		serverID := c.GetString(ServerID)
-		return serverID, true
+		val, found := c.Get(RequestInfo)
+		if !found {
+			return nil, false
+		}
+		info := (val).(*ReqInfo)
+		return info.ServerID, true
 	case RemoteAddr:
 		var ip string
 		switch addr := c.RemoteAddr().(type) {

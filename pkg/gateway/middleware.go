@@ -36,9 +36,6 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 	}()
 
-	// save serverID for access log
-	c.Set(variable.ServerID, m.serverID)
-
 	// create request info
 	host := make([]byte, len(c.Request.Host()))
 	copy(host, c.Request.Host())
@@ -47,6 +44,7 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	copy(path, c.Request.Path())
 
 	reqInfo := &variable.ReqInfo{
+		ServerID:    m.serverID,
 		Host:        host,
 		Path:        path,
 		Protocol:    c.Request.Header.GetProtocol(),

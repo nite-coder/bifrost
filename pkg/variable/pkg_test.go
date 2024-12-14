@@ -24,6 +24,7 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Request.SetRequestURI("http://abc.com/foo?bar=baz")
 
 	reqInfo := &ReqInfo{
+		ServerID:    "serverA",
 		Host:        hzCtx.Request.Host(),
 		Path:        hzCtx.Request.Path(),
 		Protocol:    hzCtx.Request.Header.GetProtocol(),
