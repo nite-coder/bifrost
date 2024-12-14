@@ -97,7 +97,7 @@ Built-in middlewares support common route rewriting.
 Adds a prefix to the original request path before forwarding upstream.
 
 Original request: `/foo` \
-Forwarded upstream: `/api/v1/foo`
+Forwarded path for upstream: `/api/v1/foo`
 
 ```yaml
 routes:
@@ -116,13 +116,13 @@ routes:
 Removes a part of the original request path before forwarding upstream.
 
 Original request: `/api/v1/payment` \
-Forwarded upstream: `/payment`
+Forwarded path for upstream: `/payment`
 
 ```yaml
 routes:
   route1:
     paths:
-      - /foo
+      - /api/v1/payment
     service_id: service1
     middlewares:
       - type: strip_prefix
@@ -136,7 +136,7 @@ routes:
 Replaces the entire original request path with a different path before forwarding upstream. If the original request includes a query string, it will also be forwarded.
 
 Original request: `/api/v1/user?name=john` \
-Forwarded upstream: `/hoo/user?name=john`
+Forwarded path for upstream: `/hoo/user?name=john`
 
 ```yaml
 routes:

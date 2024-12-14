@@ -8,8 +8,8 @@ The request log currently supports the following variables:
 | `$remote_addr`       | Client IP address                                                                                   |
 | `$host`              | Client's requested hostname                                                                         |
 | `$request_method`    | Client's requested HTTP METHOD                                                                      |
-| `$request_uri`       | Client's requested HTTP URI                                                                         |
-| `$request_protocol`  | HTTP protocol of the request                                                                        |
+| `$request_uri`       | Client's requested HTTP URI. For example, `/foo?abc=123`                                            |
+| `$request_protocol`  | HTTP protocol of the request. For example, `HTTP/1.1`                                               |
 | `$request_body`      | Body of the request                                                                                 |
 | `$header_{xxx}`      | Client request header; replace {xxx} with the specific header name, e.g., `$header_X-Forwarded-For` |
 | `$upstream_addr`     | Upstream host address                                                                               |
