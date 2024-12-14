@@ -1,5 +1,13 @@
 package variable
 
+type ReqInfo struct {
+	Host        []byte
+	Path        []byte
+	Protocol    string
+	Method      []byte
+	Querystring []byte
+}
+
 const (
 	ServerID          = "$server_id"
 	RouteID           = "$route_id"
@@ -10,6 +18,7 @@ const (
 	ReceivedSize      = "$received_size"
 	SendSize          = "$send_size"
 	Status            = "$status"
+	RequestInfo       = "$request_info"
 	RequestProtocol   = "$request_protocol"
 	RequestMethod     = "$request_method"
 	RequestURI        = "$request_uri"

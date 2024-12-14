@@ -41,19 +41,26 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// save serverID for access log
 	c.Set(variable.ServerID, m.serverID)
 
-	// save original host
+	// create request info
 	host := make([]byte, len(c.Request.Host()))
 	copy(host, c.Request.Host())
-	c.Set(variable.Host, host)
+
+	path := make([]byte, len(c.Request.Path()))
+	copy(path, c.Request.Path())
+
+	reqInfo := &variable.ReqInfo{
+		Host:        host,
+		Path:        c.Request.Path(),
+		Protocol:    c.Request.Header.GetProtocol(),
+		Method:      c.Request.Method(),
+		Querystring: c.Request.QueryString(),
+	}
+
+	c.Set(variable.RequestInfo, reqInfo)
 
 	if len(c.Request.Header.Get("X-Forwarded-For")) > 0 {
 		c.Set("X-Forwarded-For", c.Request.Header.Get("X-Forwarded-For"))
 	}
-
-	// save original path
-	path := make([]byte, len(c.Request.Path()))
-	copy(path, c.Request.Path())
-	c.Set(variable.RequestPath, path)
 
 	// add trace_id to logger
 	spanCtx := trace.SpanContextFromContext(ctx)

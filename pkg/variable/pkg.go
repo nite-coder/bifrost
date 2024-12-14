@@ -142,23 +142,44 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 		return httpStats.SendSize(), true
 	case RequestProtocol:
-		return c.Request.Header.GetProtocol(), true
-	case RequestPath:
-		val, found := c.Get(RequestPath)
-
-		if found {
-			b := val.([]byte)
-			path := cast.B2S(b)
-			return path, true
+		val, found := c.Get(RequestInfo)
+		if !found {
+			return nil, false
 		}
+		info := (val).(*ReqInfo)
+		return info.Protocol, true
+	case RequestPath:
+		val, found := c.Get(RequestInfo)
+		if !found {
+			return nil, false
+		}
+		info := (val).(*ReqInfo)
 
-		path := string(c.Request.URI().Path())
+		path := cast.B2S(info.Path)
 		return path, true
 	case RequestURI:
-		val := string(c.Request.URI().RequestURI())
-		return val, true
+		val, found := c.Get(RequestInfo)
+		if !found {
+			return nil, false
+		}
+		info := (val).(*ReqInfo)
+
+		builder := strings.Builder{}
+		builder.Write(info.Path)
+		if len(info.Querystring) > 0 {
+			builder.Write(questionByte)
+			builder.Write(info.Querystring)
+		}
+
+		return builder.String(), true
 	case RequestMethod:
-		method := string(c.Request.Method())
+		val, found := c.Get(RequestInfo)
+		if !found {
+			return nil, false
+		}
+		info := (val).(*ReqInfo)
+
+		method := cast.B2S(info.Method)
 		return method, true
 	case RequestBody:
 		// if content type is grpc, the $request_body will be ignored

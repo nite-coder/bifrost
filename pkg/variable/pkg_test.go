@@ -19,8 +19,19 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.SetClientIPFunc(func(ctx *app.RequestContext) string {
 		return "127.0.0.1"
 	})
-	hzCtx.Request.SetMethod("GET")
-	hzCtx.Request.SetRequestURI("/foo?bar=baz")
+	hzCtx.Request.SetHost("abc.com")
+	hzCtx.Request.Header.SetProtocol("HTTP/1.1")
+	hzCtx.Request.SetRequestURI("http://abc.com/foo?bar=baz")
+
+	reqInfo := &ReqInfo{
+		Host:        hzCtx.Request.Host(),
+		Path:        hzCtx.Request.Path(),
+		Protocol:    hzCtx.Request.Header.GetProtocol(),
+		Method:      hzCtx.Request.Method(),
+		Querystring: hzCtx.Request.QueryString(),
+	}
+
+	hzCtx.Set(RequestInfo, reqInfo)
 
 	userID := GetInt64("$var.user_id", hzCtx)
 	assert.Equal(t, int64(98765), userID)
@@ -48,6 +59,9 @@ func TestGetDirective(t *testing.T) {
 
 	uri := GetString(RequestURI, hzCtx)
 	assert.Equal(t, "/foo?bar=baz", uri)
+
+	protocol := GetString(RequestProtocol, hzCtx)
+	assert.Equal(t, "HTTP/1.1", protocol)
 
 	userAgent := GetString(UserAgent, hzCtx)
 	assert.Equal(t, "my_user_agent", userAgent)
