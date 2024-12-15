@@ -188,7 +188,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 		proxy := svc.proxy
 		if svc.upstream != nil && proxy == nil {
-			ctx.Set(variable.Upstream, svc.upstream.opts.ID)
+			ctx.Set(variable.UpstreamID, svc.upstream.opts.ID)
 
 			switch svc.upstream.opts.Strategy {
 			case config.RoundRobinStrategy, "":

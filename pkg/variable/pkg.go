@@ -16,6 +16,7 @@ import (
 var (
 	grpcContentType = []byte("application/grpc")
 	questionByte    = []byte{byte('?')}
+	spaceByte       = []byte{byte(' ')}
 )
 
 func Get(key string, c *app.RequestContext) (val any, found bool) {
@@ -150,6 +151,25 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 		info := (val).(*ReqInfo)
 		return info.Protocol, true
+	case Request:
+		val, found := c.Get(RequestInfo)
+		if !found {
+			return nil, false
+		}
+		info := (val).(*ReqInfo)
+
+		builder := strings.Builder{}
+		builder.Write(info.Method)
+		builder.Write(spaceByte)
+		builder.Write(info.Path)
+		if len(info.Querystring) > 0 {
+			builder.Write(questionByte)
+			builder.Write(info.Querystring)
+		}
+
+		builder.Write(spaceByte)
+		builder.WriteString(info.Protocol)
+		return builder.String(), true
 	case RequestPath:
 		val, found := c.Get(RequestInfo)
 		if !found {
@@ -200,8 +220,8 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case ServiceID:
 		serviceID := c.GetString(ServiceID)
 		return serviceID, true
-	case Upstream:
-		upstream := c.GetString(Upstream)
+	case UpstreamID:
+		upstream := c.GetString(UpstreamID)
 		return upstream, true
 	case UpstreamURI:
 		buf := bytebufferpool.Get()

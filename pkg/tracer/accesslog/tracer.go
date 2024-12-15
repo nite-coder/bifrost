@@ -98,10 +98,16 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			replacements = append(replacements, variable.RemoteAddr, remoteAddr)
 		case variable.Host:
 			host := variable.GetString(variable.Host, c)
-			replacements = append(replacements, variable.RequestURI, host)
+			replacements = append(replacements, variable.Host, host)
+		case variable.RouteID:
+			routeID := variable.GetString(variable.RouteID, c)
+			replacements = append(replacements, variable.RequestURI, routeID)
+		case variable.Request:
+			req := variable.GetString(variable.Request, c)
+			replacements = append(replacements, variable.Request, req)
 		case variable.RequestMethod:
 			method := variable.GetString(variable.RequestMethod, c)
-			replacements = append(replacements, variable.RequestURI, method)
+			replacements = append(replacements, variable.RequestMethod, method)
 		case variable.RequestURI:
 			uri := variable.GetString(variable.RequestURI, c)
 			replacements = append(replacements, variable.RequestURI, uri)

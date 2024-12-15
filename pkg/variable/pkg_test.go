@@ -55,6 +55,9 @@ func TestGetDirective(t *testing.T) {
 	serverA := GetString(ServerID, hzCtx)
 	assert.Equal(t, "serverA", serverA)
 
+	request := GetString(Request, hzCtx)
+	assert.Equal(t, "GET /foo?bar=baz HTTP/1.1", request)
+
 	path := GetString(RequestPath, hzCtx)
 	assert.Equal(t, "/foo", path)
 

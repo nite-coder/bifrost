@@ -184,21 +184,21 @@ func Run(mainOptions config.Options) (err error) {
 		}
 	}()
 
-	var sigl os.Signal
+	var sigs os.Signal
 	defer func() {
 		// shutdown bifrost
-		if sigl == syscall.SIGINT {
+		if sigs == syscall.SIGINT {
 			_ = shutdown(ctx, true)
 			return
 		}
 		_ = shutdown(ctx, false)
 	}()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	sigl = <-sigChan
+	stopChan := make(chan os.Signal, 1)
+	signal.Notify(stopChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	sigs = <-stopChan
 
-	slog.Debug("received shutdown signal", "signal", sigl, "pid", os.Getpid())
+	slog.Debug("received shutdown signal", "signal", sigs, "pid", os.Getpid())
 	return nil
 }
 
