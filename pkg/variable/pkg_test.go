@@ -16,12 +16,19 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Set("money", "123.456")
 	hzCtx.Request.Header.SetUserAgentBytes([]byte("my_user_agent"))
 	hzCtx.Set(TraceID, "trace_id")
+	hzCtx.Set(RouteID, "routeA")
+	hzCtx.Set(ServiceID, "serviceA")
+	hzCtx.Set(UpstreamID, "upstreamA")
+	hzCtx.Set(UpstreamAddr, "1.2.3.4")
+
 	hzCtx.SetClientIPFunc(func(ctx *app.RequestContext) string {
 		return "127.0.0.1"
 	})
 	hzCtx.Request.SetHost("abc.com")
 	hzCtx.Request.Header.SetProtocol("HTTP/1.1")
+	hzCtx.Request.SetMethod("POST")
 	hzCtx.Request.SetRequestURI("http://abc.com/foo?bar=baz")
+	hzCtx.Request.SetBody([]byte("hello world"))
 
 	reqInfo := &ReqInfo{
 		ServerID:    "serverA",
@@ -49,23 +56,68 @@ func TestGetDirective(t *testing.T) {
 	money32 := GetFloat32("$var.money", hzCtx)
 	assert.Equal(t, float32(123.456), money32)
 
-	clientIP := GetString("$client_ip", hzCtx)
+	remoteAddr := GetString(RemoteAddr, hzCtx)
+	assert.Equal(t, "0.0.0.0", remoteAddr)
+
+	host := GetString(Host, hzCtx)
+	assert.Equal(t, "abc.com", host)
+
+	receivedSize := GetString(ReceivedSize, hzCtx)
+	assert.Equal(t, "", receivedSize)
+
+	SendSize := GetString(SendSize, hzCtx)
+	assert.Equal(t, "", SendSize)
+
+	clientIP := GetString(ClientIP, hzCtx)
 	assert.Equal(t, "127.0.0.1", clientIP)
 
-	serverA := GetString(ServerID, hzCtx)
-	assert.Equal(t, "serverA", serverA)
+	serverID := GetString(ServerID, hzCtx)
+	assert.Equal(t, "serverA", serverID)
+
+	routeID := GetString(RouteID, hzCtx)
+	assert.Equal(t, "routeA", routeID)
+
+	serviceID := GetString(ServiceID, hzCtx)
+	assert.Equal(t, "serviceA", serviceID)
+
+	upstreamID := GetString(UpstreamID, hzCtx)
+	assert.Equal(t, "upstreamA", upstreamID)
 
 	request := GetString(Request, hzCtx)
-	assert.Equal(t, "GET /foo?bar=baz HTTP/1.1", request)
+	assert.Equal(t, "POST /foo?bar=baz HTTP/1.1", request)
 
-	path := GetString(RequestPath, hzCtx)
-	assert.Equal(t, "/foo", path)
+	requestMethod := GetString(RequestMethod, hzCtx)
+	assert.Equal(t, "POST", requestMethod)
 
-	uri := GetString(RequestURI, hzCtx)
-	assert.Equal(t, "/foo?bar=baz", uri)
+	requestBody := GetString(RequestBody, hzCtx)
+	assert.Equal(t, "hello world", requestBody)
 
-	protocol := GetString(RequestProtocol, hzCtx)
-	assert.Equal(t, "HTTP/1.1", protocol)
+	requestPath := GetString(RequestPath, hzCtx)
+	assert.Equal(t, "/foo", requestPath)
+
+	requestURI := GetString(RequestURI, hzCtx)
+	assert.Equal(t, "/foo?bar=baz", requestURI)
+
+	requestProtocol := GetString(RequestProtocol, hzCtx)
+	assert.Equal(t, "HTTP/1.1", requestProtocol)
+
+	upstream := GetString(Upstream, hzCtx)
+	assert.Equal(t, "POST /foo?bar=baz HTTP/1.1", upstream)
+
+	upstreamURI := GetString(UpstreamURI, hzCtx)
+	assert.Equal(t, "/foo?bar=baz", upstreamURI)
+
+	upstreamPath := GetString(UpstreamPath, hzCtx)
+	assert.Equal(t, "/foo", upstreamPath)
+
+	upstreamAddr := GetString(UpstreamAddr, hzCtx)
+	assert.Equal(t, "1.2.3.4", upstreamAddr)
+
+	upstreamMethod := GetString(UpstreamMethod, hzCtx)
+	assert.Equal(t, "POST", upstreamMethod)
+
+	upstreamProtocol := GetString(UpstreamProtocol, hzCtx)
+	assert.Equal(t, "HTTP/1.1", upstreamProtocol)
 
 	userAgent := GetString(UserAgent, hzCtx)
 	assert.Equal(t, "my_user_agent", userAgent)

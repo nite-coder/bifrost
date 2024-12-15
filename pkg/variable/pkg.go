@@ -131,7 +131,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 		httpStats := traceInfo.Stats()
 		if httpStats == nil {
-			return 0, false
+			return nil, false
 		}
 		return httpStats.RecvSize(), true
 	case SendSize:
@@ -141,16 +141,9 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 		httpStats := traceInfo.Stats()
 		if httpStats == nil {
-			return 0, false
-		}
-		return httpStats.SendSize(), true
-	case RequestProtocol:
-		val, found := c.Get(RequestInfo)
-		if !found {
 			return nil, false
 		}
-		info := (val).(*ReqInfo)
-		return info.Protocol, true
+		return httpStats.SendSize(), true
 	case Request:
 		val, found := c.Get(RequestInfo)
 		if !found {
@@ -211,6 +204,13 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 
 		return cast.B2S(c.Request.Body()), true
+	case RequestProtocol:
+		val, found := c.Get(RequestInfo)
+		if !found {
+			return nil, false
+		}
+		info := (val).(*ReqInfo)
+		return info.Protocol, true
 	case TraceID:
 		traceID := c.GetString(TraceID)
 		return traceID, true
@@ -223,12 +223,28 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case UpstreamID:
 		upstream := c.GetString(UpstreamID)
 		return upstream, true
+	case Upstream:
+		buf := bytebufferpool.Get()
+		defer bytebufferpool.Put(buf)
+
+		_, _ = buf.Write(c.Request.Method())
+		_, _ = buf.Write(spaceByte)
+
+		_, _ = buf.Write(c.Request.Path())
+		if len(c.Request.QueryString()) > 0 {
+			_, _ = buf.Write(questionByte)
+			_, _ = buf.Write(c.Request.QueryString())
+		}
+
+		_, _ = buf.Write(spaceByte)
+		_, _ = buf.WriteString(c.Request.Header.GetProtocol())
+
+		return buf.String(), true
 	case UpstreamURI:
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
 
 		_, _ = buf.Write(c.Request.Path())
-
 		if len(c.Request.QueryString()) > 0 {
 			_, _ = buf.Write(questionByte)
 			_, _ = buf.Write(c.Request.QueryString())
