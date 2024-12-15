@@ -108,7 +108,7 @@ func (p *FileProvider) Watch() error {
 		defer watcher.Close()
 
 		isUpdate := false
-		refresh := 999 * time.Millisecond
+		refresh := 900 * time.Millisecond
 		timer := time.NewTimer(refresh)
 		defer timer.Stop()
 

@@ -94,11 +94,12 @@ func Run(mainOptions config.Options) (err error) {
 		slog.Debug("reloading...")
 
 		if mainOptions.From() != "" {
-			mainOptions, err = config.Load(mainOptions.From())
+			newMainOptions, err := config.Load(mainOptions.From())
 			if err != nil {
 				slog.Error("fail to load config", "error", err)
 				return err
 			}
+			mainOptions = newMainOptions
 		}
 
 		b, err := sonic.Marshal(mainOptions)
