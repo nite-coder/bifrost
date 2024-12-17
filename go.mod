@@ -2,15 +2,15 @@ module github.com/nite-coder/bifrost
 
 go 1.22.0
 
-replace github.com/cloudwego/hertz v0.9.3 => github.com/nite-coder/hertz v0.0.0-20240906153830-9815bf8dbb53
+replace github.com/cloudwego/hertz v0.9.4 => github.com/nite-coder/hertz v0.0.0-20241217152919-885b480b33a6
 
 replace github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.0.0-20240820122516-bb9df3e1377c
 
 require (
 	github.com/bytedance/gopkg v0.1.1
-	github.com/bytedance/sonic v1.12.3
-	github.com/cloudwego/hertz v0.9.3
-	github.com/cloudwego/netpoll v0.6.4
+	github.com/bytedance/sonic v1.12.6
+	github.com/cloudwego/hertz v0.9.4
+	github.com/cloudwego/netpoll v0.6.5
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-resty/resty/v2 v2.15.3
 	github.com/go-viper/mapstructure/v2 v2.2.1
@@ -20,7 +20,7 @@ require (
 	github.com/hertz-contrib/logger/slog v1.0.0
 	github.com/hertz-contrib/obs-opentelemetry/tracing v0.4.1
 	github.com/hertz-contrib/pprof v0.1.2
-	github.com/hertz-contrib/websocket v0.1.0
+	github.com/hertz-contrib/websocket v0.2.0
 	github.com/miekg/dns v1.1.62
 	github.com/nite-coder/blackbear v0.0.0-20240930140346-76863193d6d4
 	github.com/ory/dockertest/v3 v3.11.0
@@ -50,11 +50,8 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
-	github.com/andeya/ameda v1.5.3 // indirect
-	github.com/andeya/goutil v1.0.1 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bytedance/go-tagexpr/v2 v2.9.11 // indirect
 	github.com/bytedance/sonic/loader v0.2.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
