@@ -11,6 +11,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
+	"github.com/cloudwego/hertz/pkg/protocol/http1/resp"
 	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/websocket"
@@ -162,11 +163,12 @@ func main() {
 	opts := []config.Option{
 		server.WithHostPorts(bind),
 		server.WithIdleTimeout(time.Second * 60),
-		server.WithReadTimeout(time.Second * 3),
-		server.WithWriteTimeout(time.Second * 3),
+		server.WithReadTimeout(time.Second * 30),
+		server.WithWriteTimeout(time.Second * 30),
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		server.WithH2C(true),
+		server.WithStreamBody(true),
 		WithDefaultServerHeader(true),
 	}
 	h := server.New(opts...)
@@ -189,6 +191,7 @@ func main() {
 	h.POST("/long", longHandler)
 	h.GET("/dynamic_upstream", findUpstreamHandler)
 	h.GET("/websocket", wssHandler)
+	h.GET("/chunk", chunkHandler)
 
 	h.GET("/users/:user_id/orders", func(c context.Context, ctx *app.RequestContext) {
 		userID := ctx.Param("user_id")
@@ -280,5 +283,17 @@ func wssHandler(c context.Context, ctx *app.RequestContext) {
 	if err != nil {
 		slog.ErrorContext(c, "upgrade err:", "error", err)
 		return
+	}
+}
+
+func chunkHandler(ctx context.Context, c *app.RequestContext) {
+
+	// Hijack the writer of response
+	c.Response.HijackWriter(resp.NewChunkedBodyWriter(&c.Response, c.GetWriter()))
+
+	for i := 0; i < 100; i++ {
+		c.Write(orderResp) // nolint: errcheck
+		c.Flush()          // nolint: errcheck
+		time.Sleep(1 * time.Second)
 	}
 }

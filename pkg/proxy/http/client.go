@@ -21,6 +21,7 @@ func DefaultClientOptions() []hzconfig.ClientOption {
 		client.WithMaxIdleConnDuration(120 * time.Second),
 		client.WithKeepAlive(true),
 		client.WithMaxConnsPerHost(1024),
+		client.WithResponseBodyStream(true),
 	}
 }
 

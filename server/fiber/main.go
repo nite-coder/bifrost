@@ -29,5 +29,9 @@ func main() {
 		return proxy.Do(c, "http://localhost:8000/spot/orders")
 	})
 
+	app.Get("/chunk", func(c *fiber.Ctx) error {
+		return proxy.Do(c, "http://localhost:8000/chunk")
+	})
+
 	log.Fatal(app.Listen(":8001"))
 }

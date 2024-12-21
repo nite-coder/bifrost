@@ -166,6 +166,7 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 	}
 	h.POST("/spot/orders", httpProxy.ServeHTTP)
 	h.POST("/helloworld.Greeter/SayHello", grpcProxy.ServeHTTP)
+	h.GET("/chunk", httpProxy.ServeHTTP)
 
 	go func() {
 		h.Spin()
