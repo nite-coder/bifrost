@@ -16,6 +16,7 @@ The access log currently supports the following directives:
 | `$request_protocol`  | The HTTP protocol of the request.                                                | `HTTP/1.1`                              |
 | `$request_body`      | Body of the request                                                              | `{"userId": 12345, "action": "update"}` |
 | `$header_{xxx}`      | Client request header; replace {xxx} with the specific header name               | `$header_X-Forwarded-For`               |
+| `$upstream`          | The request path send to upstream                                                | `GET /users/profile?id=12345 HTTP/1.1`  |
 | `$upstream_id`       | The ID of upstream which handles the request                                     | `backend-cluster-01`                    |
 | `$upstream_addr`     | Upstream host address                                                            | `10.0.0.50:8080`                        |
 | `$upstream_uri`      | Upstream's requested HTTP URI                                                    | `/internal/user/12345`                  |

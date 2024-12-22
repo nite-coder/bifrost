@@ -1,0 +1,21 @@
+version: 1
+watch: false
+
+providers:
+  file:
+    enabled: true
+    extensions:
+      - ".yaml"
+      - ".yml"
+      - ".json"
+    paths:
+      - "./../../test/config/conf"
+
+servers:
+  api_server:
+    bind: "127.0.0.1:8001"
+
+upstreams:
+  upstream1:
+    targets:
+      - target: "127.0.0.1:8000"

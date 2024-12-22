@@ -11,7 +11,7 @@ require (
 	github.com/bytedance/sonic v1.12.6
 	github.com/cloudwego/hertz v0.9.4
 	github.com/cloudwego/netpoll v0.6.5
-	github.com/fsnotify/fsnotify v1.7.0
+	github.com/fsnotify/fsnotify v1.8.0
 	github.com/go-resty/resty/v2 v2.15.3
 	github.com/go-viper/mapstructure/v2 v2.2.1
 	github.com/gofiber/fiber/v2 v2.52.5

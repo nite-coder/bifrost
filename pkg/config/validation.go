@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/middleware"
+	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 // ValidateMapping checks if the config's value mapping is valid.  For example, the server in route must be finded in the servers
@@ -19,28 +21,11 @@ func ValidateMapping(mainOpts Options) error {
 		return errors.New("no server found.  please add one server at lease")
 	}
 
-	for routeID, route := range mainOpts.Routes {
-		for _, serverID := range route.Servers {
-			if _, found := mainOpts.Servers[serverID]; !found {
-				return fmt.Errorf("can't find the server '%s' in the route '%s'", serverID, routeID)
-			}
-		}
-
-		for _, middleware := range route.Middlewares {
-			if len(middleware.Use) > 0 {
-				if _, found := mainOpts.Middlewares[middleware.Use]; !found {
-					return fmt.Errorf("can't find the middleware '%s' in the route '%s'", middleware.Use, routeID)
-				}
-			}
-		}
-	}
-
-	// TODO: check middlewares
 	for serverID, server := range mainOpts.Servers {
 		for _, m := range server.Middlewares {
 			if len(m.Use) > 0 {
 				if _, found := mainOpts.Middlewares[m.Use]; !found {
-					return fmt.Errorf("can't find the middleware '%s' in the server '%s'", m.Use, serverID)
+					return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Use, serverID)
 				}
 			}
 
@@ -48,6 +33,39 @@ func ValidateMapping(mainOpts Options) error {
 				hander := middleware.FindHandlerByType(m.Type)
 				if hander == nil {
 					return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Type, serverID)
+				}
+			}
+		}
+	}
+
+	for routeID, route := range mainOpts.Routes {
+		for _, serverID := range route.Servers {
+			if _, found := mainOpts.Servers[serverID]; !found {
+				return fmt.Errorf("the server '%s' can't be found in the route '%s'", serverID, routeID)
+			}
+		}
+
+		for _, middleware := range route.Middlewares {
+			if len(middleware.Use) > 0 {
+				if _, found := mainOpts.Middlewares[middleware.Use]; !found {
+					return fmt.Errorf("the middleware '%s' can't be found in the route '%s'", middleware.Use, routeID)
+				}
+			}
+		}
+	}
+
+	for serviceID, service := range mainOpts.Services {
+		for _, m := range service.Middlewares {
+			if len(m.Use) > 0 {
+				if _, found := mainOpts.Middlewares[m.Use]; !found {
+					return fmt.Errorf("the middleware '%s' can't be found in the service '%s'", m.Use, serviceID)
+				}
+			}
+
+			if len(m.Type) > 0 {
+				hander := middleware.FindHandlerByType(m.Type)
+				if hander == nil {
+					return fmt.Errorf("the middleware '%s' can't be found in the service '%s'", m.Type, serviceID)
 				}
 			}
 		}
@@ -121,6 +139,8 @@ func validateLogging(opts LoggingOtions) error {
 }
 
 func validateAccessLog(options map[string]AccessLogOptions) error {
+	reIsVariable := regexp.MustCompile(`\$\w+(-\w+)*`)
+
 	for id, opt := range options {
 		if !opt.Enabled {
 			continue
@@ -148,6 +168,14 @@ func validateAccessLog(options map[string]AccessLogOptions) error {
 				msg := fmt.Sprintf("the escape '%s' for access log '%s' is invalid", opt.Escape, id)
 				fullpath := []string{"access_logs", id, "escape"}
 				return newInvalidConfig(fullpath, opt.Escape, msg)
+			}
+		}
+
+		directives := reIsVariable.FindAllString(opt.Template, -1)
+
+		for _, directive := range directives {
+			if !variable.IsDirective(directive) {
+				return fmt.Errorf("the directive '%s' is not supported in the access log '%s'", directive, id)
 			}
 		}
 	}

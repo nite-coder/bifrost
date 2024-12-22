@@ -51,7 +51,7 @@ func Load(path string) (Options, error) {
 		return mainOpts, err
 	}
 
-	dynamicProvider, mainOpts, err = LoadDynamic(mainOpts)
+	dp, mainOpts, err := LoadDynamic(mainOpts)
 	if err != nil {
 		return mainOpts, fmt.Errorf("fail to load dynamic config: %w", err)
 	}
@@ -66,7 +66,9 @@ func Load(path string) (Options, error) {
 	fileProviderOpts := file.Options{
 		Paths: []string{path},
 	}
+
 	mainProvider = file.NewProvider(fileProviderOpts)
+	dynamicProvider = dp
 
 	return mainOpts, nil
 }
@@ -149,6 +151,10 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 		return mainOpts, err
 	}
 
+	if mainOpts.Middlewares == nil {
+		mainOpts.Middlewares = make(map[string]MiddlwareOptions)
+	}
+
 	if mainOpts.Servers == nil {
 		mainOpts.Servers = make(map[string]ServerOptions)
 	}
@@ -157,16 +163,12 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 		mainOpts.Routes = make(map[string]RouteOptions)
 	}
 
-	if mainOpts.Middlewares == nil {
-		mainOpts.Middlewares = make(map[string]MiddlwareOptions)
+	if mainOpts.Services == nil {
+		mainOpts.Services = make(map[string]ServiceOptions)
 	}
 
 	if mainOpts.Upstreams == nil {
 		mainOpts.Upstreams = make(map[string]UpstreamOptions)
-	}
-
-	if mainOpts.Services == nil {
-		mainOpts.Services = make(map[string]ServiceOptions)
 	}
 
 	for k, v := range newOptions.Middlewares {
@@ -179,14 +181,14 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 		mainOpts.Middlewares[k] = v
 	}
 
-	for k, v := range newOptions.Services {
-		if _, found := mainOpts.Services[k]; found {
-			msg := fmt.Sprintf("service '%s' is duplicate", k)
-			fullpath := []string{"services", k}
+	for k, v := range newOptions.Servers {
+		if _, found := mainOpts.Servers[k]; found {
+			msg := fmt.Sprintf("server '%s' is duplicate", k)
+			fullpath := []string{"servers", k}
 			return mainOpts, newInvalidConfig(fullpath, "", msg)
 		}
 
-		mainOpts.Services[k] = v
+		mainOpts.Servers[k] = v
 	}
 
 	for k, v := range newOptions.Routes {
@@ -199,6 +201,16 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 		mainOpts.Routes[k] = v
 	}
 
+	for k, v := range newOptions.Services {
+		if _, found := mainOpts.Services[k]; found {
+			msg := fmt.Sprintf("service '%s' is duplicate", k)
+			fullpath := []string{"services", k}
+			return mainOpts, newInvalidConfig(fullpath, "", msg)
+		}
+
+		mainOpts.Services[k] = v
+	}
+
 	for k, v := range newOptions.Upstreams {
 		if _, found := mainOpts.Upstreams[k]; found {
 			msg := fmt.Sprintf("upstream '%s' is duplicate", k)
@@ -207,16 +219,6 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 		}
 
 		mainOpts.Upstreams[k] = v
-	}
-
-	for k, v := range newOptions.Servers {
-		if _, found := mainOpts.Servers[k]; found {
-			msg := fmt.Sprintf("server '%s' is duplicate", k)
-			fullpath := []string{"servers", k}
-			return mainOpts, newInvalidConfig(fullpath, "", msg)
-		}
-
-		mainOpts.Servers[k] = v
 	}
 
 	return mainOpts, nil

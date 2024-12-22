@@ -153,3 +153,9 @@ func TestGetVariable(t *testing.T) {
 	assert.False(t, found)
 	assert.Nil(t, val)
 }
+
+func TestIsDirective(t *testing.T) {
+	assert.True(t, IsDirective("$var.uid"))
+	assert.True(t, IsDirective("$request"))
+	assert.False(t, IsDirective("$abc"))
+}

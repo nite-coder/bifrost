@@ -1,0 +1,27 @@
+version: 1
+watch: false
+
+servers:
+  api_server:
+    bind: "127.0.0.1:8001"
+
+access_logs:
+  good_log:
+    enabled: true
+    output: stderr
+    #output: "./logs/apiv1_access.log"
+    buffering_size: 64000
+    time_format: "2006-01-02T15:04:05.999999"
+    flush: 1s
+    escape: json
+    template: >
+      {"time":"$time",
+      "remote_addr":"$remote_addr",
+      "request":"$request1",
+      "req_body":"$request_body",
+      "status": "$status",
+      "upstream_addr":"$upstream_addr",
+      "upstream_duration": "$upstream_duration",
+      "upstream_status": "$upstream_status",
+      "x_forwarded_for":"$header_X-Forwarded-For",
+      "duration": "$duration"}

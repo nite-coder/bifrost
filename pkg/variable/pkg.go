@@ -17,6 +17,38 @@ var (
 	grpcContentType = []byte("application/grpc")
 	questionByte    = []byte{byte('?')}
 	spaceByte       = []byte{byte(' ')}
+	directives      = map[string]struct{}{
+		Time:             {},
+		ClientIP:         {},
+		Host:             {},
+		ServerID:         {},
+		RouteID:          {},
+		ServiceID:        {},
+		ReceivedSize:     {},
+		SendSize:         {},
+		RemoteAddr:       {},
+		Request:          {},
+		RequestProtocol:  {},
+		RequestMethod:    {},
+		RequestBody:      {},
+		RequestPath:      {},
+		RequestURI:       {},
+		Upstream:         {},
+		UpstreamID:       {},
+		UpstreamProtocol: {},
+		UpstreamMethod:   {},
+		UpstreamAddr:     {},
+		UpstreamPath:     {},
+		UpstreamURI:      {},
+		UpstreamStatus:   {},
+		UpstreamDuration: {},
+		Status:           {},
+		TraceID:          {},
+		Duration:         {},
+		GRPCStatus:       {},
+		GRPCMessage:      {},
+		UserAgent:        {},
+	}
 )
 
 func Get(key string, c *app.RequestContext) (val any, found bool) {
@@ -88,6 +120,22 @@ func GetBool(key string, c *app.RequestContext) bool {
 	}
 	result, _ := cast.ToBool(val)
 	return result
+}
+
+func IsDirective(key string) bool {
+	if strings.HasPrefix(key, "$var.") || strings.HasPrefix(key, "$header") {
+		return true
+	}
+
+	if !strings.HasPrefix(key, "$") {
+		return false
+	}
+
+	if _, found := directives[key]; found {
+		return true
+	}
+
+	return false
 }
 
 func directive(key string, c *app.RequestContext) (val any, found bool) {
