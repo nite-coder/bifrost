@@ -259,22 +259,25 @@ servers:
       - type: tracing
 ```
 
-| Field             | Default | Description                                                                     |
-| ----------------- | ------- | ------------------------------------------------------------------------------- |
-| bind              |         | Port binding                                                                    |
-| reuse_port        | false   | Enables reuse port; Linux only                                                  |
-| tcp_fast_open     | false   | Enables TCP fast open; Linux only                                               |
-| tcp_quick_ack     | false   | Enables TCP quick ack; Linux only                                               |
-| backlog           |         | Limits TCP backlog count; Linux only                                            |
-| http2             | false   | Enables HTTP2                                                                   |
-| logging.handler   | text    | Log format; supports `text`, `json`                                             |
-| logging.level     | info    | Log level; options are `debug`, `info`, `warn`, `error`. Not enabled by default |
-| logging.output    |         | Log output location; `stderr` or file path                                      |
-| timeout.keepalive | 60s     | Keepalive timeout                                                               |
-| timeout.read      | 60s     | Read timeout                                                                    |
-| timeout.write     | 60s     | Write timeout                                                                   |
-| timeout.graceful  | 10s     | Graceful shutdown timeout                                                       |
-| access_log_id     |         | Specifies the access log to use                                                 |
+| Field                 | Default | Description                                                                                  |
+| --------------------- | ------- | -------------------------------------------------------------------------------------------- |
+| bind                  |         | Port binding                                                                                 |
+| reuse_port            | false   | Enables reuse port; Linux only                                                               |
+| tcp_fast_open         | false   | Enables TCP fast open; Linux only                                                            |
+| tcp_quick_ack         | false   | Enables TCP quick ack; Linux only                                                            |
+| backlog               |         | Limits TCP backlog count; Linux only                                                         |
+| http2                 | false   | Enables HTTP2                                                                                |
+| logging.handler       | text    | Log format; supports `text`, `json`                                                          |
+| logging.level         | info    | Log level; options are `debug`, `info`, `warn`, `error`. Not enabled by default              |
+| logging.output        |         | Log output location; `stderr` or file path                                                   |
+| timeout.keepalive     | 60s     | Keepalive timeout                                                                            |
+| timeout.read          | 60s     | Read timeout                                                                                 |
+| timeout.write         | 60s     | Write timeout                                                                                |
+| timeout.graceful      | 10s     | Graceful shutdown timeout                                                                    |
+| max_request_body_size | 4MB     | Max body size of a request.  Unit: byte                                                      |
+| read_buffer_size      | 4MB     | Set the read buffer size while limiting the HTTP header size.  Unit: byte                    |
+| pprof                 | false   | pprof lets you collect CPU profiles, traces, and heap profiles for your Go programs via HTTP |
+| access_log_id         |         | Specifies the access log to use                                                              |
 
 ## routes
 
