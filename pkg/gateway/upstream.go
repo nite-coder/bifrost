@@ -8,6 +8,7 @@ import (
 	"hash"
 	"hash/fnv"
 	"io"
+	"log/slog"
 	"math"
 	"net"
 	"net/url"
@@ -50,7 +51,7 @@ func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[str
 	return upstreams, nil
 }
 
-func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, updateOptions config.UpstreamOptions) (*Upstream, error) {
+func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, upstreamOptions config.UpstreamOptions) (*Upstream, error) {
 	clientOpts := httpproxy.DefaultClientOptions()
 
 	if serviceOpts.Timeout.Dail > 0 {
@@ -74,16 +75,22 @@ func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, upd
 	}
 
 	upstream := &Upstream{
-		opts:   &updateOptions,
+		opts:   &upstreamOptions,
 		hasher: fnv.New32a(),
 	}
 
-	err := buildHTTPProxyList(bifrost, upstream, clientOpts, serviceOpts, updateOptions)
+	proxies, err := buildHTTPProxyList(bifrost, upstream, clientOpts, serviceOpts, upstreamOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	if bifrost.options.Resolver.Valid.Seconds() > 1 {
+	if len(proxies) == 0 {
+		return nil, fmt.Errorf("proxies can't be empty. upstream id: %s", upstreamOptions.ID)
+	}
+
+	upstream.proxies.Store(proxies)
+
+	if bifrost.dnsResolver != nil && bifrost.options.Resolver.Valid.Seconds() > 0 {
 		ticker := time.NewTicker(bifrost.options.Resolver.Valid)
 
 		go func() {
@@ -92,7 +99,18 @@ func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, upd
 			for range ticker.C {
 				oldProxies := upstream.proxies.Load().([]proxy.Proxy)
 
-				_ = buildHTTPProxyList(bifrost, upstream, clientOpts, serviceOpts, updateOptions)
+				newProxies, err := buildHTTPProxyList(bifrost, upstream, clientOpts, serviceOpts, upstreamOptions)
+				if err != nil {
+					slog.Warn("fail to build http upstream", slog.String("upstream_id", upstreamOptions.ID), slog.String("error", err.Error()))
+					continue
+				}
+
+				if len(newProxies) == 0 {
+					slog.Warn("fail to build http upstream because proxies is empty", slog.String("upstream_id", upstreamOptions.ID))
+					continue
+				}
+
+				upstream.proxies.Store(newProxies)
 
 				for _, proxy := range oldProxies {
 					if closer, ok := proxy.(io.Closer); ok {
@@ -112,12 +130,18 @@ func createGRPCUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, 
 		hasher: fnv.New32a(),
 	}
 
-	err := buildGRPCProxyList(bifrost, upstream, serviceOptions, upstreamOptions)
+	proxies, err := buildGRPCProxyList(bifrost, upstream, serviceOptions, upstreamOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	if bifrost.options.Resolver.Valid.Seconds() > 0 {
+	if len(proxies) == 0 {
+		return nil, fmt.Errorf("proxies can't be empty. upstream id: %s", upstreamOptions.ID)
+	}
+
+	upstream.proxies.Store(proxies)
+
+	if bifrost.dnsResolver != nil && bifrost.options.Resolver.Valid.Seconds() > 0 {
 		ticker := time.NewTicker(bifrost.options.Resolver.Valid)
 
 		go func() {
@@ -125,7 +149,17 @@ func createGRPCUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, 
 
 			for range ticker.C {
 				oldProxies := upstream.proxies.Load().([]proxy.Proxy)
-				_ = buildGRPCProxyList(bifrost, upstream, serviceOptions, upstreamOptions)
+
+				newProxies, err := buildGRPCProxyList(bifrost, upstream, serviceOptions, upstreamOptions)
+				if err != nil {
+					slog.Warn("fail to build grpc upstream", slog.String("upstream_id", upstreamOptions.ID), slog.String("error", err.Error()))
+					continue
+				}
+
+				if len(newProxies) == 0 {
+					slog.Warn("fail to build grpc upstream because proxies is empty", slog.String("upstream_id", upstreamOptions.ID))
+					continue
+				}
 
 				for _, proxy := range oldProxies {
 					if closer, ok := proxy.(io.Closer); ok {
@@ -325,13 +359,13 @@ findLoop:
 	goto findLoop
 }
 
-func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzconfig.ClientOption, serviceOptions config.ServiceOptions, updateOptions config.UpstreamOptions) error {
+func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzconfig.ClientOption, serviceOptions config.ServiceOptions, updateOptions config.UpstreamOptions) ([]proxy.Proxy, error) {
 	proxies := make([]proxy.Proxy, 0)
 
 	for _, targetOpts := range updateOptions.Targets {
 
 		if updateOptions.Strategy == config.WeightedStrategy && targetOpts.Weight == 0 {
-			return fmt.Errorf("weight can't be 0. upstream id: %s, target: %s", updateOptions.ID, targetOpts.Target)
+			return nil, fmt.Errorf("weight can't be 0. upstream id: %s, target: %s", updateOptions.ID, targetOpts.Target)
 		}
 
 		upstream.totalWeight += targetOpts.Weight
@@ -343,13 +377,13 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 
 		ips, err := bifrost.dnsResolver.Lookup(context.Background(), targetHost)
 		if err != nil {
-			return fmt.Errorf("lookup upstream host '%s' error: %w", targetHost, err)
+			return nil, fmt.Errorf("lookup upstream host '%s' error: %w", targetHost, err)
 		}
 
 		for _, ip := range ips {
 			addr, err := url.Parse(serviceOptions.Url)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			port := targetPort
@@ -378,7 +412,7 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 
 			client, err := httpproxy.NewClient(clientOptions)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			proxyOptions := httpproxy.Options{
@@ -393,25 +427,22 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 			proxy, err := httpproxy.New(proxyOptions, client)
 
 			if err != nil {
-				return err
+				return nil, err
 			}
 			proxies = append(proxies, proxy)
 		}
 	}
 
-	if len(proxies) > 0 {
-		upstream.proxies.Store(proxies)
-	}
-
-	return nil
+	return proxies, nil
 }
 
-func buildGRPCProxyList(bifrost *Bifrost, upstream *Upstream, serviceOptions config.ServiceOptions, upstreamOptions config.UpstreamOptions) error {
+func buildGRPCProxyList(bifrost *Bifrost, upstream *Upstream, serviceOptions config.ServiceOptions, upstreamOptions config.UpstreamOptions) ([]proxy.Proxy, error) {
 	proxies := make([]proxy.Proxy, 0)
+
 	for _, targetOpts := range upstreamOptions.Targets {
 
 		if upstreamOptions.Strategy == config.WeightedStrategy && targetOpts.Weight == 0 {
-			return fmt.Errorf("weight can't be 0. upstream id: %s, target: %s", upstreamOptions.ID, targetOpts.Target)
+			return nil, fmt.Errorf("weight can't be 0. upstream id: %s, target: %s", upstreamOptions.ID, targetOpts.Target)
 		}
 
 		upstream.totalWeight += targetOpts.Weight
@@ -423,13 +454,13 @@ func buildGRPCProxyList(bifrost *Bifrost, upstream *Upstream, serviceOptions con
 
 		ips, err := bifrost.dnsResolver.Lookup(context.Background(), targetHost)
 		if err != nil {
-			return fmt.Errorf("lookup upstream host error: %w", err)
+			return nil, fmt.Errorf("lookup upstream host error: %w", err)
 		}
 
 		for _, ip := range ips {
 			addr, err := url.Parse(serviceOptions.Url)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			port := targetPort
@@ -453,15 +484,11 @@ func buildGRPCProxyList(bifrost *Bifrost, upstream *Upstream, serviceOptions con
 
 			grpcProxy, err := grpcproxy.New(grpcOptions)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			proxies = append(proxies, grpcProxy)
 		}
 	}
 
-	if len(proxies) > 0 {
-		upstream.proxies.Store(proxies)
-	}
-
-	return nil
+	return proxies, nil
 }

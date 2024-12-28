@@ -1,9 +1,3 @@
-
-
-FULL_COMMIT := $(shell git rev-parse HEAD)
-LDFLAGS = -ldflags "-X main.Build=$(FULL_COMMIT)"
-
-
 .PHONY: test
 test:
 	go clean -testcache
@@ -17,7 +11,7 @@ docker_lint:
 
 
 build:
-	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build $(LDFLAGS) -o bin/bifrost server/bifrost/main.go
+	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -o bin/bifrost server/bifrost/main.go
 	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -o bin/testServer server/testserver/main.go
 
 release: build lint test

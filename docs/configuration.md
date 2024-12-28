@@ -50,7 +50,7 @@ num_loops: 4
 
 ## resolver
 
-The DNS resolver configuration.  By default, Bifrost will resolve all domain name and cache all IPs at beginning.  The cache won't be refresh until the gateway is restarted or reloaded.
+The DNS resolver configuration.  By default, Bifrost will resolve all domain name and cache all IPs at beginning.  The cache will not refresh until the gateway is restarted or reloaded.
 
 Example:
 
@@ -61,11 +61,11 @@ resolver:
   skip_test: false
 ```
 
-| Field     | Default | Description                                                     |
-| --------- | ------- | --------------------------------------------------------------- |
-| addr_port |         | DNS server address and port                                     |
-| valid     | 0       | Time to refresh the DNS cache.  At least greater than 1 second. |
-| skip_test | false   | Skip the dns check during testing                               |
+| Field     | Default | Description                                                                        |
+| --------- | ------- | ---------------------------------------------------------------------------------- |
+| addr_port |         | DNS server address and port.  If empty, the local `/etc/resolv.conf` will be used. |
+| valid     | 0       | Time to refresh the DNS cache.  `0`: means no refresh.  It must be greater than 0. |
+| skip_test | false   | Skip the dns check during testing                                                  |
 
 ## pid_file
 

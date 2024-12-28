@@ -25,5 +25,7 @@ func TestQueryHost(t *testing.T) {
 func TestLocalNameServer(t *testing.T) {
 	servers := GetDNSServers()
 	assert.GreaterOrEqual(t, len(servers), 1)
-	t.Log(servers)
+
+	err := ValidateDNSServer(servers[0].String())
+	assert.NoError(t, err)
 }

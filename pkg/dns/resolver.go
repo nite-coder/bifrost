@@ -52,6 +52,11 @@ func NewResolver(option Options) (*Resolver, error) {
 		option.AddrPort = servers[0].String()
 	}
 
+	err := ValidateDNSServer(option.AddrPort)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := r.loadHostsFile(); err != nil {
 		return nil, fmt.Errorf("failed to load hosts file: %w", err)
 	}
@@ -131,4 +136,34 @@ func (r *Resolver) loadHostsFile() error {
 	}
 
 	return scanner.Err()
+}
+
+// ValidateDNSServer checks the responsiveness and validity of a DNS server.
+// It sends a query to the given DNS server address and verifies if the server
+// responds and returns a successful status code. If the server does not respond
+// or returns an error code, an error is returned detailing the issue.
+
+func ValidateDNSServer(addr string) error {
+
+	m := new(dns.Msg)
+	m.SetQuestion(".", dns.TypeNS)
+	m.RecursionDesired = true
+
+	c := new(dns.Client)
+	c.Timeout = 5 * time.Second
+
+	resp, _, err := c.Exchange(m, addr)
+	if err != nil {
+		return fmt.Errorf("DNS server is not responding: %w", err)
+	}
+
+	if resp == nil {
+		return errors.New("no response from DNS server")
+	}
+
+	if resp.Rcode != dns.RcodeSuccess && resp.Rcode != dns.RcodeNameError {
+		return fmt.Errorf("DNS server returned error code: %v", dns.RcodeToString[resp.Rcode])
+	}
+
+	return nil
 }
