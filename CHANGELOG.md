@@ -3,6 +3,7 @@
 ## Next
 
 - refactor: enchance dns resolver to update upstreams.
+- refactor: optimize the information reported by OpenTelemetry tracing.
 
 ## 2024-12-22 0.1.0
 

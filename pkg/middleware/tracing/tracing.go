@@ -3,6 +3,7 @@ package tracing
 import (
 	"context"
 	"log/slog"
+	"os"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/go-viper/mapstructure/v2"
@@ -12,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -63,15 +65,24 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 		return
 	}
 
-	method := string(c.Method())
-	path := string(c.Request.Path())
+	hostname, _ := os.Hostname()
+
+	reqMethod := variable.GetString(variable.RequestMethod, c)
 
 	spanOptions := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithNewRoot(),
 	}
 
-	ctx, span := m.tracer.Start(ctx, method+" "+path, spanOptions...)
+	ctx, span := m.tracer.Start(ctx, "", spanOptions...)
+
+	httpHost := variable.GetString(variable.Host, c)
+	reqScheme := variable.GetString(variable.RequestScheme, c)
+	reqPath := variable.GetString(variable.RequestPath, c)
+	reqQuery := variable.GetString(variable.RequestQuery, c)
+	userAgent := string(c.Request.Header.UserAgent())
+	networkProtocol := variable.GetString(variable.RequestProtocol, c)
+	clientIP := c.ClientIP()
 
 	defer func() {
 		serverID := variable.GetString(variable.ServerID, c)
@@ -79,27 +90,31 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 		serviceID := variable.GetString(variable.ServiceID, c)
 		remoteAddr := variable.GetString(variable.RemoteAddr, c)
 
-		span.SetName(routeID)
+		span.SetName(reqMethod + " " + routeID)
+
+		// please refer to doc
+		// https://github.com/open-telemetry/semantic-conventions/blob/v1.27.0/docs/http/http-spans.md#status
 
 		labels := []attribute.KeyValue{
-			attribute.String("server_id", serverID),
-			attribute.String("route_id", routeID),
-			attribute.String("service_id", serviceID),
-			attribute.String("http.scheme", string(c.Request.Scheme())),
-			attribute.String("http.host", string(c.Request.Host())),
-			attribute.String("http.method", method),
-			attribute.String("http.path", path),
-			attribute.String("http.user_agent", string(c.Request.Header.UserAgent())),
-			attribute.String("protocol", c.Request.Header.GetProtocol()),
-			attribute.String("client_ip", c.ClientIP()),
-			attribute.String("remote_addr", remoteAddr),
-			attribute.Int("http.status", c.Response.StatusCode()),
+			attribute.String("bifrost.server_id", serverID),
+			attribute.String("bifrost.route_id", routeID),
+			attribute.String("bifrost.service_id", serviceID),
+			semconv.HTTPRoute(routeID),
+			semconv.HTTPRequestMethodOriginal(reqMethod),
+			semconv.ServerAddress(httpHost),
+			semconv.URLScheme(reqScheme),
+			semconv.URLPath(reqPath),
+			semconv.URLQuery(reqQuery),
+			semconv.UserAgentOriginal(userAgent),
+			semconv.NetworkProtocolName(networkProtocol),
+			semconv.ClientAddress(clientIP),
+			semconv.NetworkLocalAddress(hostname),
+			semconv.NetworkPeerAddress(remoteAddr),
+			semconv.HTTPResponseStatusCode(c.Response.StatusCode()),
 		}
 
-		if c.Response.StatusCode() >= 200 && c.Response.StatusCode() < 300 {
-			span.SetStatus(codes.Ok, "")
-		} else if c.Response.StatusCode() >= 400 {
-			span.SetStatus(codes.Error, "")
+		if c.Response.StatusCode() >= 500 {
+			span.SetStatus(codes.Error, string(c.Response.Body()))
 		}
 
 		span.SetAttributes(labels...)

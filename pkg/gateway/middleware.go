@@ -43,16 +43,17 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	path := make([]byte, len(c.Request.Path()))
 	copy(path, c.Request.Path())
 
-	reqInfo := &variable.ReqInfo{
-		ServerID:    m.serverID,
-		Host:        host,
-		Path:        path,
-		Protocol:    c.Request.Header.GetProtocol(),
-		Method:      c.Request.Method(),
-		Querystring: c.Request.QueryString(),
+	reqOrig := &variable.RequestOriginal{
+		ServerID: m.serverID,
+		Scheme:   c.Request.Scheme(),
+		Host:     host,
+		Path:     path,
+		Protocol: c.Request.Header.GetProtocol(),
+		Method:   c.Request.Method(),
+		Query:    c.Request.QueryString(),
 	}
 
-	c.Set(variable.RequestInfo, reqInfo)
+	c.Set(variable.RequestOrig, reqOrig)
 
 	c.Next(ctx)
 }

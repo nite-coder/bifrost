@@ -16,9 +16,9 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.2.1
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/google/uuid v1.6.0
+	github.com/henrylee2cn/goutil v1.0.1
 	github.com/hertz-contrib/http2 v0.1.8
 	github.com/hertz-contrib/logger/slog v1.0.0
-	github.com/hertz-contrib/obs-opentelemetry/tracing v0.4.1
 	github.com/hertz-contrib/pprof v0.1.2
 	github.com/hertz-contrib/websocket v0.2.0
 	github.com/miekg/dns v1.1.62
@@ -26,17 +26,17 @@ require (
 	github.com/ory/dockertest/v3 v3.11.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/redis/go-redis/v9 v9.6.2
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v2 v2.27.5
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/valyala/fasthttp v1.56.0
-	go.opentelemetry.io/contrib/propagators/b3 v1.31.0
-	go.opentelemetry.io/contrib/propagators/jaeger v1.31.0
-	go.opentelemetry.io/otel v1.31.0
+	go.opentelemetry.io/contrib/propagators/b3 v1.33.0
+	go.opentelemetry.io/contrib/propagators/jaeger v1.33.0
+	go.opentelemetry.io/otel v1.33.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.31.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.31.0
-	go.opentelemetry.io/otel/sdk v1.31.0
-	go.opentelemetry.io/otel/trace v1.31.0
+	go.opentelemetry.io/otel/sdk v1.33.0
+	go.opentelemetry.io/otel/trace v1.33.0
 	golang.org/x/net v0.33.0
 	golang.org/x/sys v0.28.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241007155032-5fefd90f89a9
@@ -50,6 +50,7 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
+	github.com/andeya/goutil v1.0.1 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/sonic/loader v0.2.0 // indirect
@@ -101,11 +102,9 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	go.opentelemetry.io/contrib/propagators/ot v1.31.0 // indirect
+	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.31.0 // indirect
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.31.0 // indirect
-	go.opentelemetry.io/otel/metric v1.31.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.31.0 // indirect
+	go.opentelemetry.io/otel/metric v1.33.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	golang.org/x/arch v0.11.0 // indirect
 	golang.org/x/mod v0.18.0 // indirect

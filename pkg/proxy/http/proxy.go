@@ -20,6 +20,10 @@ import (
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/variable"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
@@ -28,6 +32,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
+	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 )
 
 // TrailerPrefix is a magic prefix for [ResponseWriter.Header] map keys
@@ -304,12 +309,35 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// tracer := otel.Tracer("bifrost")
-	// var span trace.Span
-	// if tracer != nil {
-	// 	c, span = tracer.Start(c, "upstream")
-	// 	defer span.End()
-	// }
+	tracer := otel.Tracer("bifrost")
+	var span trace.Span
+	if tracer != nil {
+		spanOptions := []trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithNewRoot(),
+		}
+
+		ctx, span = tracer.Start(ctx, "upstream", spanOptions...)
+
+		defer func() {
+			reqMethod := cast.B2S(outReq.Method())
+			urlFull := cast.B2S(outReq.URI().FullURI())
+
+			labels := []attribute.KeyValue{
+				attribute.String("http.request.method", reqMethod),
+				semconv.ServerAddress(p.target),
+				semconv.URLFull(urlFull),
+				semconv.HTTPResponseStatusCode(outResp.StatusCode()),
+			}
+
+			if c.Response.StatusCode() >= 500 {
+				span.SetStatus(codes.Error, string(outResp.Body()))
+			}
+
+			span.SetAttributes(labels...)
+			span.End()
+		}()
+	}
 
 ProxyPassLoop:
 

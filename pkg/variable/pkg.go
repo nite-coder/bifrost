@@ -146,20 +146,20 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case ClientIP:
 		return c.ClientIP(), true
 	case Host:
-		val, found := c.Get(RequestInfo)
+		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
 		}
-		info := (val).(*ReqInfo)
+		info := (val).(*RequestOriginal)
 
 		host := cast.B2S(info.Host)
 		return host, true
 	case ServerID:
-		val, found := c.Get(RequestInfo)
+		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
 		}
-		info := (val).(*ReqInfo)
+		info := (val).(*RequestOriginal)
 		return info.ServerID, true
 	case RemoteAddr:
 		var ip string
@@ -193,57 +193,75 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 		return httpStats.SendSize(), true
 	case Request:
-		val, found := c.Get(RequestInfo)
+		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
 		}
-		info := (val).(*ReqInfo)
+		info := (val).(*RequestOriginal)
 
 		builder := strings.Builder{}
 		builder.Write(info.Method)
 		builder.Write(spaceByte)
 		builder.Write(info.Path)
-		if len(info.Querystring) > 0 {
+		if len(info.Query) > 0 {
 			builder.Write(questionByte)
-			builder.Write(info.Querystring)
+			builder.Write(info.Query)
 		}
 
 		builder.Write(spaceByte)
 		builder.WriteString(info.Protocol)
 		return builder.String(), true
-	case RequestPath:
-		val, found := c.Get(RequestInfo)
+	case RequestScheme:
+		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
 		}
-		info := (val).(*ReqInfo)
+		info := (val).(*RequestOriginal)
+
+		scheme := cast.B2S(info.Scheme)
+		return scheme, true
+	case RequestPath:
+		val, found := c.Get(RequestOrig)
+		if !found {
+			return nil, false
+		}
+		info := (val).(*RequestOriginal)
 
 		path := cast.B2S(info.Path)
 		return path, true
 	case RequestURI:
-		val, found := c.Get(RequestInfo)
+		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
 		}
-		info := (val).(*ReqInfo)
+		info := (val).(*RequestOriginal)
 
 		builder := strings.Builder{}
 		builder.Write(info.Path)
-		if len(info.Querystring) > 0 {
+		if len(info.Query) > 0 {
 			builder.Write(questionByte)
-			builder.Write(info.Querystring)
+			builder.Write(info.Query)
 		}
 
 		return builder.String(), true
 	case RequestMethod:
-		val, found := c.Get(RequestInfo)
+		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
 		}
-		info := (val).(*ReqInfo)
+		info := (val).(*RequestOriginal)
 
 		method := cast.B2S(info.Method)
 		return method, true
+	case RequestQuery:
+		val, found := c.Get(RequestOrig)
+		if !found {
+			return nil, false
+		}
+		info := (val).(*RequestOriginal)
+
+		query := cast.B2S(info.Query)
+		return query, true
 	case RequestBody:
 		// if content type is grpc, the $request_body will be ignored
 		contentType := c.Request.Header.ContentType()
@@ -253,11 +271,11 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 		return cast.B2S(c.Request.Body()), true
 	case RequestProtocol:
-		val, found := c.Get(RequestInfo)
+		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
 		}
-		info := (val).(*ReqInfo)
+		info := (val).(*RequestOriginal)
 		return info.Protocol, true
 	case TraceID:
 		traceID := c.GetString(TraceID)

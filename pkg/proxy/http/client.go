@@ -7,7 +7,6 @@ import (
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	http2Config "github.com/hertz-contrib/http2/config"
 	"github.com/hertz-contrib/http2/factory"
-	hertztracing "github.com/hertz-contrib/obs-opentelemetry/tracing"
 )
 
 func DefaultClientOptions() []hzconfig.ClientOption {
@@ -39,10 +38,6 @@ func NewClient(opts ClientOptions) (*client.Client, error) {
 
 	if opts.IsHTTP2 {
 		c.SetClientFactory(factory.NewClientFactory(http2Config.WithAllowHTTP(true)))
-	}
-
-	if opts.IsTracingEnabled {
-		c.Use(hertztracing.ClientMiddleware())
 	}
 
 	return c, nil

@@ -1,12 +1,13 @@
 package variable
 
-type ReqInfo struct {
-	ServerID    string
-	Host        []byte
-	Path        []byte
-	Protocol    string
-	Method      []byte
-	Querystring []byte
+type RequestOriginal struct {
+	ServerID string
+	Scheme   []byte
+	Host     []byte
+	Path     []byte
+	Protocol string
+	Method   []byte
+	Query    []byte
 }
 
 const (
@@ -19,12 +20,14 @@ const (
 	ReceivedSize      = "$received_size"
 	SendSize          = "$send_size"
 	Status            = "$status"
+	RequestOrig       = "$request_orig"
 	Request           = "$request"
-	RequestInfo       = "$request_info"
+	RequestScheme     = "$request_scheme"
 	RequestProtocol   = "$request_protocol"
 	RequestMethod     = "$request_method"
 	RequestURI        = "$request_uri"
 	RequestPath       = "$request_path"
+	RequestQuery      = "$request_query"
 	RequestPathAlias  = "$request_path_alias"
 	RequestBody       = "$request_body"
 	Duration          = "$duration"

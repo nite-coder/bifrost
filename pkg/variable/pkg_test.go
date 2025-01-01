@@ -30,16 +30,16 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Request.SetRequestURI("http://abc.com/foo?bar=baz")
 	hzCtx.Request.SetBody([]byte("hello world"))
 
-	reqInfo := &ReqInfo{
-		ServerID:    "serverA",
-		Host:        hzCtx.Request.Host(),
-		Path:        hzCtx.Request.Path(),
-		Protocol:    hzCtx.Request.Header.GetProtocol(),
-		Method:      hzCtx.Request.Method(),
-		Querystring: hzCtx.Request.QueryString(),
+	reqInfo := &RequestOriginal{
+		ServerID: "serverA",
+		Host:     hzCtx.Request.Host(),
+		Path:     hzCtx.Request.Path(),
+		Protocol: hzCtx.Request.Header.GetProtocol(),
+		Method:   hzCtx.Request.Method(),
+		Query:    hzCtx.Request.QueryString(),
 	}
 
-	hzCtx.Set(RequestInfo, reqInfo)
+	hzCtx.Set(RequestOrig, reqInfo)
 
 	userID := GetInt64("$var.user_id", hzCtx)
 	assert.Equal(t, int64(98765), userID)

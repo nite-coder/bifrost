@@ -3,17 +3,22 @@ package gateway
 import (
 	"context"
 	"net/url"
+	"runtime/debug"
 	"strings"
 	"time"
 
+	"github.com/henrylee2cn/goutil/errors"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 )
 
 func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, error) {
@@ -83,7 +88,10 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 		}
 	}
 
-	tracerProvider := newTraceProvider(exporter, opts.OTLP)
+	tracerProvider, err := newTraceProvider(exporter, opts.OTLP)
+	if err != nil {
+		return nil, err
+	}
 	otel.SetTracerProvider(tracerProvider)
 
 	var propagators []propagation.TextMapPropagator
@@ -112,7 +120,39 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 	return tracerProvider, nil
 }
 
-func newTraceProvider(exporter sdktrace.SpanExporter, options config.OTLPOptions) *sdktrace.TracerProvider {
+func newTraceProvider(exporter sdktrace.SpanExporter, options config.OTLPOptions) (*sdktrace.TracerProvider, error) {
+
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		return nil, errors.New("failed to read build info")
+	}
+
+	attrs := []attribute.KeyValue{
+		semconv.ServiceName("bifrost"),
+	}
+
+	for _, setting := range buildInfo.Settings {
+		switch setting.Key {
+		case "vcs.revision":
+			attrs = append(attrs, attribute.String("vcs.revision", setting.Value))
+		case "vcs.time":
+			attrs = append(attrs, attribute.String("vcs.time", setting.Value))
+		}
+	}
+
+	res, err := resource.New(
+		context.Background(),
+		resource.WithFromEnv(), // Discover and provide attributes from OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME environment variables.
+		resource.WithProcessPID(),
+		resource.WithProcessRuntimeVersion(),
+		resource.WithOSType(),
+		resource.WithContainer(),
+		resource.WithHost(),
+		resource.WithAttributes(attrs...),
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	sampler := sdktrace.ParentBased(
 		sdktrace.TraceIDRatioBased(options.SamplingRate),
@@ -127,8 +167,9 @@ func newTraceProvider(exporter sdktrace.SpanExporter, options config.OTLPOptions
 	tracerOptions := []sdktrace.TracerProviderOption{
 		sdktrace.WithSampler(sampler),
 		sdktrace.WithSpanProcessor(batchSpanProcessor),
+		sdktrace.WithResource(res),
 	}
 
 	traceProvider := sdktrace.NewTracerProvider(tracerOptions...)
-	return traceProvider
+	return traceProvider, nil
 }
