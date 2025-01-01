@@ -405,9 +405,8 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 			}
 
 			clientOptions := httpproxy.ClientOptions{
-				IsTracingEnabled: bifrost.options.Tracing.OTLP.Enabled,
-				IsHTTP2:          serviceOptions.Protocol == config.ProtocolHTTP2,
-				HZOptions:        clientOpts,
+				IsHTTP2:   serviceOptions.Protocol == config.ProtocolHTTP2,
+				HZOptions: clientOpts,
 			}
 
 			client, err := httpproxy.NewClient(clientOptions)
@@ -416,12 +415,13 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 			}
 
 			proxyOptions := httpproxy.Options{
-				Target:      url,
-				Protocol:    serviceOptions.Protocol,
-				Weight:      targetOpts.Weight,
-				MaxFails:    targetOpts.MaxFails,
-				FailTimeout: targetOpts.FailTimeout,
-				HeaderHost:  targetHost,
+				Target:           url,
+				Protocol:         serviceOptions.Protocol,
+				Weight:           targetOpts.Weight,
+				MaxFails:         targetOpts.MaxFails,
+				FailTimeout:      targetOpts.FailTimeout,
+				HeaderHost:       targetHost,
+				IsTracingEnabled: bifrost.options.Tracing.Enabled,
 			}
 
 			proxy, err := httpproxy.New(proxyOptions, client)

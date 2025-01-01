@@ -30,14 +30,14 @@ metrics:
     buckets: [0.01, 0.03, 0.05, 0.1]
 
 tracing:
-  otlp:
-    enabled: false
-    http:
-      endpoint: otel-collector:4318
-      insecure: true
-    # grpc:
-    #   endpoint: otel-collector:4317
-    #   insecure: true
+  enabled: true
+  service_name: "bifrost"
+  endpoint: http://host.docker.internal:4318
+  insecure: true
+  sampling_rate: 1.0
+  batch_size: 500
+  flush: 2s
+  queue_size: 50000
 
 access_logs:
   my_access_log:

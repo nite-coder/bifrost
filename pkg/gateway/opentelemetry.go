@@ -22,32 +22,32 @@ import (
 )
 
 func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, error) {
-	if !opts.OTLP.Enabled {
+	if !opts.Enabled {
 		return nil, nil
 	}
 
-	if opts.OTLP.Endpoint == "" {
+	if opts.Endpoint == "" {
 		// use grpc as default
-		opts.OTLP.Endpoint = "localhost:4317"
+		opts.Endpoint = "localhost:4317"
 	}
 
-	if opts.OTLP.BatchSize <= 0 {
-		opts.OTLP.BatchSize = 100
+	if opts.BatchSize <= 0 {
+		opts.BatchSize = 100
 	}
 
-	if opts.OTLP.Flush.Seconds() <= 0 {
-		opts.OTLP.Flush = 5 * time.Second
+	if opts.Flush.Seconds() <= 0 {
+		opts.Flush = 5 * time.Second
 	}
 
-	if opts.OTLP.QueueSize <= 0 {
-		opts.OTLP.QueueSize = 10000
+	if opts.QueueSize <= 0 {
+		opts.QueueSize = 10000
 	}
 
-	if opts.OTLP.Timeout.Seconds() <= 0 {
-		opts.OTLP.Timeout = 10 * time.Second
+	if opts.Timeout.Seconds() <= 0 {
+		opts.Timeout = 10 * time.Second
 	}
 
-	addr, err := url.Parse(opts.OTLP.Endpoint)
+	addr, err := url.Parse(opts.Endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -59,10 +59,10 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 	if strings.EqualFold(addr.Scheme, "https") || strings.EqualFold(addr.Scheme, "http") {
 		tracingOptions := []otlptracehttp.Option{
 			otlptracehttp.WithEndpoint(addr.Host),
-			otlptracehttp.WithTimeout(opts.OTLP.Timeout),
+			otlptracehttp.WithTimeout(opts.Timeout),
 		}
 
-		if opts.OTLP.Insecure {
+		if opts.Insecure {
 			tracingOptions = append(tracingOptions, otlptracehttp.WithInsecure())
 		}
 
@@ -73,11 +73,11 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 	} else {
 		// grpc
 		tracingOptions := []otlptracegrpc.Option{
-			otlptracegrpc.WithEndpoint(opts.OTLP.Endpoint),
-			otlptracegrpc.WithTimeout(opts.OTLP.Timeout),
+			otlptracegrpc.WithEndpoint(opts.Endpoint),
+			otlptracegrpc.WithTimeout(opts.Timeout),
 		}
 
-		if opts.OTLP.Insecure {
+		if opts.Insecure {
 			tracingOptions = append(tracingOptions, otlptracegrpc.WithInsecure())
 		}
 
@@ -88,7 +88,7 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 		}
 	}
 
-	tracerProvider, err := newTraceProvider(exporter, opts.OTLP)
+	tracerProvider, err := newTraceProvider(exporter, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 
 	var propagators []propagation.TextMapPropagator
 
-	for _, p := range opts.OTLP.Propagators {
+	for _, p := range opts.Propagators {
 		switch strings.TrimSpace(strings.ToLower(p)) {
 		case "tracecontext":
 			propagators = append(propagators, propagation.TraceContext{})
@@ -120,15 +120,19 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 	return tracerProvider, nil
 }
 
-func newTraceProvider(exporter sdktrace.SpanExporter, options config.OTLPOptions) (*sdktrace.TracerProvider, error) {
+func newTraceProvider(exporter sdktrace.SpanExporter, options config.TracingOptions) (*sdktrace.TracerProvider, error) {
 
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
 		return nil, errors.New("failed to read build info")
 	}
 
+	if options.ServiceName == "" {
+		options.ServiceName = "bifrost"
+	}
+
 	attrs := []attribute.KeyValue{
-		semconv.ServiceName("bifrost"),
+		semconv.ServiceName(options.ServiceName),
 	}
 
 	for _, setting := range buildInfo.Settings {

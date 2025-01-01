@@ -222,7 +222,7 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 		}
 	}
 
-	if mainOptions.Tracing.OTLP.Enabled {
+	if mainOptions.Tracing.Enabled {
 		// otel tracing
 		tp, err := initTracerProvider(mainOptions.Tracing)
 		if err != nil {

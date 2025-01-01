@@ -82,11 +82,8 @@ type PrometheusOptions struct {
 }
 
 type TracingOptions struct {
-	OTLP OTLPOptions `yaml:"otlp" json:"otlp"`
-}
-
-type OTLPOptions struct {
 	Enabled      bool          `yaml:"enabled" json:"enabled"`
+	ServiceName  string        `yaml:"service_name" json:"service_name"`
 	Propagators  []string      `yaml:"propagators" json:"propagators"`
 	Endpoint     string        `yaml:"endpoint" json:"endpoint"`
 	Insecure     bool          `yaml:"insecure" json:"insecure"`

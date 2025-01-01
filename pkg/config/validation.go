@@ -87,6 +87,11 @@ func ValidateConfig(mainOpts Options) error {
 		return err
 	}
 
+	err = validateTracing(mainOpts.Tracing)
+	if err != nil {
+		return err
+	}
+
 	err = validateLogging(mainOpts.Logging)
 	if err != nil {
 		return err
@@ -344,4 +349,17 @@ func extractAddr(addrport string) string {
 	}
 
 	return parts[0]
+}
+
+func validateTracing(opts TracingOptions) error {
+
+	if !opts.Enabled {
+		return nil
+	}
+
+	if opts.ServiceName == "" {
+		return errors.New("the service_name can't be empty for the tracing")
+	}
+
+	return nil
 }

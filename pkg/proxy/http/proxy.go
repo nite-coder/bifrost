@@ -85,12 +85,13 @@ type HTTPProxy struct {
 }
 
 type Options struct {
-	Target      string
-	Protocol    config.Protocol
-	Weight      uint32
-	MaxFails    uint
-	FailTimeout time.Duration
-	HeaderHost  string
+	Target           string
+	Protocol         config.Protocol
+	Weight           uint32
+	MaxFails         uint
+	FailTimeout      time.Duration
+	HeaderHost       string
+	IsTracingEnabled bool
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -124,9 +125,8 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 
 	if client == nil {
 		clientOptions := ClientOptions{
-			IsTracingEnabled: false,
-			IsHTTP2:          false,
-			HZOptions:        DefaultClientOptions(),
+			IsHTTP2:   false,
+			HZOptions: DefaultClientOptions(),
 		}
 		client, err = NewClient(clientOptions)
 		if err != nil {
@@ -309,34 +309,36 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	tracer := otel.Tracer("bifrost")
-	var span trace.Span
-	if tracer != nil {
-		spanOptions := []trace.SpanStartOption{
-			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithNewRoot(),
+	if p.options.IsTracingEnabled {
+		tracer := otel.Tracer("bifrost")
+		var span trace.Span
+		if tracer != nil {
+			spanOptions := []trace.SpanStartOption{
+				trace.WithSpanKind(trace.SpanKindClient),
+				trace.WithNewRoot(),
+			}
+
+			ctx, span = tracer.Start(ctx, "upstream", spanOptions...)
+
+			defer func() {
+				reqMethod := cast.B2S(outReq.Method())
+				urlFull := cast.B2S(outReq.URI().FullURI())
+
+				labels := []attribute.KeyValue{
+					attribute.String("http.request.method", reqMethod),
+					semconv.ServerAddress(p.target),
+					semconv.URLFull(urlFull),
+					semconv.HTTPResponseStatusCode(outResp.StatusCode()),
+				}
+
+				if c.Response.StatusCode() >= 500 {
+					span.SetStatus(codes.Error, string(outResp.Body()))
+				}
+
+				span.SetAttributes(labels...)
+				span.End()
+			}()
 		}
-
-		ctx, span = tracer.Start(ctx, "upstream", spanOptions...)
-
-		defer func() {
-			reqMethod := cast.B2S(outReq.Method())
-			urlFull := cast.B2S(outReq.URI().FullURI())
-
-			labels := []attribute.KeyValue{
-				attribute.String("http.request.method", reqMethod),
-				semconv.ServerAddress(p.target),
-				semconv.URLFull(urlFull),
-				semconv.HTTPResponseStatusCode(outResp.StatusCode()),
-			}
-
-			if c.Response.StatusCode() >= 500 {
-				span.SetStatus(codes.Error, string(outResp.Body()))
-			}
-
-			span.SetAttributes(labels...)
-			span.End()
-		}()
 	}
 
 ProxyPassLoop:

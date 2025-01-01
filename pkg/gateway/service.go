@@ -333,9 +333,8 @@ func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) 
 	}
 
 	clientOptions := httpproxy.ClientOptions{
-		IsTracingEnabled: bifrost.options.Tracing.OTLP.Enabled,
-		IsHTTP2:          opts.Protocol == config.ProtocolHTTP2,
-		HZOptions:        clientOpts,
+		IsHTTP2:   opts.Protocol == config.ProtocolHTTP2,
+		HZOptions: clientOpts,
 	}
 
 	client, err := httpproxy.NewClient(clientOptions)
@@ -344,10 +343,11 @@ func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) 
 	}
 
 	proxyOptions := httpproxy.Options{
-		Target:     url,
-		Protocol:   opts.Protocol,
-		Weight:     0,
-		HeaderHost: hostname,
+		Target:           url,
+		Protocol:         opts.Protocol,
+		Weight:           0,
+		HeaderHost:       hostname,
+		IsTracingEnabled: bifrost.options.Tracing.Enabled,
 	}
 
 	httpProxy, err := httpproxy.New(proxyOptions, client)

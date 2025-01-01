@@ -25,9 +25,8 @@ func DefaultClientOptions() []hzconfig.ClientOption {
 }
 
 type ClientOptions struct {
-	IsTracingEnabled bool
-	IsHTTP2          bool
-	HZOptions        []hzconfig.ClientOption
+	IsHTTP2   bool
+	HZOptions []hzconfig.ClientOption
 }
 
 func NewClient(opts ClientOptions) (*client.Client, error) {

@@ -147,33 +147,35 @@ metrics:
 ## tracing
 
 Supports `opentelemetry` for tracing, passing logs to an otel collector server. To enable tracing features, configure it with the tracing middleware.
+Bifrost follows [official OpenTelemetry semantic conventions v1.26.0](https://github.com/open-telemetry/semantic-conventions/blob/v1.26.0/docs/http/http-spans.md)
 
 Example:
 
 ```yaml
 tracing:
-  otlp:
-    enabled: false
-    propagators: ["tracecontext", "baggage"]
-    endpoint: otel-collector:4317
-    insecure: true
-    sampling_rate: 1.0
-    batch_size: 500
-    flush: 2s
-    queue_size: 50000
+  enabled: false
+  service_name: "bifrost"
+  propagators: ["tracecontext", "baggage"]
+  endpoint: otel-collector:4317
+  insecure: true
+  sampling_rate: 1.0
+  batch_size: 500
+  flush: 2s
+  queue_size: 50000
 ```
 
-| Field              | Default                   | Description                                                                                                              |
-| ------------------ | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| otlp.enabled       | false                     | Enables opentelemetry tracing support                                                                                    |
-| otlp.propagators   | `tracecontext`, `baggage` | The supported propagators are: `tracecontext`, `baggage`, `b3`, `jaeger`                                                 |
-| otlp.endpoint      | `localhost:4318`          | otlp collector http port                                                                                                 |
-| otlp.insecure      | false                     | Certificate verification                                                                                                 |
-| otlp.sampling_rate | 1.0                       | otlp collector grpc port                                                                                                 |
-| otlp.batch_size    | 100                       | Maximum number of spans to be sent in a single batch export                                                              |
-| otlp.flush         | `5s`                      | Maximum time to wait before sending a batch of spans, regardless of batch size                                           |
-| otlp.queue_size    | 10000                     | Maximum number of spans that can be queued before being dropped                                                          |
-| otlp.timeout       | `10s`                     | Maximum duration allowed for the entire trace export operation, including connection establishment and data transmission |
+| Field         | Default                   | Description                                                                                                              |
+| ------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| enabled       | false                     | Enables opentelemetry tracing support                                                                                    |
+| service_name  | `bifrsot`                 | The service name of the gateway                                                                                          |
+| propagators   | `tracecontext`, `baggage` | The supported propagators are: `tracecontext`, `baggage`, `b3`, `jaeger`                                                 |
+| endpoint      | `localhost:4318`          | The address and port of the otel collector                                                                               |
+| insecure      | false                     | Certificate verification                                                                                                 |
+| sampling_rate | 1.0                       | otlp collector grpc port                                                                                                 |
+| batch_size    | 100                       | Maximum number of spans to be sent in a single batch export                                                              |
+| flush         | `5s`                      | Maximum time to wait before sending a batch of spans, regardless of batch size                                           |
+| queue_size    | 10000                     | Maximum number of spans that can be queued before being dropped                                                          |
+| timeout       | `10s`                     | Maximum duration allowed for the entire trace export operation, including connection establishment and data transmission |
 
 ## middlewares
 
