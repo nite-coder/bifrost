@@ -9,6 +9,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
+	"github.com/nite-coder/bifrost/pkg/tracing"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -71,9 +72,9 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 
 	spanOptions := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindServer),
-		trace.WithNewRoot(),
 	}
 
+	ctx = tracing.Extract(ctx, &c.Request.Header)
 	ctx, span := m.tracer.Start(ctx, "", spanOptions...)
 
 	httpHost := variable.GetString(variable.Host, c)

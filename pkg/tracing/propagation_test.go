@@ -1,60 +1,32 @@
-package http
+package tracing
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
-	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func TestExtract(t *testing.T) {
 	ctx := context.Background()
-	bags, _ := baggage.Parse("foo=bar")
-	ctx = baggage.ContextWithBaggage(ctx, bags)
-	ctx = metainfo.WithValue(ctx, "foo", "bar")
+
+	var propagators []propagation.TextMapPropagator
+	propagators = append(propagators, propagation.TraceContext{})
+	propagators = append(propagators, propagation.Baggage{})
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagators...))
 
 	headers := &protocol.RequestHeader{}
-	headers.Set("foo", "bar")
+	headers.Set("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")
 
-	type args struct {
-		ctx      context.Context
-		metadata *protocol.RequestHeader
-	}
-	tests := []struct {
-		name  string
-		args  args
-		want  baggage.Baggage
-		want1 trace.SpanContext
-	}{
-		{
-			name: "extract successful",
-			args: args{
-				ctx:      ctx,
-				metadata: headers,
-			},
-			want:  bags,
-			want1: trace.SpanContext{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := Extract(tt.args.ctx, tt.args.metadata)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Extract() got = %v, want %v", got, tt.want)
-			}
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("Extract() got1 = %v, want %v", got1, tt.want1)
-			}
-		})
-	}
+	ctx = Extract(ctx, headers)
+	span := trace.SpanFromContext(ctx)
+
+	assert.Equal(t, "4bf92f3577b34da6a3ce929d0e0e4736", span.SpanContext().TraceID().String())
 }
 
 func TestInject(t *testing.T) {

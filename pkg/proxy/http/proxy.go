@@ -19,6 +19,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/timecache"
+	"github.com/nite-coder/bifrost/pkg/tracing"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -319,7 +320,7 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 			ctx, span = tracer.Start(ctx, "upstream", spanOptions...)
 
-			Inject(ctx, &outReq.Header)
+			tracing.Inject(ctx, &outReq.Header)
 
 			defer func() {
 				reqMethod := cast.B2S(outReq.Method())

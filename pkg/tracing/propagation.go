@@ -1,13 +1,11 @@
-package http
+package tracing
 
 import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/trace"
 )
 
 var _ propagation.TextMapCarrier = &metadataProvider{}
@@ -44,8 +42,7 @@ func Inject(ctx context.Context, headers *protocol.RequestHeader) {
 }
 
 // Extract returns the baggage and span context
-func Extract(ctx context.Context, headers *protocol.RequestHeader) (baggage.Baggage, trace.SpanContext) {
+func Extract(ctx context.Context, headers *protocol.RequestHeader) context.Context {
 	propagator := otel.GetTextMapPropagator()
-	ctx = propagator.Extract(ctx, &metadataProvider{headers: headers})
-	return baggage.FromContext(ctx), trace.SpanContextFromContext(ctx)
+	return propagator.Extract(ctx, &metadataProvider{headers: headers})
 }
