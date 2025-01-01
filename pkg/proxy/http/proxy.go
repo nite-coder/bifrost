@@ -315,10 +315,11 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		if tracer != nil {
 			spanOptions := []trace.SpanStartOption{
 				trace.WithSpanKind(trace.SpanKindClient),
-				trace.WithNewRoot(),
 			}
 
 			ctx, span = tracer.Start(ctx, "upstream", spanOptions...)
+
+			Inject(ctx, &outReq.Header)
 
 			defer func() {
 				reqMethod := cast.B2S(outReq.Method())
