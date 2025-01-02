@@ -211,18 +211,19 @@ access_logs:
     flush: 1m
     template: >
       {"time":"$time",
-      "remote_addr":"$remote_addr",
-      "host": "$host",
-      "request_uri":"$request_method $request_uri $request_protocol",
-      "req_body":"$request_body",
-      "x_forwarded_for":"$header_X-Forwarded-For",
-      "upstream_addr":"$upstream_addr",
-      "upstream_uri":"$upstream_method $upstream_uri $upstream_protocol",
-      "upstream_duration":$upstream_duration,
-      "upstream_status":$upstream_status,
-      "status":$status,
-      "duration":$duration,
-      "trace_id":"$trace_id"}
+      "remote_addr":"$network.peer.address",
+      "host": "$http.request.host",
+      "request":"$http.request",
+      "req_body":"$http.request.body",
+      "x_forwarded_for":"$http.request.header.x-forwarded-for",
+      "upstream_addr":"$upstream.request.host",
+      "upstream_request":"$upstream.request",
+      "upstream_duration":$upstream.duration,
+      "upstream_status":$upstream.response.status_code,
+      "status":$http.response.status_code,
+      "grpc_status":"$grpc.status_code",
+      "grpc_messaage":"$grpc.message",
+      "duration":$duration}
 ```
 
 | Field          | Default | Description                                              |

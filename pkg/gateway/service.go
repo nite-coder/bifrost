@@ -233,7 +233,7 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		if ctx.GetBool(variable.TargetTimeout) {
 			ctx.Response.SetStatusCode(504)
 		} else {
-			ctx.Set(variable.UpstreamStatus, ctx.Response.StatusCode())
+			ctx.Set(variable.UpstreamResponoseStatusCode, ctx.Response.StatusCode())
 		}
 	})
 

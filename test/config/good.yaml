@@ -22,15 +22,17 @@ access_logs:
     escape: json
     template: >
       {"time":"$time",
-      "remote_addr":"$remote_addr",
-      "request":"$request",
-      "req_body":"$request_body",
-      "status": "$status",
-      "upstream_addr":"$upstream_addr",
-      "upstream_duration": "$upstream_duration",
-      "upstream_status": "$upstream_status",
-      "x_forwarded_for":"$header_X-Forwarded-For",
-      "duration": "$duration"}
+      "remote_addr":"$network.peer.address",
+      "host": "$http.request.host",
+      "request":"$http.request",
+      "req_body":"$http.request.body",
+      "x_forwarded_for":"$http.request.header.x-forwarded-for",
+      "upstream_addr":"$upstream.request.host",
+      "upstream_req":"$upstream.request",
+      "upstream_duration":$upstream.duration,
+      "upstream_status":$upstream.response.status_code,
+      "status":$http.response.status_code,
+      "duration":$duration}
 
 servers:
   api_server:

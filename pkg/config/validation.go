@@ -144,7 +144,7 @@ func validateLogging(opts LoggingOtions) error {
 }
 
 func validateAccessLog(options map[string]AccessLogOptions) error {
-	reIsVariable := regexp.MustCompile(`\$\w+(-\w+)*`)
+	reIsVariable := regexp.MustCompile(`\$\w+(?:[._-]\w+)*`)
 
 	for id, opt := range options {
 		if !opt.Enabled {

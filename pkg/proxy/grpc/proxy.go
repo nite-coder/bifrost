@@ -183,7 +183,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	fullMethodName := string(c.Request.URI().Path())
 
 	// Set the upstream address
-	c.Set(variable.UpstreamAddr, p.targetHost)
+	c.Set(variable.UpstreamRequestHost, p.targetHost)
 
 	// Create a new metadata object
 	md := metadata.New(nil)
@@ -300,7 +300,7 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 
 	logger := log.FromContext(ctx)
 
-	val, _ := variable.Get(variable.RequestPath, c)
+	val, _ := variable.Get(variable.HTTPRequestPath, c)
 	originalPath, _ := cast.ToString(val)
 
 	st, ok := status.FromError(err)
@@ -309,7 +309,7 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 		st = status.New(codes.Internal, err.Error())
 	}
 
-	c.Set(variable.GRPCStatus, uint32(st.Code()))
+	c.Set(variable.GRPCStatusCode, uint32(st.Code()))
 
 	logger.Error("fail to invoke grpc server",
 		slog.String("error", err.Error()),

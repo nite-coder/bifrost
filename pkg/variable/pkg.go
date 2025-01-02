@@ -18,36 +18,38 @@ var (
 	questionByte    = []byte{byte('?')}
 	spaceByte       = []byte{byte(' ')}
 	directives      = map[string]struct{}{
-		Time:             {},
-		ClientIP:         {},
-		Host:             {},
-		ServerID:         {},
-		RouteID:          {},
-		ServiceID:        {},
-		ReceivedSize:     {},
-		SendSize:         {},
-		RemoteAddr:       {},
-		Request:          {},
-		RequestProtocol:  {},
-		RequestMethod:    {},
-		RequestBody:      {},
-		RequestPath:      {},
-		RequestURI:       {},
-		Upstream:         {},
-		UpstreamID:       {},
-		UpstreamProtocol: {},
-		UpstreamMethod:   {},
-		UpstreamAddr:     {},
-		UpstreamPath:     {},
-		UpstreamURI:      {},
-		UpstreamStatus:   {},
-		UpstreamDuration: {},
-		Status:           {},
-		TraceID:          {},
-		Duration:         {},
-		GRPCStatus:       {},
-		GRPCMessage:      {},
-		UserAgent:        {},
+		Time:                        {},
+		ClientIP:                    {},
+		HTTPRequestHost:             {},
+		ServerID:                    {},
+		RouteID:                     {},
+		ServiceID:                   {},
+		HTTPRequestSize:             {},
+		HTTPResponseSize:            {},
+		NetworkPeerAddress:          {},
+		HTTPRequest:                 {},
+		HTTPRequestScheme:           {},
+		HTTPRequestMethod:           {},
+		HTTPRequestPath:             {},
+		HTTPRequestQuery:            {},
+		HTTPRequestBody:             {},
+		HTTPRequestURI:              {},
+		HTTPRequestProtocol:         {},
+		UpstreamRequest:             {},
+		UpstreamID:                  {},
+		UpstreamRequestProtocol:     {},
+		UpstreamRequestMethod:       {},
+		UpstreamRequestHost:         {},
+		UpstreamRequestPath:         {},
+		UpstreamRequestQuery:        {},
+		UpstreamRequestURI:          {},
+		UpstreamResponoseStatusCode: {},
+		UpstreamDuration:            {},
+		HTTPResponseStatusCode:      {},
+		TraceID:                     {},
+		Duration:                    {},
+		GRPCStatusCode:              {},
+		GRPCMessage:                 {},
 	}
 )
 
@@ -123,7 +125,7 @@ func GetBool(key string, c *app.RequestContext) bool {
 }
 
 func IsDirective(key string) bool {
-	if strings.HasPrefix(key, "$var.") || strings.HasPrefix(key, "$header") {
+	if strings.HasPrefix(key, "$var.") || strings.HasPrefix(key, "$http.request.header.") || strings.HasPrefix(key, "$http.response.header.") {
 		return true
 	}
 
@@ -145,7 +147,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		return now, true
 	case ClientIP:
 		return c.ClientIP(), true
-	case Host:
+	case HTTPRequestHost:
 		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
@@ -161,7 +163,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 		info := (val).(*RequestOriginal)
 		return info.ServerID, true
-	case RemoteAddr:
+	case NetworkPeerAddress:
 		var ip string
 		switch addr := c.RemoteAddr().(type) {
 		case *net.UDPAddr:
@@ -172,7 +174,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return "", false
 		}
 		return ip, true
-	case ReceivedSize:
+	case HTTPRequestSize:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {
 			return nil, false
@@ -182,7 +184,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return nil, false
 		}
 		return httpStats.RecvSize(), true
-	case SendSize:
+	case HTTPResponseSize:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {
 			return nil, false
@@ -192,7 +194,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return nil, false
 		}
 		return httpStats.SendSize(), true
-	case Request:
+	case HTTPRequest:
 		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
@@ -211,7 +213,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		builder.Write(spaceByte)
 		builder.WriteString(info.Protocol)
 		return builder.String(), true
-	case RequestScheme:
+	case HTTPRequestScheme:
 		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
@@ -220,7 +222,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 		scheme := cast.B2S(info.Scheme)
 		return scheme, true
-	case RequestPath:
+	case HTTPRequestPath:
 		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
@@ -229,7 +231,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 		path := cast.B2S(info.Path)
 		return path, true
-	case RequestURI:
+	case HTTPRequestURI:
 		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
@@ -244,7 +246,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 
 		return builder.String(), true
-	case RequestMethod:
+	case HTTPRequestMethod:
 		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
@@ -253,7 +255,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 		method := cast.B2S(info.Method)
 		return method, true
-	case RequestQuery:
+	case HTTPRequestQuery:
 		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
@@ -262,7 +264,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 		query := cast.B2S(info.Query)
 		return query, true
-	case RequestBody:
+	case HTTPRequestBody:
 		// if content type is grpc, the $request_body will be ignored
 		contentType := c.Request.Header.ContentType()
 		if bytes.Equal(contentType, grpcContentType) {
@@ -270,7 +272,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 
 		return cast.B2S(c.Request.Body()), true
-	case RequestProtocol:
+	case HTTPRequestProtocol:
 		val, found := c.Get(RequestOrig)
 		if !found {
 			return nil, false
@@ -289,7 +291,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case UpstreamID:
 		upstream := c.GetString(UpstreamID)
 		return upstream, true
-	case Upstream:
+	case UpstreamRequest:
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
 
@@ -306,7 +308,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		_, _ = buf.WriteString(c.Request.Header.GetProtocol())
 
 		return buf.String(), true
-	case UpstreamURI:
+	case UpstreamRequestURI:
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
 
@@ -317,16 +319,19 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 
 		return buf.String(), true
-	case UpstreamProtocol:
+	case UpstreamRequestProtocol:
 		return c.Request.Header.GetProtocol(), true
-	case UpstreamMethod:
+	case UpstreamRequestMethod:
 		method := string(c.Request.Method())
 		return method, true
-	case UpstreamPath:
+	case UpstreamRequestPath:
 		return cast.B2S(c.Request.Path()), true
-	case UpstreamAddr:
-		addr := c.GetString(UpstreamAddr)
+	case UpstreamRequestHost:
+		addr := c.GetString(UpstreamRequestHost)
 		return addr, true
+	case UpstreamRequestQuery:
+		query := cast.B2S(c.Request.QueryString())
+		return query, true
 	case Duration:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {
@@ -346,15 +351,35 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		dur := httpFinish.Time().Sub(httpStart.Time()).Microseconds()
 		duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
 		return duration, true
-	case GRPCStatus:
-		status := c.GetString(GRPCStatus)
+	case GRPCStatusCode:
+		status := c.GetString(GRPCStatusCode)
 		return status, true
 	case GRPCMessage:
 		grpcMessage := c.GetString(GRPCMessage)
 		return grpcMessage, true
-	case UserAgent:
-		return c.Request.Header.UserAgent(), true
 	default:
+		if strings.HasPrefix(key, "$http.request.header.") {
+			headerKey := key[len("$http.request.header."):]
+
+			if len(headerKey) == 0 {
+				return "", false
+			}
+
+			headerVal := c.Request.Header.Get(headerKey)
+			return headerVal, true
+		}
+
+		if strings.HasPrefix(key, "$http.response.header.") {
+			headerKey := key[len("$http.response.header."):]
+
+			if len(headerKey) == 0 {
+				return "", false
+			}
+
+			headerVal := c.Response.Header.Get(headerKey)
+			return headerVal, true
+		}
+
 		return nil, false
 	}
 }
