@@ -165,9 +165,6 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			replacements = append(replacements, variable.HTTPRequestSize, strconv.Itoa(httpStats.RecvSize()))
 		case variable.HTTPResponseSize:
 			replacements = append(replacements, variable.HTTPResponseSize, strconv.Itoa(httpStats.SendSize()))
-		case variable.TraceID:
-			traceID := c.GetString(variable.TraceID)
-			replacements = append(replacements, variable.TraceID, traceID)
 		case variable.GRPCStatusCode:
 			status := ""
 
@@ -182,25 +179,13 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			replacements = append(replacements, variable.GRPCMessage, grpcMessage)
 		default:
 
-			if strings.HasPrefix(matchVal, "http.request.header.") || strings.HasPrefix(matchVal, "http.response.header.") {
-
-				val := variable.GetString(matchVal, c)
-				if len(val) > 0 {
-					val = escape(val, t.opts.Escape)
-				}
-
-				replacements = append(replacements, matchVal, val)
-				continue
+			val := variable.GetString(matchVal, c)
+			if len(val) > 0 {
+				val = escape(val, t.opts.Escape)
 			}
 
-			val, found := c.Get(matchVal)
-			if found {
-				s, _ := val.(string)
-				replacements = append(replacements, matchVal, s)
-				continue
-			}
-
-			replacements = append(replacements, matchVal, matchVal)
+			replacements = append(replacements, matchVal, val)
+			continue
 		}
 	}
 

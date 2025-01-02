@@ -34,7 +34,7 @@ func TestTracingMiddleware(t *testing.T) {
 
 	m(context.Background(), hzCtx)
 
-	traceID, found := variable.Get(variable.TraceID, hzCtx)
+	traceID, found := variable.Get("$http.response.header.x-trace-id", hzCtx)
 	assert.True(t, found)
 	assert.NotEmpty(t, traceID)
 

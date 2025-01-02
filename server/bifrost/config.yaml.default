@@ -61,8 +61,7 @@ access_logs:
       "status":$status,
       "grpc_status":"$grpc_status",
       "grpc_messaage":"$grpc_message",
-      "duration":$duration,
-      "trace_id":"$trace_id"}
+      "duration":$duration}
 
 servers:
   apiv1:

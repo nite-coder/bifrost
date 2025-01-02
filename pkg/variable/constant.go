@@ -43,7 +43,6 @@ const (
 	UpstreamRequestProtocol     = "$upstream.request.protocol"
 	UpstreamDuration            = "$upstream.duration"
 	UpstreamResponoseStatusCode = "$upstream.response.status_code"
-	TraceID                     = "$trace_id"
 	Allow                       = "$allow"
 	ClientIP                    = "$client_ip"
 	TargetTimeout               = "target_timeout"

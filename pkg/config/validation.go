@@ -361,5 +361,13 @@ func validateTracing(opts TracingOptions) error {
 		return errors.New("the service_name can't be empty for the tracing")
 	}
 
+	for _, propagator := range opts.Propagators {
+		switch propagator {
+		case "", "b3", "tracecontext", "baggage", "jaeger":
+		default:
+			return fmt.Errorf("the propagator '%s' is not supported in tracing", propagator)
+		}
+	}
+
 	return nil
 }

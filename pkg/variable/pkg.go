@@ -46,7 +46,6 @@ var (
 		UpstreamResponoseStatusCode: {},
 		UpstreamDuration:            {},
 		HTTPResponseStatusCode:      {},
-		TraceID:                     {},
 		Duration:                    {},
 		GRPCStatusCode:              {},
 		GRPCMessage:                 {},
@@ -279,9 +278,6 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 		info := (val).(*RequestOriginal)
 		return info.Protocol, true
-	case TraceID:
-		traceID := c.GetString(TraceID)
-		return traceID, true
 	case RouteID:
 		routeID := c.GetString(RouteID)
 		return routeID, true

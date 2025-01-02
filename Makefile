@@ -6,7 +6,7 @@ test:
 lint:
 	golangci-lint run --timeout 5m --verbose ./pkg/... -v
 
-docker_lint:
+docker.lint:
 	docker run -it --rm -v "${LOCAL_WORKSPACE_FOLDER}:/app" -w /app golangci/golangci-lint:v1.62.0-alpine golangci-lint run --timeout 5m --verbose ./pkg/...
 
 

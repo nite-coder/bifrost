@@ -125,8 +125,6 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 	traceID := span.SpanContext().TraceID().String()
 
 	if len(traceID) > 0 {
-		c.Set(variable.TraceID, traceID)
-
 		// add trace_id to logger
 		logger = logger.With(slog.String("trace_id", traceID))
 		ctx = log.NewContext(ctx, logger)

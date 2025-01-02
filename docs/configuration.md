@@ -281,6 +281,7 @@ servers:
 | read_buffer_size      | 4MB     | Set the read buffer size while limiting the HTTP header size.  Unit: byte                    |
 | pprof                 | false   | pprof lets you collect CPU profiles, traces, and heap profiles for your Go programs via HTTP |
 | access_log_id         |         | Specifies the access log to use                                                              |
+| middlewares           |         | middleware of the server                                                                     |
 
 ## routes
 
@@ -298,12 +299,13 @@ routes:
       - type: tracing
 ```
 
-| Field      | Default | Description                                      |
-| ---------- | ------- | ------------------------------------------------ |
-| methods    |         | HTTP methods; if empty, all methods supported    |
-| paths      |         | http path                                        |
-| servers    |         | Servers to apply the route; all servers if empty |
-| service_id |         | Service ID                                       |
+| Field       | Default | Description                                      |
+| ----------- | ------- | ------------------------------------------------ |
+| methods     |         | HTTP methods; if empty, all methods supported    |
+| paths       |         | http path                                        |
+| servers     |         | Servers to apply the route; all servers if empty |
+| service_id  |         | Service ID                                       |
+| middlewares |         | middleware of the routes                         |
 
 ## services
 
@@ -334,6 +336,7 @@ services:
 | tls_verify         | false   | Validates server certificate                                 |
 | protocol           | http    | Protocol for upstream, `http`, `http2`, `grpc` are supported |
 | url                |         | Upstream URL                                                 |
+| middlewares        |         | middleware of the service                                    |
 
 ## upstreams
 

@@ -15,7 +15,6 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Set("enabled", true)
 	hzCtx.Set("money", "123.456")
 	hzCtx.Request.Header.SetUserAgentBytes([]byte("my_user_agent"))
-	hzCtx.Set(TraceID, "trace_id")
 	hzCtx.Set(RouteID, "routeA")
 	hzCtx.Set(ServiceID, "serviceA")
 	hzCtx.Set(UpstreamID, "upstreamA")
@@ -29,6 +28,7 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Request.SetMethod("POST")
 	hzCtx.Request.SetRequestURI("http://abc.com/foo?bar=baz")
 	hzCtx.Request.SetBody([]byte("hello world"))
+	hzCtx.Response.Header.Set("x-trace-id", "1234")
 
 	reqInfo := &RequestOriginal{
 		ServerID: "serverA",
@@ -122,8 +122,8 @@ func TestGetDirective(t *testing.T) {
 	userAgent := GetString("$http.request.header.user-Agent", hzCtx)
 	assert.Equal(t, "my_user_agent", userAgent)
 
-	traceID := GetString(TraceID, hzCtx)
-	assert.Equal(t, "trace_id", traceID)
+	traceID := GetString("$http.response.header.x-trace-id", hzCtx)
+	assert.Equal(t, "1234", traceID)
 
 	val, found := Get(Duration, hzCtx)
 	assert.False(t, found)
