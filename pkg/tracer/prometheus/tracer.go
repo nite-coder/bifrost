@@ -29,9 +29,9 @@ func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(c.Response.Header.StatusCode()), unknownLabelValue)
 
-	path := variable.GetString(variable.RequestPathAlias, c)
+	path := variable.GetString(variable.HTTPRequestPathAlias, c)
 	if path == "" {
-		path = variable.GetString(variable.RequestPath, c)
+		path = variable.GetString(variable.HTTPRequestPath, c)
 	}
 	labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
 
@@ -45,12 +45,12 @@ func genUpstreamDurationLabels(c *app.RequestContext) prom.Labels {
 	labels[labelServer] = defaultValIfEmpty(serverID, unknownLabelValue)
 	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
 
-	UPSTREAM_STATUS := c.GetInt(variable.UpstreamStatus)
+	UPSTREAM_STATUS := c.GetInt(variable.UpstreamResponoseStatusCode)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(UPSTREAM_STATUS), unknownLabelValue)
 
-	path := variable.GetString(variable.UpstreamPathAlias, c)
+	path := variable.GetString(variable.UpstreamRequestPathAlias, c)
 	if path == "" {
-		path = variable.GetString(variable.UpstreamPath, c)
+		path = variable.GetString(variable.UpstreamRequestPath, c)
 	}
 	labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
 

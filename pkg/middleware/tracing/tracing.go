@@ -68,7 +68,7 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 
 	hostname, _ := os.Hostname()
 
-	reqMethod := variable.GetString(variable.RequestMethod, c)
+	reqMethod := variable.GetString(variable.HTTPRequestMethod, c)
 
 	spanOptions := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindServer),
@@ -77,19 +77,19 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 	ctx = tracing.Extract(ctx, &c.Request.Header)
 	ctx, span := m.tracer.Start(ctx, "", spanOptions...)
 
-	httpHost := variable.GetString(variable.Host, c)
-	reqScheme := variable.GetString(variable.RequestScheme, c)
-	reqPath := variable.GetString(variable.RequestPath, c)
-	reqQuery := variable.GetString(variable.RequestQuery, c)
+	httpHost := variable.GetString(variable.HTTPRequestHost, c)
+	reqScheme := variable.GetString(variable.HTTPRequestScheme, c)
+	reqPath := variable.GetString(variable.HTTPRequestPath, c)
+	reqQuery := variable.GetString(variable.HTTPRequestQuery, c)
 	userAgent := string(c.Request.Header.UserAgent())
-	networkProtocol := variable.GetString(variable.RequestProtocol, c)
+	networkProtocol := variable.GetString(variable.HTTPRequestProtocol, c)
 	clientIP := c.ClientIP()
 
 	defer func() {
 		serverID := variable.GetString(variable.ServerID, c)
 		routeID := variable.GetString(variable.RouteID, c)
 		serviceID := variable.GetString(variable.ServiceID, c)
-		remoteAddr := variable.GetString(variable.RemoteAddr, c)
+		remoteAddr := variable.GetString(variable.NetworkPeerAddress, c)
 
 		span.SetName(reqMethod + " " + routeID)
 

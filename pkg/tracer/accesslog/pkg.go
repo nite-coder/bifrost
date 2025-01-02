@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	reIsVariable    = regexp.MustCompile(`\$\w+(-\w+)*`)
+	reIsVariable    = regexp.MustCompile(`\$\w+(?:[._-]\w+)*`)
 	grpcContentType = []byte("application/grpc")
 )
 

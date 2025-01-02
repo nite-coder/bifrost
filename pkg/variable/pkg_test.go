@@ -19,7 +19,7 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Set(RouteID, "routeA")
 	hzCtx.Set(ServiceID, "serviceA")
 	hzCtx.Set(UpstreamID, "upstreamA")
-	hzCtx.Set(UpstreamAddr, "1.2.3.4")
+	hzCtx.Set(UpstreamRequestHost, "1.2.3.4")
 
 	hzCtx.SetClientIPFunc(func(ctx *app.RequestContext) string {
 		return "127.0.0.1"
@@ -56,16 +56,16 @@ func TestGetDirective(t *testing.T) {
 	money32 := GetFloat32("$var.money", hzCtx)
 	assert.Equal(t, float32(123.456), money32)
 
-	remoteAddr := GetString(RemoteAddr, hzCtx)
+	remoteAddr := GetString(NetworkPeerAddress, hzCtx)
 	assert.Equal(t, "0.0.0.0", remoteAddr)
 
-	host := GetString(Host, hzCtx)
+	host := GetString(HTTPRequestHost, hzCtx)
 	assert.Equal(t, "abc.com", host)
 
-	receivedSize := GetString(ReceivedSize, hzCtx)
+	receivedSize := GetString(HTTPRequestSize, hzCtx)
 	assert.Equal(t, "", receivedSize)
 
-	SendSize := GetString(SendSize, hzCtx)
+	SendSize := GetString(HTTPResponseSize, hzCtx)
 	assert.Equal(t, "", SendSize)
 
 	clientIP := GetString(ClientIP, hzCtx)
@@ -83,43 +83,43 @@ func TestGetDirective(t *testing.T) {
 	upstreamID := GetString(UpstreamID, hzCtx)
 	assert.Equal(t, "upstreamA", upstreamID)
 
-	request := GetString(Request, hzCtx)
+	request := GetString(HTTPRequest, hzCtx)
 	assert.Equal(t, "POST /foo?bar=baz HTTP/1.1", request)
 
-	requestMethod := GetString(RequestMethod, hzCtx)
+	requestMethod := GetString(HTTPRequestMethod, hzCtx)
 	assert.Equal(t, "POST", requestMethod)
 
-	requestBody := GetString(RequestBody, hzCtx)
+	requestBody := GetString(HTTPRequestBody, hzCtx)
 	assert.Equal(t, "hello world", requestBody)
 
-	requestPath := GetString(RequestPath, hzCtx)
+	requestPath := GetString(HTTPRequestPath, hzCtx)
 	assert.Equal(t, "/foo", requestPath)
 
-	requestURI := GetString(RequestURI, hzCtx)
+	requestURI := GetString(HTTPRequestURI, hzCtx)
 	assert.Equal(t, "/foo?bar=baz", requestURI)
 
-	requestProtocol := GetString(RequestProtocol, hzCtx)
+	requestProtocol := GetString(HTTPRequestProtocol, hzCtx)
 	assert.Equal(t, "HTTP/1.1", requestProtocol)
 
-	upstream := GetString(Upstream, hzCtx)
+	upstream := GetString(UpstreamRequest, hzCtx)
 	assert.Equal(t, "POST /foo?bar=baz HTTP/1.1", upstream)
 
-	upstreamURI := GetString(UpstreamURI, hzCtx)
+	upstreamURI := GetString(UpstreamRequestURI, hzCtx)
 	assert.Equal(t, "/foo?bar=baz", upstreamURI)
 
-	upstreamPath := GetString(UpstreamPath, hzCtx)
+	upstreamPath := GetString(UpstreamRequestPath, hzCtx)
 	assert.Equal(t, "/foo", upstreamPath)
 
-	upstreamAddr := GetString(UpstreamAddr, hzCtx)
+	upstreamAddr := GetString(UpstreamRequestHost, hzCtx)
 	assert.Equal(t, "1.2.3.4", upstreamAddr)
 
-	upstreamMethod := GetString(UpstreamMethod, hzCtx)
+	upstreamMethod := GetString(UpstreamRequestMethod, hzCtx)
 	assert.Equal(t, "POST", upstreamMethod)
 
-	upstreamProtocol := GetString(UpstreamProtocol, hzCtx)
+	upstreamProtocol := GetString(UpstreamRequestProtocol, hzCtx)
 	assert.Equal(t, "HTTP/1.1", upstreamProtocol)
 
-	userAgent := GetString(UserAgent, hzCtx)
+	userAgent := GetString("$http.request.header.user-Agent", hzCtx)
 	assert.Equal(t, "my_user_agent", userAgent)
 
 	traceID := GetString(TraceID, hzCtx)
@@ -156,6 +156,8 @@ func TestGetVariable(t *testing.T) {
 
 func TestIsDirective(t *testing.T) {
 	assert.True(t, IsDirective("$var.uid"))
-	assert.True(t, IsDirective("$request"))
+	assert.True(t, IsDirective("$http.request"))
+	assert.True(t, IsDirective("$http.request.header.user-Agent"))
+	assert.True(t, IsDirective("$http.response.header.x-trace-id"))
 	assert.False(t, IsDirective("$abc"))
 }
