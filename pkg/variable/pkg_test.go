@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/common/tracer/traceinfo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,6 +20,9 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Set(ServiceID, "serviceA")
 	hzCtx.Set(UpstreamID, "upstreamA")
 	hzCtx.Set(UpstreamRequestHost, "1.2.3.4")
+
+	tracerInfo := traceinfo.NewTraceInfo()
+	hzCtx.SetTraceInfo(tracerInfo)
 
 	hzCtx.SetClientIPFunc(func(ctx *app.RequestContext) string {
 		return "127.0.0.1"
@@ -63,10 +67,16 @@ func TestGetDirective(t *testing.T) {
 	assert.Equal(t, "abc.com", host)
 
 	receivedSize := GetString(HTTPRequestSize, hzCtx)
-	assert.Equal(t, "", receivedSize)
+	assert.Equal(t, "0", receivedSize)
 
-	SendSize := GetString(HTTPResponseSize, hzCtx)
-	assert.Equal(t, "", SendSize)
+	sendSize := GetString(HTTPResponseSize, hzCtx)
+	assert.Equal(t, "0", sendSize)
+
+	httpStart := GetString(HTTPStart, hzCtx)
+	assert.Equal(t, "", httpStart)
+
+	httpFinish := GetString(HTTPFinish, hzCtx)
+	assert.NotEmpty(t, httpFinish)
 
 	clientIP := GetString(ClientIP, hzCtx)
 	assert.Equal(t, "127.0.0.1", clientIP)

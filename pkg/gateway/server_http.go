@@ -13,17 +13,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/config"
-
 	"github.com/cloudwego/hertz/pkg/app/server"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
+	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
 	"github.com/cloudwego/hertz/pkg/network"
 	configHTTP2 "github.com/hertz-contrib/http2/config"
 	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/pprof"
+	"github.com/nite-coder/bifrost/pkg/config"
 	"golang.org/x/sys/unix"
 )
 
@@ -42,6 +42,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		server.WithSenseClientDisconnection(true),
+		server.WithTraceLevel(stats.LevelBase),
 		server.WithReadTimeout(time.Second * 60),
 		server.WithWriteTimeout(time.Second * 60),
 		server.WithExitWaitTime(time.Second * 10),
