@@ -18,6 +18,8 @@ const (
 	UpstreamID                  = "$upstream_id"
 	RequestOrig                 = "$request_orig"
 	NetworkPeerAddress          = "$network.peer.address"
+	HTTPStart                   = "$http.start"
+	HTTPFinish                  = "$http.finish"
 	HTTPRequest                 = "$http.request"
 	HTTPRequestSize             = "$http.request.size"
 	HTTPRequestScheme           = "$http.request.scheme"

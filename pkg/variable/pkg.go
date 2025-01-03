@@ -5,6 +5,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
@@ -20,13 +21,15 @@ var (
 	directives      = map[string]struct{}{
 		Time:                        {},
 		ClientIP:                    {},
+		NetworkPeerAddress:          {},
 		HTTPRequestHost:             {},
 		ServerID:                    {},
 		RouteID:                     {},
 		ServiceID:                   {},
 		HTTPRequestSize:             {},
 		HTTPResponseSize:            {},
-		NetworkPeerAddress:          {},
+		HTTPStart:                   {},
+		HTTPFinish:                  {},
 		HTTPRequest:                 {},
 		HTTPRequestScheme:           {},
 		HTTPRequestMethod:           {},
@@ -35,6 +38,7 @@ var (
 		HTTPRequestBody:             {},
 		HTTPRequestURI:              {},
 		HTTPRequestProtocol:         {},
+		HTTPResponseStatusCode:      {},
 		UpstreamRequest:             {},
 		UpstreamID:                  {},
 		UpstreamRequestProtocol:     {},
@@ -45,7 +49,6 @@ var (
 		UpstreamRequestURI:          {},
 		UpstreamResponoseStatusCode: {},
 		UpstreamDuration:            {},
-		HTTPResponseStatusCode:      {},
 		Duration:                    {},
 		GRPCStatusCode:              {},
 		GRPCMessage:                 {},
@@ -193,6 +196,40 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return nil, false
 		}
 		return httpStats.SendSize(), true
+	case HTTPStart:
+		traceInfo := c.GetTraceInfo()
+		if traceInfo == nil {
+			return nil, false
+		}
+		httpStats := traceInfo.Stats()
+		if httpStats == nil {
+			return nil, false
+		}
+
+		event := httpStats.GetEvent(stats.HTTPStart)
+		if event == nil {
+			return nil, false
+		}
+
+		start := event.Time().UnixMicro()
+		return start, true
+	case HTTPFinish:
+		traceInfo := c.GetTraceInfo()
+		if traceInfo == nil {
+			return time.Now().UnixMicro(), true
+		}
+		httpStats := traceInfo.Stats()
+		if httpStats == nil {
+			return time.Now().UnixMicro(), true
+		}
+
+		event := httpStats.GetEvent(stats.HTTPFinish)
+		if event == nil {
+			return time.Now().UnixMicro(), true
+		}
+
+		finish := event.Time().UnixMicro()
+		return finish, true
 	case HTTPRequest:
 		val, found := c.Get(RequestOrig)
 		if !found {
@@ -334,6 +371,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return nil, false
 		}
 		httpStats := traceInfo.Stats()
+		if httpStats == nil {
+			return nil, false
+		}
+
 		httpStart := httpStats.GetEvent(stats.HTTPStart)
 		if httpStart == nil {
 			return nil, false

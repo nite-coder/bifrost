@@ -13,7 +13,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/go-resty/resty/v2"
 	"github.com/nite-coder/bifrost/pkg/config"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/timinglogger"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/setvars"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/http2"
 )
@@ -82,7 +82,10 @@ func TestBifrost(t *testing.T) {
 		AccessLogID: "main",
 		Middlewares: []config.MiddlwareOptions{
 			{
-				Type: "timing_logger",
+				Type: "setvars",
+				Params: map[string]any{
+					"foo": "bar",
+				},
 			},
 		},
 	}

@@ -1,4 +1,4 @@
-package requesttransformer
+package responsetransformer
 
 import (
 	"context"
@@ -10,12 +10,11 @@ import (
 )
 
 func TestRemove(t *testing.T) {
-	h := middleware.FindHandlerByType("request-transformer")
+	h := middleware.FindHandlerByType("response-transformer")
 
 	params := map[string]any{
 		"remove": map[string]any{
-			"headers":     []string{"x-user-id"},
-			"querystring": []string{"mode"},
+			"headers": []string{"x-user-id"},
 		},
 	}
 
@@ -26,27 +25,21 @@ func TestRemove(t *testing.T) {
 	hzCtx := app.NewContext(0)
 	hzCtx.Request.SetMethod("GET")
 	hzCtx.Request.URI().SetPath("/foo?mode=1")
-	hzCtx.Request.Header.Set("x-user-id", "1")
+	hzCtx.Response.Header.Set("x-user-id", "1")
 	m(ctx, hzCtx)
 
-	userID := hzCtx.Request.Header.Get("x-user-id")
+	userID := hzCtx.Response.Header.Get("x-user-id")
 	assert.Empty(t, userID)
-
-	mode := hzCtx.Request.URI().QueryArgs().Has("mode")
-	assert.False(t, mode)
 }
 
 func TestAdd(t *testing.T) {
-	h := middleware.FindHandlerByType("request-transformer")
+	h := middleware.FindHandlerByType("response-transformer")
 
 	params := map[string]any{
 		"add": map[string]any{
 			"headers": map[string]string{
 				"x-source":     "web",
 				"x-http-start": "$var.http_start",
-			},
-			"querystring": map[string]string{
-				"mode": "1",
 			},
 		},
 	}
@@ -61,9 +54,6 @@ func TestAdd(t *testing.T) {
 	hzCtx.Request.URI().SetPath("/foo")
 	m(ctx, hzCtx)
 
-	assert.Equal(t, "web", hzCtx.Request.Header.Get("x-source"))
-	assert.Equal(t, "12345678", hzCtx.Request.Header.Get("x-http-start"))
-
-	mode := hzCtx.Query("mode")
-	assert.Equal(t, "1", mode)
+	assert.Equal(t, "web", hzCtx.Response.Header.Get("x-source"))
+	assert.Equal(t, "12345678", hzCtx.Response.Header.Get("x-http-start"))
 }

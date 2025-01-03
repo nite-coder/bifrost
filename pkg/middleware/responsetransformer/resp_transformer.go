@@ -1,4 +1,4 @@
-package requesttransformer
+package responsetransformer
 
 import (
 	"context"
@@ -9,18 +9,16 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
-type RequestTransFormaterMiddleware struct {
+type ResponseTransFormaterMiddleware struct {
 	options *Options
 }
 
 type RemoveOptions struct {
-	Headers     []string
-	Querystring []string
+	Headers []string
 }
 
 type AddOptions struct {
-	Headers     map[string]string
-	Querystring map[string]string
+	Headers map[string]string
 }
 
 type Options struct {
@@ -28,33 +26,20 @@ type Options struct {
 	Add    AddOptions
 }
 
-func NewMiddleware(opts Options) *RequestTransFormaterMiddleware {
-	return &RequestTransFormaterMiddleware{
+func NewMiddleware(opts Options) *ResponseTransFormaterMiddleware {
+	return &ResponseTransFormaterMiddleware{
 		options: &opts,
 	}
 }
 
-func (m *RequestTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *ResponseTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	if len(m.options.Remove.Headers) > 0 {
 		for _, header := range m.options.Remove.Headers {
 			if header == "" {
 				continue
 			}
-
-			if variable.IsDirective(header) {
-				header = variable.GetString(header, c)
-			}
-			c.Request.Header.Del(header)
-		}
-	}
-
-	if len(m.options.Remove.Querystring) > 0 {
-		for _, qs := range m.options.Remove.Querystring {
-			if qs == "" {
-				continue
-			}
-			c.Request.URI().QueryArgs().Del(qs)
+			c.Response.Header.Del(header)
 		}
 	}
 
@@ -67,26 +52,14 @@ func (m *RequestTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.R
 			if variable.IsDirective(v) {
 				v = variable.GetString(v, c)
 			}
-			c.Request.Header.Set(k, v)
+			c.Response.Header.Set(k, v)
 		}
 	}
 
-	if len(m.options.Add.Querystring) > 0 {
-		for k, v := range m.options.Add.Querystring {
-			if k == "" {
-				continue
-			}
-
-			if variable.IsDirective(v) {
-				v = variable.GetString(v, c)
-			}
-			c.Request.URI().QueryArgs().Add(k, v)
-		}
-	}
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("request-transformer", func(params map[string]any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("response-transformer", func(params map[string]any) (app.HandlerFunc, error) {
 		opts := &Options{}
 
 		config := &mapstructure.DecoderConfig{
