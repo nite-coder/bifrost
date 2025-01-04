@@ -13,6 +13,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 type listenInfo struct {
@@ -181,7 +183,6 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	z.state = waitingState
 	z.mu.Unlock()
 
-	_ = z.writePID()
 	socket, err := net.Listen("unix", z.options.GetUpgradeSock())
 	if err != nil {
 		return fmt.Errorf("failed to open upgrade socket: %w", err)
@@ -250,22 +251,13 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	return nil
 }
 
-func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
-	b, err := os.ReadFile(z.options.GetPIDFile())
-	if err != nil {
-		slog.Error("shutdown error", "error", err)
-		return err
+func (z *ZeroDownTime) KillProcess(ctx context.Context, pid int, removePIDFile bool) error {
+	if removePIDFile {
+		if err := os.Remove(z.options.GetPIDFile()); err != nil {
+			slog.Error("failed to remove PID file", "error", err)
+			return err
+		}
 	}
-
-	pid, err := strconv.ParseInt(string(b), 10, 32)
-	if err != nil {
-		slog.Error("pid is invalid", "error", err)
-		return err
-	}
-
-	defer func() {
-		_ = os.Remove(z.options.GetPIDFile())
-	}()
 
 	process, err := os.FindProcess(int(pid))
 	if err != nil {
@@ -318,7 +310,7 @@ func (z *ZeroDownTime) Shutdown(ctx context.Context) error {
 	return errors.New("process did not terminate within the timeout period")
 }
 
-func (z *ZeroDownTime) writePID() error {
+func (z *ZeroDownTime) WritePID() error {
 	pid := os.Getpid()
 	data := []byte(strconv.Itoa(pid))
 	err := os.WriteFile(z.options.GetPIDFile(), data, 0600)
@@ -328,4 +320,32 @@ func (z *ZeroDownTime) writePID() error {
 	}
 
 	return nil
+}
+
+func (z *ZeroDownTime) GetPID() (int, error) {
+	b, err := os.ReadFile(z.options.GetPIDFile())
+	if err != nil {
+		slog.Error("shutdown error", "error", err)
+		return 0, err
+	}
+
+	pid, err := cast.ToInt(string(b))
+	if err != nil {
+		slog.Error("pid is invalid", "error", err)
+		return 0, err
+	}
+
+	return pid, nil
+}
+
+func (z *ZeroDownTime) RemoveUpgradeSock() error {
+	_, err := os.Stat(z.options.GetUpgradeSock())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	return os.Remove(z.options.GetUpgradeSock())
 }

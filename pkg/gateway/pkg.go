@@ -25,6 +25,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/netpoll"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/zero"
 	"github.com/valyala/bytebufferpool"
 )
@@ -118,7 +119,7 @@ func Run(mainOptions config.Options) (err error) {
 			sha256sum1 := sha256.Sum256(b1)
 			if sha256sum == sha256sum1 {
 				// the content of config is not changed
-				slog.Info("bifrost is reloaded successfully", "isReloaded", false)
+				slog.Error("bifrost is reloaded successfully", "isReloaded", false)
 				return nil
 			}
 		}
@@ -138,7 +139,7 @@ func Run(mainOptions config.Options) (err error) {
 			}
 		}
 
-		slog.Info("bifrost is reloaded successfully", "isReloaded", isReloaded)
+		slog.Log(ctx, log.LevelNotice, "bifrost is reloaded successfully", "isReloaded", isReloaded)
 
 		return nil
 	}
@@ -166,20 +167,42 @@ func Run(mainOptions config.Options) (err error) {
 			}
 		}
 
-		slog.Info("bifrost started successfully", "pid", os.Getpid())
+		slog.Log(ctx, log.LevelNotice, "bifrost is started successfully", "pid", os.Getpid())
 
 		zeroDT := bifrost.ZeroDownTime()
 
 		if zeroDT != nil && zeroDT.IsUpgraded() {
-			err := zeroDT.Shutdown(ctx)
+			// shutdown old process
+			oldPID, err := zeroDT.GetPID()
+			if err != nil {
+				return
+			}
+
+			err = zeroDT.WritePID()
+			if err != nil {
+				return
+			}
+
+			err = zeroDT.KillProcess(ctx, oldPID, false)
 			if err != nil {
 				return
 			}
 		}
 
 		if mainOptions.IsDaemon {
+			err = zeroDT.WritePID()
+			if err != nil {
+				slog.Error("fail to write pid", "error", err)
+				return
+			}
+
+			err = zeroDT.RemoveUpgradeSock()
+			if err != nil {
+				slog.Error("fail to remove upgrade sock file", "error", err)
+				return
+			}
 			if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
-				slog.Error("failed to upgrade process", "error", err)
+				slog.Error("fail to wait for upgrade process", "error", err)
 				return
 			}
 		}
@@ -283,7 +306,12 @@ func StopDaemon(mainOptions config.Options) error {
 	zeroDT := zero.New(zeroOpts)
 
 	ctx := context.Background()
-	err := zeroDT.Shutdown(ctx)
+
+	oldPID, err := zeroDT.GetPID()
+	if err != nil {
+		return err
+	}
+	err = zeroDT.KillProcess(ctx, oldPID, true)
 	if err != nil {
 		slog.Error("fail to stop", "error", err)
 		return err
@@ -328,7 +356,7 @@ func shutdown(ctx context.Context, now bool) error {
 		}
 	}
 
-	slog.Info("bifrost is shutdown successfully", "pid", os.Getpid())
+	slog.Log(ctx, log.LevelNotice, "bifrost is shutdown successfully", "pid", os.Getpid())
 	return nil
 }
 

@@ -102,7 +102,7 @@ func ValidateConfig(mainOpts Options) error {
 		return err
 	}
 
-	err = validateServers(mainOpts.Servers)
+	err = validateServers(mainOpts)
 	if err != nil {
 		return err
 	}
@@ -188,16 +188,17 @@ func validateAccessLog(options map[string]AccessLogOptions) error {
 	return nil
 }
 
-func validateServers(options map[string]ServerOptions) error {
-	for id, opt := range options {
-		if opt.Bind == "" {
+func validateServers(mainOptions Options) error {
+
+	for id, serverOptions := range mainOptions.Servers {
+		if serverOptions.Bind == "" {
 			msg := fmt.Sprintf("the bind can't be empty for server '%s'", id)
 			fullpath := []string{"servers", id, "bind"}
 			return newInvalidConfig(fullpath, "", msg)
 		}
 
-		if len(opt.TLS.CertPEM) > 0 {
-			_, err := os.ReadFile(opt.TLS.CertPEM)
+		if len(serverOptions.TLS.CertPEM) > 0 {
+			_, err := os.ReadFile(serverOptions.TLS.CertPEM)
 			if err != nil {
 				msg := fmt.Sprintf("the cert pem file is invalid for server '%s'", id)
 
@@ -206,12 +207,12 @@ func validateServers(options map[string]ServerOptions) error {
 				}
 
 				fullpath := []string{"servers", id, "tls", "cert_pem"}
-				return newInvalidConfig(fullpath, opt.TLS.CertPEM, msg)
+				return newInvalidConfig(fullpath, serverOptions.TLS.CertPEM, msg)
 			}
 		}
 
-		if len(opt.TLS.KeyPEM) > 0 {
-			_, err := os.ReadFile(opt.TLS.KeyPEM)
+		if len(serverOptions.TLS.KeyPEM) > 0 {
+			_, err := os.ReadFile(serverOptions.TLS.KeyPEM)
 			if err != nil {
 				msg := fmt.Sprintf("the key pem file is invalid for server '%s'", id)
 
@@ -220,7 +221,15 @@ func validateServers(options map[string]ServerOptions) error {
 				}
 
 				fullpath := []string{"servers", id, "tls", "key_pem"}
-				return newInvalidConfig(fullpath, opt.TLS.KeyPEM, msg)
+				return newInvalidConfig(fullpath, serverOptions.TLS.KeyPEM, msg)
+			}
+		}
+
+		if serverOptions.AccessLogID != "" {
+			if _, found := mainOptions.AccessLogs[serverOptions.AccessLogID]; !found {
+				msg := fmt.Sprintf("the access log '%s' doesn't exist for server '%s'", serverOptions.AccessLogID, id)
+				fullpath := []string{"servers", id, "access_log_id"}
+				return newInvalidConfig(fullpath, serverOptions.AccessLogID, msg)
 			}
 		}
 	}

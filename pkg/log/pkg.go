@@ -13,6 +13,10 @@ var (
 	}
 )
 
+const (
+	LevelNotice = slog.Level(10)
+)
+
 func FromContext(ctx context.Context) *slog.Logger {
 	v := ctx.Value(ctxKey)
 

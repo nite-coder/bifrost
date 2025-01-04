@@ -57,7 +57,12 @@ func main() {
 	}
 
 	if *shudown {
-		_ = zeroDT.Shutdown(ctx)
+		oldPID, err := zeroDT.GetPID()
+		if err != nil {
+			slog.Error("shutdown error", "error", err)
+			return
+		}
+		_ = zeroDT.KillProcess(ctx, oldPID, true)
 		return
 	}
 
@@ -66,7 +71,13 @@ func main() {
 		go func() {
 			<-done
 
-			err := zeroDT.Shutdown(ctx)
+			oldPID, err := zeroDT.GetPID()
+			if err != nil {
+				slog.Error("fail to upgrade", "error", err)
+				return
+			}
+
+			err = zeroDT.KillProcess(ctx, oldPID, false)
 			if err != nil {
 				return
 			}
@@ -74,6 +85,11 @@ func main() {
 			time.Sleep(5 * time.Second)
 
 			if *daemon {
+				err = zeroDT.WritePID()
+				if err != nil {
+					slog.Error("Upgrade process error", "error", err)
+					return
+				}
 				if err := zeroDT.WaitForUpgrade(ctx); err != nil {
 					slog.Error("Upgrade process error", "error", err)
 					return
