@@ -4,8 +4,8 @@ A high-performance, low-latency API Gateway library developed in Golang.
 
 ## Motivation
 
-1. The Lua ecosystem is relatively small, with many third-party packages still lacking features.
-1. Ideal for people who are more familiar with Go development than Lua.
+1. `Lua` is more suitable for writing simple business logic. However, if you encounter complex scenarios that require asynchronous processing, unit testing, etc., `Lua` might not be the best choice.
+1. Ideal for people who are more familiar with `Go` development.
 1. Integrating existing Go services with the gateway can reduce request latency.
 1. Easy to extend with custom features for secondary development.
 1. Designed for high performance and low latency.

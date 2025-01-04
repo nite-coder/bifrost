@@ -21,35 +21,36 @@ type BufferedLogger struct {
 }
 
 func NewBufferedLogger(opts config.AccessLogOptions) (*BufferedLogger, error) {
-	var err error
-	var logFile io.Writer
+
+	var writer io.Writer
+
+	logger := &BufferedLogger{
+		options: &opts,
+	}
 
 	output := strings.ToLower(opts.Output)
 	switch output {
 	case "":
-		logFile = io.Discard
+		writer = io.Discard
 	case "stderr":
-		logFile = os.Stderr
+		writer = os.Stderr
 	default:
-		logFile, err = os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 		if err != nil {
 			return nil, err
 		}
+		logger.file = file
+		writer = file
 	}
 
 	if opts.BufferSize <= 0 {
 		opts.BufferSize = 64 * variable.KB
 	}
 
-	writer := bufio.NewWriterSize(logFile, opts.BufferSize)
+	logger.writer = bufio.NewWriterSize(writer, opts.BufferSize)
 
 	if opts.Flush.Seconds() <= 0 {
 		opts.Flush = 1 * time.Minute
-	}
-
-	logger := &BufferedLogger{
-		writer:  writer,
-		options: &opts,
 	}
 
 	logger.flushTimer = time.AfterFunc(opts.Flush, logger.periodicFlush)
@@ -89,5 +90,10 @@ func (l *BufferedLogger) periodicFlush() {
 func (l *BufferedLogger) Close() error {
 	l.flushTimer.Stop()
 	_ = l.Flush()
-	return l.file.Close()
+
+	if l.file != nil {
+		return l.file.Close()
+	}
+
+	return nil
 }

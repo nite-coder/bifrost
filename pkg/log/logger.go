@@ -25,10 +25,6 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 				// Handle custom level values.
 				level := a.Value.Any().(slog.Level)
 
-				// This could also look up the name from a map or other structure, but
-				// this demonstrates using a switch statement to rename levels. For
-				// maximum performance, the string values should be constants, but this
-				// example uses the raw strings for readability.
 				if level == LevelNotice {
 					a.Value = slog.StringValue("NOTICE")
 				}
