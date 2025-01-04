@@ -32,7 +32,7 @@ func sortBifrostVariables(slice []string) {
 	sort.Sort(byLengthAndContent(slice))
 }
 
-func parseVariables(content string) []string {
+func parseDirectives(content string) []string {
 	variables := reIsVariable.FindAllString(content, -1)
 	sortBifrostVariables(variables)
 	return variables

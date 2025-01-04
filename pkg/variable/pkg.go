@@ -5,7 +5,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
@@ -216,16 +215,16 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case HTTPFinish:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {
-			return time.Now().UnixMicro(), true
+			return timecache.Now().UnixMicro(), true
 		}
 		httpStats := traceInfo.Stats()
 		if httpStats == nil {
-			return time.Now().UnixMicro(), true
+			return timecache.Now().UnixMicro(), true
 		}
 
 		event := httpStats.GetEvent(stats.HTTPFinish)
 		if event == nil {
-			return time.Now().UnixMicro(), true
+			return timecache.Now().UnixMicro(), true
 		}
 
 		finish := event.Time().UnixMicro()
@@ -315,6 +314,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 		info := (val).(*RequestOriginal)
 		return info.Protocol, true
+
 	case RouteID:
 		routeID := c.GetString(RouteID)
 		return routeID, true

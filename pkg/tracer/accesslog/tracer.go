@@ -38,7 +38,7 @@ func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 
 	tracer := &Tracer{
 		opts:      opts,
-		matchVars: parseVariables(opts.Template),
+		matchVars: parseDirectives(opts.Template),
 		writer:    bufferedLogger,
 	}
 
@@ -80,44 +80,16 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 		return nil
 	}
 
-	httpFinish := httpStats.GetEvent(stats.HTTPFinish)
-	statErr := httpStats.Error()
-
-	timeNow := timecache.Now()
-	contentType := c.Request.Header.ContentType()
 	replacements := make([]string, 0, len(t.matchVars)*2)
 
-	for _, matchVal := range t.matchVars {
-		switch matchVal {
+	for _, key := range t.matchVars {
+		switch key {
 		case variable.Time:
+			timeNow := timecache.Now()
 			now := timeNow.Format(t.opts.TimeFormat)
 			replacements = append(replacements, variable.Time, now)
-		case variable.NetworkPeerAddress:
-			val, _ := variable.Get(variable.NetworkPeerAddress, c)
-			remoteAddr, _ := cast.ToString(val)
-			replacements = append(replacements, variable.NetworkPeerAddress, remoteAddr)
-		case variable.HTTPRequestHost:
-			host := variable.GetString(variable.HTTPRequestHost, c)
-			replacements = append(replacements, variable.HTTPRequestHost, host)
-		case variable.RouteID:
-			routeID := variable.GetString(variable.RouteID, c)
-			replacements = append(replacements, variable.HTTPRequestURI, routeID)
-		case variable.HTTPRequest:
-			req := variable.GetString(variable.HTTPRequest, c)
-			replacements = append(replacements, variable.HTTPRequest, req)
-		case variable.HTTPRequestMethod:
-			method := variable.GetString(variable.HTTPRequestMethod, c)
-			replacements = append(replacements, variable.HTTPRequestMethod, method)
-		case variable.HTTPRequestURI:
-			uri := variable.GetString(variable.HTTPRequestURI, c)
-			replacements = append(replacements, variable.HTTPRequestURI, uri)
-		case variable.HTTPRequestPath:
-			path := variable.GetString(variable.HTTPRequestPath, c)
-			replacements = append(replacements, variable.HTTPRequestPath, path)
-		case variable.HTTPRequestProtocol:
-			protocol := variable.GetString(variable.HTTPRequestProtocol, c)
-			replacements = append(replacements, variable.HTTPRequestProtocol, protocol)
 		case variable.HTTPRequestBody:
+			contentType := c.Request.Header.ContentType()
 			// if content type is grpc, the $request_body will be ignored
 			if bytes.Equal(contentType, grpcContentType) {
 				replacements = append(replacements, variable.HTTPRequestBody, "")
@@ -130,61 +102,19 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			status := strconv.Itoa(c.Response.StatusCode())
 
 			// this case for http2 client disconnected
+			statErr := httpStats.Error()
 			if statErr != nil && statErr.Error() == "client disconnected" {
 				status = strconv.Itoa(499)
 			}
 
 			replacements = append(replacements, variable.HTTPResponseStatusCode, status)
-		case variable.UpstreamRequestProtocol:
-			replacements = append(replacements, variable.UpstreamRequestProtocol, c.Request.Header.GetProtocol())
-		case variable.UpstreamRequestMethod:
-			replacements = append(replacements, variable.UpstreamRequestMethod, cast.B2S(c.Request.Method()))
-		case variable.UpstreamRequestURI:
-			val, _ := variable.Get(variable.UpstreamRequestURI, c)
-			uri, _ := cast.ToString(val)
-			replacements = append(replacements, variable.UpstreamRequestURI, uri)
-		case variable.UpstreamRequestPath:
-			replacements = append(replacements, variable.UpstreamRequestPath, cast.B2S(c.Request.Path()))
-		case variable.UpstreamRequestHost:
-			addr := c.GetString(variable.UpstreamRequestHost)
-			replacements = append(replacements, variable.UpstreamRequestHost, addr)
-		case variable.UpstreamResponoseStatusCode:
-			code := c.GetInt(variable.UpstreamResponoseStatusCode)
-			replacements = append(replacements, variable.UpstreamResponoseStatusCode, strconv.Itoa(code))
-		case variable.UpstreamDuration:
-			dur := c.GetString(variable.UpstreamDuration)
-			if len(dur) == 0 {
-				dur = "0"
-			}
-			replacements = append(replacements, variable.UpstreamDuration, dur)
-		case variable.Duration:
-			dur := httpFinish.Time().Sub(httpStart.Time()).Microseconds()
-			duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
-			replacements = append(replacements, variable.Duration, duration)
-		case variable.HTTPRequestSize:
-			replacements = append(replacements, variable.HTTPRequestSize, strconv.Itoa(httpStats.RecvSize()))
-		case variable.HTTPResponseSize:
-			replacements = append(replacements, variable.HTTPResponseSize, strconv.Itoa(httpStats.SendSize()))
-		case variable.GRPCStatusCode:
-			status := ""
-
-			val, found := c.Get(variable.GRPCStatusCode)
-			if found {
-				status, _ = cast.ToString(val)
-			}
-
-			replacements = append(replacements, variable.GRPCStatusCode, status)
-		case variable.GRPCMessage:
-			grpcMessage := c.GetString(variable.GRPCMessage)
-			replacements = append(replacements, variable.GRPCMessage, grpcMessage)
 		default:
-
-			val := variable.GetString(matchVal, c)
+			val := variable.GetString(key, c)
 			if len(val) > 0 {
 				val = escape(val, t.opts.Escape)
 			}
 
-			replacements = append(replacements, matchVal, val)
+			replacements = append(replacements, key, val)
 			continue
 		}
 	}

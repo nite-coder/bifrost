@@ -40,6 +40,7 @@ func TestAdd(t *testing.T) {
 			"headers": map[string]string{
 				"x-source":     "web",
 				"x-http-start": "$var.http_start",
+				"x-user-id":    "",
 			},
 		},
 	}
@@ -56,4 +57,5 @@ func TestAdd(t *testing.T) {
 
 	assert.Equal(t, "web", hzCtx.Response.Header.Get("x-source"))
 	assert.Equal(t, "12345678", hzCtx.Response.Header.Get("x-http-start"))
+	assert.Equal(t, "", hzCtx.Response.Header.Get("x-user-id"))
 }
