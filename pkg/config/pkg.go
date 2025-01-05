@@ -26,6 +26,29 @@ func Load(path string) (Options, error) {
 	// load main config
 	var mainOpts Options
 
+	if path == "" {
+		defaultPaths := []string{
+			"./config.yaml",
+			"./conf/config.yaml",
+			"./config/config.yaml",
+		}
+
+		for _, dpath := range defaultPaths {
+			_, err := os.Stat(dpath)
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					continue
+				}
+			}
+
+			path = dpath
+		}
+
+		if path == "" {
+			return mainOpts, errors.New("config file not found")
+		}
+	}
+
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		return mainOpts, errors.New("config file not found")
 	}

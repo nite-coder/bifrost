@@ -86,7 +86,7 @@ func (m *RequestTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.R
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("request-transformer", func(params map[string]any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("request_transformer", func(params map[string]any) (app.HandlerFunc, error) {
 		opts := &Options{}
 
 		config := &mapstructure.DecoderConfig{

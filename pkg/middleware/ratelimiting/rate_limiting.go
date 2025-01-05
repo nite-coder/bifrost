@@ -145,7 +145,7 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("rate-limiting", func(param map[string]any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("rate_limiting", func(param map[string]any) (app.HandlerFunc, error) {
 		option := Options{}
 
 		// strategy

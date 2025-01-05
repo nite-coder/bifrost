@@ -30,7 +30,7 @@ func main() {
 			&cli.StringFlag{
 				Name:    "config",
 				Aliases: []string{"c"},
-				Value:   "./config.yaml",
+				Value:   "",
 				Usage:   "The path to the configuration file",
 			},
 			&cli.BoolFlag{

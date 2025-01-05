@@ -10,7 +10,7 @@ import (
 )
 
 func TestRemove(t *testing.T) {
-	h := middleware.FindHandlerByType("response-transformer")
+	h := middleware.FindHandlerByType("response_transformer")
 
 	params := map[string]any{
 		"remove": map[string]any{
@@ -33,7 +33,7 @@ func TestRemove(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	h := middleware.FindHandlerByType("response-transformer")
+	h := middleware.FindHandlerByType("response_transformer")
 
 	params := map[string]any{
 		"add": map[string]any{

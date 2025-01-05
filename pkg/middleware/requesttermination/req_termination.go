@@ -43,7 +43,7 @@ func (m *RequestTerminationMiddleware) ServeHTTP(ctx context.Context, c *app.Req
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("request-termination", func(params map[string]any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("request_termination", func(params map[string]any) (app.HandlerFunc, error) {
 		opts := &Options{}
 
 		config := &mapstructure.DecoderConfig{

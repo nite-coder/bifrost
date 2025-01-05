@@ -59,7 +59,7 @@ func (m *ResponseTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("response-transformer", func(params map[string]any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("response_transformer", func(params map[string]any) (app.HandlerFunc, error) {
 		opts := &Options{}
 
 		config := &mapstructure.DecoderConfig{
