@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
-	"io"
 	"log/slog"
 	"math"
 	"net"
@@ -101,22 +100,48 @@ func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, ups
 
 				newProxies, err := buildHTTPProxyList(bifrost, upstream, clientOpts, serviceOpts, upstreamOptions)
 				if err != nil {
-					slog.Warn("fail to build http upstream", slog.String("upstream_id", upstreamOptions.ID), slog.String("error", err.Error()))
+					slog.Debug("fail to build http upstream", slog.String("upstream_id", upstreamOptions.ID), slog.String("error", err.Error()))
 					continue
 				}
 
 				if len(newProxies) == 0 {
-					slog.Warn("fail to build http upstream because proxies is empty", slog.String("upstream_id", upstreamOptions.ID))
+					slog.Debug("fail to build http upstream because proxies is empty", slog.String("upstream_id", upstreamOptions.ID))
 					continue
 				}
 
-				upstream.proxies.Store(newProxies)
+				var updatedProxies []proxy.Proxy
 
-				for _, proxy := range oldProxies {
-					if closer, ok := proxy.(io.Closer); ok {
-						_ = closer.Close()
+				// remove old proxy if not exist in new proxies list
+				for _, oldProxy := range oldProxies {
+					isFound := false
+					for _, newProxy := range newProxies {
+						if oldProxy.Target() == newProxy.Target() {
+							isFound = true
+							break
+						}
+					}
+
+					if isFound {
+						updatedProxies = append(updatedProxies, oldProxy)
 					}
 				}
+
+				// add new proxy if not exist in updatedProxies
+				for _, newProxy := range newProxies {
+					isFound := false
+					for _, proxy := range updatedProxies {
+						if proxy.Target() == newProxy.Target() {
+							isFound = true
+							break
+						}
+					}
+
+					if !isFound {
+						updatedProxies = append(updatedProxies, newProxy)
+					}
+				}
+
+				upstream.proxies.Store(updatedProxies)
 			}
 		}()
 	}
@@ -161,11 +186,39 @@ func createGRPCUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, 
 					continue
 				}
 
-				for _, proxy := range oldProxies {
-					if closer, ok := proxy.(io.Closer); ok {
-						_ = closer.Close()
+				var updatedProxies []proxy.Proxy
+
+				// remove old proxy if not exist in new proxies list
+				for _, oldProxy := range oldProxies {
+					isFound := false
+					for _, newProxy := range newProxies {
+						if oldProxy.Target() == newProxy.Target() {
+							isFound = true
+							break
+						}
+					}
+
+					if isFound {
+						updatedProxies = append(updatedProxies, oldProxy)
 					}
 				}
+
+				// add new proxy if not exist in updatedProxies
+				for _, newProxy := range newProxies {
+					isFound := false
+					for _, proxy := range updatedProxies {
+						if proxy.Target() == newProxy.Target() {
+							isFound = true
+							break
+						}
+					}
+
+					if !isFound {
+						updatedProxies = append(updatedProxies, newProxy)
+					}
+				}
+
+				upstream.proxies.Store(updatedProxies)
 			}
 		}()
 	}

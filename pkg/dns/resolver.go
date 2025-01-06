@@ -22,7 +22,7 @@ type Resolver struct {
 	options     *Options
 	client      *dns.Client
 	hostsCache  map[string][]string
-	resultCache *cache.Cache[string, []string]
+	dnsCache *cache.Cache[string, []string]
 }
 
 type Options struct {
@@ -36,7 +36,7 @@ func NewResolver(option Options) (*Resolver, error) {
 
 	r := &Resolver{
 		hostsCache:  make(map[string][]string),
-		resultCache: resultCache,
+		dnsCache: resultCache,
 	}
 
 	r.options = &option
@@ -82,7 +82,7 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 	}
 
 	// Second, check the result cache
-	if ips, ok := r.resultCache.Get(host); ok {
+	if ips, ok := r.dnsCache.Get(host); ok {
 		return ips, nil
 	}
 
@@ -105,7 +105,7 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 		return nil, fmt.Errorf("%w; can't resolve host '%s'", ErrNotFound, host)
 	}
 
-	r.resultCache.PutWithTTL(host, ips, r.options.Valid)
+	r.dnsCache.PutWithTTL(host, ips, r.options.Valid)
 	return ips, nil
 }
 
