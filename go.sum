@@ -44,6 +44,8 @@ github.com/chzyer/test v1.0.0/go.mod h1:2JlltgoNkt4TW/z9V/IzDdFaMTM2JPIi26O1pF38
 github.com/cloudwego/base64x v0.1.4 h1:jwCgWpFanWmN8xoIUHa2rtzmkd5J2plF/dnLS6Xd/0Y=
 github.com/cloudwego/base64x v0.1.4/go.mod h1:0zlkT4Wn5C6NdauXdJRhSKRlJvmclQ1hhJgA0rcu/8w=
 github.com/cloudwego/hertz v0.9.4-0.20241021100040-3477b0309b81/go.mod h1:gGVUfJU/BOkJv/ZTzrw7FS7uy7171JeYIZvAyV3wS3o=
+github.com/cloudwego/hertz v0.9.5 h1:FXV2YFLrNHRdpwT+OoIvv0wEHUC0Bo68CDPujr6VnWo=
+github.com/cloudwego/hertz v0.9.5/go.mod h1:UUBt8N8hSTStz7NEvLZ5mnALpBSofNL4DoYzIIp8UaY=
 github.com/cloudwego/iasm v0.2.0 h1:1KNIy1I1H9hNNFEEH3DVnI4UujN+1zjpuk6gwHLTssg=
 github.com/cloudwego/iasm v0.2.0/go.mod h1:8rXZaNYT2n95jn+zTI1sDr+IgcD2GVs0nlbbQPiEFhY=
 github.com/cloudwego/netpoll v0.6.2/go.mod h1:kaqvfZ70qd4T2WtIIpCOi5Cxyob8viEpzLhCrTrz3HM=
@@ -158,8 +160,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/nite-coder/blackbear v0.0.0-20240930140346-76863193d6d4 h1:GiabVDOPd3C4oUEGdZwsarV2w4qyNKOj0SqCjxUa9X4=
 github.com/nite-coder/blackbear v0.0.0-20240930140346-76863193d6d4/go.mod h1:8dHV5jDE1V1EkzxXxYEh1uiFNII+7JTj0vFbCmUCsvU=
-github.com/nite-coder/hertz v0.0.0-20241217152919-885b480b33a6 h1:H8CtrsK03f1JdBUnF04SA3OyddFXSNHyGrR9YHJUe64=
-github.com/nite-coder/hertz v0.0.0-20241217152919-885b480b33a6/go.mod h1:UUBt8N8hSTStz7NEvLZ5mnALpBSofNL4DoYzIIp8UaY=
+github.com/nite-coder/hertz v0.0.0-20250106143046-faf7d3cf17ac h1:a+kWccZDA4x3tXgTgMzbQF1mvBr5s2KCrcjRy232rWk=
+github.com/nite-coder/hertz v0.0.0-20250106143046-faf7d3cf17ac/go.mod h1:UUBt8N8hSTStz7NEvLZ5mnALpBSofNL4DoYzIIp8UaY=
 github.com/nite-coder/http2 v0.0.0-20240820122516-bb9df3e1377c h1:0p4RH4XQzoSJGZNy9xTuS708hkpZHR2i5RiSmUjrMA8=
 github.com/nite-coder/http2 v0.0.0-20240820122516-bb9df3e1377c/go.mod h1:eEgOLfrPIiiAEtTvyhkrjMQ8UHLqO59RWf5CqCuZNTw=
 github.com/nyaruka/phonenumbers v1.0.55/go.mod h1:sDaTZ/KPX5f8qyV9qN+hIm+4ZBARJrupC6LuhshJq1U=

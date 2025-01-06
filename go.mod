@@ -2,14 +2,14 @@ module github.com/nite-coder/bifrost
 
 go 1.22.0
 
-replace github.com/cloudwego/hertz v0.9.4 => github.com/nite-coder/hertz v0.0.0-20241217152919-885b480b33a6
+replace github.com/cloudwego/hertz v0.9.5 => github.com/nite-coder/hertz v0.0.0-20250106143046-faf7d3cf17ac
 
 replace github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.0.0-20240820122516-bb9df3e1377c
 
 require (
 	github.com/bytedance/gopkg v0.1.1
 	github.com/bytedance/sonic v1.12.6
-	github.com/cloudwego/hertz v0.9.4
+	github.com/cloudwego/hertz v0.9.5
 	github.com/cloudwego/netpoll v0.6.5
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/go-resty/resty/v2 v2.15.3

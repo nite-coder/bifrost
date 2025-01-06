@@ -4,6 +4,7 @@
 
 - refactor: enchance dns resolver to update upstreams.
 - refactor: optimize the information reported by OpenTelemetry tracing and redesign config.
+- chore: upgrade hertz package to v0.9.5
 - feat: load config from default config path when config path is empty.
 - feat: support systemd init script.
 - [[#7](https://github.com/nite-coder/bifrost/pull/7)]: upgrade and rename access log directives

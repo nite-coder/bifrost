@@ -47,30 +47,30 @@ Forward all HTTP requests to the backend upstream services. With two upstream se
 package main
 
 import (
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/gateway"
-	"github.com/nite-coder/bifrost/pkg/initialize"
+ "github.com/nite-coder/bifrost/pkg/config"
+ "github.com/nite-coder/bifrost/pkg/gateway"
+ "github.com/nite-coder/bifrost/pkg/initialize"
 )
 
 func main() {
-	_ = initialize.Middleware()
+ _ = initialize.Middleware()
 
-	options, err := config.Load("./config.yaml")
-	if err != nil {
-		panic(err)
-	}
+ options, err := config.Load("./config.yaml")
+ if err != nil {
+  panic(err)
+ }
 
-	err = gateway.Run(options)
-	if err != nil {
-		panic(err)
-	}
+ err = gateway.Run(options)
+ if err != nil {
+  panic(err)
+ }
 }
  ```
 
 3. Modify your `go.mod` by adding the following two lines.
 
 ```sh
-replace github.com/cloudwego/hertz v0.9.4 => github.com/nite-coder/hertz v0.0.0-20241217152919-885b480b33a6
+replace github.com/cloudwego/hertz v0.9.5 => github.com/nite-coder/hertz v0.0.0-20250106143046-faf7d3cf17ac
 replace github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.0.0-20240820122516-bb9df3e1377c
 ```
 
