@@ -207,10 +207,6 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	if len(mainOptions.AccessLogs) > 0 && !isReload {
 
 		for id, accessLogOptions := range mainOptions.AccessLogs {
-			if !accessLogOptions.Enabled {
-				continue
-			}
-
 			accessLogTracer, err := accesslog.NewTracer(accessLogOptions)
 			if err != nil {
 				return nil, err

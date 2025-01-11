@@ -147,10 +147,6 @@ func validateAccessLog(options map[string]AccessLogOptions) error {
 	reIsVariable := regexp.MustCompile(`\$\w+(?:[._-]\w+)*`)
 
 	for id, opt := range options {
-		if !opt.Enabled {
-			continue
-		}
-
 		if opt.Template == "" {
 			msg := fmt.Sprintf("the template can't be empty for access log '%s'", id)
 			fullpath := []string{"access_logs", id, "template"}

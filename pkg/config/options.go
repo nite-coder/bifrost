@@ -129,7 +129,6 @@ const (
 )
 
 type AccessLogOptions struct {
-	Enabled    bool          `yaml:"enabled" json:"enabled"`
 	BufferSize int           `yaml:"buffer_size" json:"buffer_size"`
 	Output     string        `yaml:"output" json:"output"`
 	Template   string        `yaml:"template" json:"template"`

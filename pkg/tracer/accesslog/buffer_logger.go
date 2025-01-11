@@ -86,7 +86,10 @@ func (l *BufferedLogger) periodicFlush() {
 }
 
 func (l *BufferedLogger) Close() error {
-	l.flushTimer.Stop()
+	if l.flushTimer != nil {
+		l.flushTimer.Stop()
+	}
+
 	_ = l.Flush()
 
 	if l.file != nil {

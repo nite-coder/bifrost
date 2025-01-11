@@ -31,8 +31,7 @@ func TestBifrost(t *testing.T) {
 	options.Metrics.Prometheus.ServerID = "apiv1"
 
 	options.AccessLogs["main"] = config.AccessLogOptions{
-		Enabled: true,
-		Output:  "stderr",
+		Output:  "",
 		Template: `      {"time":"$time",
       "remote_addr":"$network.peer.address",
       "host": "$http.request.host",

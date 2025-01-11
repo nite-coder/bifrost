@@ -203,7 +203,6 @@ Example:
 ```yaml
 access_logs:
   my_access_log: # Unique request log name for reuse
-    enabled: true
     output: stderr
     buffering_size: 65536
     time_format: "2006-01-02T15:04:05"
@@ -226,15 +225,14 @@ access_logs:
       "duration":$duration}
 ```
 
-| Field          | Default | Description                                                                      |
-| -------------- | ------- | -------------------------------------------------------------------------------- |
-| enabled        | `false` | Enables request logging                                                          |
-| output         |         | Output location; supports `stderr` or file path;                                 |
-| buffering_size | 64 KB   | Output buffer size, in bytes                                                     |
-| time_format    |         | Time format                                                                      |
-| escape         | `none`  | Escape characters; options are `none`, `json`, `default`                         |
-| template       |         | Request log format                                                               |
-| flush          | `0`     | Time interval for writing logs to disk; `0`: allow the OS to flush logs to disk. |
+| Field          | Default               | Description                                                                      |
+| -------------- | --------------------- | -------------------------------------------------------------------------------- |
+| output         |                       | Output location; supports `stderr` or file path;                                 |
+| buffering_size | 64 KB                 | Output buffer size, in bytes                                                     |
+| time_format    | `2006-01-02 15:04:05` | Time format; use [golang time format](https://yourbasic.org/golang/format-parse-string-time-date-example/)                                               |
+| escape         | `none`                | Escape characters; options are `none`, `json`, `default`                         |
+| template       |                       | Request log format                                                               |
+| flush          | `0`                   | Time interval for writing logs to disk; `0`: allow the OS to flush logs to disk. |
 
 ## servers
 
