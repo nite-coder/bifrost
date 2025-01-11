@@ -25,7 +25,7 @@ type Tracer struct {
 
 func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 	if opts.TimeFormat == "" {
-		opts.TimeFormat = time.RFC3339
+		opts.TimeFormat = time.DateTime
 	}
 
 	words := strings.Fields(opts.Template)
