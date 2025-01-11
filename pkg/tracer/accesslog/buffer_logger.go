@@ -49,11 +49,9 @@ func NewBufferedLogger(opts config.AccessLogOptions) (*BufferedLogger, error) {
 
 	logger.writer = bufio.NewWriterSize(writer, opts.BufferSize)
 
-	if opts.Flush.Seconds() <= 0 {
-		opts.Flush = 1 * time.Minute
+	if opts.Flush.Seconds() > 0 {
+		logger.flushTimer = time.AfterFunc(opts.Flush, logger.periodicFlush)
 	}
-
-	logger.flushTimer = time.AfterFunc(opts.Flush, logger.periodicFlush)
 
 	return logger, nil
 }

@@ -226,15 +226,15 @@ access_logs:
       "duration":$duration}
 ```
 
-| Field          | Default | Description                                              |
-| -------------- | ------- | -------------------------------------------------------- |
-| enabled        | false   | Enables request logging                                  |
-| output         |         | Output location; supports `stderr` or file path          |
-| buffering_size | 64 KB   | Output buffer size, in bytes                             |
-| time_format    |         | Time format                                              |
-| escape         | none    | Escape characters; options are `none`, `json`, `default` |
-| template       |         | Request log format                                       |
-| flush          | 1m      | Time interval for writing logs to disk                   |
+| Field          | Default | Description                                                                      |
+| -------------- | ------- | -------------------------------------------------------------------------------- |
+| enabled        | `false` | Enables request logging                                                          |
+| output         |         | Output location; supports `stderr` or file path;                                 |
+| buffering_size | 64 KB   | Output buffer size, in bytes                                                     |
+| time_format    |         | Time format                                                                      |
+| escape         | `none`  | Escape characters; options are `none`, `json`, `default`                         |
+| template       |         | Request log format                                                               |
+| flush          | `0`     | Time interval for writing logs to disk; `0`: allow the OS to flush logs to disk. |
 
 ## servers
 
