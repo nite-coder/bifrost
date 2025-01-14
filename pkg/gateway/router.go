@@ -56,17 +56,14 @@ func (n *node) addChild(child *node, nodeType nodeType) {
 			Node: child,
 		}
 
-		isFound := false
 		for _, cc := range n.prefixChildren {
 			if cc.Path == child.path {
 				cc.Node = child
-				break
+				return
 			}
 		}
 
-		if !isFound {
-			n.prefixChildren = append(n.prefixChildren, c)
-		}
+		n.prefixChildren = append(n.prefixChildren, c)
 
 		sort.Slice(n.prefixChildren, func(i, j int) bool {
 			return len(n.prefixChildren[i].Path) > len(n.prefixChildren[j].Path)
@@ -80,17 +77,14 @@ func (n *node) addChild(child *node, nodeType nodeType) {
 			Node: child,
 		}
 
-		isFound := false
 		for _, cc := range n.generalChildren {
 			if cc.Path == child.path {
 				cc.Node = child
-				break
+				return
 			}
 		}
 
-		if !isFound {
-			n.generalChildren = append(n.generalChildren, c)
-		}
+		n.generalChildren = append(n.generalChildren, c)
 
 		sort.Slice(n.generalChildren, func(i, j int) bool {
 			return len(n.generalChildren[i].Path) > len(n.generalChildren[j].Path)
