@@ -88,7 +88,7 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 		}
 	})
 
-	t.Run("prefix match", func(t *testing.T) {
+	t.Run("prefix match 1", func(t *testing.T) {
 		nodeTypes := []nodeType{nodeTypePrefix, nodeTypeGeneral, nodeTypeRegex}
 		route := newRoutes()
 
@@ -113,6 +113,31 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 
 		if statusCode != 202 {
 			t.Errorf("Expected %v for path %s, but got %v", 202, "/", statusCode)
+		}
+	})
+
+	t.Run("prefix match 2", func(t *testing.T) {
+		route := newRoutes()
+
+		_ = route.Add(config.RouteOptions{
+			Methods: []string{"GET"},
+			Paths:   []string{"^~ /"},
+		}, generalkHandler)
+
+		_ = route.Add(config.RouteOptions{
+			Methods: []string{"GET"},
+			Paths:   []string{"^~ /order_book"},
+		}, prefixHandler)
+
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		c.Request.URI().SetPath("/order_book")
+
+		route.ServeHTTP(context.Background(), c)
+		statusCode := c.Response.StatusCode()
+
+		if statusCode != 202 {
+			t.Errorf("Expected %v for path %s, but got %v", 202, "/market/btc", statusCode)
 		}
 	})
 
@@ -177,6 +202,29 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 
 		if statusCode != 204 {
 			t.Errorf("Expected %v for path %s, but got %v", 204, "/", statusCode)
+		}
+	})
+
+	t.Run("general match 2", func(t *testing.T) {
+		route := newRoutes()
+
+		_ = route.Add(config.RouteOptions{
+			Paths:   []string{"/"},
+		}, prefixHandler)
+
+		_ = route.Add(config.RouteOptions{
+			Paths:   []string{"/mock"},
+		}, generalkHandler)
+
+		c := app.NewContext(0)
+		c.Request.SetMethod("POST")
+		c.Request.URI().SetPath("/mock")
+
+		route.ServeHTTP(context.Background(), c)
+		statusCode := c.Response.StatusCode()
+
+		if statusCode != 204 {
+			t.Errorf("Expected %v for path %s, but got %v", 204, "/market/btc", statusCode)
 		}
 	})
 

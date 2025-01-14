@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -21,13 +22,18 @@ const (
 	nodeTypeRegex
 )
 
+type Children struct {
+	Path string
+	Node *node
+}
+
 // node represents a node in the Trie
 type node struct {
 	path            string           // Path name of the node
 	children        map[string]*node // Child nodes, indexed by path name
 	handler         *methodHandler   // Handler functions
-	prefixChildren  map[string]*node
-	generalChildren map[string]*node
+	prefixChildren  []*Children
+	generalChildren []*Children
 }
 
 // newNode creates a new node
@@ -36,8 +42,8 @@ func newNode(path string) *node {
 		path:            path,
 		children:        make(map[string]*node),
 		handler:         &methodHandler{handlers: make(map[string][]app.HandlerFunc)},
-		prefixChildren:  make(map[string]*node),
-		generalChildren: make(map[string]*node),
+		prefixChildren:  make([]*Children, 0),
+		generalChildren: make([]*Children, 0),
 	}
 }
 
@@ -45,11 +51,51 @@ func newNode(path string) *node {
 func (n *node) addChild(child *node, nodeType nodeType) {
 	switch nodeType {
 	case nodeTypePrefix:
-		n.prefixChildren[child.path] = child
+		c := &Children{
+			Path: child.path,
+			Node: child,
+		}
+
+		isFound := false
+		for _, cc := range n.prefixChildren {
+			if cc.Path == child.path {
+				cc.Node = child
+				break
+			}
+		}
+
+		if !isFound {
+			n.prefixChildren = append(n.prefixChildren, c)
+		}
+
+		sort.Slice(n.prefixChildren, func(i, j int) bool {
+			return len(n.prefixChildren[i].Path) > len(n.prefixChildren[j].Path)
+		})
+
 	case nodeTypeExact:
 		n.children[child.path] = child
 	case nodeTypeGeneral:
-		n.generalChildren[child.path] = child
+		c := &Children{
+			Path: child.path,
+			Node: child,
+		}
+
+		isFound := false
+		for _, cc := range n.generalChildren {
+			if cc.Path == child.path {
+				cc.Node = child
+				break
+			}
+		}
+
+		if !isFound {
+			n.generalChildren = append(n.generalChildren, c)
+		}
+
+		sort.Slice(n.generalChildren, func(i, j int) bool {
+			return len(n.generalChildren[i].Path) > len(n.generalChildren[j].Path)
+		})
+
 	default:
 	}
 }
@@ -58,16 +104,20 @@ func (n *node) addChild(child *node, nodeType nodeType) {
 func (n *node) findChildByName(name string, nodeType nodeType) *node {
 	switch nodeType {
 	case nodeTypePrefix:
-		if child, ok := n.prefixChildren[name]; ok {
-			return child
+		for _, cc := range n.prefixChildren {
+			if cc.Path == name {
+				return cc.Node
+			}
 		}
 	case nodeTypeExact:
 		if child, ok := n.children[name]; ok {
 			return child
 		}
 	case nodeTypeGeneral:
-		if child, ok := n.generalChildren[name]; ok {
-			return child
+		for _, cc := range n.generalChildren {
+			if cc.Path == name {
+				return cc.Node
+			}
 		}
 	default:
 		return nil
@@ -83,15 +133,15 @@ func (n *node) matchChildByName(name string, nodeType nodeType) *node {
 			return child
 		}
 	case nodeTypePrefix:
-		for _, prefix := range n.prefixChildren {
-			if prefix.path == "/" || strings.HasPrefix(name, prefix.path) {
-				return prefix
+		for _, cc := range n.prefixChildren {
+			if cc.Path == "/" || strings.HasPrefix(name, cc.Path) {
+				return cc.Node
 			}
 		}
 	case nodeTypeGeneral:
-		for _, general := range n.generalChildren {
-			if general.path == "/" || strings.HasPrefix(name, general.path) {
-				return general
+		for _, cc := range n.generalChildren {
+			if cc.Path == "/" || strings.HasPrefix(name, cc.Path) {
+				return cc.Node
 			}
 		}
 	default:
