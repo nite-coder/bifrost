@@ -24,7 +24,7 @@ const (
 func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 	labels := make(prom.Labels)
 
-	serverID := c.GetString(variable.ServerID)
+	serverID := variable.GetString(variable.ServerID, c)
 	labels[labelServer] = defaultValIfEmpty(serverID, unknownLabelValue)
 	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(c.Response.Header.StatusCode()), unknownLabelValue)
@@ -41,7 +41,7 @@ func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 func genUpstreamDurationLabels(c *app.RequestContext) prom.Labels {
 	labels := make(prom.Labels)
 
-	serverID := c.GetString(variable.ServerID)
+	serverID := variable.GetString(variable.ServerID, c)
 	labels[labelServer] = defaultValIfEmpty(serverID, unknownLabelValue)
 	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
 
@@ -78,7 +78,7 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	}
 
 	info := c.GetTraceInfo().Stats()
-	serverID := c.GetString(variable.ServerID)
+	serverID := variable.GetString(variable.ServerID, c)
 
 	httpStart := info.GetEvent(stats.HTTPStart)
 	httpFinish := info.GetEvent(stats.HTTPFinish)
@@ -114,46 +114,46 @@ func NewTracer(opts ...Option) tracer.Tracer {
 		opts.apply(cfg)
 	}
 
-	requestSizeTotalCounter := prom.NewCounterVec(
+	httpRequestSizeTotalCounter := prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "bifrost_request_size_total",
+			Name: "request_size_total",
 			Help: "the server received request body size, unit byte.",
 		},
 		[]string{labelServer},
 	)
-	prom.MustRegister(requestSizeTotalCounter)
+	prom.MustRegister(httpRequestSizeTotalCounter)
 
-	responseSizeTotalCounter := prom.NewCounterVec(
+	httpResponseSizeTotalCounter := prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "bifrost_response_size_total",
+			Name: "http_response_size_total",
 			Help: "the server send response body size, unit byte.",
 		},
 		[]string{labelServer},
 	)
-	prom.MustRegister(responseSizeTotalCounter)
+	prom.MustRegister(httpResponseSizeTotalCounter)
 
-	requestTotalCounter := prom.NewCounterVec(
+	httpRequestTotalCounter := prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "bifrost_request_total",
+			Name: "http_request_total",
 			Help: "Total number of HTTPs completed by the server, regardless of success or failure",
 		},
 		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
 	)
-	prom.MustRegister(requestTotalCounter)
+	prom.MustRegister(httpRequestTotalCounter)
 
-	requestDurationHistogram := prom.NewHistogramVec(
+	httpRequestDurationHistogram := prom.NewHistogramVec(
 		prom.HistogramOpts{
-			Name:    "bifrost_request_duration",
+			Name:    "http_request_duration",
 			Help:    "Latency (seconds) of HTTP that had been application-level handled by the server",
 			Buckets: cfg.buckets,
 		},
 		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
 	)
-	prom.MustRegister(requestDurationHistogram)
+	prom.MustRegister(httpRequestDurationHistogram)
 
 	bifrostDurationHistogram := prom.NewHistogramVec(
 		prom.HistogramOpts{
-			Name:    "bifrost_bifrost_duration",
+			Name:    "bifrost_duration",
 			Help:    "Time taken for Bifrost to route a request and run all configured middlewares",
 			Buckets: cfg.buckets,
 		},
@@ -163,7 +163,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 
 	upstreamDurationHistogram := prom.NewHistogramVec(
 		prom.HistogramOpts{
-			Name:    "bifrost_upstream_duration",
+			Name:    "upstream_duration",
 			Help:    "Latency (seconds) of HTTP that had been sent to upstream server from server",
 			Buckets: cfg.buckets,
 		},
@@ -174,10 +174,10 @@ func NewTracer(opts ...Option) tracer.Tracer {
 	// TODO: add total connections
 
 	return &serverTracer{
-		requestSizeTotalCounter:   requestSizeTotalCounter,
-		respoonseSizeTotalCounter: responseSizeTotalCounter,
-		requestTotalCounter:       requestTotalCounter,
-		requestDurationHistogram:  requestDurationHistogram,
+		requestSizeTotalCounter:   httpRequestSizeTotalCounter,
+		respoonseSizeTotalCounter: httpResponseSizeTotalCounter,
+		requestTotalCounter:       httpRequestTotalCounter,
+		requestDurationHistogram:  httpRequestDurationHistogram,
 		bifrostDurationHistogram:  bifrostDurationHistogram,
 		upstreamDurationHistogram: upstreamDurationHistogram,
 	}
