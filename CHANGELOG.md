@@ -7,7 +7,9 @@
 - chore: upgrade hertz package to v0.9.5
 - feat: load config from default config path when config path is empty.
 - feat: support systemd init script.
-- fix: fix router map order issue.
+- fix: order of routes issue
+- fix: promethus server name is unkonwn issue
+- fix: validate promethus serrver_id in config
 - [[#7](https://github.com/nite-coder/bifrost/pull/7)]: upgrade and rename access log directives
 - [[#8](https://github.com/nite-coder/bifrost/pull/8)]: new response-transformer middleware
 

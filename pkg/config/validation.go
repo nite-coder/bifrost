@@ -15,8 +15,8 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
-// ValidateMapping checks if the config's value mapping is valid.  For example, the server in route must be finded in the servers
-func ValidateMapping(mainOpts Options) error {
+// ValidateConfigAfterLoadDynamic checks if the config's value mapping is valid.  For example, the server in route must be finded in the servers
+func ValidateConfigAfterLoadDynamic(mainOpts Options) error {
 	if len(mainOpts.Servers) == 0 {
 		return errors.New("no server found.  please add one server at lease")
 	}
@@ -71,7 +71,12 @@ func ValidateMapping(mainOpts Options) error {
 		}
 	}
 
-	err := validateFQDN(mainOpts)
+	err := validateMetrics(mainOpts)
+	if err != nil {
+		return err
+	}
+
+	err = validateFQDN(mainOpts)
 	if err != nil {
 		return err
 	}
@@ -82,12 +87,7 @@ func ValidateMapping(mainOpts Options) error {
 // ValidateConfig checks if the config's values are valid, but does not check if the config's value mapping is valid
 func ValidateConfig(mainOpts Options) error {
 
-	err := validateMetrics(mainOpts)
-	if err != nil {
-		return err
-	}
-
-	err = validateTracing(mainOpts.Tracing)
+	err := validateTracing(mainOpts.Tracing)
 	if err != nil {
 		return err
 	}

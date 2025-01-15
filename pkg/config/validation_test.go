@@ -29,7 +29,7 @@ func TestUpstreamDNS(t *testing.T) {
 		},
 	}
 
-	err := ValidateMapping(options)
+	err := ValidateConfigAfterLoadDynamic(options)
 	assert.NoError(t, err)
 
 	options.Upstreams["test"] = UpstreamOptions{
@@ -40,6 +40,6 @@ func TestUpstreamDNS(t *testing.T) {
 		},
 	}
 
-	err = ValidateMapping(options)
+	err = ValidateConfigAfterLoadDynamic(options)
 	assert.ErrorIs(t, err, dns.ErrNotFound)
 }
