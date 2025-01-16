@@ -52,7 +52,7 @@ func TestInitialize(t *testing.T) {
 			name: "single redis with invalid ping",
 			options: []config.RedisOptions{
 				{
-					Addrs: []string{"localhost:6379"},
+					Addrs: []string{"localhost:6380"},
 					ID:    "test",
 				},
 			},

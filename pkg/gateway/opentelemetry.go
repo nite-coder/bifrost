@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"context"
-	"net/url"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -47,18 +46,14 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 		opts.Timeout = 10 * time.Second
 	}
 
-	addr, err := url.Parse(opts.Endpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	addr.Scheme = strings.ToLower(addr.Scheme)
+	opts.Endpoint = strings.ToLower(opts.Endpoint)
 
 	var exporter sdktrace.SpanExporter
+	var err error
 
-	if strings.EqualFold(addr.Scheme, "https") || strings.EqualFold(addr.Scheme, "http") {
+	if strings.HasPrefix(opts.Endpoint, "https") || strings.HasPrefix(opts.Endpoint, "http") {
 		tracingOptions := []otlptracehttp.Option{
-			otlptracehttp.WithEndpoint(addr.Host),
+			otlptracehttp.WithEndpoint(opts.Endpoint),
 			otlptracehttp.WithTimeout(opts.Timeout),
 		}
 

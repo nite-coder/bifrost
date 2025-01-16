@@ -164,18 +164,18 @@ tracing:
   queue_size: 50000
 ```
 
-| Field         | Default                   | Description                                                                                                              |
-| ------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| enabled       | false                     | Enables opentelemetry tracing support                                                                                    |
-| service_name  | `bifrsot`                 | The service name of the gateway                                                                                          |
-| propagators   | `tracecontext`, `baggage` | The supported propagators are: `tracecontext`, `baggage`, `b3`, `jaeger`                                                 |
-| endpoint      | `localhost:4318`          | The address and port of the otel collector                                                                               |
-| insecure      | false                     | Certificate verification                                                                                                 |
-| sampling_rate | 1.0                       | otlp collector grpc port                                                                                                 |
-| batch_size    | 100                       | Maximum number of spans to be sent in a single batch export                                                              |
-| flush         | `5s`                      | Maximum time to wait before sending a batch of spans, regardless of batch size                                           |
-| queue_size    | 10000                     | Maximum number of spans that can be queued before being dropped                                                          |
-| timeout       | `10s`                     | Maximum duration allowed for the entire trace export operation, including connection establishment and data transmission |
+| Field         | Default                   | Description                                                                                                                                                           |
+| ------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| enabled       | `false`                   | Enables opentelemetry tracing support                                                                                                                                 |
+| service_name  | `bifrsot`                 | The service name of the gateway                                                                                                                                       |
+| propagators   | `tracecontext`, `baggage` | The supported propagators are: `tracecontext`, `baggage`, `b3`, `jaeger`                                                                                              |
+| endpoint      | `localhost:4318`          | The address and port of the otel collector.  If the endpoint starts with http or https, Bifrost will use the HTTP protocol; otherwise, it will use the gRPC protocol. |
+| insecure      | `false`                   | Certificate verification                                                                                                                                              |
+| sampling_rate | `1.0`                     | A given fraction of traces. Fractions >= 1 will always sample. Fractions < 0 are treated as zero.                                                                     |
+| batch_size    | `100`                     | Maximum number of spans to be sent in a single batch export                                                                                                           |
+| flush         | `5s`                      | Maximum time to wait before sending a batch of spans, regardless of batch size                                                                                        |
+| queue_size    | `10000`                   | Maximum number of spans that can be queued before being dropped                                                                                                       |
+| timeout       | `10s`                     | Maximum duration allowed for the entire trace export operation, including connection establishment and data transmission                                              |
 
 ## middlewares
 
@@ -225,14 +225,14 @@ access_logs:
       "duration":$duration}
 ```
 
-| Field          | Default               | Description                                                                      |
-| -------------- | --------------------- | -------------------------------------------------------------------------------- |
-| output         |                       | Output location; supports `stderr` or file path;                                 |
-| buffering_size | 64 KB                 | Output buffer size, in bytes                                                     |
-| time_format    | `2006-01-02 15:04:05` | Time format; use [golang time format](https://yourbasic.org/golang/format-parse-string-time-date-example/)                                               |
-| escape         | `none`                | Escape characters; options are `none`, `json`, `default`                         |
-| template       |                       | Request log format                                                               |
-| flush          | `0`                   | Time interval for writing logs to disk; `0`: allow the OS to flush logs to disk. |
+| Field          | Default               | Description                                                                                                |
+| -------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- |
+| output         |                       | Output location; supports `stderr` or file path;                                                           |
+| buffering_size | 64 KB                 | Output buffer size, in bytes                                                                               |
+| time_format    | `2006-01-02 15:04:05` | Time format; use [golang time format](https://yourbasic.org/golang/format-parse-string-time-date-example/) |
+| escape         | `none`                | Escape characters; options are `none`, `json`, `default`                                                   |
+| template       |                       | Request log format                                                                                         |
+| flush          | `0`                   | Time interval for writing logs to disk; `0`: allow the OS to flush logs to disk.                           |
 
 ## servers
 
