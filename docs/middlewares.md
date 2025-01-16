@@ -100,6 +100,18 @@ routes:
 
 ### Tracing
 
+The tracing middleware follows [official OpenTelemetry semantic conventions v1.26.0](https://github.com/open-telemetry/semantic-conventions/blob/v1.26.0/docs/http/http-spans.md).
+The middleware create a trace every request.  You can also use `$var.trace_id` to print trace id in access log.
+
+```yaml
+servers:
+  apiv1:
+    bind: ":8001"
+    reuse_port: true
+    middlewares:
+      - type: tracing
+```
+
 ### TrafficSplitter
 
 ## Custom Middlewares

@@ -365,6 +365,8 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case UpstreamRequestQuery:
 		query := cast.B2S(c.Request.QueryString())
 		return query, true
+	case UpstreamDuration:
+		return c.GetString(UpstreamDuration), true
 	case Duration:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {

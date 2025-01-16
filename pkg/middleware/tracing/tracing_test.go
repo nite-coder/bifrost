@@ -6,7 +6,6 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/middleware"
-	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -34,9 +33,7 @@ func TestTracingMiddleware(t *testing.T) {
 
 	m(context.Background(), hzCtx)
 
-	traceID, found := variable.Get("$http.response.header.x-trace-id", hzCtx)
+	traceID, found := hzCtx.Get(traceIDKey)
 	assert.True(t, found)
 	assert.NotEmpty(t, traceID)
-
-	assert.Equal(t, traceID, hzCtx.Response.Header.Get("x-trace-id"))
 }

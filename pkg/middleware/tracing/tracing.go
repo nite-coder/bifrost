@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/tracing"
@@ -18,43 +17,22 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const traceIDKey = "trace_id"
+
 func init() {
 	_ = middleware.RegisterMiddleware("tracing", func(params map[string]any) (app.HandlerFunc, error) {
-		opts := &Options{}
-
-		config := &mapstructure.DecoderConfig{
-			Metadata: nil,
-			Result:   opts,
-			TagName:  "mapstructure",
-		}
-
-		decoder, err := mapstructure.NewDecoder(config)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := decoder.Decode(params); err != nil {
-			return nil, err
-		}
-
-		m := NewMiddleware(*opts)
+		m := NewMiddleware()
 		return m.ServeHTTP, nil
 	})
 }
 
 type TracingMiddleware struct {
-	tracer  trace.Tracer
-	options *Options
+	tracer trace.Tracer
 }
 
-type Options struct {
-	ResponseHeader string `mapstructure:"response_header"`
-}
-
-func NewMiddleware(options Options) *TracingMiddleware {
+func NewMiddleware() *TracingMiddleware {
 	return &TracingMiddleware{
-		options: &options,
-		tracer:  otel.Tracer("bifrost"),
+		tracer: otel.Tracer("bifrost"),
 	}
 }
 
@@ -81,7 +59,6 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 	reqScheme := variable.GetString(variable.HTTPRequestScheme, c)
 	reqPath := variable.GetString(variable.HTTPRequestPath, c)
 	reqQuery := variable.GetString(variable.HTTPRequestQuery, c)
-	userAgent := string(c.Request.Header.UserAgent())
 	networkProtocol := variable.GetString(variable.HTTPRequestProtocol, c)
 	clientIP := c.ClientIP()
 
@@ -106,7 +83,6 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 			semconv.URLScheme(reqScheme),
 			semconv.URLPath(reqPath),
 			semconv.URLQuery(reqQuery),
-			semconv.UserAgentOriginal(userAgent),
 			semconv.NetworkProtocolName(networkProtocol),
 			semconv.ClientAddress(clientIP),
 			semconv.NetworkLocalAddress(hostname),
@@ -126,13 +102,10 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 
 	if len(traceID) > 0 {
 		// add trace_id to logger
-		logger = logger.With(slog.String("trace_id", traceID))
+		logger = logger.With(slog.String(traceIDKey, traceID))
 		ctx = log.NewContext(ctx, logger)
+		c.Set(traceIDKey, traceID)
 	}
 
 	c.Next(ctx)
-
-	if m.options.ResponseHeader != "" && len(traceID) > 0 {
-		c.Response.Header.Set(m.options.ResponseHeader, traceID)
-	}
 }
