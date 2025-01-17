@@ -18,12 +18,12 @@ import (
 // ValidateConfig checks if the config's values are valid, but does not check if the config's value mapping is valid
 func ValidateConfig(mainOpts Options) error {
 
-	err := validateTracing(mainOpts.Tracing)
+	err := validateLogging(mainOpts.Logging)
 	if err != nil {
 		return err
 	}
 
-	err = validateLogging(mainOpts.Logging)
+	err = validateTracing(mainOpts.Tracing)
 	if err != nil {
 		return err
 	}
@@ -33,12 +33,7 @@ func ValidateConfig(mainOpts Options) error {
 		return err
 	}
 
-	err = validateServers(mainOpts)
-	if err != nil {
-		return err
-	}
-
-	err = validateRoutes(mainOpts.Routes)
+	err = validateMetrics(mainOpts)
 	if err != nil {
 		return err
 	}
@@ -48,61 +43,17 @@ func ValidateConfig(mainOpts Options) error {
 		return err
 	}
 
-	if len(mainOpts.Servers) == 0 {
-		return errors.New("no server found.  please add one server at lease")
+	err = validateServices(mainOpts)
+	if err != nil {
+		return err
 	}
 
-	for serverID, server := range mainOpts.Servers {
-		for _, m := range server.Middlewares {
-			if len(m.Use) > 0 {
-				if _, found := mainOpts.Middlewares[m.Use]; !found {
-					return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Use, serverID)
-				}
-			}
-
-			if len(m.Type) > 0 {
-				hander := middleware.FindHandlerByType(m.Type)
-				if hander == nil {
-					return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Type, serverID)
-				}
-			}
-		}
+	err = validateRoutes(mainOpts)
+	if err != nil {
+		return err
 	}
 
-	for routeID, route := range mainOpts.Routes {
-		for _, serverID := range route.Servers {
-			if _, found := mainOpts.Servers[serverID]; !found {
-				return fmt.Errorf("the server '%s' can't be found in the route '%s'", serverID, routeID)
-			}
-		}
-
-		for _, middleware := range route.Middlewares {
-			if len(middleware.Use) > 0 {
-				if _, found := mainOpts.Middlewares[middleware.Use]; !found {
-					return fmt.Errorf("the middleware '%s' can't be found in the route '%s'", middleware.Use, routeID)
-				}
-			}
-		}
-	}
-
-	for serviceID, service := range mainOpts.Services {
-		for _, m := range service.Middlewares {
-			if len(m.Use) > 0 {
-				if _, found := mainOpts.Middlewares[m.Use]; !found {
-					return fmt.Errorf("the middleware '%s' can't be found in the service '%s'", m.Use, serviceID)
-				}
-			}
-
-			if len(m.Type) > 0 {
-				hander := middleware.FindHandlerByType(m.Type)
-				if hander == nil {
-					return fmt.Errorf("the middleware '%s' can't be found in the service '%s'", m.Type, serviceID)
-				}
-			}
-		}
-	}
-
-	err = validateMetrics(mainOpts)
+	err = validateServers(mainOpts)
 	if err != nil {
 		return err
 	}
@@ -181,6 +132,27 @@ func validateAccessLog(options map[string]AccessLogOptions) error {
 
 func validateServers(mainOptions Options) error {
 
+	if len(mainOptions.Servers) == 0 {
+		return errors.New("no server found.  please add one server at lease")
+	}
+
+	for serverID, server := range mainOptions.Servers {
+		for _, m := range server.Middlewares {
+			if len(m.Use) > 0 {
+				if _, found := mainOptions.Middlewares[m.Use]; !found {
+					return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Use, serverID)
+				}
+			}
+
+			if len(m.Type) > 0 {
+				hander := middleware.FindHandlerByType(m.Type)
+				if hander == nil {
+					return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Type, serverID)
+				}
+			}
+		}
+	}
+
 	for id, serverOptions := range mainOptions.Servers {
 		if serverOptions.Bind == "" {
 			msg := fmt.Sprintf("the bind can't be empty for server '%s'", id)
@@ -223,17 +195,68 @@ func validateServers(mainOptions Options) error {
 				return newInvalidConfig(fullpath, serverOptions.AccessLogID, msg)
 			}
 		}
+
+		for _, m := range serverOptions.Middlewares {
+			if len(m.Use) > 0 {
+				if _, found := mainOptions.Middlewares[m.Use]; !found {
+					return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Use, serverOptions.ID)
+				}
+			}
+
+			if len(m.Type) > 0 {
+				hander := middleware.FindHandlerByType(m.Type)
+				if hander == nil {
+					return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Type, serverOptions.ID)
+				}
+			}
+		}
 	}
 
 	return nil
 }
 
-func validateRoutes(options map[string]RouteOptions) error {
-	for id, opt := range options {
-		if opt.ServiceID == "" {
-			msg := fmt.Sprintf("the 'service_id' can't be empty for the route '%s'", id)
-			fullpath := []string{"routes", id, "service_id"}
+func validateRoutes(mainOptions Options) error {
+	for routeID, route := range mainOptions.Routes {
+		if route.ServiceID == "" {
+			msg := fmt.Sprintf("the 'service_id' can't be empty for the route '%s'", routeID)
+			fullpath := []string{"routes", routeID, "service_id"}
 			return newInvalidConfig(fullpath, "", msg)
+		}
+
+		for _, serverID := range route.Servers {
+			if _, found := mainOptions.Servers[serverID]; !found {
+				return fmt.Errorf("the server '%s' can't be found in the route '%s'", serverID, routeID)
+			}
+		}
+
+		for _, middleware := range route.Middlewares {
+			if len(middleware.Use) > 0 {
+				if _, found := mainOptions.Middlewares[middleware.Use]; !found {
+					return fmt.Errorf("the middleware '%s' can't be found in the route '%s'", middleware.Use, routeID)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func validateServices(mainOptions Options) error {
+
+	for serviceID, service := range mainOptions.Services {
+		for _, m := range service.Middlewares {
+			if len(m.Use) > 0 {
+				if _, found := mainOptions.Middlewares[m.Use]; !found {
+					return fmt.Errorf("the middleware '%s' can't be found in the service '%s'", m.Use, serviceID)
+				}
+			}
+
+			if len(m.Type) > 0 {
+				hander := middleware.FindHandlerByType(m.Type)
+				if hander == nil {
+					return fmt.Errorf("the middleware '%s' can't be found in the service '%s'", m.Type, serviceID)
+				}
+			}
 		}
 	}
 
@@ -363,7 +386,9 @@ func validateTracing(opts TracingOptions) error {
 
 	for _, propagator := range opts.Propagators {
 		switch propagator {
-		case "", "b3", "tracecontext", "baggage", "jaeger":
+		case "b3", "tracecontext", "baggage", "jaeger": // ok
+		case "":
+			return errors.New("the propagator can't be empty for the tracing")
 		default:
 			return fmt.Errorf("the propagator '%s' is not supported in tracing", propagator)
 		}

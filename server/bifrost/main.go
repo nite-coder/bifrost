@@ -59,6 +59,12 @@ func main() {
 			},
 		},
 		Action: func(cCtx *cli.Context) error {
+			defer func() {
+				if err := recover(); err != nil {
+					slog.Error("unknown error", "error", err)
+				}
+			}()
+
 			var err error
 
 			_ = initialize.Middleware()

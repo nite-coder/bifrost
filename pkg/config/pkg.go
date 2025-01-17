@@ -42,6 +42,7 @@ func Load(path string) (Options, error) {
 			}
 
 			path = dpath
+			break
 		}
 
 		if path == "" {
@@ -64,7 +65,7 @@ func Load(path string) (Options, error) {
 		return mainOpts, err
 	}
 
-	dp, mainOpts, err := LoadDynamic(mainOpts)
+	dp, mainOpts, err := loadDynamic(mainOpts)
 	if err != nil {
 		return mainOpts, fmt.Errorf("fail to load dynamic config: %w", err)
 	}
@@ -91,7 +92,7 @@ func Load(path string) (Options, error) {
 	return mainOpts, nil
 }
 
-func LoadDynamic(mainOptions Options) (provider.Provider, Options, error) {
+func loadDynamic(mainOptions Options) (provider.Provider, Options, error) {
 
 	// use file provider if enabled
 	if mainOptions.Providers.File.Enabled {

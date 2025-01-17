@@ -27,11 +27,16 @@ func TestGatewayRun(t *testing.T) {
 	}
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Run panic: %v", r)
+			}
+		}()
+
 		err := Run(options)
 		assert.NoError(t, err)
 	}()
 
-	time.Sleep(2 * time.Second)
-
+	time.Sleep(3 * time.Second)
 	shutdown(context.Background(), true)
 }

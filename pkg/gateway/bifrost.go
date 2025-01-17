@@ -132,7 +132,7 @@ func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 // The isReload parameter indicates whether the function is being called during a reload operation.
 // The function returns a pointer to Bifrost and an error.
 func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
-	// validate
+	// validate config file
 	err := config.ValidateConfig(mainOptions)
 	if err != nil {
 		return nil, err
@@ -239,7 +239,8 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 		}
 
 		// deep copy; each server has only one access logger tracer
-		myTracers := append([]tracer.Tracer(nil), tracers...)
+		myTracers := make([]tracer.Tracer, len(tracers))
+		copy(myTracers, tracers)
 
 		if len(server.AccessLogID) > 0 {
 			_, found := mainOptions.AccessLogs[server.AccessLogID]
