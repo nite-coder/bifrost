@@ -28,3 +28,10 @@ func TestConfigFailCheck(t *testing.T) {
 	_, err = Load(configPath)
 	assert.Error(t, err)
 }
+
+func TestConfigAfterDynamicLoad(t *testing.T) {
+	configPath := "./../../test/config/load_after_dynamic.yaml"
+	_, err := Load(configPath)
+
+	assert.Error(t, err)
+}

@@ -1,7 +1,6 @@
 package file
 
 import (
-	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -53,35 +52,47 @@ func (p *FileProvider) Open() ([]*ContentInfo, error) {
 	var contents []*ContentInfo
 
 	for _, path := range p.options.Paths {
-		err := filepath.WalkDir(path, func(filePath string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if !d.IsDir() {
-				fileExtension := filepath.Ext(filePath)
-
-				if len(fileExtension) == 0 {
-					return nil
-				}
-
-				if !slices.Contains(p.options.Extensions, fileExtension) {
-					return nil
-				}
-
-				content, err := os.ReadFile(filePath)
-				if err != nil {
-					return err
-				}
-				contents = append(contents, &ContentInfo{
-					Content: string(content),
-					Path:    filePath,
-				})
-			}
-			return nil
-		})
+		// Check if the path is a file or a directory
+		info, err := os.Stat(path)
 		if err != nil {
 			return nil, err
+		}
+
+		if info.IsDir() {
+			// If it's a directory, read files in the directory (non-recursive)
+			entries, err := os.ReadDir(path)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, entry := range entries {
+				if !entry.IsDir() { // Skip subdirectories
+					filePath := filepath.Join(path, entry.Name())
+					fileExtension := filepath.Ext(filePath)
+
+					// Check if the file extension is in the allowed list
+					if len(fileExtension) > 0 && slices.Contains(p.options.Extensions, fileExtension) {
+						content, err := os.ReadFile(filePath)
+						if err != nil {
+							return nil, err
+						}
+						contents = append(contents, &ContentInfo{
+							Content: string(content),
+							Path:    filePath,
+						})
+					}
+				}
+			}
+		} else {
+			// If it's a file, read it directly
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return nil, err
+			}
+			contents = append(contents, &ContentInfo{
+				Content: string(content),
+				Path:    path,
+			})
 		}
 	}
 

@@ -97,11 +97,11 @@ providers:
       - "./conf"
 ```
 
-| Field      | Default                | Description                                                                                                         |
-| ---------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| enabled    | false                  | Enables the file provider                                                                                           |
-| extensions | `.yaml`,`.yml`, `json` | Allowed file extensions                                                                                             |
-| paths      |                        | Directories or files to be loaded.  Recursively traverse all subdirectories and files under the specified directory |
+| Field      | Default                | Description                                               |
+| ---------- | ---------------------- | --------------------------------------------------------- |
+| enabled    | false                  | Enables the file provider                                 |
+| extensions | `.yaml`,`.yml`, `json` | Allowed file extensions                                   |
+| paths      |                        | Directories or files to be loaded.  (Skip subdirectories) |
 
 ## logging
 

@@ -138,11 +138,6 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 		return nil, err
 	}
 
-	err = config.ValidateConfigAfterLoadDynamic(mainOptions)
-	if err != nil {
-		return nil, err
-	}
-
 	tCache := timecache.New(mainOptions.TimerResolution)
 	timecache.Set(tCache)
 

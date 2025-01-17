@@ -64,6 +64,11 @@ func Load(path string) (Options, error) {
 		return mainOpts, err
 	}
 
+	dp, mainOpts, err := LoadDynamic(mainOpts)
+	if err != nil {
+		return mainOpts, fmt.Errorf("fail to load dynamic config: %w", err)
+	}
+
 	err = ValidateConfig(mainOpts)
 	if err != nil {
 		var errInvalidConfig ErrInvalidConfig
@@ -71,16 +76,6 @@ func Load(path string) (Options, error) {
 			line := findConfigurationLine(content, errInvalidConfig.FullPath, errInvalidConfig.Value)
 			return mainOpts, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), path, line)
 		}
-		return mainOpts, err
-	}
-
-	dp, mainOpts, err := LoadDynamic(mainOpts)
-	if err != nil {
-		return mainOpts, fmt.Errorf("fail to load dynamic config: %w", err)
-	}
-
-	err = ValidateConfigAfterLoadDynamic(mainOpts)
-	if err != nil {
 		return mainOpts, err
 	}
 
