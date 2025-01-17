@@ -13,6 +13,7 @@
 - fix: validate promethus serrver_id in config
 - fix: allow tracing endpoint with ip
 - fix: config validation is not correct
+- fix: access log tracer is added to server more than once
 - [[#7](https://github.com/nite-coder/bifrost/pull/7)]: upgrade and rename access log directives
 - [[#8](https://github.com/nite-coder/bifrost/pull/8)]: new response-transformer middleware
 
