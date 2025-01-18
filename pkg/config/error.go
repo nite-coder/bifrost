@@ -15,5 +15,5 @@ func newInvalidConfig(structure []string, value any, message string) ErrInvalidC
 }
 
 func (e ErrInvalidConfig) Error() string {
-	return "invalid config: " + e.Message
+	return e.Message
 }

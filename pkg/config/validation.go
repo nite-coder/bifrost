@@ -33,11 +33,6 @@ func ValidateConfig(mainOpts Options, isFullMode bool) error {
 		return err
 	}
 
-	err = validateMetrics(mainOpts)
-	if err != nil {
-		return err
-	}
-
 	err = validateUpstreams(mainOpts.Upstreams)
 	if err != nil {
 		return err
@@ -54,6 +49,11 @@ func ValidateConfig(mainOpts Options, isFullMode bool) error {
 	}
 
 	err = validateServers(mainOpts, isFullMode)
+	if err != nil {
+		return err
+	}
+
+	err = validateMetrics(mainOpts, isFullMode)
 	if err != nil {
 		return err
 	}
@@ -305,15 +305,21 @@ func validateUpstreams(options map[string]UpstreamOptions) error {
 	return nil
 }
 
-func validateMetrics(options Options) error {
+func validateMetrics(options Options, isFullMode bool) error {
 	if options.Metrics.Prometheus.Enabled {
 		if options.Metrics.Prometheus.ServerID == "" {
 			return errors.New("the server_id can't be empty for the prometheus")
 		}
 
+		if !isFullMode {
+			return nil
+		}
+
 		_, found := options.Servers[options.Metrics.Prometheus.ServerID]
 		if !found {
-			return fmt.Errorf("the server_id '%s' for the prometheus is not found", options.Metrics.Prometheus.ServerID)
+			msg := fmt.Sprintf("the server_id '%s' for the prometheus is not found", options.Metrics.Prometheus.ServerID)
+			structure := []string{"metrics", "prometheus", "server_id"}
+			return newInvalidConfig(structure, options.Metrics.Prometheus.ServerID, msg)
 		}
 	}
 

@@ -82,11 +82,6 @@ func Load(path string) (Options, error) {
 
 	err = ValidateConfig(mainOpts, true)
 	if err != nil {
-		var errInvalidConfig ErrInvalidConfig
-		if errors.As(err, &errInvalidConfig) {
-			line := findConfigurationLine(content, errInvalidConfig.Structure, errInvalidConfig.Value)
-			return mainOpts, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), path, line)
-		}
 		return mainOpts, err
 	}
 

@@ -20,6 +20,7 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Set(ServiceID, "serviceA")
 	hzCtx.Set(UpstreamID, "upstreamA")
 	hzCtx.Set(UpstreamRequestHost, "1.2.3.4")
+	hzCtx.Set(UpstreamResponoseStatusCode, 200)
 
 	tracerInfo := traceinfo.NewTraceInfo()
 	hzCtx.SetTraceInfo(tracerInfo)
@@ -128,6 +129,9 @@ func TestGetDirective(t *testing.T) {
 
 	upstreamProtocol := GetString(UpstreamRequestProtocol, hzCtx)
 	assert.Equal(t, "HTTP/1.1", upstreamProtocol)
+
+	upstreamStatusCode := GetString(UpstreamResponoseStatusCode, hzCtx)
+	assert.Equal(t, "200", upstreamStatusCode)
 
 	userAgent := GetString("$http.request.header.user-Agent", hzCtx)
 	assert.Equal(t, "my_user_agent", userAgent)

@@ -34,7 +34,7 @@ watch: true # Immediate effect
 
 ## timer_resolution
 
-Sets the precision of the gateway's time settings. The default is 1 second, with a minimum setting of 1 millisecond (ms).
+Sets the precision of the gateway's time cache settings. The default is 1 second, with a minimum setting of 1 millisecond (ms).
 
 ```yaml
 timer_resolution: 1ms

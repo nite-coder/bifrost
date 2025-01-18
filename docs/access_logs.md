@@ -4,7 +4,7 @@ The access log currently supports the following directives:
 
 | Directive                        | Description                                                                                                         | Example                                 |
 | :------------------------------- | :------------------------------------------------------------------------------------------------------------------ | :-------------------------------------- |
-| `$time`                          | Time the request log is generated                                                                                   | `2024-03-15 14:30:21`                   |
+| `$time`                          | Time the request log is generated. (use timecache)                                                                  | `2024-03-15 14:30:21`                   |
 | `$hostname`                      | The hostname of server                                                                                              | `sim01`                                 |
 | `$network.peer.address`          | Peer address of the network connection                                                                              | `192.168.1.100`                         |
 | `$service_id`                    | The service id of the request                                                                                       | `user-service-prod`                     |
@@ -34,6 +34,6 @@ The access log currently supports the following directives:
 | `$upstream.request.uri`          | Upstream request uri                                                                                                | `/internal/user/12345`                  |
 | `$upstream.request.protocol`     | Upstream request protocol                                                                                           | `HTTP/1.1`                              |
 | `$upstream.response.status_code` | Upstream response status code                                                                                       | `200`                                   |
-| `$upstream.duration`             | Time taken to process the upstream request                                                                          | `0.125`                                 |
+| `$upstream.duration`             | Time taken to process the upstream request (use timecache)                                                          | `0.125`                                 |
 | `$grpc.status_code`              | GRPC STATUS CODE returned by the upstream target                                                                    | `0`                                     |
 | `$grpc.messaage`                 | GRPC Message returned by the upstream target                                                                        | `OK`                                    |
