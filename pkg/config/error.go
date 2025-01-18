@@ -1,16 +1,16 @@
 package config
 
 type ErrInvalidConfig struct {
-	FullPath []string
-	Value    any
-	Message  string
+	Structure []string
+	Value     any
+	Message   string
 }
 
-func newInvalidConfig(fullPath []string, value any, message string) ErrInvalidConfig {
+func newInvalidConfig(structure []string, value any, message string) ErrInvalidConfig {
 	return ErrInvalidConfig{
-		FullPath: fullPath,
-		Value:    value,
-		Message:  message,
+		Structure: structure,
+		Value:     value,
+		Message:   message,
 	}
 }
 

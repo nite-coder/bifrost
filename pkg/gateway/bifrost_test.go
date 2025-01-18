@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -31,7 +32,7 @@ func TestBifrost(t *testing.T) {
 	options.Metrics.Prometheus.ServerID = "apiv1"
 
 	options.AccessLogs["main"] = config.AccessLogOptions{
-		Output:  "",
+		Output: "",
 		Template: `      {"time":"$time",
       "remote_addr":"$network.peer.address",
       "host": "$http.request.host",
@@ -201,6 +202,8 @@ func TestBifrost(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode())
-		t.Log(resp.String())
+
+		isUnknown := strings.Contains(resp.String(), "unknown")
+		assert.False(t, isUnknown, "metric endpoint has unknown labels")
 	})
 }

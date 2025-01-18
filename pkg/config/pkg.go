@@ -65,16 +65,26 @@ func Load(path string) (Options, error) {
 		return mainOpts, err
 	}
 
+	err = ValidateConfig(mainOpts, false)
+	if err != nil {
+		var errInvalidConfig ErrInvalidConfig
+		if errors.As(err, &errInvalidConfig) {
+			line := findConfigurationLine(content, errInvalidConfig.Structure, errInvalidConfig.Value)
+			return mainOpts, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), path, line)
+		}
+		return mainOpts, err
+	}
+
 	dp, mainOpts, err := loadDynamic(mainOpts)
 	if err != nil {
 		return mainOpts, fmt.Errorf("fail to load dynamic config: %w", err)
 	}
 
-	err = ValidateConfig(mainOpts)
+	err = ValidateConfig(mainOpts, true)
 	if err != nil {
 		var errInvalidConfig ErrInvalidConfig
 		if errors.As(err, &errInvalidConfig) {
-			line := findConfigurationLine(content, errInvalidConfig.FullPath, errInvalidConfig.Value)
+			line := findConfigurationLine(content, errInvalidConfig.Structure, errInvalidConfig.Value)
 			return mainOpts, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), path, line)
 		}
 		return mainOpts, err
@@ -121,7 +131,7 @@ func loadDynamic(mainOptions Options) (provider.Provider, Options, error) {
 			if err != nil {
 				var errInvalidConfig ErrInvalidConfig
 				if errors.As(err, &errInvalidConfig) {
-					line := findConfigurationLine(c.Content, errInvalidConfig.FullPath, errInvalidConfig.Value)
+					line := findConfigurationLine(c.Content, errInvalidConfig.Structure, errInvalidConfig.Value)
 					return nil, mainOptions, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), c.Path, line)
 				}
 
@@ -192,9 +202,9 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 
 	for k, v := range newOptions.Middlewares {
 		if _, found := mainOpts.Middlewares[k]; found {
-			msg := fmt.Sprintf("middleware '%s' is duplicate", k)
-			fullpath := []string{"middlewares", k}
-			return mainOpts, newInvalidConfig(fullpath, "", msg)
+			msg := fmt.Sprintf("middleware '%s' is duplicated", k)
+			structure := []string{"middlewares", k}
+			return mainOpts, newInvalidConfig(structure, "", msg)
 		}
 
 		mainOpts.Middlewares[k] = v
@@ -202,9 +212,9 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 
 	for k, v := range newOptions.Servers {
 		if _, found := mainOpts.Servers[k]; found {
-			msg := fmt.Sprintf("server '%s' is duplicate", k)
-			fullpath := []string{"servers", k}
-			return mainOpts, newInvalidConfig(fullpath, "", msg)
+			msg := fmt.Sprintf("server '%s' is duplicated", k)
+			structure := []string{"servers", k}
+			return mainOpts, newInvalidConfig(structure, "", msg)
 		}
 
 		mainOpts.Servers[k] = v
@@ -212,9 +222,9 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 
 	for k, v := range newOptions.Routes {
 		if _, found := mainOpts.Routes[k]; found {
-			msg := fmt.Sprintf("route '%s' is duplicate", k)
-			fullpath := []string{"routes", k}
-			return mainOpts, newInvalidConfig(fullpath, "", msg)
+			msg := fmt.Sprintf("route '%s' is duplicated", k)
+			structure := []string{"routes", k}
+			return mainOpts, newInvalidConfig(structure, "", msg)
 		}
 
 		mainOpts.Routes[k] = v
@@ -222,9 +232,9 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 
 	for k, v := range newOptions.Services {
 		if _, found := mainOpts.Services[k]; found {
-			msg := fmt.Sprintf("service '%s' is duplicate", k)
-			fullpath := []string{"services", k}
-			return mainOpts, newInvalidConfig(fullpath, "", msg)
+			msg := fmt.Sprintf("service '%s' is duplicated", k)
+			structure := []string{"services", k}
+			return mainOpts, newInvalidConfig(structure, "", msg)
 		}
 
 		mainOpts.Services[k] = v
@@ -232,9 +242,9 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 
 	for k, v := range newOptions.Upstreams {
 		if _, found := mainOpts.Upstreams[k]; found {
-			msg := fmt.Sprintf("upstream '%s' is duplicate", k)
-			fullpath := []string{"upstreams", k}
-			return mainOpts, newInvalidConfig(fullpath, "", msg)
+			msg := fmt.Sprintf("upstream '%s' is duplicated", k)
+			structure := []string{"upstreams", k}
+			return mainOpts, newInvalidConfig(structure, "", msg)
 		}
 
 		mainOpts.Upstreams[k] = v
