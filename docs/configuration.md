@@ -220,19 +220,17 @@ access_logs:
       "upstream_duration":$upstream.duration,
       "upstream_status":$upstream.response.status_code,
       "status":$http.response.status_code,
-      "grpc_status":"$grpc.status_code",
-      "grpc_messaage":"$grpc.message",
-      "duration":$duration}
+      "duration":$http.request.duration}
 ```
 
-| Field          | Type          | Default               | Description                                                                                                |
-| -------------- | ------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- |
-| output         | string        |                       | Output location; supports `stderr` or file path;                                                           |
-| buffering_size | int           | 64 KB                 | Output buffer size, in bytes                                                                               |
-| time_format    | string        | `2006-01-02 15:04:05` | Time format; use [golang time format](https://yourbasic.org/golang/format-parse-string-time-date-example/) |
-| escape         | EscapeType    | `none`                | Escape characters; options are `none`, `json`, `default`                                                   |
-| template       | string        |                       | Request log format                                                                                         |
-| flush          | time.Duration | `0`                   | Time interval for writing logs to disk; `0`: allow the OS to flush logs to disk.                           |
+| Field          | Type            | Default               | Description                                                                                                |
+| -------------- | --------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- |
+| output         | `string`        |                       | Output location; supports `stderr` or file path;                                                           |
+| buffering_size | `int`           | 64 KB                 | Output buffer size, in bytes                                                                               |
+| time_format    | `string`        | `2006-01-02 15:04:05` | Time format; use [golang time format](https://yourbasic.org/golang/format-parse-string-time-date-example/) |
+| escape         | `string`        | `none`                | Escape characters; options are `none`, `json`, `default`                                                   |
+| template       | `string`        |                       | Request log format                                                                                         |
+| flush          | `time.Duration` | `0`                   | Time interval for writing logs to disk; `0`: allow the OS to flush logs to disk.                           |
 
 ## servers
 

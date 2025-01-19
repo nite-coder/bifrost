@@ -24,7 +24,7 @@ The access log currently supports the following directives:
 | `$http.response.size`            | The total size of the response in bytes. This should be the total number of bytes sent over the wire (unit:bye)     | `832000`                                |
 | `$http.response.header.<key>`    | HTTP response headers, `<key>` being the normalized HTTP Header name (lowercase), the value being the header values | `ab123456-7890-1234-5678-90abcdef1234`  |
 | `$http.response.status_code`     | HTTP response status code                                                                                           | `200`                                   |
-| `$duration`                      | Total time from when the HTTP request was sent to when a response was returned                                      | `0.250`                                 |
+| `$http.request.duration`  | Duration of HTTP server requests                                                                                    | `0.250`                                 |
 | `$upstream.request`              | Upstream request info                                                                                               | `GET /users/profile?id=12345 HTTP/1.1`  |
 | `$upstream.request.scheme`       | Upstream request scheme                                                                                             | `http`                                  |
 | `$upstream.request.host`         | Upstream request host                                                                                               | `10.0.0.50:8080`                        |

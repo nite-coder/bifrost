@@ -46,7 +46,7 @@ func TestBifrost(t *testing.T) {
       "status":$http.response.status_code,
       "grpc_status":"$grpc.status_code",
       "grpc_messaage":"$grpc.message",
-      "duration":$duration}`,
+      "duration":$http.request.duration}`,
 	}
 
 	options.Upstreams["backend"] = config.UpstreamOptions{

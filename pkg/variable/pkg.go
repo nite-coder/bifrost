@@ -48,7 +48,7 @@ var (
 		UpstreamRequestURI:          {},
 		UpstreamResponoseStatusCode: {},
 		UpstreamDuration:            {},
-		Duration:                    {},
+		HTTPRequestDuration:         {},
 		GRPCStatusCode:              {},
 		GRPCMessage:                 {},
 	}
@@ -370,7 +370,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		return status, true
 	case UpstreamDuration:
 		return c.GetString(UpstreamDuration), true
-	case Duration:
+	case HTTPRequestDuration:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {
 			return nil, false

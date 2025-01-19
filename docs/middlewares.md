@@ -19,9 +19,9 @@ Currently supported middlewares are below.
 * [ReplacePathRegex](#replacepathregex): Replace the request path with a regular expression.
 * [RequestTermination](#requesttermination): Response the content to client and terminate the request.
 * [RequestTransformer](#requesttransformer): Apply a request transformation to the request.
+* [ResponseTransformer](#responsetransformer): Apply a response transformation to the response.
 * [SetVars](#setvars): Set variables in the request context.
 * [StripPrefix](#stripprefix): Remove a prefix from the request path.
-* [TimingLogger](#timinglogger): Record the request entry and exit time and return this information in HTTP headers.
 * [Tracing](#tracing): trace the request.
 * [TrafficSplitter](#trafficsplitter): Route requests to different services based on weights.
 
@@ -46,11 +46,44 @@ routes:
 
 ### Mirror
 
+Mirrors the request to another service.
+
+```yaml
+routes:
+  route1:
+    paths:
+      - /foo
+    service_id: service1
+    middlewares:
+      - type: mirror
+        params:
+          service_id: service2
+```
+
 ### RateLimiting
 
 ### ReplacePath
 
 Replaces the entire original request path with a different path before forwarding upstream. If the original request includes a query string, it will also be forwarded.
+
+Original request: `/api/v1/user?name=john` \
+Forwarded path for upstream: `/hoo/user?name=john`
+
+```yaml
+routes:
+  route1:
+    paths:
+      - /api/v1/user
+    service_id: service1
+    middlewares:
+      - type: replace_path
+        params:
+          path: /hoo/user
+```
+
+### ReplacePathRegex
+
+Replaces the entire original request path with a different path via regular expression before forwarding upstream. If the original request includes a query string, it will also be forwarded.
 
 Original request: `/api/v1/user?name=john` \
 Forwarded path for upstream: `/hoo/user?name=john`
@@ -68,13 +101,86 @@ routes:
           replacement: /hoo/$1
 ```
 
-### ReplacePathRegex
-
 ### RequestTermination
+
+Returns the content to the client and terminates the request.
+
+```yaml
+routes:
+  mock:
+    paths:
+      - /mock/order
+    service_id: service1
+    middlewares:
+      - type: request_termination
+        params:
+          status_code: 200
+          content_type: application/json
+          body: []
+
+```
 
 ### RequestTransformer
 
+Apply a request transformation to the request.
+
+```yaml
+routes:
+  mock:
+    paths:
+      - /mock/order
+    service_id: service1
+    middlewares:
+      - type: request_transformer
+        params:
+          remove:
+            headers:
+              - x-user-id
+            querystring:
+              - mode
+          add:
+            headers:
+              x-id: 123
+```
+
+### ResponseTransformer
+
+Apply a response transformation to the response.
+
+```yaml
+routes:
+  mock:
+    paths:
+      - /mock/order
+    service_id: service1
+    middlewares:
+      - type: response_transformer
+        params:
+          remove:
+            headers:
+              - x-server
+          add:
+            headers:
+              x-source: web
+              x-http-start: $var.http_start
+              x-http-finish: $var.http_finish
+```
+
 ### SetVars
+
+Set variables in the request context.
+
+```yaml
+routes:
+  route1:
+    paths:
+      - /api/v1/orders
+    service_id: service1
+    middlewares:
+      - type: setvars
+        params:
+         - $http.request.path_alias: /orders/{order_id}
+```
 
 ### StripPrefix
 
@@ -96,8 +202,6 @@ routes:
             - /api/v1
 ```
 
-### TimingLogger
-
 ### Tracing
 
 The tracing middleware follows [official OpenTelemetry semantic conventions v1.26.0](https://github.com/open-telemetry/semantic-conventions/blob/v1.26.0/docs/http/http-spans.md).
@@ -113,6 +217,24 @@ servers:
 ```
 
 ### TrafficSplitter
+
+Route requests to different services based on weights.
+
+```yaml
+servers:
+  apiv1:
+    bind: ":8001"
+    reuse_port: true
+    middlewares:
+      - type: traffic_splitter
+        params:
+          key: $my_order
+          destinations:
+            - weight: 80
+              to: old_service
+            - weight: 20
+              to: new_service
+```
 
 ## Custom Middlewares
 

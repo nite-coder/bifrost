@@ -18,7 +18,7 @@ func getRandomNumber(max int64) (int64, error) {
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("traffic-splitter", func(params map[string]any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("traffic_splitter", func(params map[string]any) (app.HandlerFunc, error) {
 
 		opts := &Options{}
 

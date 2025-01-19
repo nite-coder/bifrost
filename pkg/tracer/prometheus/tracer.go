@@ -4,11 +4,10 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/nite-coder/bifrost/pkg/variable"
-
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
+	"github.com/nite-coder/bifrost/pkg/variable"
 	prom "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -58,16 +57,18 @@ func genUpstreamDurationLabels(c *app.RequestContext) prom.Labels {
 }
 
 type serverTracer struct {
-	requestSizeTotalCounter   *prom.CounterVec
-	respoonseSizeTotalCounter *prom.CounterVec
-	requestTotalCounter       *prom.CounterVec
-	requestDurationHistogram  *prom.HistogramVec
-	bifrostDurationHistogram  *prom.HistogramVec
-	upstreamDurationHistogram *prom.HistogramVec
+	httpServerRequestBodySize  *prom.CounterVec
+	httpServerResponseBodySize *prom.CounterVec
+	httpServerRequests         *prom.CounterVec
+	httpServerActiveRequests   prom.Gauge
+	httpServerRequestDuration  *prom.HistogramVec
+	httpBifrostRequestDuration *prom.HistogramVec
+	httpClientRequestDuration  *prom.HistogramVec
 }
 
 // Start record the beginning of server handling request from client.
 func (s *serverTracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
+	s.httpServerActiveRequests.Inc()
 	return ctx
 }
 
@@ -86,23 +87,25 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	s.httpServerActiveRequests.Dec()
+
 	reqDuration := httpFinish.Time().Sub(httpStart.Time())
-	_ = counterAdd(s.requestTotalCounter, 1, genRequestDurationLabels(c))
-	_ = histogramObserve(s.requestDurationHistogram, reqDuration, genRequestDurationLabels(c))
+	_ = counterAdd(s.httpServerRequests, 1, genRequestDurationLabels(c))
+	_ = histogramObserve(s.httpServerRequestDuration, reqDuration, genRequestDurationLabels(c))
 
 	upstreamDuration := c.GetDuration(variable.UpstreamDuration)
-	_ = histogramObserve(s.upstreamDurationHistogram, upstreamDuration, genUpstreamDurationLabels(c))
+	_ = histogramObserve(s.httpClientRequestDuration, upstreamDuration, genUpstreamDurationLabels(c))
 
 	bifrostDuration := reqDuration - upstreamDuration
-	_ = histogramObserve(s.bifrostDurationHistogram, bifrostDuration, genRequestDurationLabels(c))
+	_ = histogramObserve(s.httpBifrostRequestDuration, bifrostDuration, genRequestDurationLabels(c))
 
 	serverLabel := make(prom.Labels)
 	serverLabel[labelServer] = serverID
 	requestSize := info.RecvSize()
 	responseSize := info.SendSize()
 
-	_ = counterAdd(s.requestSizeTotalCounter, requestSize, serverLabel)
-	_ = counterAdd(s.respoonseSizeTotalCounter, responseSize, serverLabel)
+	_ = counterAdd(s.httpServerRequestBodySize, requestSize, serverLabel)
+	_ = counterAdd(s.httpServerResponseBodySize, responseSize, serverLabel)
 
 }
 
@@ -114,72 +117,82 @@ func NewTracer(opts ...Option) tracer.Tracer {
 		opts.apply(cfg)
 	}
 
-	httpRequestSizeTotalCounter := prom.NewCounterVec(
+	httpServerRequestBodySize := prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "request_size_total",
-			Help: "the server received request body size, unit byte.",
+			Name: "http_server_request_body_size",
+			Help: "Size of HTTP server request bodies.",
 		},
 		[]string{labelServer},
 	)
-	prom.MustRegister(httpRequestSizeTotalCounter)
+	prom.MustRegister(httpServerRequestBodySize)
 
-	httpResponseSizeTotalCounter := prom.NewCounterVec(
+	httpServerResponseBodySize := prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "http_response_size_total",
-			Help: "the server send response body size, unit byte.",
+			Name: "http_server_response_body_size",
+			Help: "Size of HTTP server response bodies.",
 		},
 		[]string{labelServer},
 	)
-	prom.MustRegister(httpResponseSizeTotalCounter)
+	prom.MustRegister(httpServerResponseBodySize)
 
-	httpRequestTotalCounter := prom.NewCounterVec(
+	httpServerRequests := prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "http_request_total",
+			Name: "http_server_requests",
 			Help: "Total number of HTTPs completed by the server, regardless of success or failure",
 		},
 		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
 	)
-	prom.MustRegister(httpRequestTotalCounter)
+	prom.MustRegister(httpServerRequests)
 
-	httpRequestDurationHistogram := prom.NewHistogramVec(
+	httpServerActiveRequests := prom.NewGauge(
+		prom.GaugeOpts{
+			Name: "http_server_active_requests",
+			Help: "Number of active HTTP server requests",
+		},
+	)
+
+	prom.MustRegister(httpServerActiveRequests)
+
+	httpServerRequestDuration := prom.NewHistogramVec(
 		prom.HistogramOpts{
-			Name:    "http_request_duration",
-			Help:    "Latency (seconds) of HTTP that had been application-level handled by the server",
+			Name:    "http_server_request_duration",
+			Help:    "Duration of HTTP server requests. (seconds)",
 			Buckets: cfg.buckets,
 		},
 		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
 	)
-	prom.MustRegister(httpRequestDurationHistogram)
+	prom.MustRegister(httpServerRequestDuration)
 
-	bifrostDurationHistogram := prom.NewHistogramVec(
+	httpBifrostRequestDuration := prom.NewHistogramVec(
 		prom.HistogramOpts{
-			Name:    "bifrost_duration",
-			Help:    "Time taken for Bifrost to route a request and run all configured middlewares",
+			Name:    "http_bifrost_request_duration",
+			Help:    "Duration of HTTP bifrost requests. (seconds)",
 			Buckets: cfg.buckets,
 		},
 		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
 	)
-	prom.MustRegister(bifrostDurationHistogram)
+	prom.MustRegister(httpBifrostRequestDuration)
 
-	upstreamDurationHistogram := prom.NewHistogramVec(
+	httpClientRequestDuration := prom.NewHistogramVec(
 		prom.HistogramOpts{
-			Name:    "upstream_duration",
-			Help:    "Latency (seconds) of HTTP that had been sent to upstream server from server",
+			Name:    "http_client_request_duration",
+			Help:    "Duration of HTTP client requests. (seconds)",
 			Buckets: cfg.buckets,
 		},
 		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
 	)
-	prom.MustRegister(upstreamDurationHistogram)
+	prom.MustRegister(httpClientRequestDuration)
 
 	// TODO: add total connections
 
 	return &serverTracer{
-		requestSizeTotalCounter:   httpRequestSizeTotalCounter,
-		respoonseSizeTotalCounter: httpResponseSizeTotalCounter,
-		requestTotalCounter:       httpRequestTotalCounter,
-		requestDurationHistogram:  httpRequestDurationHistogram,
-		bifrostDurationHistogram:  bifrostDurationHistogram,
-		upstreamDurationHistogram: upstreamDurationHistogram,
+		httpServerRequestBodySize:  httpServerRequestBodySize,
+		httpServerResponseBodySize: httpServerResponseBodySize,
+		httpServerRequests:         httpServerRequests,
+		httpServerActiveRequests:   httpServerActiveRequests,
+		httpServerRequestDuration:  httpServerRequestDuration,
+		httpBifrostRequestDuration: httpBifrostRequestDuration,
+		httpClientRequestDuration:  httpClientRequestDuration,
 	}
 }
 

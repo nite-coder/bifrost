@@ -33,7 +33,7 @@ const (
 	HTTPRequestBody             = "$http.request.body"
 	HTTPResponseSize            = "$http.response.size"
 	HTTPResponseStatusCode      = "$http.response.status_code"
-	Duration                    = "$duration"
+	HTTPRequestDuration         = "$http.request.duration"
 	LogTime                     = "$log_time"
 	UpstreamRequest             = "$upstream.request"
 	UpstreamRequestHost         = "$upstream.request.host"

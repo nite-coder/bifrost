@@ -14,9 +14,9 @@ type RequestTerminationMiddleware struct {
 }
 
 type Options struct {
-	StatusCode  int
-	ContentType string
-	Body        string
+	StatusCode  int    `mapstructure:"status_code"`
+	ContentType string `mapstructure:"content_type"`
+	Body        string `mapstructure:"body"`
 }
 
 func NewMiddleware(options Options) *RequestTerminationMiddleware {
@@ -62,7 +62,7 @@ func init() {
 		}
 
 		if opts.StatusCode == 0 {
-			return nil, errors.New("request-termination: status_code can't be empty")
+			return nil, errors.New("requesttermination: status_code can't be empty")
 		}
 
 		m := NewMiddleware(*opts)
