@@ -209,11 +209,11 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 		route := newRoutes()
 
 		_ = route.Add(config.RouteOptions{
-			Paths:   []string{"/"},
+			Paths: []string{"/"},
 		}, prefixHandler)
 
 		_ = route.Add(config.RouteOptions{
-			Paths:   []string{"/mock"},
+			Paths: []string{"/mock"},
 		}, generalkHandler)
 
 		c := app.NewContext(0)
@@ -292,6 +292,11 @@ func TestRoutes(t *testing.T) {
 	}, generalkHandler)
 	assert.NoError(t, err)
 
+	err = route.Add(config.RouteOptions{
+		Paths: []string{"/api/v1/"},
+	}, generalkHandler)
+	assert.NoError(t, err)
+
 	testCases := []struct {
 		method         string
 		host           string
@@ -307,6 +312,8 @@ func TestRoutes(t *testing.T) {
 		{"DELETE", "abc.com", "/market/eth", 203},
 
 		{"DELETE", "abc.com", "/market/eth/orders", 204},
+
+		{"GET", "abc.com", "/api/v1/orders", 204},
 	}
 
 	for _, tc := range testCases {

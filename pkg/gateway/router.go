@@ -213,10 +213,6 @@ func (r *Router) add(method, path string, nodeType nodeType, middleware ...app.H
 	// Split the path and traverse the nodes
 	parts := strings.Split(path, "/")
 	for idx, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
 		isLast := false
 		if idx == len(parts)-1 {
 			isLast = true

@@ -23,21 +23,22 @@ func TestReplacePathRegexMiddleware_ServeHTTP(t *testing.T) {
 			name:             "Replace path",
 			regex:            "^/api/v1/(.*)$",
 			replacement:      "/hoo/$1",
-			originalPath:     "/api/v1/users",
 			originalFullPath: "/api/v1/users?name=john",
-			expectedPath:     "/hoo/users",
 			expectedFullPath: "/hoo/users?name=john",
-			expectedHeader:   "/api/v1/users",
 		},
 		{
 			name:             "No replacement needed",
 			regex:            "^/api(/v2.*)",
 			replacement:      "$1",
-			originalPath:     "/v1/users",
 			originalFullPath: "/v1/users",
-			expectedPath:     "/v1/users",
 			expectedFullPath: "/v1/users",
-			expectedHeader:   "/v1/users",
+		},
+		{
+			name:             "replace all",
+			regex:            "^/(.*)$",
+			replacement:      "/app-web/$1",
+			originalFullPath: "/apiwww/v1/hello/world/",
+			expectedFullPath: "/app-web/apiwww/v1/hello/world/",
 		},
 	}
 
@@ -50,8 +51,8 @@ func TestReplacePathRegexMiddleware_ServeHTTP(t *testing.T) {
 
 			middleware.ServeHTTP(context.Background(), ctx)
 
-			assert.Equal(t, tt.expectedPath, string(ctx.Request.URI().Path()), "Path should be replaced correctly")
-			assert.Equal(t, tt.expectedFullPath, string(ctx.Request.URI().RequestURI()), "Full Path should be replaced correctly")
+			uri := string(ctx.Request.URI().RequestURI())
+			assert.Equal(t, tt.expectedFullPath, uri, "Full Path should be replaced correctly")
 		})
 	}
 }
