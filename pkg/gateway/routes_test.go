@@ -331,6 +331,33 @@ func TestRoutes(t *testing.T) {
 	}
 }
 
+
+func TestRegexOrder(t *testing.T) {
+	route := newRoutes()
+
+	err := route.Add(config.RouteOptions{
+		Methods: []string{"GET"},
+		Paths:   []string{"~ ^/(api/v1/live/subtitle|api/v2/w33/live/)"},
+	}, regexkHandler)
+	assert.NoError(t, err)
+
+	err = route.Add(config.RouteOptions{
+		Paths: []string{"/api/v1/hello", "/api/v2/world"},
+	}, generalkHandler)
+	assert.NoError(t, err)
+
+	c := &app.RequestContext{}
+	c.Request.SetMethod("GET")
+	c.Request.URI().SetPath("api/v1/hello/aaa")
+
+	route.ServeHTTP(context.Background(), c)
+	statusCode := c.Response.StatusCode()
+
+	if statusCode != 204 {
+		t.Errorf("wrong expected %d got %v", 204, statusCode)
+	}
+}
+
 func TestDuplicateRoutes(t *testing.T) {
 	route := newRoutes()
 

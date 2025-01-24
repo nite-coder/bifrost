@@ -245,7 +245,8 @@ func checkRegexpRoute(setting routeSetting, method string, path string) bool {
 
 		for _, m := range setting.route.Methods {
 			if m == method {
-				return true
+				isMethodFound = true
+				break
 			}
 		}
 
