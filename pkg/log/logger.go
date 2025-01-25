@@ -68,7 +68,7 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 		}
 
 		// Wrap the file in a bufferedFileWriter for better performance and reopen support
-		bfw := newBufferedFileWriter(file, 64*1024) // 64KB buffer size
+		bfw := newBufferedFileWriter(file, 4*1024) // 4KB buffer size
 		writer = bfw
 
 		// Start listening for SIGUSR1 signals
@@ -145,7 +145,6 @@ func (bfw *bufferedFileWriter) reopen() error {
 	bfw.mu.Lock()
 	defer bfw.mu.Unlock()
 
-	// 打印当前文件路径
 	filePath := bfw.file.Name()
 	fmt.Printf("Reopening file: %s\n", filePath)
 
@@ -159,11 +158,10 @@ func (bfw *bufferedFileWriter) reopen() error {
 		}
 	}
 
-	// 再次打印路径，确认没有变化
 	fmt.Printf("Attempting to open file: %s\n", filePath)
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		fmt.Printf("OpenFile failed: %v (path: %s)\n", err, filePath) // 明确打印错误和路径
+		fmt.Printf("OpenFile failed: %v (path: %s)\n", err, filePath)
 		return fmt.Errorf("open error: %w", err)
 	}
 
