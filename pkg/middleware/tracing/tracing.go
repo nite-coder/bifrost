@@ -27,12 +27,16 @@ func init() {
 }
 
 type TracingMiddleware struct {
-	tracer trace.Tracer
+	tracer   trace.Tracer
+	hostname string
 }
 
 func NewMiddleware() *TracingMiddleware {
+	hostname, _ := os.Hostname()
+
 	return &TracingMiddleware{
-		tracer: otel.Tracer("bifrost"),
+		tracer:   otel.Tracer("bifrost"),
+		hostname: hostname,
 	}
 }
 
@@ -43,8 +47,6 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 		c.Next(ctx)
 		return
 	}
-
-	hostname, _ := os.Hostname()
 
 	reqMethod := variable.GetString(variable.HTTPRequestMethod, c)
 
@@ -85,7 +87,7 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 			semconv.URLQuery(reqQuery),
 			semconv.NetworkProtocolName(networkProtocol),
 			semconv.ClientAddress(clientIP),
-			semconv.NetworkLocalAddress(hostname),
+			semconv.NetworkLocalAddress(m.hostname),
 			semconv.NetworkPeerAddress(remoteAddr),
 			semconv.HTTPResponseStatusCode(c.Response.StatusCode()),
 		}
