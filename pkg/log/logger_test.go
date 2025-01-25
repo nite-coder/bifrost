@@ -24,7 +24,8 @@ func TestLogging(t *testing.T) {
 	logger.Info("test")
 }
 
-func TestBufferedFileWriterReopen(t *testing.T) {
+// TestSIGUSR1Reopen tests the SIGUSR1 signal handling to reopen the log file.
+func TestSIGUSR1Reopen(t *testing.T) {
 	// Create a temporary log file for testing
 	tmpFile, err := os.CreateTemp("", "test-log-*.log")
 	if err != nil {
@@ -32,20 +33,20 @@ func TestBufferedFileWriterReopen(t *testing.T) {
 	}
 	defer os.Remove(tmpFile.Name()) // Clean up the temp file after the test
 
-	// Initialize the bufferedFileWriter
-	bfw := newBufferedFileWriter(tmpFile, 64*1024) // 64KB buffer size
-	go bfw.listenForSignals()
-
-	// Write some data to the file
-	data := "Log before reopen\n"
-	if _, err := bfw.Write([]byte(data)); err != nil {
-		t.Fatalf("Failed to write to file: %v", err)
+	// Configure the logger to write to the temp file
+	opts := config.LoggingOtions{
+		Output:  tmpFile.Name(),
+		Level:   "info",
+		Handler: "text",
 	}
 
-	// Flush the buffer to ensure data is written to the file
-	if err := bfw.Flush(); err != nil {
-		t.Fatalf("Failed to flush buffer: %v", err)
+	logger, err := NewLogger(opts)
+	if err != nil {
+		t.Fatalf("Failed to create logger: %v", err)
 	}
+
+	// Write some logs to the file
+	logger.Info("Log before SIGUSR1")
 
 	// Simulate log rotation by renaming the current log file
 	rotatedFile := tmpFile.Name() + ".rotated"
@@ -65,16 +66,8 @@ func TestBufferedFileWriterReopen(t *testing.T) {
 	// Wait for the signal to be processed
 	time.Sleep(100 * time.Millisecond)
 
-	// Write more data after the file has been reopened
-	data = "Log after reopen\n"
-	if _, err := bfw.Write([]byte(data)); err != nil {
-		t.Fatalf("Failed to write to file after reopen: %v", err)
-	}
-
-	// Flush the buffer again to ensure all data is written to the file
-	if err := bfw.Flush(); err != nil {
-		t.Fatalf("Failed to flush buffer: %v", err)
-	}
+	// Write more logs after the file has been reopened
+	logger.Info("Log after SIGUSR1")
 
 	// Read the contents of the new log file
 	newLogContent, err := os.ReadFile(tmpFile.Name())
@@ -83,7 +76,7 @@ func TestBufferedFileWriterReopen(t *testing.T) {
 	}
 
 	// Verify that the new log file contains the expected logs
-	expectedLog := "Log after reopen"
+	expectedLog := "Log after SIGUSR1"
 	if !strings.Contains(string(newLogContent), expectedLog) {
 		t.Errorf("New log file does not contain expected log. Got: %s", string(newLogContent))
 	}
@@ -95,7 +88,7 @@ func TestBufferedFileWriterReopen(t *testing.T) {
 	}
 
 	// Verify that the rotated log file contains the expected logs
-	expectedRotatedLog := "Log before reopen"
+	expectedRotatedLog := "Log before SIGUSR1"
 	if !strings.Contains(string(rotatedLogContent), expectedRotatedLog) {
 		t.Errorf("Rotated log file does not contain expected log. Got: %s", string(rotatedLogContent))
 	}

@@ -1,7 +1,6 @@
 package log
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,6 +12,40 @@ import (
 
 	"github.com/nite-coder/bifrost/pkg/config"
 )
+
+// fileWriter is a wrapper around os.File to support reopening the file on SIGUSR1.
+type fileWriter struct {
+	file *os.File
+	mu   sync.Mutex // Protects concurrent access to the file
+}
+
+// Write implements the io.Writer interface.
+func (fw *fileWriter) Write(p []byte) (n int, err error) {
+	fw.mu.Lock()
+	defer fw.mu.Unlock()
+
+	return fw.file.Write(p)
+}
+
+// reopen closes the current file and reopens it.
+func (fw *fileWriter) reopen() error {
+	fw.mu.Lock()
+	defer fw.mu.Unlock()
+
+	// Close the current file
+	if fw.file != nil {
+		fw.file.Close()
+	}
+
+	// Reopen the file
+	file, err := os.OpenFile(fw.file.Name(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	fw.file = file
+
+	return nil
+}
 
 // NewLogger creates a new slog.Logger instance with the specified options.
 func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
@@ -67,12 +100,20 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 			return nil, err
 		}
 
-		// Wrap the file in a bufferedFileWriter for better performance and reopen support
-		bfw := newBufferedFileWriter(file, 4*1024) // 4KB buffer size
-		writer = bfw
+		// Wrap the file in a fileWriter to support reopening
+		fw := &fileWriter{file: file}
+		writer = fw
 
-		// Start listening for SIGUSR1 signals
-		go bfw.listenForSignals()
+		// Listen for SIGUSR1 signals to reopen the log file
+		go func() {
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, syscall.SIGUSR1) // Register to receive SIGUSR1 signals
+
+			for {
+				<-sigChan   // Wait for a SIGUSR1 signal
+				fw.reopen() // Reopen the log file
+			}
+		}()
 	}
 
 	// Determine the log handler type
@@ -93,93 +134,4 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 	// Create the slog.Logger instance
 	logger := slog.New(logHandler)
 	return logger, nil
-}
-
-// bufferedFileWriter wraps a bufio.Writer and *os.File to support buffered writing and file reopening.
-type bufferedFileWriter struct {
-	file   *os.File
-	writer *bufio.Writer
-	mu     sync.Mutex // Protects concurrent access to file and writer
-}
-
-// newBufferedFileWriter creates a new bufferedFileWriter instance.
-func newBufferedFileWriter(file *os.File, bufferSize int) *bufferedFileWriter {
-	return &bufferedFileWriter{
-		file:   file,
-		writer: bufio.NewWriterSize(file, bufferSize),
-	}
-}
-
-// Write writes data to the buffered writer.
-func (bfw *bufferedFileWriter) Write(p []byte) (n int, err error) {
-	bfw.mu.Lock()
-	defer bfw.mu.Unlock()
-
-	return bfw.writer.Write(p)
-}
-
-// Flush flushes the buffered writer to the underlying file.
-func (bfw *bufferedFileWriter) Flush() error {
-	bfw.mu.Lock()
-	defer bfw.mu.Unlock()
-
-	// 1. Flush bufio.Writer to *os.File
-	if err := bfw.writer.Flush(); err != nil {
-		fmt.Printf("Failed to flush buffer: %v\n", err)
-		return fmt.Errorf("flush buffer failed: %w", err)
-	}
-
-	// 2. Sync *os.File to disk
-	if bfw.file != nil {
-		if err := bfw.file.Sync(); err != nil {
-			fmt.Printf("Failed to sync file: %v\n", err)
-			return fmt.Errorf("sync file failed: %w", err)
-		}
-	}
-
-	return nil
-}
-
-// reopen closes the current file and reopens it.
-func (bfw *bufferedFileWriter) reopen() error {
-	bfw.mu.Lock()
-	defer bfw.mu.Unlock()
-
-	filePath := bfw.file.Name()
-	fmt.Printf("Reopening file: %s\n", filePath)
-
-	if err := bfw.writer.Flush(); err != nil {
-		return fmt.Errorf("flush error: %w", err)
-	}
-
-	if bfw.file != nil {
-		if err := bfw.file.Close(); err != nil {
-			return fmt.Errorf("close error: %w", err)
-		}
-	}
-
-	fmt.Printf("Attempting to open file: %s\n", filePath)
-	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		fmt.Printf("OpenFile failed: %v (path: %s)\n", err, filePath)
-		return fmt.Errorf("open error: %w", err)
-	}
-
-	bfw.file = file
-	bfw.writer.Reset(file)
-	return nil
-}
-
-// listenForSignals listens for SIGUSR1 signals to reopen the log file.
-func (bfw *bufferedFileWriter) listenForSignals() {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGUSR1) // Register to receive SIGUSR1 signals
-
-	for {
-		<-sigChan // Wait for a SIGUSR1 signal
-		if err := bfw.reopen(); err != nil {
-			// Log the error or handle it as needed
-			fmt.Printf("Failed to reopen log file: %v\n", err)
-		}
-	}
 }
