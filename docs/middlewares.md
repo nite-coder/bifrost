@@ -162,8 +162,8 @@ routes:
           add:
             headers:
               x-source: web
-              x-http-start: $var.http_start
-              x-http-finish: $var.http_finish
+              x-http-start: $http.start
+              x-http-finish: $http.finish
 ```
 
 ### SetVars

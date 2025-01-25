@@ -9,6 +9,7 @@
 - chore: upgrade hertz package to v0.9.5
 - feat: load config from default config path when config path is empty.
 - feat: support systemd init script.
+- feat: support SIGUSR1 signals for logging
 - fix: order of routes issue
 - fix: promethus server name is unkonwn issue
 - fix: validate promethus serrver_id in config

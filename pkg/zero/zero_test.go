@@ -80,7 +80,7 @@ func TestListener(t *testing.T) {
 	}
 
 	// Test retrieving the same listener
-	l2, err := z.Listener(ctx, "tcp", l.Addr().String(), nil)
+	l2, err := z.Listener(ctx, "tcp", "localhost:7788", nil)
 	if err != nil {
 		t.Fatalf("Listener() error = %v", err)
 	}
