@@ -17,6 +17,7 @@
 - fix: access log tracer is added to server more than once
 - fix: support trailing slash in path
 - fix: the order of regex route is wrong when using methods
+- fix: response_transformer is not executed after the request
 - [[#7](https://github.com/nite-coder/bifrost/pull/7)]: upgrade and rename access log directives
 - [[#8](https://github.com/nite-coder/bifrost/pull/8)]: new response-transformer middleware
 

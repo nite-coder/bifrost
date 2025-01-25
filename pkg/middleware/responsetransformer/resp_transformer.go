@@ -33,6 +33,7 @@ func NewMiddleware(opts Options) *ResponseTransFormaterMiddleware {
 }
 
 func (m *ResponseTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+	c.Next(ctx)
 
 	if len(m.options.Remove.Headers) > 0 {
 		for _, header := range m.options.Remove.Headers {
