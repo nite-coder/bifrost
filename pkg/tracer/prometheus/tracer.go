@@ -37,25 +37,6 @@ func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 	return labels
 }
 
-func genUpstreamDurationLabels(c *app.RequestContext) prom.Labels {
-	labels := make(prom.Labels)
-
-	serverID := variable.GetString(variable.ServerID, c)
-	labels[labelServer] = defaultValIfEmpty(serverID, unknownLabelValue)
-	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
-
-	UPSTREAM_STATUS := c.GetInt(variable.UpstreamResponoseStatusCode)
-	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(UPSTREAM_STATUS), unknownLabelValue)
-
-	path := variable.GetString(variable.UpstreamRequestPathAlias, c)
-	if path == "" {
-		path = variable.GetString(variable.UpstreamRequestPath, c)
-	}
-	labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
-
-	return labels
-}
-
 type serverTracer struct {
 	httpServerRequestBodySize  *prom.CounterVec
 	httpServerResponseBodySize *prom.CounterVec
@@ -63,7 +44,6 @@ type serverTracer struct {
 	httpServerActiveRequests   prom.Gauge
 	httpServerRequestDuration  *prom.HistogramVec
 	httpBifrostRequestDuration *prom.HistogramVec
-	httpClientRequestDuration  *prom.HistogramVec
 }
 
 // Start record the beginning of server handling request from client.
@@ -94,7 +74,6 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	_ = histogramObserve(s.httpServerRequestDuration, reqDuration, genRequestDurationLabels(c))
 
 	upstreamDuration := c.GetDuration(variable.UpstreamDuration)
-	_ = histogramObserve(s.httpClientRequestDuration, upstreamDuration, genUpstreamDurationLabels(c))
 
 	bifrostDuration := reqDuration - upstreamDuration
 	_ = histogramObserve(s.httpBifrostRequestDuration, bifrostDuration, genRequestDurationLabels(c))
@@ -173,16 +152,6 @@ func NewTracer(opts ...Option) tracer.Tracer {
 	)
 	prom.MustRegister(httpBifrostRequestDuration)
 
-	httpClientRequestDuration := prom.NewHistogramVec(
-		prom.HistogramOpts{
-			Name:    "http_client_request_duration",
-			Help:    "Duration of HTTP client requests. (seconds)",
-			Buckets: cfg.buckets,
-		},
-		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
-	)
-	prom.MustRegister(httpClientRequestDuration)
-
 	// TODO: add total connections
 
 	return &serverTracer{
@@ -192,7 +161,6 @@ func NewTracer(opts ...Option) tracer.Tracer {
 		httpServerActiveRequests:   httpServerActiveRequests,
 		httpServerRequestDuration:  httpServerRequestDuration,
 		httpBifrostRequestDuration: httpBifrostRequestDuration,
-		httpClientRequestDuration:  httpClientRequestDuration,
 	}
 }
 
