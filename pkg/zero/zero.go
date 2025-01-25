@@ -164,7 +164,7 @@ func (z *ZeroDownTime) Listener(ctx context.Context, network string, address str
 
 	info := &listenInfo{
 		listener: listener,
-		Key:      listener.Addr().String(),
+		Key:      address,
 	}
 
 	z.mu.Lock()
