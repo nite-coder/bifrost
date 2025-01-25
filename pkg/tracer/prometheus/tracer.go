@@ -28,7 +28,7 @@ func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(c.Response.Header.StatusCode()), unknownLabelValue)
 
-	path := variable.GetString(variable.HTTPRequestPathAlias, c)
+	path := variable.GetString(variable.HTTPRoute, c)
 	if path == "" {
 		path = variable.GetString(variable.HTTPRequestPath, c)
 	}
