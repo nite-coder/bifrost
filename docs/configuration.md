@@ -134,15 +134,15 @@ metrics:
     enabled: true
     server_id: "apiv1"
     path: "/metrics"
-    buckets: [0.005000, 0.010000, 0.025000, 0.050000, 0.10000, 0.250000, 0.500000, 1.00000, 2.50000, 5.000000, 10.000000]
+    buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
 ```
 
-| Field                | Type      | Default                                                                                                    | Description                    |
-| -------------------- | --------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| prometheus.enabled   | bool      | false                                                                                                      | Enables prometheus support     |
-| prometheus.server_id | string    |                                                                                                            | Server  used to expose metrics |
-| prometheus.path      | string    | `/metrics`                                                                                                 | set the metric                 |
-| prometheus.buckets   | []float64 | 0.005000, 0.010000, 0.025000, 0.050000, 0.10000, 0.250000, 0.500000, 1.00000, 2.50000, 5.000000, 10.000000 | Latency bucket levels          |
+| Field                | Type      | Default                                                                       | Description                    |
+| -------------------- | --------- | ----------------------------------------------------------------------------- | ------------------------------ |
+| prometheus.enabled   | bool      | false                                                                         | Enables prometheus support     |
+| prometheus.server_id | string    |                                                                               | Server  used to expose metrics |
+| prometheus.path      | string    | `/metrics`                                                                    | set the metric                 |
+| prometheus.buckets   | []float64 | `0.005`, `0.01`, `0.025`, `0.05`, `0.1`, `0.25`, `0.5`, `1`, `2.5`, `5`, `10` | Latency bucket levels          |
 
 ## tracing
 
