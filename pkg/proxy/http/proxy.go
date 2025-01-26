@@ -93,6 +93,7 @@ type Options struct {
 	FailTimeout      time.Duration
 	HeaderHost       string
 	IsTracingEnabled bool
+	ServiceID        string
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -318,14 +319,13 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 				trace.WithSpanKind(trace.SpanKindClient),
 			}
 
-			ctx, span = tracer.Start(ctx, "upstream", spanOptions...)
+			reqMethod := cast.B2S(outReq.Method())
+			urlFull := cast.B2S(outReq.URI().FullURI())
 
+			ctx, span = tracer.Start(ctx, reqMethod+" "+p.options.ServiceID, spanOptions...)
 			tracing.Inject(ctx, &outReq.Header)
 
 			defer func() {
-				reqMethod := cast.B2S(outReq.Method())
-				urlFull := cast.B2S(outReq.URI().FullURI())
-
 				labels := []attribute.KeyValue{
 					attribute.String("http.request.method", reqMethod),
 					semconv.ServerAddress(p.target),

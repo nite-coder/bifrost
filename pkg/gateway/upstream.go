@@ -475,6 +475,7 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 				FailTimeout:      targetOpts.FailTimeout,
 				HeaderHost:       targetHost,
 				IsTracingEnabled: bifrost.options.Tracing.Enabled,
+				ServiceID:        serviceOptions.ID,
 			}
 
 			proxy, err := httpproxy.New(proxyOptions, client)

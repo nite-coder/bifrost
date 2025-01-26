@@ -286,27 +286,27 @@ func (svc *DynamicService) ServeHTTP(c context.Context, ctx *app.RequestContext)
 	ctx.Next(c)
 }
 
-func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) (proxy.Proxy, error) {
+func initHTTPProxy(bifrost *Bifrost, serviceOptions config.ServiceOptions, addr *url.URL) (proxy.Proxy, error) {
 	clientOpts := httpproxy.DefaultClientOptions()
 
-	if opts.Timeout.Dail > 0 {
-		clientOpts = append(clientOpts, client.WithDialTimeout(opts.Timeout.Dail))
+	if serviceOptions.Timeout.Dail > 0 {
+		clientOpts = append(clientOpts, client.WithDialTimeout(serviceOptions.Timeout.Dail))
 	}
 
-	if opts.Timeout.Read > 0 {
-		clientOpts = append(clientOpts, client.WithClientReadTimeout(opts.Timeout.Read))
+	if serviceOptions.Timeout.Read > 0 {
+		clientOpts = append(clientOpts, client.WithClientReadTimeout(serviceOptions.Timeout.Read))
 	}
 
-	if opts.Timeout.Write > 0 {
-		clientOpts = append(clientOpts, client.WithWriteTimeout(opts.Timeout.Write))
+	if serviceOptions.Timeout.Write > 0 {
+		clientOpts = append(clientOpts, client.WithWriteTimeout(serviceOptions.Timeout.Write))
 	}
 
-	if opts.Timeout.MaxConnWait > 0 {
-		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(opts.Timeout.MaxConnWait))
+	if serviceOptions.Timeout.MaxConnWait > 0 {
+		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(serviceOptions.Timeout.MaxConnWait))
 	}
 
-	if opts.MaxConnsPerHost != nil {
-		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*opts.MaxConnsPerHost))
+	if serviceOptions.MaxConnsPerHost != nil {
+		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*serviceOptions.MaxConnsPerHost))
 	}
 
 	hostname := addr.Hostname()
@@ -314,7 +314,7 @@ func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) 
 	if strings.EqualFold(addr.Scheme, "https") {
 		clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
 			ServerName:         hostname,
-			InsecureSkipVerify: !opts.TLSVerify, //nolint:gosec
+			InsecureSkipVerify: !serviceOptions.TLSVerify, //nolint:gosec
 		}))
 	}
 
@@ -333,7 +333,7 @@ func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) 
 	}
 
 	clientOptions := httpproxy.ClientOptions{
-		IsHTTP2:   opts.Protocol == config.ProtocolHTTP2,
+		IsHTTP2:   serviceOptions.Protocol == config.ProtocolHTTP2,
 		HZOptions: clientOpts,
 	}
 
@@ -344,10 +344,11 @@ func initHTTPProxy(bifrost *Bifrost, opts config.ServiceOptions, addr *url.URL) 
 
 	proxyOptions := httpproxy.Options{
 		Target:           url,
-		Protocol:         opts.Protocol,
+		Protocol:         serviceOptions.Protocol,
 		Weight:           0,
 		HeaderHost:       hostname,
 		IsTracingEnabled: bifrost.options.Tracing.Enabled,
+		ServiceID:        serviceOptions.ID,
 	}
 
 	httpProxy, err := httpproxy.New(proxyOptions, client)
