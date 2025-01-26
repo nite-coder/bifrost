@@ -53,7 +53,7 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 
 	if strings.HasPrefix(opts.Endpoint, "https") || strings.HasPrefix(opts.Endpoint, "http") {
 		tracingOptions := []otlptracehttp.Option{
-			otlptracehttp.WithEndpoint(opts.Endpoint),
+			otlptracehttp.WithEndpointURL(opts.Endpoint),
 			otlptracehttp.WithTimeout(opts.Timeout),
 		}
 
