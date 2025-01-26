@@ -179,7 +179,8 @@ routes:
     middlewares:
       - type: setvars
         params:
-         - $http.request.path_alias: /orders/{order_id}
+          $http.route: /orders/{order_id}
+          user_id: 123456
 ```
 
 ### StripPrefix

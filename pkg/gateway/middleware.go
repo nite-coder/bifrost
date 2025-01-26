@@ -9,6 +9,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -27,6 +28,7 @@ func newInitMiddleware(serverID string, logger *slog.Logger) *initMiddleware {
 
 func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := m.logger
+	ctx = log.NewContext(ctx, logger)
 
 	defer func() {
 		if r := recover(); r != nil {
