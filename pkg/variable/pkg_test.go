@@ -21,6 +21,7 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Set(UpstreamID, "upstreamA")
 	hzCtx.Set(UpstreamRequestHost, "1.2.3.4")
 	hzCtx.Set(UpstreamResponoseStatusCode, 200)
+	hzCtx.Set(HTTPRoute, "/orders/{order_id}")
 
 	tracerInfo := traceinfo.NewTraceInfo()
 	hzCtx.SetTraceInfo(tracerInfo)
@@ -132,6 +133,9 @@ func TestGetDirective(t *testing.T) {
 
 	upstreamStatusCode := GetString(UpstreamResponoseStatusCode, hzCtx)
 	assert.Equal(t, "200", upstreamStatusCode)
+
+	httpRoute := GetString(HTTPRoute, hzCtx)
+	assert.Equal(t, "/orders/{order_id}", httpRoute)
 
 	userAgent := GetString("$http.request.header.user-Agent", hzCtx)
 	assert.Equal(t, "my_user_agent", userAgent)

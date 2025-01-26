@@ -29,6 +29,7 @@ var (
 		HTTPResponseSize:            {},
 		HTTPStart:                   {},
 		HTTPFinish:                  {},
+		HTTPRoute:                   {},
 		HTTPRequest:                 {},
 		HTTPRequestScheme:           {},
 		HTTPRequestMethod:           {},
@@ -248,6 +249,8 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		builder.Write(spaceByte)
 		builder.WriteString(info.Protocol)
 		return builder.String(), true
+	case HTTPRoute:
+		return c.GetString(HTTPRoute), true
 	case HTTPRequestScheme:
 		val, found := c.Get(RequestOrig)
 		if !found {
