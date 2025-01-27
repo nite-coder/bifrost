@@ -5,7 +5,6 @@ import "time"
 type Options struct {
 	from            string                      `yaml:"-" json:"-"`
 	IsDaemon        bool                        `yaml:"-" json:"-"`
-	Version         string                      `yaml:"version" json:"version"`
 	PIDFile         string                      `yaml:"pid_file" json:"pid_file"`
 	UpgradeSock     string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
 	Gopool          bool                        `yaml:"gopool" json:"gopool"`
@@ -30,7 +29,6 @@ type Options struct {
 
 func NewOptions() Options {
 	mainOptions := Options{
-		Version:     "1",
 		AccessLogs:  make(map[string]AccessLogOptions),
 		Servers:     make(map[string]ServerOptions),
 		Routes:      make(map[string]RouteOptions),
@@ -171,6 +169,7 @@ type RouteOptions struct {
 	ID          string             `yaml:"-" json:"-"`
 	Methods     []string           `yaml:"methods" json:"methods"`
 	Paths       []string           `yaml:"paths" json:"paths"`
+	Route       string             `yaml:"route" json:"route"`
 	Servers     []string           `yaml:"servers" json:"servers"`
 	Middlewares []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
 	ServiceID   string             `yaml:"service_id" json:"service_id"`

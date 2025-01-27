@@ -110,8 +110,8 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 			signal.Notify(sigChan, syscall.SIGUSR1) // Register to receive SIGUSR1 signals
 
 			for {
-				<-sigChan   // Wait for a SIGUSR1 signal
-				fw.reopen() // Reopen the log file
+				<-sigChan       // Wait for a SIGUSR1 signal
+				_ = fw.reopen() // Reopen the log file
 			}
 		}()
 	}

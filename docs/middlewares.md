@@ -179,7 +179,6 @@ routes:
     middlewares:
       - type: setvars
         params:
-          $http.route: /orders/{order_id}
           user_id: 123456
 ```
 

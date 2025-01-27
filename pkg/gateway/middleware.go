@@ -61,20 +61,25 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 }
 
 type initRouteMiddleware struct {
+	options *initRouteMiddlewareOptions
+}
+
+type initRouteMiddlewareOptions struct {
 	routeID   string
+	route     string
 	serviceID string
 }
 
-func newInitRouteMiddleware(routeID, serviceID string) *initRouteMiddleware {
+func newInitRouteMiddleware(options *initRouteMiddlewareOptions) *initRouteMiddleware {
 	return &initRouteMiddleware{
-		routeID:   routeID,
-		serviceID: serviceID,
+		options: options,
 	}
 }
 
 func (m *initRouteMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
-	c.Set(variable.RouteID, m.routeID)
-	c.Set(variable.ServiceID, m.serviceID)
+	c.Set(variable.RouteID, m.options.routeID)
+	c.Set(variable.HTTPRoute, m.options.route)
+	c.Set(variable.ServiceID, m.options.serviceID)
 }
 
 func loadMiddlewares(middlewareOptions map[string]config.MiddlwareOptions) (map[string]app.HandlerFunc, error) {

@@ -211,16 +211,16 @@ access_logs:
     template: >
       {"time":"$time",
       "remote_addr":"$network.peer.address",
-      "host": "$http.request.host",
+      "host":"$http.request.host",
       "request":"$http.request",
       "req_body":"$http.request.body",
       "x_forwarded_for":"$http.request.header.x-forwarded-for",
       "upstream_addr":"$upstream.request.host",
       "upstream_request":"$upstream.request",
-      "upstream_duration":$upstream.duration,
-      "upstream_status":$upstream.response.status_code,
-      "status":$http.response.status_code,
-      "duration":$http.request.duration}
+      "upstream_duration":"$upstream.duration",
+      "upstream_status":"$upstream.response.status_code",
+      "status":"$http.response.status_code",
+      "duration":"$http.request.duration"}
 ```
 
 | Field          | Type            | Default               | Description                                                                                                |
@@ -288,20 +288,22 @@ routes:
   spot-orders: # Unique route name
     methods: []
     paths:
-      - /api/v1
+      - /api/v1/orders
+    route: /api/v1/orders/{order_id}
     servers: ["extenal", "extenal_tls"]
     service_id: api-service
     middlewares:
       - type: tracing
 ```
 
-| Field       | Type                | Default | Description                                      |
-| ----------- | ------------------- | ------- | ------------------------------------------------ |
-| methods     | []string            |         | HTTP methods; if empty, all methods supported    |
-| paths       | []string            |         | http path                                        |
-| servers     | []string            |         | Servers to apply the route; all servers if empty |
-| service_id  | string              |         | Service ID                                       |
-| middlewares | []MiddlewareOptions |         | middleware of the routes                         |
+| Field       | Type                | Default | Description                                                         |
+| ----------- | ------------------- | ------- | ------------------------------------------------------------------- |
+| methods     | []string            |         | HTTP methods; if empty, all methods supported                       |
+| paths       | []string            |         | http path                                                           |
+| route       | string              |         | The path template is in the format used for displaying metric paths |
+| servers     | []string            |         | Servers to apply the route; all servers if empty                    |
+| service_id  | string              |         | Service ID                                                          |
+| middlewares | []MiddlewareOptions |         | middleware of the routes                                            |
 
 ## services
 
