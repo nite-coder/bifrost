@@ -2,7 +2,6 @@ package zero
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -14,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
@@ -102,7 +102,7 @@ func (z *ZeroDownTime) Listener(ctx context.Context, network string, address str
 			str := os.Getenv("LISTENERS")
 
 			if len(str) > 0 {
-				err := json.Unmarshal([]byte(str), &z.listeners)
+				err := sonic.Unmarshal([]byte(str), &z.listeners)
 				if err != nil {
 					slog.Error("failed to unmarshal LISTENERS", "error", err)
 					return
@@ -117,6 +117,8 @@ func (z *ZeroDownTime) Listener(ctx context.Context, network string, address str
 			for index < count {
 				// fd starting from 3
 				fd := 3 + index
+				l := z.listeners[index]
+				index++
 
 				f := os.NewFile(uintptr(fd), "")
 				if f == nil {
@@ -129,10 +131,7 @@ func (z *ZeroDownTime) Listener(ctx context.Context, network string, address str
 					continue
 				}
 
-				l := z.listeners[index]
 				l.listener = fileListener
-
-				index++
 
 				slog.Info("file Listener is created", "addr", fileListener.Addr(), "fd", fd)
 			}
@@ -226,7 +225,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 
 			slog.Info("listeners count", "count", len(files))
 
-			b, err := json.Marshal(z.listeners)
+			b, err := sonic.Marshal(z.listeners)
 			if err != nil {
 				slog.Error("failed to marshal listeners", "error", err)
 				break

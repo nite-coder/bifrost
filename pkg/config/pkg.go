@@ -1,13 +1,13 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"strings"
 
+	"github.com/bytedance/sonic"
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/provider/file"
 
@@ -252,7 +252,7 @@ func findConfigurationLine(content string, fullPath []string, value any) int {
 	var node any
 	var err error
 
-	err = json.Unmarshal([]byte(content), &node)
+	err = sonic.Unmarshal([]byte(content), &node)
 	if err != nil {
 		var yamlNode yaml.Node
 		err = yaml.Unmarshal([]byte(content), &yamlNode)

@@ -3,13 +3,13 @@ package gateway
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"net"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/go-resty/resty/v2"
@@ -170,7 +170,7 @@ func TestBifrost(t *testing.T) {
 			assert.NoError(t, err)
 
 			testOrder := &TestOrder{}
-			err = json.Unmarshal(resp.Body(), testOrder)
+			err = sonic.Unmarshal(resp.Body(), testOrder)
 			assert.NoError(t, err)
 
 			assert.Equal(t, 200, resp.StatusCode())
