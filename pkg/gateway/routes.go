@@ -11,6 +11,7 @@ import (
 
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/middleware"
+	"github.com/nite-coder/bifrost/pkg/variable"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/blackbear/pkg/cast"
@@ -43,13 +44,13 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 
 		routeMiddlewares := make([]app.HandlerFunc, 0)
 
-		initOptions := &initRouteMiddlewareOptions{
-			routeID:   routeID,
-			route:     routeOptions.Route,
-			serviceID: routeOptions.ServiceID,
+		rOptions := &variable.RequestRoute{
+			RouteID:   routeID,
+			Route:     routeOptions.Route,
+			ServiceID: routeOptions.ServiceID,
 		}
 
-		initRouteMiddleware := newInitRouteMiddleware(initOptions)
+		initRouteMiddleware := newFirstRouteMiddleware(rOptions)
 		routeMiddlewares = append(routeMiddlewares, initRouteMiddleware.ServeHTTP)
 
 		for _, m := range routeOptions.Middlewares {

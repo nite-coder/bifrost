@@ -131,22 +131,13 @@ func newTraceProvider(exporter sdktrace.SpanExporter, options config.TracingOpti
 	}
 
 	for _, setting := range buildInfo.Settings {
-		switch setting.Key {
-		case "vcs.revision":
+		if setting.Key == "vcs.revision" {
 			attrs = append(attrs, attribute.String("vcs.revision", setting.Value))
-		case "vcs.time":
-			attrs = append(attrs, attribute.String("vcs.time", setting.Value))
 		}
 	}
 
 	res, err := resource.New(
 		context.Background(),
-		resource.WithFromEnv(), // Discover and provide attributes from OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME environment variables.
-		resource.WithProcessPID(),
-		resource.WithProcessRuntimeVersion(),
-		resource.WithOSType(),
-		resource.WithContainer(),
-		resource.WithHost(),
 		resource.WithAttributes(attrs...),
 	)
 	if err != nil {

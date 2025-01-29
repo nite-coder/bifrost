@@ -44,8 +44,15 @@ func TestGetDirective(t *testing.T) {
 		Method:   hzCtx.Request.Method(),
 		Query:    hzCtx.Request.QueryString(),
 	}
-
 	hzCtx.Set(RequestOrig, reqInfo)
+
+	reqRoute := &RequestRoute{
+		RouteID:   "routeA",
+		Route:     "/orders/{order_id}",
+		ServiceID: "serviceA",
+	}
+
+	hzCtx.Set(BifrostRoute, reqRoute)
 
 	userID := GetInt64("$var.user_id", hzCtx)
 	assert.Equal(t, int64(98765), userID)

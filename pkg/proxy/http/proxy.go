@@ -23,7 +23,6 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -313,8 +312,9 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	if p.options.IsTracingEnabled {
 		tracer := otel.Tracer("bifrost")
-		var span trace.Span
 		if tracer != nil {
+			var span trace.Span
+
 			spanOptions := []trace.SpanStartOption{
 				trace.WithSpanKind(trace.SpanKindClient),
 			}
@@ -327,14 +327,9 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 			defer func() {
 				labels := []attribute.KeyValue{
-					attribute.String("http.request.method", reqMethod),
+					semconv.HTTPRequestMethodKey.String(reqMethod),
 					semconv.ServerAddress(p.target),
 					semconv.URLFull(urlFull),
-					semconv.HTTPResponseStatusCode(outResp.StatusCode()),
-				}
-
-				if c.Response.StatusCode() >= 500 {
-					span.SetStatus(codes.Error, string(outResp.Body()))
 				}
 
 				span.SetAttributes(labels...)

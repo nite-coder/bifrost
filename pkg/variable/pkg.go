@@ -250,7 +250,12 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		builder.WriteString(info.Protocol)
 		return builder.String(), true
 	case HTTPRoute:
-		return c.GetString(HTTPRoute), true
+		val, found := c.Get(BifrostRoute)
+		if !found {
+			return nil, false
+		}
+		info := (val).(*RequestRoute)
+		return info.Route, true
 	case HTTPRequestScheme:
 		val, found := c.Get(RequestOrig)
 		if !found {
@@ -319,11 +324,19 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		return info.Protocol, true
 
 	case RouteID:
-		routeID := c.GetString(RouteID)
-		return routeID, true
+		val, found := c.Get(BifrostRoute)
+		if !found {
+			return nil, false
+		}
+		info := (val).(*RequestRoute)
+		return info.RouteID, true
 	case ServiceID:
-		serviceID := c.GetString(ServiceID)
-		return serviceID, true
+		val, found := c.Get(BifrostRoute)
+		if !found {
+			return nil, false
+		}
+		info := (val).(*RequestRoute)
+		return info.ServiceID, true
 	case UpstreamID:
 		upstream := c.GetString(UpstreamID)
 		return upstream, true

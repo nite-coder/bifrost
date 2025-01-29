@@ -6,13 +6,13 @@ import (
 	"os"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/tracing"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -21,20 +21,44 @@ const traceIDKey = "trace_id"
 
 func init() {
 	_ = middleware.RegisterMiddleware("tracing", func(params map[string]any) (app.HandlerFunc, error) {
-		m := NewMiddleware()
+		opts := &Options{}
+
+		config := &mapstructure.DecoderConfig{
+			Metadata: nil,
+			Result:   opts,
+			TagName:  "mapstructure",
+		}
+
+		decoder, err := mapstructure.NewDecoder(config)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := decoder.Decode(params); err != nil {
+			return nil, err
+		}
+
+		m := NewMiddleware(opts)
+
 		return m.ServeHTTP, nil
 	})
 }
 
 type TracingMiddleware struct {
+	options  *Options
 	tracer   trace.Tracer
 	hostname string
 }
 
-func NewMiddleware() *TracingMiddleware {
+type Options struct {
+	Attributes map[string]string `mapstructure:"attributes"`
+}
+
+func NewMiddleware(options *Options) *TracingMiddleware {
 	hostname, _ := os.Hostname()
 
 	return &TracingMiddleware{
+		options:  options,
 		tracer:   otel.Tracer("bifrost"),
 		hostname: hostname,
 	}
@@ -57,43 +81,35 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 	ctx = tracing.Extract(ctx, &c.Request.Header)
 	ctx, span := m.tracer.Start(ctx, "", spanOptions...)
 
-	httpHost := variable.GetString(variable.HTTPRequestHost, c)
 	reqScheme := variable.GetString(variable.HTTPRequestScheme, c)
 	reqPath := variable.GetString(variable.HTTPRequestPath, c)
-	reqQuery := variable.GetString(variable.HTTPRequestQuery, c)
-	networkProtocol := variable.GetString(variable.HTTPRequestProtocol, c)
-	clientIP := c.ClientIP()
 
 	defer func() {
-		serverID := variable.GetString(variable.ServerID, c)
 		routeID := variable.GetString(variable.RouteID, c)
-		serviceID := variable.GetString(variable.ServiceID, c)
-		remoteAddr := variable.GetString(variable.NetworkPeerAddress, c)
+		httpRoute := variable.GetString(variable.HTTPRoute, c)
 
-		span.SetName(reqMethod + " " + routeID)
+		if len(httpRoute) > 0 {
+			span.SetName(reqMethod + " " + httpRoute)
+		} else {
+			span.SetName(reqMethod + " " + routeID)
+		}
 
 		// please refer to doc
 		// https://github.com/open-telemetry/semantic-conventions/blob/v1.27.0/docs/http/http-spans.md#status
 
 		labels := []attribute.KeyValue{
-			attribute.String("bifrost.server_id", serverID),
-			attribute.String("bifrost.route_id", routeID),
-			attribute.String("bifrost.service_id", serviceID),
-			semconv.HTTPRoute(routeID),
-			semconv.HTTPRequestMethodOriginal(reqMethod),
-			semconv.ServerAddress(httpHost),
-			semconv.URLScheme(reqScheme),
+			semconv.HTTPRequestMethodKey.String(reqMethod),
 			semconv.URLPath(reqPath),
-			semconv.URLQuery(reqQuery),
-			semconv.NetworkProtocolName(networkProtocol),
-			semconv.ClientAddress(clientIP),
-			semconv.NetworkLocalAddress(m.hostname),
-			semconv.NetworkPeerAddress(remoteAddr),
-			semconv.HTTPResponseStatusCode(c.Response.StatusCode()),
+			semconv.URLScheme(reqScheme),
 		}
 
-		if c.Response.StatusCode() >= 500 {
-			span.SetStatus(codes.Error, string(c.Response.Body()))
+		for k, v := range m.options.Attributes {
+			if k == "" {
+				continue
+			}
+
+			val := variable.GetString(v, c)
+			labels = append(labels, attribute.String(k, val))
 		}
 
 		span.SetAttributes(labels...)
@@ -106,6 +122,7 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 		// add trace_id to logger
 		logger = logger.With(slog.String(traceIDKey, traceID))
 		ctx = log.NewContext(ctx, logger)
+
 		c.Set(traceIDKey, traceID)
 	}
 

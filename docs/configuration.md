@@ -147,7 +147,7 @@ metrics:
 ## tracing
 
 Supports `opentelemetry` for tracing, passing logs to an otel collector server. To enable tracing features, configure it with the tracing middleware.
-Bifrost follows [official OpenTelemetry semantic conventions v1.26.0](https://github.com/open-telemetry/semantic-conventions/blob/v1.26.0/docs/http/http-spans.md)
+Bifrost follows [official OpenTelemetry semantic conventions v1.27.0](https://github.com/open-telemetry/semantic-conventions/blob/v1.27.0/docs/http/http-spans.md)
 
 Example:
 

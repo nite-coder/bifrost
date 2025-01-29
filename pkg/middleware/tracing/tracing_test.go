@@ -14,8 +14,12 @@ import (
 func TestTracingMiddleware(t *testing.T) {
 	h := middleware.FindHandlerByType("tracing")
 
-	params := map[string]any{
+	attrs := map[string]any{
 		"response_header": "x-trace-id",
+	}
+
+	params := map[string]any{
+		"attributes": attrs,
 	}
 
 	m, err := h(params)

@@ -10,6 +10,12 @@ type RequestOriginal struct {
 	Protocol string
 }
 
+type RequestRoute struct {
+	RouteID   string
+	Route     string
+	ServiceID string
+}
+
 const (
 	Time                        = "$time"
 	ServerID                    = "$server_id"
@@ -46,6 +52,7 @@ const (
 	UpstreamResponoseStatusCode = "$upstream.response.status_code"
 	Allow                       = "$allow"
 	ClientIP                    = "$client_ip"
+	BifrostRoute                = "$bifrost_route"
 	TargetTimeout               = "target_timeout"
 
 	// grpc
