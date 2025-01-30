@@ -155,23 +155,23 @@ func validateAccessLog(options map[string]AccessLogOptions) error {
 
 func validateServers(mainOptions Options, isFullMode bool) error {
 
-	for id, serverOptions := range mainOptions.Servers {
+	for serverID, serverOptions := range mainOptions.Servers {
 		if serverOptions.Bind == "" {
-			msg := fmt.Sprintf("the bind can't be empty for server '%s'", id)
-			structure := []string{"servers", id, "bind"}
+			msg := fmt.Sprintf("the bind can't be empty for server '%s'", serverID)
+			structure := []string{"servers", serverID, "bind"}
 			return newInvalidConfig(structure, "", msg)
 		}
 
 		if len(serverOptions.TLS.CertPEM) > 0 {
 			_, err := os.ReadFile(serverOptions.TLS.CertPEM)
 			if err != nil {
-				msg := fmt.Sprintf("the cert pem file is invalid for server '%s'", id)
+				msg := fmt.Sprintf("the cert pem file is invalid for server '%s'", serverID)
 
 				if os.IsNotExist(err) {
-					msg = fmt.Sprintf("the cert pem file doesn't exist for server '%s'", id)
+					msg = fmt.Sprintf("the cert pem file doesn't exist for server '%s'", serverID)
 				}
 
-				structure := []string{"servers", id, "tls", "cert_pem"}
+				structure := []string{"servers", serverID, "tls", "cert_pem"}
 				return newInvalidConfig(structure, serverOptions.TLS.CertPEM, msg)
 			}
 		}
@@ -179,21 +179,21 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 		if len(serverOptions.TLS.KeyPEM) > 0 {
 			_, err := os.ReadFile(serverOptions.TLS.KeyPEM)
 			if err != nil {
-				msg := fmt.Sprintf("the key pem file is invalid for server '%s'", id)
+				msg := fmt.Sprintf("the key pem file is invalid for server '%s'", serverID)
 
 				if os.IsNotExist(err) {
-					msg = fmt.Sprintf("the key pem file doesn't exist for server '%s'", id)
+					msg = fmt.Sprintf("the key pem file doesn't exist for server '%s'", serverID)
 				}
 
-				structure := []string{"servers", id, "tls", "key_pem"}
+				structure := []string{"servers", serverID, "tls", "key_pem"}
 				return newInvalidConfig(structure, serverOptions.TLS.KeyPEM, msg)
 			}
 		}
 
 		if serverOptions.AccessLogID != "" {
 			if _, found := mainOptions.AccessLogs[serverOptions.AccessLogID]; !found {
-				msg := fmt.Sprintf("the access log '%s' doesn't exist for server '%s'", serverOptions.AccessLogID, id)
-				structure := []string{"servers", id, "access_log_id"}
+				msg := fmt.Sprintf("the access log '%s' doesn't exist for server '%s'", serverOptions.AccessLogID, serverID)
+				structure := []string{"servers", serverID, "access_log_id"}
 				return newInvalidConfig(structure, serverOptions.AccessLogID, msg)
 			}
 		}
@@ -202,14 +202,14 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 			for _, m := range serverOptions.Middlewares {
 				if len(m.Use) > 0 {
 					if _, found := mainOptions.Middlewares[m.Use]; !found {
-						return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Use, serverOptions.ID)
+						return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Use, serverID)
 					}
 				}
 
 				if len(m.Type) > 0 {
 					hander := middleware.FindHandlerByType(m.Type)
 					if hander == nil {
-						return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Type, serverOptions.ID)
+						return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Type, serverID)
 					}
 				}
 			}
