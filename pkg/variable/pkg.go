@@ -3,8 +3,10 @@ package variable
 import (
 	"bytes"
 	"net"
+	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
@@ -24,6 +26,7 @@ var (
 		HTTPRequestHost:             {},
 		ServerID:                    {},
 		RouteID:                     {},
+		Hostname:                    {},
 		ServiceID:                   {},
 		HTTPRequestSize:             {},
 		HTTPResponseSize:            {},
@@ -142,6 +145,11 @@ func IsDirective(key string) bool {
 	return false
 }
 
+var (
+	hostnameOnce sync.Once
+	hostname     string
+)
+
 func directive(key string, c *app.RequestContext) (val any, found bool) {
 	switch key {
 	case Time:
@@ -149,6 +157,13 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		return now, true
 	case ClientIP:
 		return c.ClientIP(), true
+	case Hostname:
+		hostnameOnce.Do(func() {
+			if hostname == "" {
+				hostname, _ = os.Hostname()
+			}
+		})
+		return hostname, true
 	case HTTPRequestHost:
 		val, found := c.Get(RequestOrig)
 		if !found {

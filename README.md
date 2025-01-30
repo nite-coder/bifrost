@@ -4,7 +4,7 @@ A low latency and high throughput API Gateway library written in Go.
 
 ## Goal
 
-1. Low latency and high throughput (powered by the Hertz framework).
+1. Low latency and high throughput.
 1. Allows writing middlewares in native `Go`.
 1. Easy to integrate with existing Go services.
 1. Built as an SDK/library instead of an artifact.
@@ -12,7 +12,7 @@ A low latency and high throughput API Gateway library written in Go.
 ## Features
 
 1. Support for writing middleware in `Go`.
-1. High performance and low latency (powered by the Hertz framework).
+1. Low latency and high throughput (powered by the Hertz framework).
 1. Millisecond-level hot reloads for route updates without interrupting requests.
 1. Built-in Prometheus monitoring.
 1. Built-in OpenTelemetry tracing.

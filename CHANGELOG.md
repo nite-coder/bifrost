@@ -7,7 +7,8 @@
 - Automatically load configuration from the default path when the config path is empty.
 - Added support for systemd init scripts.
 - Enabled handling of `SIGUSR1` signals for logging purposes.
-- Introduced the `route` field in routes.
+- Introduce the `route` field in routes.
+- Introduce the `opentelemetry` middleware.
 
 ### **Bug Fixes**
 
@@ -25,7 +26,7 @@
 
 - Enhanced DNS resolver to update upstreams.
 - Excluded reading subdirectories in paths when using the file provider.
-- Optimized OpenTelemetry tracing information and redesigned its configuration.
+- the `tracing` middleware is removed.
 - Updated metric endpoint to follow semantic conventions.
 
 ### **Chore**

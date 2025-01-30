@@ -61,11 +61,11 @@ resolver:
   skip_test: false
 ```
 
-| Field     | Type          | Default | Description                                                                        |
-| --------- | ------------- | ------- | ---------------------------------------------------------------------------------- |
-| addr_port | string        |         | DNS server address and port.  If empty, the local `/etc/resolv.conf` will be used. |
-| valid     | time.Duration | 0       | Time to refresh the DNS cache.  `0`: means no refresh.  It must be greater than 0. |
-| skip_test | bool          | false   | Skip the dns check during testing                                                  |
+| Field     | Type            | Default | Description                                                                        |
+| --------- | --------------- | ------- | ---------------------------------------------------------------------------------- |
+| addr_port | `string`        |         | DNS server address and port.  If empty, the local `/etc/resolv.conf` will be used. |
+| valid     | `time.Duration` | 0       | Time to refresh the DNS cache.  `0`: means no refresh.  It must be greater than 0. |
+| skip_test | `bool`          | false   | Skip the dns check during testing                                                  |
 
 ## pid_file
 
@@ -97,11 +97,11 @@ providers:
       - "./conf"
 ```
 
-| Field      | Type     | Default                | Description                                               |
-| ---------- | -------- | ---------------------- | --------------------------------------------------------- |
-| enabled    | bool     | false                  | Enables the file provider                                 |
-| extensions | []string | `.yaml`,`.yml`, `json` | Allowed file extensions                                   |
-| paths      | []string |                        | Directories or files to be loaded.  (Skip subdirectories) |
+| Field      | Type       | Default                | Description                                               |
+| ---------- | ---------- | ---------------------- | --------------------------------------------------------- |
+| enabled    | `bool`     | `false`                | Enables the file provider                                 |
+| extensions | `[]string` | `.yaml`,`.yml`, `json` | Allowed file extensions                                   |
+| paths      | `[]string` |                        | Directories or files to be loaded.  (Skip subdirectories) |
 
 ## logging
 
@@ -116,11 +116,11 @@ logging:
   output: stderr
 ```
 
-| Field   | Type   | Default | Description                                                                      |
-| ------- | ------ | ------- | -------------------------------------------------------------------------------- |
-| handler | string | text    | Log format; supports `text` and `json`                                           |
-| level   | string | info    | Log level; options are  `debug`, `info`, `warn`, `error`. Not enabled by default |
-| output  | string |         | Log output location, currently supports `stderr` or file path                    |
+| Field   | Type     | Default | Description                                                                      |
+| ------- | -------- | ------- | -------------------------------------------------------------------------------- |
+| handler | `string` | `text`  | Log format; supports `text` and `json`                                           |
+| level   | `string` | `info`  | Log level; options are  `debug`, `info`, `warn`, `error`. Not enabled by default |
+| output  | `string` |         | Log output location, currently supports `stderr` or file path                    |
 
 ## metrics
 
@@ -137,12 +137,12 @@ metrics:
     buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
 ```
 
-| Field                | Type      | Default                                                                       | Description                    |
-| -------------------- | --------- | ----------------------------------------------------------------------------- | ------------------------------ |
-| prometheus.enabled   | bool      | false                                                                         | Enables prometheus support     |
-| prometheus.server_id | string    |                                                                               | Server  used to expose metrics |
-| prometheus.path      | string    | `/metrics`                                                                    | set the metric                 |
-| prometheus.buckets   | []float64 | `0.005`, `0.01`, `0.025`, `0.05`, `0.1`, `0.25`, `0.5`, `1`, `2.5`, `5`, `10` | Latency bucket levels          |
+| Field                | Type        | Default                                                                       | Description                    |
+| -------------------- | ----------- | ----------------------------------------------------------------------------- | ------------------------------ |
+| prometheus.enabled   | `bool`      | `false`                                                                       | Enables prometheus support     |
+| prometheus.server_id | `string`    |                                                                               | Server  used to expose metrics |
+| prometheus.path      | `string`    | `/metrics`                                                                    | set the metric                 |
+| prometheus.buckets   | `[]float64` | `0.005`, `0.01`, `0.025`, `0.05`, `0.1`, `0.25`, `0.5`, `1`, `2.5`, `5`, `10` | Latency bucket levels          |
 
 ## tracing
 
@@ -164,18 +164,18 @@ tracing:
   queue_size: 50000
 ```
 
-| Field         | Type          | Default                   | Description                                                                                                                                                         |
-| :------------ | :------------ | :------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| enabled       | bool          | `false`                   | Enables opentelemetry tracing support                                                                                                                               |
-| service_name  | string        | `bifrsot`                 | The service name of the gateway                                                                                                                                     |
-| propagators   | []string      | `tracecontext`, `baggage` | The supported propagators are: `tracecontext`, `baggage`, `b3`, `jaeger`                                                                                            |
-| endpoint      | string        | `localhost:4318`          | The address and port of the otel collector. If the endpoint starts with `http` or `https`, it will use the HTTP protocol. Otherwise, it will use the gRPC protocol. |
-| insecure      | bool          | `false`                   | Certificate verification                                                                                                                                            |
-| sampling_rate | float64       | `1.0`                     | A given fraction of traces. Fractions >= 1 will always sample. Fractions < 0 are treated as zero.                                                                   |
-| batch_size    | int64         | `100`                     | Maximum number of spans to be sent in a single batch export                                                                                                         |
-| flush         | time.Duration | `5s`                      | Maximum time to wait before sending a batch of spans, regardless of batch size                                                                                      |
-| queue_size    | int64         | `10000`                   | Maximum number of spans that can be queued before being dropped                                                                                                     |
-| timeout       | time.Duration | `10s`                     | Maximum duration allowed for the entire trace export operation, including connection establishment and data transmission                                            |
+| Field         | Type            | Default                   | Description                                                                                                                                                         |
+| :------------ | :-------------- | :------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| enabled       | `bool`          | `false`                   | Enables opentelemetry tracing support                                                                                                                               |
+| service_name  | `string`        | `bifrsot`                 | The service name of the gateway                                                                                                                                     |
+| propagators   | `[]string`      | `tracecontext`, `baggage` | The supported propagators are: `tracecontext`, `baggage`, `b3`, `jaeger`                                                                                            |
+| endpoint      | `string`        | `localhost:4318`          | The address and port of the otel collector. If the endpoint starts with `http` or `https`, it will use the HTTP protocol. Otherwise, it will use the gRPC protocol. |
+| insecure      | `bool`          | `false`                   | Certificate verification                                                                                                                                            |
+| sampling_rate | `float64`       | `1.0`                     | A given fraction of traces. Fractions >= 1 will always sample. Fractions < 0 are treated as zero.                                                                   |
+| batch_size    | `int64`         | `100`                     | Maximum number of spans to be sent in a single batch export                                                                                                         |
+| flush         | `time.Duration` | `5s`                      | Maximum time to wait before sending a batch of spans, regardless of batch size                                                                                      |
+| queue_size    | `int64`         | `10000`                   | Maximum number of spans that can be queued before being dropped                                                                                                     |
+| timeout       | `time.Duration` | `10s`                     | Maximum duration allowed for the entire trace export operation, including connection establishment and data transmission                                            |
 
 ## middlewares
 
@@ -189,10 +189,10 @@ middlewares:
     type: timing_logger
 ```
 
-| Field  | Type           | Default | Description           |
-| ------ | -------------- | ------- | --------------------- |
-| type   | string         |         | Middleware type       |
-| params | map[string]any |         | Middleware parameters |
+| Field  | Type             | Default | Description           |
+| ------ | ---------------- | ------- | --------------------- |
+| type   | `string`         |         | Middleware type       |
+| params | `map[string]any` |         | Middleware parameters |
 
 ## access_logs
 
@@ -225,8 +225,8 @@ access_logs:
 
 | Field          | Type            | Default               | Description                                                                                                |
 | -------------- | --------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- |
-| output         | `string`        |                       | Output location; supports `stderr` or file path;                                                           |
-| buffering_size | `int`           | 64 KB                 | Output buffer size, in bytes                                                                               |
+| output         | `string`        |                       | Output location; supports `stderr` or file path. If empty, no log will be printed                          |
+| buffering_size | `int`           | `65536`               | Output buffer size, in bytes                                                                               |
 | time_format    | `string`        | `2006-01-02 15:04:05` | Time format; use [golang time format](https://yourbasic.org/golang/format-parse-string-time-date-example/) |
 | escape         | `string`        | `none`                | Escape characters; options are `none`, `json`, `default`                                                   |
 | template       | `string`        |                       | Request log format                                                                                         |
@@ -258,26 +258,26 @@ servers:
       - type: tracing
 ```
 
-| Field                 | Type                | Default | Description                                                                                  |
-| --------------------- | ------------------- | ------- | -------------------------------------------------------------------------------------------- |
-| bind                  | string              |         | Port binding                                                                                 |
-| reuse_port            | bool                | false   | Enables reuse port; Linux only                                                               |
-| tcp_fast_open         | bool                | false   | Enables TCP fast open; Linux only                                                            |
-| tcp_quick_ack         | bool                | false   | Enables TCP quick ack; Linux only                                                            |
-| backlog               | int                 |         | Limits TCP backlog count; Linux only                                                         |
-| http2                 | bool                | false   | Enables HTTP2                                                                                |
-| logging.handler       | string              | text    | Log format; supports `text`, `json`                                                          |
-| logging.level         | string              | info    | Log level; options are `debug`, `info`, `warn`, `error`. Not enabled by default              |
-| logging.output        | string              |         | Log output location; `stderr` or file path                                                   |
-| timeout.keepalive     | time.Duration       | 60s     | Keepalive timeout                                                                            |
-| timeout.read          | time.Duration       | 60s     | Read timeout                                                                                 |
-| timeout.write         | time.Duration       | 60s     | Write timeout                                                                                |
-| timeout.graceful      | time.Duration       | 10s     | Graceful shutdown timeout                                                                    |
-| max_request_body_size | int                 | 4MB     | Max body size of a request.  Unit: byte                                                      |
-| read_buffer_size      | int                 | 4MB     | Set the read buffer size while limiting the HTTP header size.  Unit: byte                    |
-| pprof                 | bool                | false   | pprof lets you collect CPU profiles, traces, and heap profiles for your Go programs via HTTP |
-| access_log_id         | string              |         | Specifies the access log to use                                                              |
-| middlewares           | []MiddlewareOptions |         | middleware of the server                                                                     |
+| Field                 | Type                  | Default | Description                                                                                  |
+| --------------------- | --------------------- | ------- | -------------------------------------------------------------------------------------------- |
+| bind                  | `string`              |         | Port binding                                                                                 |
+| reuse_port            | `bool`                | `false` | Enables reuse port; Linux only                                                               |
+| tcp_fast_open         | `bool`                | `false` | Enables TCP fast open; Linux only                                                            |
+| tcp_quick_ack         | `bool`                | `false` | Enables TCP quick ack; Linux only                                                            |
+| backlog               | `int`                 |         | Limits TCP backlog count; Linux only                                                         |
+| http2                 | `bool`                | `false` | Enables HTTP2                                                                                |
+| logging.handler       | `string`              | `text`  | Log format; supports `text`, `json`                                                          |
+| logging.level         | `string`              | `info`  | Log level; options are `debug`, `info`, `warn`, `error`. Not enabled by default              |
+| logging.output        | `string`              |         | Output location; supports `stderr` or file path. If empty, no log will be printed            |
+| timeout.keepalive     | `time.Duration`       | `60s`   | Keepalive timeout                                                                            |
+| timeout.read          | `time.Duration`       | `60s`   | Read timeout                                                                                 |
+| timeout.write         | `time.Duration`       | `60s`   | Write timeout                                                                                |
+| timeout.graceful      | `time.Duration`       | `10s`   | Graceful shutdown timeout                                                                    |
+| max_request_body_size | `int`                 | `4MB`   | Max body size of a request.  Unit: byte                                                      |
+| read_buffer_size      | `int`                 | `4MB`   | Set the read buffer size while limiting the HTTP header size.  Unit: byte                    |
+| pprof                 | `bool`                | `false` | pprof lets you collect CPU profiles, traces, and heap profiles for your Go programs via HTTP |
+| access_log_id         | `string`              |         | Specifies the access log to use                                                              |
+| middlewares           | `[]MiddlewareOptions` |         | middleware of the server                                                                     |
 
 ## routes
 
@@ -296,14 +296,14 @@ routes:
       - type: tracing
 ```
 
-| Field       | Type                | Default | Description                                                         |
-| ----------- | ------------------- | ------- | ------------------------------------------------------------------- |
-| methods     | []string            |         | HTTP methods; if empty, all methods supported                       |
-| paths       | []string            |         | http path                                                           |
-| route       | string              |         | The path template is in the format used for displaying metric paths |
-| servers     | []string            |         | Servers to apply the route; all servers if empty                    |
-| service_id  | string              |         | Service ID                                                          |
-| middlewares | []MiddlewareOptions |         | middleware of the routes                                            |
+| Field       | Type                  | Default | Description                                                         |
+| ----------- | --------------------- | ------- | ------------------------------------------------------------------- |
+| methods     | `[]string`            |         | HTTP methods; if empty, all methods supported                       |
+| paths       | `[]string`            |         | http path                                                           |
+| route       | `string`              |         | The path template is in the format used for displaying metric paths |
+| servers     | `[]string`            |         | Servers to apply the route; all servers if empty                    |
+| service_id  | `string`              |         | Service ID                                                          |
+| middlewares | `[]MiddlewareOptions` |         | middleware of the routes                                            |
 
 ## services
 
@@ -352,11 +352,11 @@ upstreams:
         weight: 1
 ```
 
-| Field                | Type   | Default     | Description                                                                          |
-| -------------------- | ------ | ----------- | ------------------------------------------------------------------------------------ |
-| strategy             | string | round_robin | Load balancing algorithm; supports `round_robin`、`random`、`weighted`、`hashing`    |
-| hash_on              | string |             | Variable used for hash-based load balancing, effective only if strategy is `hashing` |
-| targets.target       | string |             | Target IP                                                                            |
-| targets.max_fails    | int32  | 0           | Maximum failure count; `0` - indicates no limit                                      |
-| targets.fail_timeout | int32  | 10s         | Time window for tracking failure counts                                              |
-| targets.weight       | int32  | 1           | Weight for load balancing                                                            |
+| Field                | Type     | Default       | Description                                                                          |
+| -------------------- | -------- | ------------- | ------------------------------------------------------------------------------------ |
+| strategy             | `string` | `round_robin` | Load balancing algorithm; supports `round_robin`、`random`、`weighted`、`hashing`    |
+| hash_on              | `string` |               | Variable used for hash-based load balancing, effective only if strategy is `hashing` |
+| targets.target       | `string` |               | Target IP                                                                            |
+| targets.max_fails    | `int32`  | `0`           | Maximum failure count; `0` - indicates no limit                                      |
+| targets.fail_timeout | `int32`  | `10s`         | Time window for tracking failure counts                                              |
+| targets.weight       | `int32`  | `1`           | Weight for load balancing                                                            |

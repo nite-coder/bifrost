@@ -14,6 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/client"
+	hzerrors "github.com/cloudwego/hertz/pkg/common/errors"
+	"github.com/cloudwego/hertz/pkg/protocol"
+	"github.com/google/uuid"
 	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
@@ -21,18 +26,13 @@ import (
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/tracing"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
-
-	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/app/client"
-	hzerrors "github.com/cloudwego/hertz/pkg/common/errors"
-	"github.com/cloudwego/hertz/pkg/protocol"
-	"github.com/google/uuid"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // TrailerPrefix is a magic prefix for [ResponseWriter.Header] map keys
@@ -330,6 +330,18 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 					semconv.HTTPRequestMethodKey.String(reqMethod),
 					semconv.ServerAddress(p.target),
 					semconv.URLFull(urlFull),
+				}
+
+				if c.Response.StatusCode() > 0 {
+					labels = append(labels, semconv.HTTPResponseStatusCode(c.Response.StatusCode()))
+				}
+
+				if c.Response.StatusCode() >= 400 {
+					span.SetStatus(codes.Error, "")
+				}
+
+				if c.GetBool(variable.TargetTimeout) {
+					span.SetStatus(codes.Error, "timeout")
 				}
 
 				span.SetAttributes(labels...)

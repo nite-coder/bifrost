@@ -12,14 +12,18 @@ import (
 )
 
 func TestTracingMiddleware(t *testing.T) {
-	h := middleware.FindHandlerByType("tracing")
+	h := middleware.FindHandlerByType("opentelemetry")
 
 	attrs := map[string]any{
 		"response_header": "x-trace-id",
 	}
 
-	params := map[string]any{
+	tracingOptions := map[string]any{
 		"attributes": attrs,
+	}
+
+	params := map[string]any{
+		"tracing": tracingOptions,
 	}
 
 	m, err := h(params)

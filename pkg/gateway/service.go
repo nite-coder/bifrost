@@ -154,26 +154,26 @@ func (svc *Service) Middlewares() []app.HandlerFunc {
 	return svc.middlewares
 }
 
-func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	logger := log.FromContext(c)
+func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+	logger := log.FromContext(ctx)
 	done := make(chan bool)
 
-	runTask(c, func() {
+	runTask(ctx, func() {
 		defer func() {
 			done <- true
 			if r := recover(); r != nil {
 				stackTrace := runtime.StackTrace()
-				logger.ErrorContext(c, "service panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
-				ctx.Abort()
+				logger.ErrorContext(ctx, "service panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
+				c.Abort()
 			}
 		}()
 
 		if len(svc.dynamicUpstream) > 0 {
-			upstreamName := ctx.GetString(svc.dynamicUpstream)
+			upstreamName := c.GetString(svc.dynamicUpstream)
 
 			if len(upstreamName) == 0 {
-				logger.Warn("upstream is empty", slog.String("path", cast.B2S(ctx.Request.Path())))
-				ctx.Abort()
+				logger.Warn("upstream is empty", slog.String("path", cast.B2S(c.Request.Path())))
+				c.Abort()
 				return
 			}
 
@@ -181,14 +181,14 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 			svc.upstream, found = svc.upstreams[upstreamName]
 			if !found {
 				logger.Warn("upstream is not found", slog.String("name", upstreamName))
-				ctx.Abort()
+				c.Abort()
 				return
 			}
 		}
 
 		proxy := svc.proxy
 		if svc.upstream != nil && proxy == nil {
-			ctx.Set(variable.UpstreamID, svc.upstream.opts.ID)
+			c.Set(variable.UpstreamID, svc.upstream.opts.ID)
 
 			switch svc.upstream.opts.Strategy {
 			case config.RoundRobinStrategy, "":
@@ -199,53 +199,53 @@ func (svc *Service) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 				proxy = svc.upstream.random()
 			case config.HashingStrategy:
 				hashon := svc.upstream.opts.HashOn
-				val := ctx.GetString(hashon)
+				val := c.GetString(hashon)
 				proxy = svc.upstream.hasing(val)
 			}
 		}
 
 		if proxy == nil {
-			reqMethod := cast.B2S(ctx.Request.Method())
-			reqPath := cast.B2S(ctx.Request.Path())
-			reqProtocol := ctx.Request.Header.GetProtocol()
+			reqMethod := cast.B2S(c.Request.Method())
+			reqPath := cast.B2S(c.Request.Path())
+			reqProtocol := c.Request.Header.GetProtocol()
 
-			logger.ErrorContext(c, ErrNoLiveUpstream.Error(),
+			logger.ErrorContext(ctx, ErrNoLiveUpstream.Error(),
 				"request_uri", reqMethod+" "+reqPath+" "+reqProtocol,
 				"upstream_uri", reqPath,
-				"host", cast.B2S(ctx.Request.Host()))
+				"host", cast.B2S(c.Request.Host()))
 
 			// no live upstream
-			ctx.SetStatusCode(503)
+			c.SetStatusCode(503)
 			return
 		}
 
 		startTime := timecache.Now()
-		proxy.ServeHTTP(c, ctx)
+		proxy.ServeHTTP(ctx, c)
 		endTime := timecache.Now()
 
 		dur := endTime.Sub(startTime)
 		mic := dur.Microseconds()
 		duration := float64(mic) / 1e6
 		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
-		ctx.Set(variable.UpstreamDuration, responseTime)
+		c.Set(variable.UpstreamDuration, responseTime)
 
 		// the upstream target timeout and we need to response http status 504 back to client
-		if ctx.GetBool(variable.TargetTimeout) {
-			ctx.Response.SetStatusCode(504)
+		if c.GetBool(variable.TargetTimeout) {
+			c.Response.SetStatusCode(504)
 		} else {
-			ctx.Set(variable.UpstreamResponoseStatusCode, ctx.Response.StatusCode())
+			c.Set(variable.UpstreamResponoseStatusCode, c.Response.StatusCode())
 		}
 	})
 
 	select {
-	case <-c.Done():
-		fullURI := fullURI(&ctx.Request)
-		logger.WarnContext(c, "client cancel the request",
+	case <-ctx.Done():
+		fullURI := fullURI(&c.Request)
+		logger.WarnContext(ctx, "client cancel the request",
 			slog.String("full_uri", fullURI),
 		)
 
 		// The client canceled the request
-		ctx.Response.SetStatusCode(499)
+		c.Response.SetStatusCode(499)
 	case <-done:
 	}
 }

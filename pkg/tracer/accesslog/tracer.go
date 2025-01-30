@@ -110,8 +110,11 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			replacements = append(replacements, variable.HTTPResponseStatusCode, status)
 		default:
 			val := variable.GetString(key, c)
+
 			if len(val) > 0 {
 				val = escape(val, t.opts.Escape)
+			} else if len(val) == 0 && len(key) > 0 {
+				val = escape(key, t.opts.Escape)
 			}
 
 			replacements = append(replacements, key, val)

@@ -13,6 +13,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -20,7 +21,7 @@ import (
 const traceIDKey = "trace_id"
 
 func init() {
-	_ = middleware.RegisterMiddleware("tracing", func(params map[string]any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("opentelemetry", func(params map[string]any) (app.HandlerFunc, error) {
 		opts := &Options{}
 
 		config := &mapstructure.DecoderConfig{
@@ -44,27 +45,31 @@ func init() {
 	})
 }
 
-type TracingMiddleware struct {
+type OpenTelemetryMiddleware struct {
 	options  *Options
 	tracer   trace.Tracer
 	hostname string
 }
 
-type Options struct {
+type TracingOptions struct {
 	Attributes map[string]string `mapstructure:"attributes"`
 }
 
-func NewMiddleware(options *Options) *TracingMiddleware {
+type Options struct {
+	TracingOptions TracingOptions `mapstructure:"tracing"`
+}
+
+func NewMiddleware(options *Options) *OpenTelemetryMiddleware {
 	hostname, _ := os.Hostname()
 
-	return &TracingMiddleware{
+	return &OpenTelemetryMiddleware{
 		options:  options,
 		tracer:   otel.Tracer("bifrost"),
 		hostname: hostname,
 	}
 }
 
-func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *OpenTelemetryMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 
 	if m.tracer == nil {
@@ -83,10 +88,12 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 
 	reqScheme := variable.GetString(variable.HTTPRequestScheme, c)
 	reqPath := variable.GetString(variable.HTTPRequestPath, c)
+	reqQuery := variable.GetString(variable.HTTPRequestQuery, c)
 
 	defer func() {
 		routeID := variable.GetString(variable.RouteID, c)
 		httpRoute := variable.GetString(variable.HTTPRoute, c)
+		errType := variable.GetString(variable.ErrorType, c)
 
 		if len(httpRoute) > 0 {
 			span.SetName(reqMethod + " " + httpRoute)
@@ -103,12 +110,41 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 			semconv.URLScheme(reqScheme),
 		}
 
-		for k, v := range m.options.Attributes {
-			if k == "" {
+		if len(httpRoute) > 0 {
+			labels = append(labels, semconv.HTTPRoute(httpRoute))
+		}
+
+		if len(reqQuery) > 0 {
+			labels = append(labels, semconv.URLQuery(reqQuery))
+		}
+
+		if len(errType) > 0 {
+			labels = append(labels, semconv.ErrorTypeKey.String(errType))
+		}
+
+		if c.Response.StatusCode() > 0 {
+			labels = append(labels, semconv.HTTPResponseStatusCode(c.Response.StatusCode()))
+		}
+
+		if c.Response.StatusCode() >= 500 {
+			span.SetStatus(codes.Error, "")
+		}
+
+		if c.GetBool(variable.TargetTimeout) {
+			span.SetStatus(codes.Error, "timeout")
+		}
+
+		for k, v := range m.options.TracingOptions.Attributes {
+			if k == "" || v == "" {
 				continue
 			}
 
 			val := variable.GetString(v, c)
+
+			if len(val) == 0 && variable.IsDirective(v) {
+				continue
+			}
+
 			labels = append(labels, attribute.String(k, val))
 		}
 

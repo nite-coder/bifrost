@@ -24,6 +24,7 @@ const (
 	UpstreamID                  = "$upstream_id"
 	RequestOrig                 = "$request_orig"
 	NetworkPeerAddress          = "$network.peer.address"
+	Hostname                    = "$hostname"
 	HTTPStart                   = "$http.start"
 	HTTPFinish                  = "$http.finish"
 	HTTPRoute                   = "$http.route"
@@ -40,6 +41,8 @@ const (
 	HTTPResponseSize            = "$http.response.size"
 	HTTPResponseStatusCode      = "$http.response.status_code"
 	HTTPRequestDuration         = "$http.request.duration"
+	ErrorType                   = "$error.type"
+	ErrorMessage                = "$error.message"
 	LogTime                     = "$log_time"
 	UpstreamRequest             = "$upstream.request"
 	UpstreamRequestHost         = "$upstream.request.host"
@@ -52,7 +55,7 @@ const (
 	UpstreamResponoseStatusCode = "$upstream.response.status_code"
 	Allow                       = "$allow"
 	ClientIP                    = "$client_ip"
-	BifrostRoute                = "$bifrost_route"
+	BifrostRoute                = "$bifrost.route"
 	TargetTimeout               = "target_timeout"
 
 	// grpc

@@ -5,6 +5,7 @@ import (
 
 	_ "github.com/nite-coder/bifrost/pkg/middleware/addprefix"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/mirror"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/opentelemetry"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/ratelimiting"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepath"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepathregex"
@@ -13,7 +14,6 @@ import (
 	_ "github.com/nite-coder/bifrost/pkg/middleware/responsetransformer"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/setvars"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/stripprefix"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/tracing"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/trafficsplitter"
 	"github.com/stretchr/testify/assert"
 )
