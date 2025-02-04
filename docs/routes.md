@@ -14,7 +14,7 @@ Exact match > Prefix match > Regular expression match > General match
 
 ### Exact Match
 
-The route begins with `=`. In the following example, the request will only be matched if it exactly matches `/spot/orders`.
+A path that begins with `=` is an exact match. In the following example, the request will be matched only if it exactly equals `/spot/orders`.
 
 ```yaml
 routes:
@@ -25,7 +25,7 @@ routes:
 
 ### Prefix Match
 
-Paths that start with `^~` are prefix matches. In this example, any request starting with `/api/v1` will be matched.
+A path that starts with `^~` is a prefix match. In this example, any request starting with `/api/v1` will be matched.
 
 ```yaml
 routes:
@@ -35,7 +35,7 @@ routes:
     service_id: service1
 ```
 
-If a request meets two prefix match rules, the longest matching rule takes priority. In the example below, a request GET `/api/v1/orders/12345` will match `testRoute2`.
+If a request matches two prefix rules, the longest matching rule takes priority. In the example below, a `GET /api/v1/orders/12345` request will match `testRoute2`.
 
 ```yaml
 routes:
@@ -52,7 +52,7 @@ routes:
 
 ### Regular Expression Match
 
-Paths that begin with `~` denote a regular expression match (case sensitive). In this example, requests with paths like `/api/v2/my_orders` will match. Multiple regex rules follow the order in the configuration file from top to bottom.
+A path that begins with `~` denotes a regular expression match (case-sensitive). In this example, requests with paths like `/api/v2/my_orders` will match. When multiple regex rules are defined, they are evaluated in the order they appear in the configuration file, from top to bottom.
 
 ```yaml
 routes:
@@ -73,7 +73,7 @@ routes:
     service_id: service1
 ```
 
-If a request matches two prefix rules, the longest rule takes priority. For example, GET `/api/v1/orders/12345` will match `testRoute2`.
+If a request matches two prefix rules, the longest matching rule takes priority. In the example below, a `GET /api/v1/orders/12345` request will match `testRoute2`.
 
 ```yaml
 routes:

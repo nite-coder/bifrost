@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"flag"
 	"io"
 	"log/slog"
+	"runtime"
 	"sync/atomic"
 	"time"
 
@@ -15,6 +17,11 @@ import (
 	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/websocket"
+)
+
+var (
+	delay = flag.Duration("delay", 0, "delay to mock business processing")
+	tail  = flag.Duration("tail", 0, "1% long tail latency")
 )
 
 func WithDefaultServerHeader(disable bool) config.Option {
@@ -156,6 +163,7 @@ var (
 )
 
 func main() {
+	flag.Parse()
 
 	orderResp = []byte(order)
 	orderbookResp = []byte(orderbook)
@@ -215,18 +223,22 @@ func echoHandler(c context.Context, ctx *app.RequestContext) {
 var placeOrderCounter atomic.Uint64
 
 func placeOrderHandler(c context.Context, ctx *app.RequestContext) {
-	mode := ctx.Query("mode")
 
-	if len(mode) > 0 {
-		if (placeOrderCounter.Load() % 99) == 0 {
-			time.Sleep(100 * time.Millisecond)
+	if (placeOrderCounter.Load() % 99) == 0 {
+		if *tail > 0 {
+			time.Sleep(*tail)
 		} else {
-			time.Sleep(5 * time.Millisecond)
+			runtime.Gosched()
 		}
-		placeOrderCounter.Add(1)
+	} else {
+		if *delay > 0 {
+			time.Sleep(*delay)
+		} else {
+			runtime.Gosched()
+		}
 	}
 
-	// slog.Info("request proto", "proto", ctx.Request.Header.GetProtocol())
+	placeOrderCounter.Add(1)
 
 	ctx.SetContentType("application/json; charset=utf8")
 	ctx.Response.SetStatusCode(200)

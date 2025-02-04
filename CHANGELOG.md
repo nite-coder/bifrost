@@ -21,6 +21,7 @@
 - Added support for trailing slashes in paths.
 - Corrected the order of regex routes when methods are used.
 - Ensured `response_transformer` execution after requests
+- the server id is missing when validating middleware in server options
 
 ### **Refactor**
 
