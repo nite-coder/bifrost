@@ -199,7 +199,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 				proxy = svc.upstream.random()
 			case config.HashingStrategy:
 				hashon := svc.upstream.opts.HashOn
-				val := c.GetString(hashon)
+				val := variable.GetString(hashon, c)
 				proxy = svc.upstream.hasing(val)
 			}
 		}

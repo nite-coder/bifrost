@@ -10,6 +10,8 @@ The access log currently supports the following directives:
 | `$service_id`                    | The service id of the request                                                                                       | `user-service-prod`                     |
 | `$route_id`                      | The route id of the request                                                                                         | `get-user-profile`                      |
 | `$upstream_id`                   | The upstream id of the request                                                                                      | `backend-cluster-01`                    |
+| `$error.type`                    | The error type of the request. You need to write a middleware to extract the error type first.                      | `YOUR_ERROR_CODE`                       |
+| `$error.message`                 | The error message of the request. You need to write a middleware to extract the error type first.                   | `YOUR_ERROR_MESSAGE`                    |
 | `$http.start`                    | HTTP request start                                                                                                  | `1737793075600742`                      |
 | `$http.end`                      | HTTP request finish                                                                                                 | `1737793075600742`                      |
 | `$http.request`                  | HTTP request info                                                                                                   | `GET /users/profile?id=12345 HTTP/1.1`  |

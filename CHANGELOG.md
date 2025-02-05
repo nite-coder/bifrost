@@ -9,6 +9,7 @@
 - Enabled handling of `SIGUSR1` signals for logging purposes.
 - Introduce the `route` field in routes.
 - Introduce the `opentelemetry` middleware.
+- Introduce the `$error.type` and `$error.message` directive.
 
 ### **Bug Fixes**
 
@@ -29,6 +30,7 @@
 - Excluded reading subdirectories in paths when using the file provider.
 - the `tracing` middleware is removed.
 - Updated metric endpoint to follow semantic conventions.
+- Allow the `hash_on` field in upstream to support all directives.
 
 ### **Chore**
 
