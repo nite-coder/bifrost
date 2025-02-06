@@ -150,6 +150,9 @@ func TestGetDirective(t *testing.T) {
 	traceID := GetString("$http.response.header.x-trace-id", hzCtx)
 	assert.Equal(t, "1234", traceID)
 
+	errType := GetString(ErrorType, hzCtx)
+	assert.Equal(t, "", errType)
+
 	hostname := GetString(Hostname, hzCtx)
 	assert.NotEmpty(t, hostname)
 
