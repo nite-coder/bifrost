@@ -193,6 +193,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return "", false
 		}
 		return ip, true
+	case ErrorType:
+		return c.GetString(ErrorType), true
+	case ErrorMessage:
+		return c.GetString(ErrorMessage), true
 	case HTTPRequestSize:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {

@@ -4,7 +4,11 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
+	"github.com/cloudwego/hertz/pkg/common/tracer/traceinfo"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -73,4 +77,22 @@ func BenchmarkEscapeJSON(b *testing.B) {
 			}
 		})
 	}
+}
+
+func TestPrintVariable(t *testing.T) {
+	options := config.AccessLogOptions{
+		Template: "aa:$error.type, time:$time, body:$http.request.body, status_code:$http.response.status_code",
+	}
+	tracer, err := NewTracer(options)
+	assert.NoError(t, err)
+
+	hzCtx := app.NewContext(0)
+	info := traceinfo.NewTraceInfo()
+	info.Stats().SetLevel(stats.LevelDetailed)
+	info.Stats().Record(stats.HTTPStart, stats.StatusInfo, "aa")
+	info.Stats().Record(stats.HTTPFinish, stats.StatusInfo, "aa")
+	hzCtx.SetTraceInfo(info)
+
+	strs := tracer.buildReplacer(hzCtx)
+	assert.Empty(t, strs[5]) // $error.type
 }
