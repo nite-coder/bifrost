@@ -28,6 +28,8 @@ var (
 		RouteID:                     {},
 		Hostname:                    {},
 		ServiceID:                   {},
+		ErrorType:                   {},
+		ErrorMessage:                {},
 		HTTPRequestSize:             {},
 		HTTPResponseSize:            {},
 		HTTPStart:                   {},
