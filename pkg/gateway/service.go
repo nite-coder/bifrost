@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
@@ -19,9 +21,6 @@ import (
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/variable"
-
-	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 

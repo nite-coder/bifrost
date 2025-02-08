@@ -34,7 +34,8 @@
 
 ### **Chore**
 
-- Upgraded Hertz package to `v0.9.5`
+- Updated Hertz package to `v0.9.5`
+- Updated the minimum required Go version to `v1.23`
 
 ### **Pull Requests**
 

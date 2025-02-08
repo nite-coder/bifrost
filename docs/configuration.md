@@ -305,7 +305,7 @@ routes:
 
 | Field       | Type                  | Default | Description                                                         |
 | ----------- | --------------------- | ------- | ------------------------------------------------------------------- |
-| methods     | `[]string`            |         | HTTP methods; if empty, all methods supported                       |
+| methods     | `[]string`            |         | HTTP methods; if empty, all http methods are supported              |
 | paths       | `[]string`            |         | http path                                                           |
 | route       | `string`              |         | The path template is in the format used for displaying metric paths |
 | servers     | `[]string`            |         | Servers to apply the route; all servers if empty                    |
