@@ -22,7 +22,6 @@ Currently supported middlewares are below.
 * [ResponseTransformer](#responsetransformer): Apply a response transformation to the response.
 * [SetVars](#setvars): Set variables in the request context.
 * [StripPrefix](#stripprefix): Remove a prefix from the request path.
-* [Opentelemetry](#opentelemetry): The OpenTelemetry middleware is fully compatible with the OpenTelemetry specification and can be used with any OpenTelemetry compatible backend.
 * [TrafficSplitter](#trafficsplitter): Route requests to different services based on weights.
 
 ### AddPrefix
@@ -200,25 +199,6 @@ routes:
         params:
           prefixes:
             - /api/v1
-```
-
-### Opentelemetry
-
-The OpenTelemetry middleware is fully compatible with the OpenTelemetry specification and can be used with any OpenTelemetry compatible backend.  The middleware follows [official OpenTelemetry semantic conventions v1.27.0](https://github.com/open-telemetry/semantic-conventions/blob/v1.27.0/docs/http/http-spans.md).
-The middleware also create a trace id every request.  You can also use `$var.trace_id` to print trace id in access log.
-
-```yaml
-servers:
-  apiv1:
-    bind: ":8001"
-    reuse_port: true
-    middlewares:
-      - type: opentelemetry
-        params:
-          tracing:
-            attributes:
-              "network.local.address": "$hostname"
-              "user_id": "$var.user_id" # custom attribute
 ```
 
 ### TrafficSplitter

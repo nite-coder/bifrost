@@ -28,6 +28,7 @@ var (
 		RouteID:                     {},
 		Hostname:                    {},
 		ServiceID:                   {},
+		TraceID:                     {},
 		ErrorType:                   {},
 		ErrorMessage:                {},
 		HTTPRequestSize:             {},
@@ -193,6 +194,8 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return "", false
 		}
 		return ip, true
+	case TraceID:
+		return c.GetString(TraceID), true
 	case ErrorType:
 		return c.GetString(ErrorType), true
 	case ErrorMessage:

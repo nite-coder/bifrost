@@ -253,31 +253,38 @@ servers:
       read: 60s
       write: 60s
       graceful: 10s
+    observability:
+      tracing:
+        enabled: true
+        attributes:
+          network.local.address: "$hostname"
     access_log_id: my_access_log
     middlewares:
       - type: tracing
 ```
 
-| Field                 | Type                  | Default | Description                                                                                  |
-| --------------------- | --------------------- | ------- | -------------------------------------------------------------------------------------------- |
-| bind                  | `string`              |         | Port binding                                                                                 |
-| reuse_port            | `bool`                | `false` | Enables reuse port; Linux only                                                               |
-| tcp_fast_open         | `bool`                | `false` | Enables TCP fast open; Linux only                                                            |
-| tcp_quick_ack         | `bool`                | `false` | Enables TCP quick ack; Linux only                                                            |
-| backlog               | `int`                 |         | Limits TCP backlog count; Linux only                                                         |
-| http2                 | `bool`                | `false` | Enables HTTP2                                                                                |
-| logging.handler       | `string`              | `text`  | Log format; supports `text`, `json`                                                          |
-| logging.level         | `string`              | `info`  | Log level; options are `debug`, `info`, `warn`, `error`. Not enabled by default              |
-| logging.output        | `string`              |         | Output location; supports `stderr` or file path. If empty, no log will be printed            |
-| timeout.keepalive     | `time.Duration`       | `60s`   | Keepalive timeout                                                                            |
-| timeout.read          | `time.Duration`       | `60s`   | Read timeout                                                                                 |
-| timeout.write         | `time.Duration`       | `60s`   | Write timeout                                                                                |
-| timeout.graceful      | `time.Duration`       | `10s`   | Graceful shutdown timeout                                                                    |
-| max_request_body_size | `int`                 | `4MB`   | Max body size of a request.  Unit: byte                                                      |
-| read_buffer_size      | `int`                 | `4MB`   | Set the read buffer size while limiting the HTTP header size.  Unit: byte                    |
-| pprof                 | `bool`                | `false` | pprof lets you collect CPU profiles, traces, and heap profiles for your Go programs via HTTP |
-| access_log_id         | `string`              |         | Specifies the access log to use                                                              |
-| middlewares           | `[]MiddlewareOptions` |         | middleware of the server                                                                     |
+| Field                            | Type                  | Default | Description                                                                                  |
+| -------------------------------- | --------------------- | ------- | -------------------------------------------------------------------------------------------- |
+| bind                             | `string`              |         | Port binding                                                                                 |
+| reuse_port                       | `bool`                | `false` | Enables reuse port; Linux only                                                               |
+| tcp_fast_open                    | `bool`                | `false` | Enables TCP fast open; Linux only                                                            |
+| tcp_quick_ack                    | `bool`                | `false` | Enables TCP quick ack; Linux only                                                            |
+| backlog                          | `int`                 |         | Limits TCP backlog count; Linux only                                                         |
+| http2                            | `bool`                | `false` | Enables HTTP2                                                                                |
+| logging.handler                  | `string`              | `text`  | Log format; supports `text`, `json`                                                          |
+| logging.level                    | `string`              | `info`  | Log level; options are `debug`, `info`, `warn`, `error`. Not enabled by default              |
+| logging.output                   | `string`              |         | Output location; supports `stderr` or file path. If empty, no log will be printed            |
+| timeout.keepalive                | `time.Duration`       | `60s`   | Keepalive timeout                                                                            |
+| timeout.read                     | `time.Duration`       | `60s`   | Read timeout                                                                                 |
+| timeout.write                    | `time.Duration`       | `60s`   | Write timeout                                                                                |
+| timeout.graceful                 | `time.Duration`       | `10s`   | Graceful shutdown timeout                                                                    |
+| max_request_body_size            | `int`                 | `4MB`   | Max body size of a request.  Unit: byte                                                      |
+| read_buffer_size                 | `int`                 | `4MB`   | Set the read buffer size while limiting the HTTP header size.  Unit: byte                    |
+| pprof                            | `bool`                | `false` | pprof lets you collect CPU profiles, traces, and heap profiles for your Go programs via HTTP |
+| access_log_id                    | `string`              |         | Specifies the access log to use                                                              |
+| observability.tracing.enabled    | `bool`                | `true`  | Enable or disable the tracing feature                                                        |
+| observability.tracing.attributes | `map[string]string`   | `true`  | The attributes of the span                                                                   |
+| middlewares                      | `[]MiddlewareOptions` |         | middleware of the server                                                                     |
 
 ## routes
 

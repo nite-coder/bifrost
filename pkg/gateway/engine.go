@@ -45,6 +45,11 @@ func newEngine(bifrost *Bifrost, serverOptions config.ServerOptions) (*Engine, e
 	initMiddleware := newInitMiddleware(serverOptions.ID, logger)
 	engine.Use(initMiddleware.ServeHTTP)
 
+	if bifrost.options.Tracing.Enabled && serverOptions.Observability.Tracing.IsEnabled() {
+		tracingMiddleware := newTracingMiddleware(serverOptions.Observability.Tracing)
+		engine.Use(tracingMiddleware.ServeHTTP)
+	}
+
 	// set server's middlewares
 	for _, m := range serverOptions.Middlewares {
 
