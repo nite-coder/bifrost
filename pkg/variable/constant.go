@@ -25,6 +25,7 @@ const (
 	RequestOrig                 = "$request_orig"
 	NetworkPeerAddress          = "$network.peer.address"
 	Hostname                    = "$hostname"
+	TraceID                     = "$trace_id"
 	HTTPStart                   = "$http.start"
 	HTTPFinish                  = "$http.finish"
 	HTTPRoute                   = "$http.route"

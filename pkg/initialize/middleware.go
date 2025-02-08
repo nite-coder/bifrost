@@ -5,7 +5,6 @@ import (
 
 	_ "github.com/nite-coder/bifrost/pkg/middleware/addprefix"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/mirror"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/opentelemetry"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/ratelimiting"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepath"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepathregex"

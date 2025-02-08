@@ -79,6 +79,23 @@ type PrometheusOptions struct {
 	Buckets  []float64 `yaml:"buckets" json:"buckets"`
 }
 
+type ServerTracingOptions struct {
+	Enabled    *bool             `yaml:"enabled" json:"enabled"`
+	Attributes map[string]string `yaml:"attributes" json:"attributes"`
+}
+
+func (options ServerTracingOptions) IsEnabled() bool {
+	if options.Enabled == nil || *options.Enabled {
+		return true
+	}
+
+	return false
+}
+
+type Observability struct {
+	Tracing ServerTracingOptions `yaml:"tracing" json:"tracing"`
+}
+
 type TracingOptions struct {
 	Enabled      bool          `yaml:"enabled" json:"enabled"`
 	ServiceName  string        `yaml:"service_name" json:"service_name"`
@@ -108,6 +125,7 @@ type ServerOptions struct {
 	ReadBufferSize     int                  `yaml:"read_buffer_size" json:"read_buffer_size"`
 	PPROF              bool                 `yaml:"pprof" json:"pprof"`
 	AccessLogID        string               `yaml:"access_log_id" json:"access_log_id"`
+	Observability      Observability        `yaml:"observability" json:"observability"`
 }
 
 type ServerTimeoutOptions struct {
