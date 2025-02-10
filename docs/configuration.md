@@ -196,7 +196,7 @@ middlewares:
 
 ## access_logs
 
-Request logging; variables are detailed in the [access logs](./access_logs.md)
+Record the access log; you can use the directives lists in the [directives](./directive.md)
 
 Example:
 

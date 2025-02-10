@@ -133,7 +133,7 @@ func GetBool(key string, c *app.RequestContext) bool {
 }
 
 func IsDirective(key string) bool {
-	if strings.HasPrefix(key, "$var.") || strings.HasPrefix(key, "$http.request.header.") || strings.HasPrefix(key, "$http.response.header.") {
+	if strings.HasPrefix(key, "$var.") || strings.HasPrefix(key, "$http.request.header.") || strings.HasPrefix(key, "$http.response.header.") || strings.HasPrefix(key, "$http.request.query.") {
 		return true
 	}
 
@@ -460,6 +460,17 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 			headerVal := c.Response.Header.Get(headerKey)
 			return headerVal, true
+		}
+
+		if strings.HasPrefix(key, "$http.request.query.") {
+			queryKey := key[len("$http.request.query."):]
+
+			if len(queryKey) == 0 {
+				return "", false
+			}
+
+			val := c.Query(queryKey)
+			return val, true
 		}
 
 		return nil, false

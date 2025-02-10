@@ -9,7 +9,7 @@
 - Enabled handling of `SIGUSR1` signals for logging purposes.
 - Introduce the `route` field in routes.
 - Introduce the `observability` field in servers options.
-- Introduce the `$error.type`, `$error.message`, `$trace_id` directive.
+- Introduce the `$error.type`, `$error.message`, `$trace_id`, `$http.request.query.<key>` directive.
 
 ### **Bug Fixes**
 
