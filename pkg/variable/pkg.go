@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"net"
 	"os"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,6 +18,7 @@ import (
 )
 
 var (
+	reIsVariable    = regexp.MustCompile(`\$\w+(?:[._-]\w+)*`)
 	grpcContentType = []byte("application/grpc")
 	questionByte    = []byte{byte('?')}
 	spaceByte       = []byte{byte(' ')}
@@ -475,4 +478,32 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 		return nil, false
 	}
+}
+
+func ParseDirectives(content string) []string {
+	variables := reIsVariable.FindAllString(content, -1)
+	sortBifrostVariables(variables)
+	return variables
+}
+
+type byLengthAndContent []string
+
+func (s byLengthAndContent) Len() int {
+	return len(s)
+}
+
+func (s byLengthAndContent) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s byLengthAndContent) Less(i, j int) bool {
+	if len(s[i]) == len(s[j]) {
+		return s[i] < s[j]
+	}
+
+	return len(s[i]) > len(s[j])
+}
+
+func sortBifrostVariables(slice []string) {
+	sort.Sort(byLengthAndContent(slice))
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/middleware"
+	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 func init() {
@@ -21,7 +22,9 @@ func init() {
 }
 
 type ReplacePathMiddleware struct {
-	newPath []byte
+	directives []string
+	newPath    []byte
+	newPathStr string
 }
 
 func NewMiddleware(newPath string) *ReplacePathMiddleware {
@@ -31,11 +34,28 @@ func NewMiddleware(newPath string) *ReplacePathMiddleware {
 	}
 
 	return &ReplacePathMiddleware{
-		newPath: []byte(newPath),
+		newPath:    []byte(newPath),
+		newPathStr: newPath,
+		directives: variable.ParseDirectives(newPath),
 	}
 }
 
 func (m *ReplacePathMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
-	c.Request.URI().SetPathBytes(m.newPath)
+	if len(m.directives) > 0 {
+		replacements := make([]string, 0, len(m.directives)*2)
+
+		for _, key := range m.directives {
+			val := variable.GetString(key, c)
+			replacements = append(replacements, key, val)
+		}
+
+		replacer := strings.NewReplacer(replacements...)
+		result := replacer.Replace(m.newPathStr)
+
+		c.Request.URI().SetPath(result)
+	} else {
+		c.Request.URI().SetPathBytes(m.newPath)
+	}
+
 	c.Next(ctx)
 }

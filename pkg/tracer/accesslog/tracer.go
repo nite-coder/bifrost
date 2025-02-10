@@ -17,6 +17,10 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
+var (
+	grpcContentType = []byte("application/grpc")
+)
+
 type Tracer struct {
 	opts      config.AccessLogOptions
 	matchVars []string
@@ -38,7 +42,7 @@ func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 
 	tracer := &Tracer{
 		opts:      opts,
-		matchVars: parseDirectives(opts.Template),
+		matchVars: variable.ParseDirectives(opts.Template),
 		writer:    bufferedLogger,
 	}
 

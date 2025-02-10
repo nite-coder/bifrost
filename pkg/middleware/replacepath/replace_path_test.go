@@ -28,3 +28,24 @@ func TestReplacePath(t *testing.T) {
 
 	assert.Equal(t, "/api/v1/hello", string(hzCtx.Request.Path()))
 }
+
+func TestReplacePathWithDirective(t *testing.T) {
+	h := middleware.FindHandlerByType("replace_path")
+
+	params := map[string]any{
+		"path": "/api/v1/hello/$var.name",
+	}
+
+	m, err := h(params)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+
+	hzCtx := app.NewContext(0)
+	hzCtx.Set("name", "bifrost")
+	hzCtx.Request.SetMethod("GET")
+	hzCtx.Request.URI().SetPath("/foo")
+	m(ctx, hzCtx)
+
+	assert.Equal(t, "/api/v1/hello/bifrost", string(hzCtx.Request.Path()))
+}

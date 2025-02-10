@@ -195,3 +195,20 @@ func TestIsDirective(t *testing.T) {
 	assert.True(t, IsDirective("$http.response.header.x-trace-id"))
 	assert.False(t, IsDirective("$abc"))
 }
+
+func TestParseDirectives(t *testing.T) {
+
+	template := `{"time":"$time",
+	"remote_addr":"$network.peer.address",
+	"host": "$http.request.host",
+	"request":"$http.request",
+	"req_body":"$http.request.body"}`
+
+	directives := ParseDirectives(template)
+	assert.Equal(t, 5, len(directives))
+
+	template = "/orders/$type"
+	directives = ParseDirectives(template)
+	assert.Equal(t, 1, len(directives))
+	assert.Equal(t, "$type", directives[0])
+}

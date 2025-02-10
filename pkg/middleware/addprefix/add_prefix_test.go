@@ -48,3 +48,25 @@ func TestAddPrefixMoreSlash(t *testing.T) {
 
 	assert.Equal(t, "/api/v1/foo", string(hzCtx.Request.Path()))
 }
+
+
+func TestAddPrefixWithDirective(t *testing.T) {
+	h := middleware.FindHandlerByType("add_prefix")
+
+	params := map[string]any{
+		"prefix": "/api/v1/$var.name",
+	}
+
+	m, err := h(params)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+
+	hzCtx := app.NewContext(0)
+	hzCtx.Set("name", "bifrost")
+	hzCtx.Request.SetMethod("GET")
+	hzCtx.Request.URI().SetPath("/foo")
+	m(ctx, hzCtx)
+
+	assert.Equal(t, "/api/v1/bifrost/foo", string(hzCtx.Request.Path()))
+}
