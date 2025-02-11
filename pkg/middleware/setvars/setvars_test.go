@@ -28,3 +28,26 @@ func TestSetVarsMiddleware(t *testing.T) {
 
 	assert.Equal(t, "/orders/{order_id}", hzCtx.GetString(variable.HTTPRoute))
 }
+
+
+func TestSetVarsWithDirectivesMiddleware(t *testing.T) {
+	h := middleware.FindHandlerByType("setvars")
+
+	params := map[string]any{
+		variable.HTTPRoute: "/orders/{order_id}",
+		"user_id": "$http.request.header.user_id",
+	}
+
+	m, err := h(params)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	hzCtx := app.NewContext(0)
+	hzCtx.Request.SetMethod("GET")
+	hzCtx.Request.URI().SetPath("/orders/123")
+	hzCtx.Request.Header.Set("user_id", "996")
+	m(ctx, hzCtx)
+
+	assert.Equal(t, "/orders/{order_id}", hzCtx.GetString(variable.HTTPRoute))
+	assert.Equal(t, "996", variable.GetString("$var.user_id", hzCtx))
+}

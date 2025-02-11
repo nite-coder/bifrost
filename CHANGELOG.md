@@ -10,7 +10,7 @@
 - Introduce the `route` field in routes.
 - Introduce the `observability` field in servers options.
 - Introduce the `$error.type`, `$error.message`, `$trace_id`, `$http.request.query.<key>` directive.
-- Both `Addprefix` and `Replacepath` middlewares can use directive
+- `Addprefix`,`Replacepath` and `Setvars` middlewares can use directive
 
 ### **Bug Fixes**
 
