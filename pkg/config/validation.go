@@ -220,15 +220,28 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 }
 
 func validateRoutes(mainOptions Options, isFullMode bool) error {
+
 	for routeID, route := range mainOptions.Routes {
 		if route.ServiceID == "" {
-			msg := fmt.Sprintf("the 'service_id' can't be empty for the route '%s'", routeID)
+			msg := fmt.Sprintf("the 'service_id' can't be empty in the route '%s'", routeID)
 			structure := []string{"routes", routeID, "service_id"}
+			return newInvalidConfig(structure, "", msg)
+		}
+
+		if len(route.Paths) == 0 {
+			msg := fmt.Sprintf("the paths can't be empty in the route '%s'", routeID)
+			structure := []string{"routes", routeID, "paths"}
 			return newInvalidConfig(structure, "", msg)
 		}
 
 		if !isFullMode {
 			continue
+		}
+
+		if _, found := mainOptions.Services[route.ServiceID]; !found {
+			msg := fmt.Sprintf("the service '%s' can't be found in the route '%s'", route.ServiceID, routeID)
+			structure := []string{"routes", routeID, "service_id"}
+			return newInvalidConfig(structure, "", msg)
 		}
 
 		for _, serverID := range route.Servers {
@@ -257,19 +270,41 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 
 	for serviceID, service := range mainOptions.Services {
 
-		if isFullMode {
-			for _, m := range service.Middlewares {
-				if len(m.Use) > 0 {
-					if _, found := mainOptions.Middlewares[m.Use]; !found {
-						return fmt.Errorf("the middleware '%s' can't be found in the service '%s'", m.Use, serviceID)
-					}
-				}
+		if !isFullMode {
+			continue
+		}
 
-				if len(m.Type) > 0 {
-					hander := middleware.FindHandlerByType(m.Type)
-					if hander == nil {
-						return fmt.Errorf("the middleware '%s' can't be found in the service '%s'", m.Type, serviceID)
-					}
+		addr, err := url.Parse(service.Url)
+		if err != nil {
+			return err
+		}
+
+		hostname := addr.Hostname()
+
+		// validate
+		if len(hostname) == 0 {
+			return fmt.Errorf("the host is invalid in service url. service_id: %s", serviceID)
+		}
+
+		// exist upstream
+		if hostname[0] != '$' {
+			_, found := mainOptions.Upstreams[hostname]
+			if !found {
+				return fmt.Errorf("the upstream '%s' can't be found in the service '%s'", hostname, serviceID)
+			}
+		}
+
+		for _, m := range service.Middlewares {
+			if len(m.Use) > 0 {
+				if _, found := mainOptions.Middlewares[m.Use]; !found {
+					return fmt.Errorf("the middleware '%s' can't be found in the service '%s'", m.Use, serviceID)
+				}
+			}
+
+			if len(m.Type) > 0 {
+				hander := middleware.FindHandlerByType(m.Type)
+				if hander == nil {
+					return fmt.Errorf("the middleware '%s' can't be found in the service '%s'", m.Type, serviceID)
 				}
 			}
 		}
@@ -296,9 +331,13 @@ func validateUpstreams(options map[string]UpstreamOptions) error {
 		}
 
 		if opt.Strategy == HashingStrategy && opt.HashOn == "" {
-			msg := fmt.Sprintf("the hash_on can't be empty for the upstream '%s'", upstreamID)
+			msg := fmt.Sprintf("the hash_on can't be empty in the upstream '%s'", upstreamID)
 			structure := []string{"upstreams", upstreamID, "hash_on"}
 			return newInvalidConfig(structure, "", msg)
+		}
+
+		if len(opt.Targets) == 0 {
+			return fmt.Errorf("the targets can't be empty in the upstream '%s'", upstreamID)
 		}
 	}
 

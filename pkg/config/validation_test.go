@@ -43,3 +43,38 @@ func TestUpstreamDNS(t *testing.T) {
 	err = ValidateConfig(options, true)
 	assert.ErrorIs(t, err, dns.ErrNotFound)
 }
+
+func TestServiceNotFoundUpstream(t *testing.T) {
+	options := NewOptions()
+
+	options.Services["service1"] = ServiceOptions{
+		Url: "http://test1/hello",
+	}
+
+	err := validateServices(options, true)
+	assert.Error(t, err)
+}
+
+
+func TestEmptyTargetUpstream(t *testing.T) {
+	options := NewOptions()
+
+	options.Upstreams["test"] = UpstreamOptions{
+
+	}
+
+	err := validateUpstreams(options.Upstreams)
+	assert.Error(t, err)
+}
+
+func TestRouteNotFoundService(t *testing.T) {
+	options := NewOptions()
+
+	options.Routes["route1"] = RouteOptions{
+		Paths:     []string{"/hello"},
+		ServiceID: "test1",
+	}
+
+	err := validateRoutes(options, true)
+	assert.Error(t, err)
+}

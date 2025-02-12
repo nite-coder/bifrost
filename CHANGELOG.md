@@ -11,6 +11,7 @@
 - Introduce the `observability` field in servers options.
 - Introduce the `$error.type`, `$error.message`, `$trace_id`, `$http.request.query.<key>` directive.
 - `Addprefix`,`Replacepath` and `Setvars` middlewares can use directive
+- Add additional validations when running the -t flag via CLI.
 
 ### **Bug Fixes**
 
