@@ -242,10 +242,12 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 			continue
 		}
 
-		if _, found := mainOptions.Services[route.ServiceID]; !found {
-			msg := fmt.Sprintf("the service '%s' can't be found in the route '%s'", route.ServiceID, routeID)
-			structure := []string{"routes", routeID, "service_id"}
-			return newInvalidConfig(structure, "", msg)
+		if route.ServiceID[0] != '$' {
+			if _, found := mainOptions.Services[route.ServiceID]; !found {
+				msg := fmt.Sprintf("the service '%s' can't be found in the route '%s'", route.ServiceID, routeID)
+				structure := []string{"routes", routeID, "service_id"}
+				return newInvalidConfig(structure, "", msg)
+			}
 		}
 
 		for _, serverID := range route.Servers {
