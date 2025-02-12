@@ -46,7 +46,7 @@ func NewResolver(option Options) (*Resolver, error) {
 		servers := GetDNSServers()
 
 		if len(servers) == 0 {
-			return nil, fmt.Errorf("%w; can't get dns server", ErrNotFound)
+			return nil, fmt.Errorf("dns: %w; can't get dns server", ErrNotFound)
 		}
 
 		option.AddrPort = servers[0].String()
@@ -58,7 +58,7 @@ func NewResolver(option Options) (*Resolver, error) {
 	}
 
 	if err := r.loadHostsFile(); err != nil {
-		return nil, fmt.Errorf("failed to load hosts file: %w", err)
+		return nil, fmt.Errorf("dns: failed to load hosts file: %w", err)
 	}
 
 	return r, nil
@@ -91,7 +91,7 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 
 	in, _, err := r.client.ExchangeContext(ctx, m, r.options.AddrPort)
 	if err != nil {
-		return nil, fmt.Errorf("fail to query '%s' to dns server '%s', error: %w", host, r.options.AddrPort, err)
+		return nil, fmt.Errorf("dns: fail to query '%s' to dns server '%s', error: %w", host, r.options.AddrPort, err)
 	}
 
 	var ips []string
@@ -102,7 +102,7 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 	}
 
 	if len(ips) == 0 {
-		return nil, fmt.Errorf("%w; can't resolve host '%s'", ErrNotFound, host)
+		return nil, fmt.Errorf("dns: %w; can't resolve host '%s'", ErrNotFound, host)
 	}
 
 	r.dnsCache.PutWithTTL(host, ips, r.options.Valid)

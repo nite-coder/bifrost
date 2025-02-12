@@ -35,3 +35,30 @@ func TestConfigAfterDynamicLoad(t *testing.T) {
 
 	assert.Error(t, err)
 }
+
+func TestDomainName(t *testing.T) {
+	testDomains := []string{
+		"example.com",
+		"sub-domain.example.co.uk",
+		"invalid.com",
+		"valid123.com",
+	}
+
+	for _, domain := range testDomains {
+		result := IsValidDomain(domain)
+		assert.True(t, result)
+	}
+
+
+	testDomains = []string{
+		"invalid-bb",
+		"-invalid.com",
+		"toolong" + "toolong" + "toolong" + "toolong" + "toolong" + "toolong", // Exceeds 253 characters
+		"valid123_aa",
+	}
+
+	for _, domain := range testDomains {
+		result := IsValidDomain(domain)
+		assert.False(t, result, domain + " should be false")
+	}
+}

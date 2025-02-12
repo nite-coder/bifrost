@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/bytedance/sonic"
@@ -20,6 +21,7 @@ var (
 	OnChanged       provider.ChangeFunc
 	dynamicProvider provider.Provider
 	mainProvider    provider.Provider
+	domainRegex     = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 )
 
 func Load(path string) (Options, error) {
@@ -331,4 +333,15 @@ func findLineNumber(lines []string, key string, value any) int {
 		}
 	}
 	return -1
+}
+
+func IsValidDomain(domain string) bool {
+	// Define the regular expression
+	// Each label: 1-63 characters, can only contain letters, numbers, and hyphens, cannot start or end with a hyphen
+	// Full domain: Multiple labels separated by dots, total length should not exceed 253 characters
+
+	if domainRegex.MatchString(domain) && len(domain) <= 253 {
+		return true
+	}
+	return false
 }
