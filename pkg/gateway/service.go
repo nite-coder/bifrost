@@ -124,12 +124,12 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	}
 
 	// exist upstream
+	// the hostname can be not found in upstreams because user can use real domain name like www.google.com
 	upstream, found := svc.upstreams[hostname]
-	if !found {
-		return nil, fmt.Errorf("upstream '%s' not found in service: '%s'", hostname, serviceOptions.ID)
+	if found {
+		svc.upstream = upstream
+		return svc, nil
 	}
-
-	svc.upstream = upstream
 
 	// direct proxy
 	switch serviceOptions.Protocol {
