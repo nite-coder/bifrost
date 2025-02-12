@@ -11,6 +11,7 @@ import (
 
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/middleware"
+	"github.com/nite-coder/bifrost/pkg/router"
 	"github.com/nite-coder/bifrost/pkg/variable"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -107,13 +108,13 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 }
 
 type Routes struct {
-	router       *Router
+	router       *router.Router
 	regexpRoutes []routeSetting
 }
 
 func newRoutes() *Routes {
 	return &Routes{
-		router:       newRouter(),
+		router:       router.NewRouter(),
 		regexpRoutes: make([]routeSetting, 0),
 	}
 }
@@ -123,7 +124,7 @@ func (r *Routes) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	method := cast.B2S(ctx.Method())
 	path := cast.B2S(ctx.Request.Path())
 
-	middlewares, isDefered := r.router.find(method, path)
+	middlewares, isDefered := r.router.Find(method, path)
 
 	if len(middlewares) > 0 && !isDefered {
 		ctx.SetIndex(-1)
@@ -166,7 +167,7 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 
 	for _, path := range routeOpts.Paths {
 		path = strings.TrimSpace(path)
-		var nodeType nodeType
+		var nodeType router.NodeType
 
 		switch {
 		case strings.HasPrefix(path, "~*"):
@@ -202,13 +203,13 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 			})
 			continue
 		case strings.HasPrefix(path, "="):
-			nodeType = nodeTypeExact
+			nodeType = router.Exact
 			path = strings.TrimSpace(path[1:])
 			if len(path) == 0 {
 				return fmt.Errorf("router: exact route can't be empty in route: '%s'", routeOpts.ID)
 			}
 		case strings.HasPrefix(path, "^~"):
-			nodeType = nodeTypePrefix
+			nodeType = router.Prefix
 			path = strings.TrimSpace(path[2:])
 			if len(path) == 0 {
 				return fmt.Errorf("router: prefix route can't be empty in route: '%s'", routeOpts.ID)
@@ -218,12 +219,12 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 			if !strings.HasPrefix(path, "/") {
 				return fmt.Errorf("router: '%s' is invalid path. Path needs to begin with '/'", path)
 			}
-			nodeType = nodeTypeGeneral
+			nodeType = router.General
 		}
 
 		if len(routeOpts.Methods) == 0 {
-			for _, method := range httpMethods {
-				err = r.router.add(method, path, nodeType, middlewares...)
+			for _, method := range router.HTTPMethods {
+				err = r.router.Add(method, path, nodeType, middlewares...)
 				if err != nil {
 					return err
 				}
@@ -232,11 +233,11 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 
 		for _, method := range routeOpts.Methods {
 			method := strings.ToUpper(method)
-			if !isValidHTTPMethod(method) {
+			if !router.IsValidHTTPMethod(method) {
 				return fmt.Errorf("http method %s is not valid", method)
 			}
 
-			err = r.router.add(method, path, nodeType, middlewares...)
+			err = r.router.Add(method, path, nodeType, middlewares...)
 			if err != nil {
 				return err
 			}

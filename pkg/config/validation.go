@@ -10,8 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/middleware"
+	"github.com/nite-coder/bifrost/pkg/router"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
@@ -221,6 +223,8 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 
 func validateRoutes(mainOptions Options, isFullMode bool) error {
 
+	router := router.NewRouter()
+
 	for routeID, route := range mainOptions.Routes {
 		if route.ServiceID == "" {
 			msg := fmt.Sprintf("the 'service_id' can't be empty in the route '%s'", routeID)
@@ -260,6 +264,11 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 					return newInvalidConfig(structure, middleware.Use, msg)
 				}
 			}
+		}
+
+		err := addRoute(router, route)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -432,4 +441,60 @@ func extractAddr(addrport string) string {
 	}
 
 	return parts[0]
+}
+
+func addRoute(r *router.Router, routeOptions RouteOptions) error {
+
+	for _, path := range routeOptions.Paths {
+		path = strings.TrimSpace(path)
+		var nodeType router.NodeType
+
+		switch {
+		case strings.HasPrefix(path, "~*"):
+			continue
+		case strings.HasPrefix(path, "~"):
+			continue
+		case strings.HasPrefix(path, "="):
+			nodeType = router.Exact
+			path = strings.TrimSpace(path[1:])
+			if len(path) == 0 {
+				return fmt.Errorf("config: exact route can't be empty in route: '%s'", routeOptions.ID)
+			}
+		case strings.HasPrefix(path, "^~"):
+			nodeType = router.Prefix
+			path = strings.TrimSpace(path[2:])
+			if len(path) == 0 {
+				return fmt.Errorf("config: prefix route can't be empty in route: '%s'", routeOptions.ID)
+			}
+
+		default:
+			if !strings.HasPrefix(path, "/") {
+				return fmt.Errorf("config: '%s' is invalid path. Path needs to begin with '/'", path)
+			}
+			nodeType = router.General
+		}
+
+		if len(routeOptions.Methods) == 0 {
+			for _, method := range router.HTTPMethods {
+				err := r.Add(method, path, nodeType, func(c context.Context, ctx *app.RequestContext) {})
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		for _, method := range routeOptions.Methods {
+			method := strings.ToUpper(method)
+			if !router.IsValidHTTPMethod(method) {
+				return fmt.Errorf("http method %s is not valid", method)
+			}
+
+			err := r.Add(method, path, nodeType)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

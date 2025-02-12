@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"math/big"
 	"net"
-	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -35,7 +34,6 @@ var (
 	runTask        = gopool.CtxGo
 	httpGET        = []byte("GET")
 	spaceByte      = []byte{byte(' ')}
-	httpMethods    = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch, http.MethodHead, http.MethodOptions, http.MethodTrace, http.MethodConnect}
 )
 
 // GetBifrost retrieves the current instance of Bifrost.
@@ -51,15 +49,6 @@ func GetBifrost() *Bifrost {
 // It is typically called by the top-level application code to initialize the Bifrost instance.
 func SetBifrost(bifrost *Bifrost) {
 	defaultBifrost.Store(bifrost)
-}
-
-func isValidHTTPMethod(method string) bool {
-	switch method {
-	case http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch, http.MethodHead, http.MethodOptions, http.MethodTrace, http.MethodConnect:
-		return true
-	default:
-		return false
-	}
 }
 
 // Run starts the bifrost server with the given options.

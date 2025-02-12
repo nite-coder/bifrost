@@ -33,6 +33,7 @@
 - the `tracing` middleware is removed.
 - Updated metric endpoint to follow semantic conventions.
 - Allow the `hash_on` field in upstream to support all directives.
+- Move router from `gateway` package to `router` package
 
 ### **Chore**
 

@@ -1,22 +1,37 @@
-package gateway
+package router
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"testing"
 
-	"github.com/nite-coder/bifrost/pkg/config"
-
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
+func exactkHandler(c context.Context, ctx *app.RequestContext) {
+	ctx.SetStatusCode(201)
+}
+
+func prefixHandler(c context.Context, ctx *app.RequestContext) {
+	ctx.SetStatusCode(202)
+}
+
+func regexkHandler(c context.Context, ctx *app.RequestContext) {
+	ctx.SetStatusCode(203)
+}
+
+func generalkHandler(c context.Context, ctx *app.RequestContext) {
+	ctx.SetStatusCode(204)
+}
+
 func loadStaticRouter() *Router {
-	router := newRouter()
-	_ = router.add("GET", "/", nodeTypeGeneral, exactkHandler)
-	_ = router.add("GET", "/foo", nodeTypeGeneral, exactkHandler)
-	_ = router.add("GET", "/foo/bar/baz/", nodeTypeGeneral, exactkHandler)
-	_ = router.add("GET", "/foo/bar/baz/qux/quux", nodeTypeGeneral, exactkHandler)
-	_ = router.add("GET", "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred", nodeTypeGeneral, exactkHandler)
+	router := NewRouter()
+	_ = router.Add("GET", "/", General, exactkHandler)
+	_ = router.Add("GET", "/foo", General, exactkHandler)
+	_ = router.Add("GET", "/foo/bar/baz/", General, exactkHandler)
+	_ = router.Add("GET", "/foo/bar/baz/qux/quux", General, exactkHandler)
+	_ = router.Add("GET", "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred", General, exactkHandler)
 	return router
 }
 
@@ -56,6 +71,11 @@ func BenchmarkStatic5(b *testing.B) {
 	benchmark(b, router, "GET", "/foo/bar/baz/qux/quux")
 }
 
+type RouteOptions struct {
+	Methods []string `yaml:"methods" json:"methods"`
+	Paths   []string `yaml:"paths" json:"paths"`
+}
+
 func BenchmarkCode(b *testing.B) {
 	method := "GET"
 	// path1 := "/foo"
@@ -63,7 +83,7 @@ func BenchmarkCode(b *testing.B) {
 	path10 := "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred"
 	// prefix := "/foo/bar/baz/qux/quux"
 
-	routeSetting := config.RouteOptions{
+	routeSetting := RouteOptions{
 		Methods: []string{method},
 		Paths:   []string{path10},
 	}
@@ -106,7 +126,7 @@ func benchmark(b *testing.B, router *Router, method, path string) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = router.find(method, path)
+		_, _ = router.Find(method, path)
 	}
 }
 

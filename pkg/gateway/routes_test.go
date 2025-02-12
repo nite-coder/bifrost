@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/router"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
@@ -27,17 +28,17 @@ func generalkHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(204)
 }
 
-func registerByNodeType(route *Routes, nodeType nodeType) *Routes {
+func registerByNodeType(route *Routes, nodeType router.NodeType) *Routes {
 	switch nodeType {
-	case nodeTypeExact:
+	case router.Exact:
 		_ = route.Add(config.RouteOptions{
 			Paths: []string{"= /market/btc", "= /"},
 		}, exactkHandler)
-	case nodeTypePrefix:
+	case router.Prefix:
 		_ = route.Add(config.RouteOptions{
 			Paths: []string{"^~ /market/btc", "^~ /"},
 		}, prefixHandler)
-	case nodeTypeRegex:
+	case router.Regex:
 		_ = route.Add(config.RouteOptions{
 			Paths: []string{"~ /market/(btc|usdt|eth)$", "~ ^/$"},
 		}, regexkHandler)
@@ -49,7 +50,7 @@ func registerByNodeType(route *Routes, nodeType nodeType) *Routes {
 		_ = route.Add(config.RouteOptions{
 			Paths: []string{"~ /market/(btc|usdt|eth)"},
 		}, nil) // test two regexs router order
-	case nodeTypeGeneral:
+	case router.General:
 		_ = route.Add(config.RouteOptions{
 			Paths: []string{"/market/btc", "/"},
 		}, generalkHandler)
@@ -61,7 +62,7 @@ func registerByNodeType(route *Routes, nodeType nodeType) *Routes {
 func TestRoutePriorityAndRoot(t *testing.T) {
 
 	t.Run("exact match", func(t *testing.T) {
-		nodeTypes := []nodeType{nodeTypeExact, nodeTypePrefix, nodeTypeGeneral, nodeTypeRegex}
+		nodeTypes := []router.NodeType{router.Exact, router.Prefix, router.General, router.Regex}
 		route := newRoutes()
 
 		for _, nodeType := range nodeTypes {
@@ -89,7 +90,7 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 	})
 
 	t.Run("prefix match 1", func(t *testing.T) {
-		nodeTypes := []nodeType{nodeTypePrefix, nodeTypeGeneral, nodeTypeRegex}
+		nodeTypes := []router.NodeType{router.Prefix, router.General, router.Regex}
 		route := newRoutes()
 
 		for _, nodeType := range nodeTypes {
@@ -142,7 +143,7 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 	})
 
 	t.Run("regex match", func(t *testing.T) {
-		nodeTypes := []nodeType{nodeTypeGeneral, nodeTypeRegex}
+		nodeTypes := []router.NodeType{router.General, router.Regex}
 		route := newRoutes()
 
 		for _, nodeType := range nodeTypes {
@@ -178,7 +179,7 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 	})
 
 	t.Run("general match", func(t *testing.T) {
-		nodeTypes := []nodeType{nodeTypeGeneral}
+		nodeTypes := []router.NodeType{router.General}
 		route := newRoutes()
 
 		for _, nodeType := range nodeTypes {
@@ -331,7 +332,6 @@ func TestRoutes(t *testing.T) {
 	}
 }
 
-
 func TestRegexOrder(t *testing.T) {
 	route := newRoutes()
 
@@ -371,13 +371,13 @@ func TestDuplicateRoutes(t *testing.T) {
 		Methods: []string{"GET"},
 		Paths:   []string{"/foo"},
 	}, exactkHandler)
-	assert.ErrorIs(t, err, ErrAlreadyExists)
+	assert.ErrorIs(t, err, router.ErrAlreadyExists)
 
 	err = route.Add(config.RouteOptions{
 		Methods: []string{},
 		Paths:   []string{"/foo"},
 	}, exactkHandler)
-	assert.ErrorIs(t, err, ErrAlreadyExists)
+	assert.ErrorIs(t, err, router.ErrAlreadyExists)
 
 	err = route.Add(config.RouteOptions{
 		Methods: []string{"GET"},
@@ -389,7 +389,7 @@ func TestDuplicateRoutes(t *testing.T) {
 		Methods: []string{"GET"},
 		Paths:   []string{"/"},
 	}, exactkHandler)
-	assert.ErrorIs(t, err, ErrAlreadyExists)
+	assert.ErrorIs(t, err, router.ErrAlreadyExists)
 }
 
 var testString = `/hello/world/you/bbb/dddd`

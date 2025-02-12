@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/nite-coder/bifrost/pkg/dns"
+	"github.com/nite-coder/bifrost/pkg/router"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,6 +45,28 @@ func TestUpstreamDNS(t *testing.T) {
 	assert.ErrorIs(t, err, dns.ErrNotFound)
 }
 
+func TestDpulicateRoutes(t *testing.T) {
+	options := NewOptions()
+
+	options.Services["aa"] = ServiceOptions{
+		Url: "http://test1/hello",
+	}
+
+	options.Routes["test1"] = RouteOptions{
+		Paths: []string{"/hello"},
+		ServiceID: "aa",
+	}
+
+	options.Routes["test2"] = RouteOptions{
+		Methods: []string{"GET"},
+		Paths:   []string{"/hello"},
+		ServiceID: "aa",
+	}
+
+	err := validateRoutes(options, true)
+	assert.ErrorIs(t, err, router.ErrAlreadyExists)
+}
+
 func TestServiceNotFoundUpstream(t *testing.T) {
 	options := NewOptions()
 
@@ -55,13 +78,10 @@ func TestServiceNotFoundUpstream(t *testing.T) {
 	assert.Error(t, err)
 }
 
-
 func TestEmptyTargetUpstream(t *testing.T) {
 	options := NewOptions()
 
-	options.Upstreams["test"] = UpstreamOptions{
-
-	}
+	options.Upstreams["test"] = UpstreamOptions{}
 
 	err := validateUpstreams(options.Upstreams)
 	assert.Error(t, err)
