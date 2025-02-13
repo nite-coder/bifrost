@@ -81,7 +81,7 @@ func BenchmarkEscapeJSON(b *testing.B) {
 
 func TestPrintVariable(t *testing.T) {
 	options := config.AccessLogOptions{
-		Template: "aa:$error.type, time:$time, body:$http.request.body, status_code:$http.response.status_code",
+		Template: "aa:$error.type, time:$time, body:$http.request.body, status_code:$http.response.status_code, user_id: $var.user_id",
 	}
 	tracer, err := NewTracer(options)
 	assert.NoError(t, err)
@@ -94,5 +94,6 @@ func TestPrintVariable(t *testing.T) {
 	hzCtx.SetTraceInfo(info)
 
 	strs := tracer.buildReplacer(hzCtx)
-	assert.Empty(t, strs[5]) // $error.type
+	assert.Empty(t, strs[5]) // $var.user_id
+	assert.Empty(t, strs[7]) // $error.type
 }

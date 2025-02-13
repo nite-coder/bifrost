@@ -113,15 +113,7 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 
 			replacements = append(replacements, variable.HTTPResponseStatusCode, status)
 		default:
-			val := ""
-			v, found := variable.Get(key, c)
-
-			if found {
-				val, _ = cast.ToString(v)
-			} else {
-				val = key
-			}
-
+			val := variable.GetString(key, c)
 			replacements = append(replacements, key, val)
 			continue
 		}
