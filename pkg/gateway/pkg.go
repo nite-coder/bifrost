@@ -83,8 +83,8 @@ func Run(mainOptions config.Options) (err error) {
 	config.OnChanged = func() error {
 		slog.Debug("reloading...")
 
-		if mainOptions.From() != "" {
-			newMainOptions, err := config.Load(mainOptions.From())
+		if mainOptions.ConfigPath() != "" {
+			newMainOptions, err := config.Load(mainOptions.ConfigPath())
 			if err != nil {
 				slog.Error("fail to load config", "error", err)
 				return err

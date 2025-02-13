@@ -87,7 +87,7 @@ func Load(path string) (Options, error) {
 		return mainOpts, err
 	}
 
-	mainOpts.from = path
+	mainOpts.configPath = path
 
 	fileProviderOpts := file.Options{
 		Paths: []string{path},

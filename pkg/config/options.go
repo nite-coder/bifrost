@@ -3,7 +3,7 @@ package config
 import "time"
 
 type Options struct {
-	from            string                      `yaml:"-" json:"-"`
+	configPath      string                      `yaml:"-" json:"-"`
 	IsDaemon        bool                        `yaml:"-" json:"-"`
 	PIDFile         string                      `yaml:"pid_file" json:"pid_file"`
 	UpgradeSock     string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
@@ -48,8 +48,8 @@ func (opt Options) IsWatch() bool {
 	return *opt.Watch
 }
 
-func (opt Options) From() string {
-	return opt.from
+func (opt Options) ConfigPath() string {
+	return opt.configPath
 }
 
 type ProviderOtions struct {
