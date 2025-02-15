@@ -17,6 +17,7 @@ import (
 	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/websocket"
+	"github.com/nite-coder/bifrost/pkg/middleware/cors"
 )
 
 var (
@@ -180,6 +181,7 @@ func main() {
 		WithDefaultServerHeader(true),
 	}
 	h := server.New(opts...)
+	h.Use(cors.Default())
 
 	logger := hertzslog.NewLogger(hertzslog.WithOutput(io.Discard))
 	hlog.SetLevel(hlog.LevelError)

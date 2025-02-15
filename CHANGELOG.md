@@ -2,6 +2,10 @@
 
 ## Next
 
+### **Features**
+
+- Introduce the `cors` middleware.
+
 ### **Test**
 
 - Improve `router`, `zoer`, `gateway` `provider`, `proxy`(websocket) package test coverage.

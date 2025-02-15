@@ -13,6 +13,7 @@ You can also develop custom middlewares directly in native Golang.
 Currently supported middlewares are below.
 
 * [AddPrefix](#addprefix): Add a prefix to the request path.
+* [Cors](#cors): A Middleware for Cross-Origin Resource Sharing.
 * [Mirror](#mirror): Mirror the request to another service.
 * [RateLimiting](#ratelimiting): To Control the Number of Requests Going to a Service
 * [ReplacePath](#replacepath): Replace the request path.
@@ -41,6 +42,27 @@ routes:
       - type: add_prefix
         params:
           prefix: /api/v1
+```
+
+### Cors
+
+A Middleware for Cross-Origin Resource Sharing.
+
+Original request: `/foo` \
+Forwarded path for upstream: `/api/v1/foo`
+
+```yaml
+routes:
+  route1:
+    paths:
+      - /foo
+    service_id: service1
+    middlewares:
+      - type: cors
+        params:
+          allow_methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+          allow_headers: ["Origin", "Content-Length", "Content-Type"]
+          max_age: 12h
 ```
 
 ### Mirror
