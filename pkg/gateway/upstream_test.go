@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 
@@ -350,4 +351,94 @@ func TestHashing(t *testing.T) {
 			assert.Nil(t, proxy)
 		}
 	})
+}
+
+func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
+
+	targetOptions := []config.TargetOptions{
+		{
+			Target:      "127.0.0.1:1234",
+			Weight:      1,
+			FailTimeout: time.Second,
+			MaxFails:    1,
+		},
+		{
+			Target:      "127.0.0.1:1234",
+			Weight:      1,
+			FailTimeout: 10 * time.Second,
+			MaxFails:    1,
+		},
+		{
+			Target:      "127.0.0.1:1234",
+			Weight:      1,
+			FailTimeout: 10 * time.Second,
+			MaxFails:    0,
+		},
+	}
+
+	upstreamOptions := config.UpstreamOptions{
+		ID:       "test",
+		Strategy: config.RoundRobinStrategy,
+		Targets:  targetOptions,
+	}
+
+	dnsResolver, err := dns.NewResolver(dns.Options{
+		Valid: time.Second,
+	})
+	assert.NoError(t, err)
+
+	bifrost := &Bifrost{
+		options: &config.Options{
+			Resolver: config.ResolverOptions{
+				SkipTest: true,
+				Valid:    time.Second,
+			},
+			Upstreams: map[string]config.UpstreamOptions{
+				"test": upstreamOptions,
+			},
+		},
+		dnsResolver: dnsResolver,
+	}
+
+	testService := config.ServiceOptions{
+		Protocol: config.ProtocolHTTP,
+		Url:      "http://test",
+	}
+
+	upstreamMap, err := loadUpstreams(bifrost, config.ServiceOptions{})
+	assert.NoError(t, err)
+	assert.Len(t, upstreamMap, 1)
+
+	upstream, err := newUpstream(
+		bifrost,
+		testService,
+		config.UpstreamOptions{
+			ID:       "test",
+			Strategy: config.RoundRobinStrategy,
+			Targets:  targetOptions,
+		},
+	)
+
+	time.Sleep(3 * time.Second)
+
+	assert.NoError(t, err)
+	assert.Len(t, upstream.proxies.Load().([]proxy.Proxy), 3)
+
+	upstream, err = newUpstream(
+		bifrost,
+		config.ServiceOptions{
+			Protocol: config.ProtocolGRPC,
+			Url:      "http://test",
+		},
+		config.UpstreamOptions{
+			ID:       "test",
+			Strategy: config.RoundRobinStrategy,
+			Targets:  targetOptions,
+		},
+	)
+
+	time.Sleep(3 * time.Second)
+
+	assert.NoError(t, err)
+	assert.Len(t, upstream.proxies.Load().([]proxy.Proxy), 3)
 }

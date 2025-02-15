@@ -19,10 +19,6 @@ func prefixHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(202)
 }
 
-func regexkHandler(c context.Context, ctx *app.RequestContext) {
-	ctx.SetStatusCode(203)
-}
-
 func generalkHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(204)
 }
@@ -172,4 +168,18 @@ func TestRouter(t *testing.T) {
 	middlewares, isDefered = router.Find(http.MethodPost, "/orders/123")
 	assert.False(t, isDefered)
 	assert.Len(t, middlewares, 1)
+}
+
+func TestIsValidHTTPMethod(t *testing.T) {
+	assert.True(t, IsValidHTTPMethod(http.MethodGet))
+	assert.True(t, IsValidHTTPMethod(http.MethodPost))
+	assert.True(t, IsValidHTTPMethod(http.MethodPut))
+	assert.True(t, IsValidHTTPMethod(http.MethodDelete))
+	assert.True(t, IsValidHTTPMethod(http.MethodPatch))
+	assert.True(t, IsValidHTTPMethod(http.MethodHead))
+	assert.True(t, IsValidHTTPMethod(http.MethodOptions))
+	assert.True(t, IsValidHTTPMethod(http.MethodTrace))
+	assert.True(t, IsValidHTTPMethod(http.MethodConnect))
+
+	assert.False(t, IsValidHTTPMethod("foo"))
 }

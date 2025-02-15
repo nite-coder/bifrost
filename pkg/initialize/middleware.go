@@ -1,8 +1,6 @@
 package initialize
 
 import (
-	"testing"
-
 	_ "github.com/nite-coder/bifrost/pkg/middleware/addprefix"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/mirror"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/ratelimiting"
@@ -14,14 +12,8 @@ import (
 	_ "github.com/nite-coder/bifrost/pkg/middleware/setvars"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/stripprefix"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/trafficsplitter"
-	"github.com/stretchr/testify/assert"
 )
 
 func Middleware() error {
 	return nil
-}
-
-func TestInitMiddleware(t *testing.T) {
-	err := Middleware()
-	assert.NoError(t, err)
 }
