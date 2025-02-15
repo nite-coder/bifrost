@@ -113,9 +113,9 @@ func convert(s []string, c converter) []string {
 
 func str2bytes(s string) (b []byte) {
 	/* #nosec G103 */
-	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b)) // nolint
 	/* #nosec G103 */
-	sh := (*reflect.StringHeader)(unsafe.Pointer(&s))
+	sh := (*reflect.StringHeader)(unsafe.Pointer(&s)) // nolint
 	bh.Data = sh.Data
 	bh.Len = sh.Len
 	bh.Cap = sh.Len
