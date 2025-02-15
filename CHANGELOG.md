@@ -4,7 +4,7 @@
 
 ### **Test**
 
-- Improve `router`, `zoer`, `provider` package test coverage.
+- Improve `router`, `zoer`, `provider`, `proxy`(websocket) package test coverage.
 
 ### **Documents**
 

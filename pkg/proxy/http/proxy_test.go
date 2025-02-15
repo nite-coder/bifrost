@@ -3,17 +3,21 @@ package http
 import (
 	"bytes"
 	"context"
+	"log"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/hertz-contrib/websocket"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/protocol"
+	gwebsocket "github.com/gorilla/websocket"
 )
 
 // Reverse proxy tests.
@@ -457,4 +461,67 @@ func TestReverseProxy_Post(t *testing.T) {
 	if g, e := string(resp.Body()), backendResponse; g != e {
 		t.Errorf("got body %q; expected %q", g, e)
 	}
+}
+
+var upgrader = websocket.HertzUpgrader{} // use default options
+
+func TestReverseProxyWebSocket(t *testing.T) {
+	// Create a WebSocket server
+	wsServer := server.New(
+		server.WithHostPorts("127.0.0.1:9998"),
+		server.WithExitWaitTime(1*time.Second),
+	)
+	wsServer.NoHijackConnPool = true
+
+	wsServer.GET("/proxy/websocket", func(cc context.Context, ctx *app.RequestContext) {
+		err := upgrader.Upgrade(ctx, func(conn *websocket.Conn) {
+			for {
+				mt, message, err := conn.ReadMessage()
+				if err != nil {
+					log.Println("read:", err)
+					break
+				}
+				log.Printf("recv: %s", message)
+				err = conn.WriteMessage(mt, message)
+				if err != nil {
+					log.Println("write:", err)
+					break
+				}
+			}
+		})
+		if err != nil {
+			log.Print("upgrade:", err)
+			return
+		}
+	})
+
+	//Create a proxy
+	proxyOptions := Options{
+		Target:   "http://127.0.0.1:9998/proxy",
+		Protocol: config.ProtocolHTTP,
+		Weight:   1,
+	}
+	proxy, _ := New(proxyOptions, nil)
+	wsServer.GET("/websocket", proxy.ServeHTTP)
+	go wsServer.Spin()
+	time.Sleep(time.Second)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		_ = wsServer.Shutdown(ctx)
+	}()
+
+	// websocket client
+	dialer := gwebsocket.DefaultDialer
+	connect, _, err := dialer.Dial("ws://127.0.0.1:9998/websocket", nil)
+	if nil != err {
+		log.Println(err)
+		return
+	}
+	defer connect.Close()
+
+	connect.WriteMessage(websocket.TextMessage, []byte("hello"))
+	_, message, err := connect.ReadMessage()
+	assert.NoError(t, err)
+	assert.Equal(t, "hello", string(message))
 }
