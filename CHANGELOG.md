@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## Next
+
+### **Test**
+
+- Improve router package test coverage.
+
+### **Documents**
+
+- Add "user_group" section in configuration.
+
 ## 0.2.0 (2024-02-14)
 
 ### **Features**

@@ -10,6 +10,7 @@ This configuration file is divided into two primary types: `static configuration
 * [watch](#watch)
 * [timer_resolution](#timer_resolution)
 * [num_loops](#num_loops)
+* [user_group](#user_group)
 * [resolver](#resolver)
 * [pid_file](#pid_file)
 * [upgrade_sock](#upgrade_sock)
@@ -46,6 +47,15 @@ This represents the number of epoll created by bifrost, which has been automatic
 
 ```yaml
 num_loops: 4
+```
+
+## user_group
+
+The gateway process runs as a background task (daemon) under a specified user and group.
+
+```yaml
+user: nobody
+group: nogroup
 ```
 
 ## resolver
@@ -260,31 +270,31 @@ servers:
           network.local.address: "$hostname"
     access_log_id: my_access_log
     middlewares:
-      - type: tracing
+      - type: xxx
 ```
 
-| Field                            | Type                  | Default | Description                                                                                  |
-| -------------------------------- | --------------------- | ------- | -------------------------------------------------------------------------------------------- |
-| bind                             | `string`              |         | Port binding                                                                                 |
-| reuse_port                       | `bool`                | `false` | Enables reuse port; Linux only                                                               |
-| tcp_fast_open                    | `bool`                | `false` | Enables TCP fast open; Linux only                                                            |
-| tcp_quick_ack                    | `bool`                | `false` | Enables TCP quick ack; Linux only                                                            |
-| backlog                          | `int`                 |         | Limits TCP backlog count; Linux only                                                         |
-| http2                            | `bool`                | `false` | Enables HTTP2                                                                                |
-| logging.handler                  | `string`              | `text`  | Log format; supports `text`, `json`                                                          |
-| logging.level                    | `string`              | `info`  | Log level; options are `debug`, `info`, `warn`, `error`. Not enabled by default              |
-| logging.output                   | `string`              |         | Output location; supports `stderr` or file path. If empty, no log will be printed            |
-| timeout.keepalive                | `time.Duration`       | `60s`   | Keepalive timeout                                                                            |
-| timeout.read                     | `time.Duration`       | `60s`   | Read timeout                                                                                 |
-| timeout.write                    | `time.Duration`       | `60s`   | Write timeout                                                                                |
-| timeout.graceful                 | `time.Duration`       | `10s`   | Graceful shutdown timeout                                                                    |
-| max_request_body_size            | `int`                 | `4MB`   | Max body size of a request.  Unit: byte                                                      |
-| read_buffer_size                 | `int`                 | `4MB`   | Set the read buffer size while limiting the HTTP header size.  Unit: byte                    |
-| pprof                            | `bool`                | `false` | pprof lets you collect CPU profiles, traces, and heap profiles for your Go programs via HTTP |
-| access_log_id                    | `string`              |         | Specifies the access log to use                                                              |
-| observability.tracing.enabled    | `bool`                | `true`  | Enable or disable the tracing feature                                                        |
-| observability.tracing.attributes | `map[string]string`   | `true`  | The attributes of the span                                                                   |
-| middlewares                      | `[]MiddlewareOptions` |         | middleware of the server                                                                     |
+| Field                            | Type                | Default | Description                                                                                  |
+| -------------------------------- | ------------------- | ------- | -------------------------------------------------------------------------------------------- |
+| bind                             | `string`            |         | Port binding                                                                                 |
+| reuse_port                       | `bool`              | `false` | Enables reuse port; Linux only                                                               |
+| tcp_fast_open                    | `bool`              | `false` | Enables TCP fast open; Linux only                                                            |
+| tcp_quick_ack                    | `bool`              | `false` | Enables TCP quick ack; Linux only                                                            |
+| backlog                          | `int`               |         | Limits TCP backlog count; Linux only                                                         |
+| http2                            | `bool`              | `false` | Enables HTTP2                                                                                |
+| logging.handler                  | `string`            | `text`  | Log format; supports `text`, `json`                                                          |
+| logging.level                    | `string`            | `info`  | Log level; options are `debug`, `info`, `warn`, `error`. Not enabled by default              |
+| logging.output                   | `string`            |         | Output location; supports `stderr` or file path. If empty, no log will be printed            |
+| timeout.keepalive                | `time.Duration`     | `60s`   | Keepalive timeout                                                                            |
+| timeout.read                     | `time.Duration`     | `60s`   | Read timeout                                                                                 |
+| timeout.write                    | `time.Duration`     | `60s`   | Write timeout                                                                                |
+| timeout.graceful                 | `time.Duration`     | `10s`   | Graceful shutdown timeout                                                                    |
+| max_request_body_size            | `int`               | `4MB`   | Max body size of a request.  Unit: byte                                                      |
+| read_buffer_size                 | `int`               | `4MB`   | Set the read buffer size while limiting the HTTP header size.  Unit: byte                    |
+| pprof                            | `bool`              | `false` | pprof lets you collect CPU profiles, traces, and heap profiles for your Go programs via HTTP |
+| access_log_id                    | `string`            |         | Specifies the access log to use                                                              |
+| observability.tracing.enabled    | `bool`              | `true`  | Enable or disable the tracing feature                                                        |
+| observability.tracing.attributes | `map[string]string` | `true`  | The attributes of the span                                                                   |
+| middlewares                      | `[]Middleware`      |         | middleware of the server                                                                     |
 
 ## routes
 
@@ -300,17 +310,17 @@ routes:
     servers: ["extenal", "extenal_tls"]
     service_id: api-service
     middlewares:
-      - type: tracing
+      - type: xxx
 ```
 
-| Field       | Type                  | Default | Description                                                         |
-| ----------- | --------------------- | ------- | ------------------------------------------------------------------- |
-| methods     | `[]string`            |         | HTTP methods; if empty, all http methods are supported              |
-| paths       | `[]string`            |         | http path                                                           |
-| route       | `string`              |         | The path template is in the format used for displaying metric paths |
-| servers     | `[]string`            |         | Servers to apply the route; all servers if empty                    |
-| service_id  | `string`              |         | Service ID                                                          |
-| middlewares | `[]MiddlewareOptions` |         | middleware of the routes                                            |
+| Field       | Type           | Default | Description                                                         |
+| ----------- | -------------- | ------- | ------------------------------------------------------------------- |
+| methods     | `[]string`     |         | HTTP methods; if empty, all http methods are supported              |
+| paths       | `[]string`     |         | http path                                                           |
+| route       | `string`       |         | The path template is in the format used for displaying metric paths |
+| servers     | `[]string`     |         | Servers to apply the route; all servers if empty                    |
+| service_id  | `string`       |         | Service ID                                                          |
+| middlewares | `[]Middleware` |         | middleware of the routes                                            |
 
 ## services
 

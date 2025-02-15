@@ -3,10 +3,12 @@ package router
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"slices"
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/stretchr/testify/assert"
 )
 
 func exactkHandler(c context.Context, ctx *app.RequestContext) {
@@ -150,4 +152,24 @@ func BenchmarkMapLookup(b *testing.B) {
 			b.Errorf("key not found")
 		}
 	}
+}
+
+func TestRouter(t *testing.T) {
+	router := NewRouter()
+
+	router.Add(http.MethodGet, "/", General, generalkHandler)
+	router.Add(http.MethodPost, "/orders/123", Prefix, prefixHandler)
+	router.Add(http.MethodPut, "/foo", Exact, exactkHandler)
+
+	middlewares, isDefered := router.Find(http.MethodGet, "/")
+	assert.True(t, isDefered)
+	assert.Len(t, middlewares, 1)
+
+	middlewares, isDefered = router.Find(http.MethodPut, "/foo")
+	assert.False(t, isDefered)
+	assert.Len(t, middlewares, 1)
+
+	middlewares, isDefered = router.Find(http.MethodPost, "/orders/123")
+	assert.False(t, isDefered)
+	assert.Len(t, middlewares, 1)
 }
