@@ -4,8 +4,7 @@
 
 ### **Test**
 
-- Improve router package test coverage.
-- Improve zero package test coverage.
+- Improve `router`, `zoer`, `provider` package test coverage.
 
 ### **Documents**
 

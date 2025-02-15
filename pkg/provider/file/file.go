@@ -144,6 +144,7 @@ func (p *FileProvider) Watch() error {
 							slog.Error("file watcher error", "error:", err)
 						}
 					}
+					isUpdate = true
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {

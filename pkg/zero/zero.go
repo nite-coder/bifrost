@@ -291,7 +291,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 			cmd.Stderr = nil
 			cmd.ExtraFiles = files
 			if err := cmd.Start(); err != nil {
-				slog.ErrorContext(ctx, "failed to start child process", "error", err)
+				slog.ErrorContext(ctx, "failed to start a new process", "error", err)
 				continue
 			}
 		}

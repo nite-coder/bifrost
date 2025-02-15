@@ -76,9 +76,10 @@ func TestTimeCache(t *testing.T) {
 
 	// Test case 3: Check if the returned time is within the interval
 	tc = New(time.Second)
-	now1 = tc.Now()
+	Set(tc)
+	now1 = Now()
 	time.Sleep(time.Millisecond)
-	now2 = tc.Now()
+	now2 = Now()
 	if !now1.Add(time.Millisecond).After(now2) {
 		t.Errorf("Expected time within interval, got time outside interval")
 	}
