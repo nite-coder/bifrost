@@ -60,9 +60,11 @@ routes:
     middlewares:
       - type: cors
         params:
-          allow_methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+          allow_all_origins: true
+          allow_methods:
+            ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
           allow_headers: ["Origin", "Content-Length", "Content-Type"]
-          max_age: 12h
+          max_age: 12m
 ```
 
 ### Mirror

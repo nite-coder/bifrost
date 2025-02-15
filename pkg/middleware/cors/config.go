@@ -200,36 +200,42 @@ func NewMiddleware(config Config) app.HandlerFunc {
 
 func init() {
 	_ = middleware.RegisterMiddleware("cors", func(params map[string]any) (app.HandlerFunc, error) {
-		cfg := &Config{}
+		cfg := Config{}
 
-		config := &mapstructure.DecoderConfig{
-			Metadata: nil,
-			Result:   cfg,
-			TagName:  "mapstructure",
+		if len(params) == 0 {
+			cfg = DefaultConfig()
+			cfg.AllowAllOrigins = true
+		} else {
+			config := &mapstructure.DecoderConfig{
+				DecodeHook: mapstructure.StringToTimeDurationHookFunc(),
+				Metadata:   nil,
+				Result:     &cfg,
+				TagName:    "mapstructure",
+			}
+
+			decoder, err := mapstructure.NewDecoder(config)
+			if err != nil {
+				return nil, err
+			}
+
+			if err := decoder.Decode(params); err != nil {
+				return nil, err
+			}
+
+			if len(cfg.AllowMethods) == 0 {
+				cfg.AllowMethods = DefaultConfig().AllowMethods
+			}
+
+			if len(cfg.AllowHeaders) == 0 {
+				cfg.AllowHeaders = DefaultConfig().AllowHeaders
+			}
+
+			if cfg.MaxAge == 0 {
+				cfg.MaxAge = DefaultConfig().MaxAge
+			}
 		}
 
-		decoder, err := mapstructure.NewDecoder(config)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := decoder.Decode(params); err != nil {
-			return nil, err
-		}
-
-		if len(cfg.AllowMethods) == 0 {
-			cfg.AllowMethods = DefaultConfig().AllowMethods
-		}
-
-		if len(cfg.AllowHeaders) == 0 {
-			cfg.AllowHeaders = DefaultConfig().AllowHeaders
-		}
-
-		if cfg.MaxAge == 0 {
-			cfg.MaxAge = DefaultConfig().MaxAge
-		}
-
-		m := NewMiddleware(*cfg)
+		m := NewMiddleware(cfg)
 		return m, nil
 	})
 }

@@ -2,6 +2,7 @@ package initialize
 
 import (
 	_ "github.com/nite-coder/bifrost/pkg/middleware/addprefix"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/cors"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/mirror"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/ratelimiting"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/replacepath"
