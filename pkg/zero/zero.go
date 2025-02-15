@@ -17,6 +17,43 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
+type CommandRunner interface {
+	Command(name string, arg ...string) *exec.Cmd
+}
+
+type EnvGetter func(string) string
+
+type process interface {
+	Signal(os.Signal) error
+	Kill() error
+	Wait() (*os.ProcessState, error)
+	Release() error
+}
+
+type ProcessFinder interface {
+	FindProcess(pid int) (process, error)
+}
+
+type FileOpener func(name string) (*os.File, error)
+
+type defaultCommandRunner struct{}
+
+func (d *defaultCommandRunner) Command(name string, arg ...string) *exec.Cmd {
+	return exec.Command(name, arg...)
+}
+
+var defaultEnvGetter = os.Getenv
+
+type defaultProcessFinder struct{}
+
+func (d *defaultProcessFinder) FindProcess(pid int) (process, error) {
+	return os.FindProcess(pid)
+}
+
+var defaultFileOpener = func(name string) (*os.File, error) {
+	return os.OpenFile(name, os.O_RDWR|os.O_CREATE, 0600)
+}
+
 type listenInfo struct {
 	listener net.Listener `json:"-"`
 	Key      string       `json:"key"`
@@ -37,11 +74,17 @@ type ZeroDownTime struct {
 	isShutdownCh  chan bool
 	listenerOnce  sync.Once
 	state         State
+	killTimeout   time.Duration
+	command       CommandRunner
+	envGetter     EnvGetter
+	processFinder ProcessFinder
+	fileOpener    FileOpener
 }
 
 type Options struct {
 	UpgradeSock string
 	PIDFile     string
+	KillTimout  time.Duration
 }
 
 func (opts Options) GetPIDFile() string {
@@ -59,11 +102,21 @@ func (opts Options) GetUpgradeSock() string {
 }
 
 func New(opts Options) *ZeroDownTime {
+	killTimeout := 10 * time.Second
+	if opts.KillTimout > 0 {
+		killTimeout = opts.KillTimout
+	}
+
 	return &ZeroDownTime{
 		options:       &opts,
 		stopWaitingCh: make(chan bool, 1),
 		isShutdownCh:  make(chan bool, 1),
 		state:         defaultState,
+		command:       &defaultCommandRunner{},
+		envGetter:     defaultEnvGetter,
+		processFinder: &defaultProcessFinder{},
+		fileOpener:    defaultFileOpener,
+		killTimeout:   killTimeout,
 	}
 }
 
@@ -91,7 +144,7 @@ func (z *ZeroDownTime) Upgrade() error {
 }
 
 func (z *ZeroDownTime) IsUpgraded() bool {
-	return os.Getenv("UPGRADE") != ""
+	return z.envGetter("UPGRADE") != ""
 }
 
 func (z *ZeroDownTime) Listener(ctx context.Context, network string, address string, cfg *net.ListenConfig) (net.Listener, error) {
@@ -231,7 +284,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 				break
 			}
 
-			cmd := exec.Command(os.Args[0], os.Args[1:]...)
+			cmd := z.command.Command(os.Args[0], os.Args[1:]...)
 			cmd.Env = append(os.Environ(), "UPGRADE=1", "LISTENERS="+string(b))
 			cmd.Stdin = nil
 			cmd.Stdout = nil
@@ -250,6 +303,10 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	return nil
 }
 
+var (
+	ErrKillTimeout = errors.New("process did not terminate within the timeout period")
+)
+
 func (z *ZeroDownTime) KillProcess(ctx context.Context, pid int, removePIDFile bool) error {
 	if removePIDFile {
 		if err := os.Remove(z.options.GetPIDFile()); err != nil {
@@ -258,7 +315,7 @@ func (z *ZeroDownTime) KillProcess(ctx context.Context, pid int, removePIDFile b
 		}
 	}
 
-	process, err := os.FindProcess(int(pid))
+	process, err := z.processFinder.FindProcess(pid)
 	if err != nil {
 		slog.Error("find process error", "error", err)
 		return err
@@ -275,7 +332,7 @@ func (z *ZeroDownTime) KillProcess(ctx context.Context, pid int, removePIDFile b
 	defer ticker.Stop()
 
 	// Set timeout deadline
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(z.killTimeout)
 
 	for time.Now().Before(deadline) {
 		<-ticker.C
@@ -306,7 +363,7 @@ func (z *ZeroDownTime) KillProcess(ctx context.Context, pid int, removePIDFile b
 		}
 	}
 
-	return errors.New("process did not terminate within the timeout period")
+	return ErrKillTimeout
 }
 
 func (z *ZeroDownTime) WritePID() error {

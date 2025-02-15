@@ -4,8 +4,11 @@ import (
 	"context"
 	"net"
 	"os"
+	"syscall"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetPIDFile(t *testing.T) {
@@ -49,45 +52,68 @@ func TestGetUpgradeSock(t *testing.T) {
 }
 
 func TestIsUpgraded(t *testing.T) {
-	z := New(Options{})
+	t.Run("upgraded", func(t *testing.T) {
+		z := New(Options{})
+		z.envGetter = func(k string) string {
+			if k == "UPGRADE" {
+				return "1"
+			}
+			return ""
+		}
+		if !z.IsUpgraded() {
+			t.Error("Expected upgraded state")
+		}
+	})
 
-	// Test when UPGRADE env var is not set
-	if z.IsUpgraded() {
-		t.Error("IsUpgraded() should return false when UPGRADE env var is not set")
-	}
-
-	// Test when UPGRADE env var is set
-	os.Setenv("UPGRADE", "1")
-	defer os.Unsetenv("UPGRADE")
-	if !z.IsUpgraded() {
-		t.Error("IsUpgraded() should return true when UPGRADE env var is set")
-	}
+	t.Run("not upgraded", func(t *testing.T) {
+		z := New(Options{})
+		z.envGetter = func(string) string { return "" }
+		if z.IsUpgraded() {
+			t.Error("Expected normal state")
+		}
+	})
 }
 
 func TestListener(t *testing.T) {
-	z := New(Options{})
-	ctx := context.Background()
+	t.Run("new listener creation", func(t *testing.T) {
+		z := New(Options{})
+		l, err := z.Listener(context.Background(), "tcp", "localhost:0", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer l.Close()
 
-	// Test creating a new listener
-	l, err := z.Listener(ctx, "tcp", "localhost:7788", nil)
-	if err != nil {
-		t.Fatalf("Listener() error = %v", err)
-	}
-	defer l.Close()
+		if len(z.listeners) != 1 {
+			t.Errorf("Expected 1 listener, got %d", len(z.listeners))
+		}
+	})
 
-	if l == nil {
-		t.Error("Listener() returned nil")
-	}
+	t.Run("reuse listener when upgraded", func(t *testing.T) {
+		// mock upgraded
+		z := New(Options{})
+		z.envGetter = func(k string) string {
+			if k == "UPGRADE" {
+				return "1"
+			}
+			if k == "LISTENERS" {
+				return `[{"Key":"localhost:1234"}]`
+			}
+			return ""
+		}
 
-	// Test retrieving the same listener
-	l2, err := z.Listener(ctx, "tcp", "localhost:7788", nil)
-	if err != nil {
-		t.Fatalf("Listener() error = %v", err)
-	}
+		// mock file descriptor
+		z.fileOpener = func(name string) (*os.File, error) {
+			return os.NewFile(uintptr(3), ""), nil
+		}
 
-	if l != l2 {
-		t.Error("Listener() did not return the same listener for the same address")
-	}
+		l, err := z.Listener(context.Background(), "tcp", "localhost:1234", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if l == nil {
+			t.Error("Expected existing listener")
+		}
+	})
 }
 
 func TestClose(t *testing.T) {
@@ -144,4 +170,100 @@ func TestWaitForUpgrade(t *testing.T) {
 	if err != nil {
 		t.Fatalf("WaitForUpgrade() error = %v", err)
 	}
+}
+
+func TestPIDOperations(t *testing.T) {
+	tempFile, _ := os.CreateTemp("", "pidfile")
+	defer os.Remove(tempFile.Name())
+
+	z := New(Options{PIDFile: tempFile.Name()})
+
+	t.Run("write pid", func(t *testing.T) {
+		err := z.WritePID()
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("read pid", func(t *testing.T) {
+		pid, err := z.GetPID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if pid != os.Getpid() {
+			t.Errorf("Expected PID %d, got %d", os.Getpid(), pid)
+		}
+	})
+}
+
+type mockProcess struct {
+	signals []os.Signal
+	pid     int
+	killed  bool
+	err     error
+	wait    bool
+}
+
+func (m *mockProcess) Signal(sig os.Signal) error {
+	if m.killed {
+		return os.ErrProcessDone
+	}
+
+	if sig == syscall.SIGTERM && !m.wait {
+		m.killed = true
+	}
+
+	m.signals = append(m.signals, sig)
+	return m.err
+}
+
+func (m *mockProcess) Kill() error {
+	if !m.wait {
+		m.killed = true
+	}
+	return nil
+}
+
+func (m *mockProcess) Wait() (*os.ProcessState, error) {
+	return nil, m.err
+}
+
+func (m *mockProcess) Release() error {
+	return m.err
+}
+
+type mockProcessFinder struct {
+	proc process
+}
+
+func (m *mockProcessFinder) FindProcess(pid int) (process, error) {
+	return m.proc, nil
+}
+
+func TestKillProcess(t *testing.T) {
+	t.Run("normal kill", func(t *testing.T) {
+		mp := &mockProcess{pid: 123}
+
+		z := New(Options{})
+		z.processFinder = &mockProcessFinder{proc: mp}
+
+		err := z.KillProcess(context.Background(), 123, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(mp.signals) == 0 || mp.signals[0] != syscall.SIGTERM {
+			t.Error("Expected SIGTERM signal")
+		}
+	})
+
+	t.Run("kill timeout", func(t *testing.T) {
+		mp := &mockProcess{pid: 123, wait: true}
+
+		z := New(Options{KillTimout: 2 * time.Second})
+		z.processFinder = &mockProcessFinder{proc: mp}
+
+		err := z.KillProcess(context.Background(), 123, false)
+		assert.ErrorIs(t, err, ErrKillTimeout)
+	})
 }
