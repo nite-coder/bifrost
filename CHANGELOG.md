@@ -6,6 +6,10 @@
 
 - Introduce the `cors`, `parallel` middlewares.
 
+### **Bug Fixes**
+
+- fix systemd unit file.  No more `Can't open PID file` error
+
 ### **Refactor**
 
 - Redesigned the `setvars` middleware to support the `default` field.

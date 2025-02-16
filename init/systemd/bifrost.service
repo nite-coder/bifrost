@@ -4,7 +4,6 @@ After=network.target
 
 [Service]
 Type=forking
-User=nobody
 WorkingDirectory=/home/my-gateway
 PIDFile=/home/my-gateway/logs/bifrost.pid
 ExecStartPre=/home/my-gateway/bifrost -t -c=conf/config.yaml
