@@ -15,6 +15,7 @@ Currently supported middlewares are below.
 * [AddPrefix](#addprefix): Add a prefix to the request path.
 * [Cors](#cors): A Middleware for Cross-Origin Resource Sharing.
 * [Mirror](#mirror): Mirror the request to another service.
+* [Parallel](#parallel): Execute a group of middlewares concurrently.
 * [RateLimiting](#ratelimiting): To Control the Number of Requests Going to a Service
 * [ReplacePath](#replacepath): Replace the request path.
 * [ReplacePathRegex](#replacepathregex): Replace the request path with a regular expression.
@@ -81,6 +82,29 @@ routes:
       - type: mirror
         params:
           service_id: service2
+```
+
+### Parallel
+
+Execute a group of middlewares concurrently. If errors occur in any of the middlewares, the request will be terminated.
+
+```yaml
+routes:
+  order:
+    paths:
+      - /order
+    service_id: order_service
+    middlewares:
+      - type: parallel
+        params:
+          - type: setvars
+            params:
+              - Key: user_id
+                Value: $http.request.header.user_id
+          - type: setvars
+            params:
+              - Key: is_vpi
+                Value: true
 ```
 
 ### RateLimiting

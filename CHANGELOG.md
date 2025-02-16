@@ -4,7 +4,7 @@
 
 ### **Features**
 
-- Introduce the `cors` middleware.
+- Introduce the `cors`, `parallel` middlewares.
 
 ### **Refactor**
 
