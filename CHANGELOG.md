@@ -13,7 +13,7 @@
 
 ### **Test**
 
-- Improve `router`, `zoer`, `gateway` `provider`, `proxy`(websocket) package test coverage.
+- Improve `router`, `zero`, `gateway` `provider`, `proxy`(websocket) package test coverage.
 
 ### **Documents**
 

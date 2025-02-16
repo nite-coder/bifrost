@@ -34,7 +34,7 @@ func registerByNodeType(route *Routes, nodeType router.NodeType) *Routes {
 		_ = route.Add(config.RouteOptions{
 			Paths: []string{"= /market/btc", "= /"},
 		}, exactkHandler)
-	case router.Prefix:
+	case router.PreferentialPrefix:
 		_ = route.Add(config.RouteOptions{
 			Paths: []string{"^~ /market/btc", "^~ /"},
 		}, prefixHandler)
@@ -50,7 +50,7 @@ func registerByNodeType(route *Routes, nodeType router.NodeType) *Routes {
 		_ = route.Add(config.RouteOptions{
 			Paths: []string{"~ /market/(btc|usdt|eth)"},
 		}, nil) // test two regexs router order
-	case router.General:
+	case router.Prefix:
 		_ = route.Add(config.RouteOptions{
 			Paths: []string{"/market/btc", "/"},
 		}, generalkHandler)
@@ -62,7 +62,7 @@ func registerByNodeType(route *Routes, nodeType router.NodeType) *Routes {
 func TestRoutePriorityAndRoot(t *testing.T) {
 
 	t.Run("exact match", func(t *testing.T) {
-		nodeTypes := []router.NodeType{router.Exact, router.Prefix, router.General, router.Regex}
+		nodeTypes := []router.NodeType{router.Exact, router.PreferentialPrefix, router.Prefix, router.Regex}
 		route := newRoutes()
 
 		for _, nodeType := range nodeTypes {
@@ -90,7 +90,7 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 	})
 
 	t.Run("prefix match 1", func(t *testing.T) {
-		nodeTypes := []router.NodeType{router.Prefix, router.General, router.Regex}
+		nodeTypes := []router.NodeType{router.PreferentialPrefix, router.Prefix, router.Regex}
 		route := newRoutes()
 
 		for _, nodeType := range nodeTypes {
@@ -143,7 +143,7 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 	})
 
 	t.Run("regex match", func(t *testing.T) {
-		nodeTypes := []router.NodeType{router.General, router.Regex}
+		nodeTypes := []router.NodeType{router.Prefix, router.Regex}
 		route := newRoutes()
 
 		for _, nodeType := range nodeTypes {
@@ -179,7 +179,7 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 	})
 
 	t.Run("general match", func(t *testing.T) {
-		nodeTypes := []router.NodeType{router.General}
+		nodeTypes := []router.NodeType{router.Prefix}
 		route := newRoutes()
 
 		for _, nodeType := range nodeTypes {

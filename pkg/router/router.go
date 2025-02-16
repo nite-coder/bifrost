@@ -22,8 +22,8 @@ type NodeType int32
 
 const (
 	Exact NodeType = iota
+	PreferentialPrefix
 	Prefix
-	General
 	Regex
 )
 
@@ -55,7 +55,7 @@ func newNode(path string) *node {
 // addChild adds a child node to the current node
 func (n *node) addChild(child *node, nodeType NodeType) {
 	switch nodeType {
-	case Prefix:
+	case PreferentialPrefix:
 		c := &Children{
 			Path: child.path,
 			Node: child,
@@ -76,7 +76,7 @@ func (n *node) addChild(child *node, nodeType NodeType) {
 
 	case Exact:
 		n.children[child.path] = child
-	case General:
+	case Prefix:
 		c := &Children{
 			Path: child.path,
 			Node: child,
@@ -102,7 +102,7 @@ func (n *node) addChild(child *node, nodeType NodeType) {
 // findChildByName searches for a node with the specified name among the children
 func (n *node) findChildByName(name string, nodeType NodeType) *node {
 	switch nodeType {
-	case Prefix:
+	case PreferentialPrefix:
 		for _, cc := range n.prefixChildren {
 			if cc.Path == name {
 				return cc.Node
@@ -112,7 +112,7 @@ func (n *node) findChildByName(name string, nodeType NodeType) *node {
 		if child, ok := n.children[name]; ok {
 			return child
 		}
-	case General:
+	case Prefix:
 		for _, cc := range n.generalChildren {
 			if cc.Path == name {
 				return cc.Node
@@ -131,13 +131,13 @@ func (n *node) matchChildByName(name string, nodeType NodeType) *node {
 		if child, ok := n.children[name]; ok {
 			return child
 		}
-	case Prefix:
+	case PreferentialPrefix:
 		for _, cc := range n.prefixChildren {
 			if cc.Path == "/" || strings.HasPrefix(name, cc.Path) {
 				return cc.Node
 			}
 		}
-	case General:
+	case Prefix:
 		for _, cc := range n.generalChildren {
 			if cc.Path == "/" || strings.HasPrefix(name, cc.Path) {
 				return cc.Node
@@ -191,7 +191,7 @@ func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.H
 
 	// If the path is the root path, add handler functions directly
 	if path == "/" {
-		if nodeType == Prefix || nodeType == General {
+		if nodeType == PreferentialPrefix || nodeType == Prefix {
 			childNode := currentNode.findChildByName("/", nodeType)
 			if childNode == nil {
 				childNode = newNode("/")
@@ -225,7 +225,7 @@ func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.H
 
 		// Find if the current node's children contain a node with the same name
 		var childNode *node
-		if isLast && (nodeType == Prefix || nodeType == General) {
+		if isLast && (nodeType == PreferentialPrefix || nodeType == Prefix) {
 			childNode = currentNode.findChildByName(part, nodeType)
 		} else {
 			childNode = currentNode.findChildByName(part, Exact)
@@ -233,7 +233,7 @@ func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.H
 
 		// If not found, create a new node
 		if childNode == nil {
-			if isLast && (nodeType == Prefix || nodeType == General) {
+			if isLast && (nodeType == PreferentialPrefix || nodeType == Prefix) {
 				childNode = newNode(part)
 				currentNode.addChild(childNode, nodeType)
 			} else {
@@ -272,7 +272,7 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 			return h, false
 		}
 
-		prefixChildNode := currentNode.matchChildByName("/", Prefix)
+		prefixChildNode := currentNode.matchChildByName("/", PreferentialPrefix)
 		if prefixChildNode != nil {
 			h := prefixChildNode.findHandler(method)
 			if len(h) > 0 {
@@ -280,7 +280,7 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 			}
 		}
 
-		generalChildNode := currentNode.matchChildByName("/", General)
+		generalChildNode := currentNode.matchChildByName("/", Prefix)
 		if generalChildNode != nil {
 			h := generalChildNode.findHandler(method)
 			if len(h) > 0 {
@@ -320,7 +320,7 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 		// Find if the current node's children contain a node with the same name
 		childNode := currentNode.matchChildByName(segment, Exact)
 
-		prefixChildNode := currentNode.matchChildByName(segment, Prefix)
+		prefixChildNode := currentNode.matchChildByName(segment, PreferentialPrefix)
 		if prefixChildNode != nil {
 			h := prefixChildNode.findHandler(method)
 			if len(h) > 0 {
@@ -328,7 +328,7 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 			}
 		}
 
-		generalChildNode := currentNode.matchChildByName(segment, General)
+		generalChildNode := currentNode.matchChildByName(segment, Prefix)
 		if generalChildNode != nil {
 			h := generalChildNode.findHandler(method)
 			if len(h) > 0 {

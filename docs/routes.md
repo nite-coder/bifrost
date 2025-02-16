@@ -1,12 +1,12 @@
 # Routes
 
-Bifrost's routing design is similar to NGINX, with four main types:
+Bifrost's routing rule is similar to NGINX, with four main types:
 
-1. Exact match `=`
-1. Prefix match `^~`
-1. Regular expression match `~` (case sensitive)
-1. Regular expression match `~*` (case insensitive)
-1. General match
+1. Exact match `=`: Highest priority, matches the URI exactly
+1. Preferential prefix match `^~`: If a match is found, stop searching
+1. Regular expression match `~` (case sensitive):
+1. Regular expression match `~*` (case insensitive):
+1. Preifx match `/{your_prefix}`:
 
 ## Match Priority
 
@@ -23,7 +23,7 @@ routes:
       - "= /spot/orders"
 ```
 
-### Prefix Match
+### Preferential prefix Match
 
 A path that starts with `^~` is a prefix match. In this example, any request starting with `/api/v1` will be matched.
 
@@ -61,7 +61,7 @@ routes:
       - "~ /api/(v1|v2)"
 ```
 
-### General Match
+### Preifx Match
 
 In this example, any request starting with `/api/v3/time` will match `testRoute`.
 

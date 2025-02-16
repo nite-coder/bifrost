@@ -209,7 +209,7 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 				return fmt.Errorf("router: exact route can't be empty in route: '%s'", routeOpts.ID)
 			}
 		case strings.HasPrefix(path, "^~"):
-			nodeType = router.Prefix
+			nodeType = router.PreferentialPrefix
 			path = strings.TrimSpace(path[2:])
 			if len(path) == 0 {
 				return fmt.Errorf("router: prefix route can't be empty in route: '%s'", routeOpts.ID)
@@ -219,7 +219,7 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 			if !strings.HasPrefix(path, "/") {
 				return fmt.Errorf("router: '%s' is invalid path. Path needs to begin with '/'", path)
 			}
-			nodeType = router.General
+			nodeType = router.Prefix
 		}
 
 		if len(routeOpts.Methods) == 0 {

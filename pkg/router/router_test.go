@@ -25,11 +25,11 @@ func generalkHandler(c context.Context, ctx *app.RequestContext) {
 
 func loadStaticRouter() *Router {
 	router := NewRouter()
-	_ = router.Add("GET", "/", General, exactkHandler)
-	_ = router.Add("GET", "/foo", General, exactkHandler)
-	_ = router.Add("GET", "/foo/bar/baz/", General, exactkHandler)
-	_ = router.Add("GET", "/foo/bar/baz/qux/quux", General, exactkHandler)
-	_ = router.Add("GET", "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred", General, exactkHandler)
+	_ = router.Add("GET", "/", Prefix, exactkHandler)
+	_ = router.Add("GET", "/foo", Prefix, exactkHandler)
+	_ = router.Add("GET", "/foo/bar/baz/", Prefix, exactkHandler)
+	_ = router.Add("GET", "/foo/bar/baz/qux/quux", Prefix, exactkHandler)
+	_ = router.Add("GET", "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred", Prefix, exactkHandler)
 	return router
 }
 
@@ -153,8 +153,8 @@ func BenchmarkMapLookup(b *testing.B) {
 func TestRouter(t *testing.T) {
 	router := NewRouter()
 
-	router.Add(http.MethodGet, "/", General, generalkHandler)
-	router.Add(http.MethodPost, "/orders/123", Prefix, prefixHandler)
+	router.Add(http.MethodGet, "/", Prefix, generalkHandler)
+	router.Add(http.MethodPost, "/orders/123", PreferentialPrefix, prefixHandler)
 	router.Add(http.MethodPut, "/foo", Exact, exactkHandler)
 
 	middlewares, isDefered := router.Find(http.MethodGet, "/")
