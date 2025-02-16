@@ -5,12 +5,13 @@ After=network.target
 [Service]
 Type=forking
 User=nobody
-WorkingDirectory=/home/my-gateway/bifrost
-PIDFile=/home/my-gateway/bifrost/logs/bifrost.pid
-ExecStartPre=/home/my-gateway/bifrost/bifrost -t -c=conf/config.yaml
-ExecStart=/home/my-gateway/bifrost/bifrost -d -c=conf/config.yaml
-ExecReload=/home/my-gateway/bifrost/bifrost -u -c=conf/config.yaml
-ExecStop=/home/my-gateway/bifrost/bifrost -s -c=conf/config.yaml
+WorkingDirectory=/home/my-gateway
+PIDFile=/home/my-gateway/logs/bifrost.pid
+ExecStartPre=/home/my-gateway/bifrost -t -c=conf/config.yaml
+ExecStart=/home/my-gateway/bifrost -d -c=conf/config.yaml
+ExecStartPost=/bin/sleep 1
+ExecReload=/home/my-gateway/bifrost -u -c=conf/config.yaml
+ExecStop=/home/my-gateway/bifrost -s -c=conf/config.yaml
 Restart=on-failure
 
 [Install]
