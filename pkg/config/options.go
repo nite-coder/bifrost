@@ -154,10 +154,10 @@ type AccessLogOptions struct {
 }
 
 type MiddlwareOptions struct {
-	ID     string         `yaml:"-" json:"-"`
-	Type   string         `yaml:"type" json:"type"`
-	Params map[string]any `yaml:"params" json:"params"`
-	Use    string         `yaml:"use" json:"use"`
+	ID     string `yaml:"-" json:"-"`
+	Type   string `yaml:"type" json:"type"`
+	Params any    `yaml:"params" json:"params"`
+	Use    string `yaml:"use" json:"use"`
 }
 
 type UpstreamStrategy string

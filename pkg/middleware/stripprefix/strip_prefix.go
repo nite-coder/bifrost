@@ -3,18 +3,32 @@ package stripprefix
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
 func init() {
-	_ = middleware.RegisterMiddleware("strip_prefix", func(params map[string]any) (app.HandlerFunc, error) {
-		val := params["prefixes"].([]any)
+	_ = middleware.RegisterMiddleware("strip_prefix", func(params any) (app.HandlerFunc, error) {
+		if params == nil {
+			return nil, errors.New("strip_prefix middleware params is empty or invalid")
+		}
 
 		prefixes := make([]string, 0)
-		for _, v := range val {
-			prefixes = append(prefixes, v.(string))
+		if val, ok := params.(map[string]any); ok {
+			prefixVal, found := val["prefixes"]
+
+			if !found {
+				return nil, errors.New("prefixes params is not set or prefixes is invalid")
+			}
+
+			err := mapstructure.Decode(prefixVal, &prefixes)
+			if err != nil {
+				return nil, fmt.Errorf("prefixes params is invalid, error: %w", err)
+			}
 		}
 
 		m := NewMiddleware(prefixes)

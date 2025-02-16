@@ -9,10 +9,11 @@ import (
 )
 
 func registerMiddlewares() error {
-	err := middleware.RegisterMiddleware("timing", func(param map[string]any) (app.HandlerFunc, error) {
+	err := middleware.RegisterMiddleware("timing", func(param any) (app.HandlerFunc, error) {
 		m := TimingMiddleware{}
 		return m.ServeHTTP, nil
 	})
+
 	if err != nil {
 		return err
 	}

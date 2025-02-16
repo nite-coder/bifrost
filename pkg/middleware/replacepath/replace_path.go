@@ -8,16 +8,33 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
+	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 func init() {
-	_ = middleware.RegisterMiddleware("replace_path", func(params map[string]any) (app.HandlerFunc, error) {
-		newPath, ok := params["path"].(string)
-		if !ok {
-			return nil, errors.New("path is not set or path is invalid")
+	_ = middleware.RegisterMiddleware("replace_path", func(params any) (app.HandlerFunc, error) {
+		if params == nil {
+			return nil, errors.New("replace_path middleware params is not set or invalid")
 		}
-		m := NewMiddleware(newPath)
-		return m.ServeHTTP, nil
+
+		var path string
+		var err error
+		if val, ok := params.(map[string]any); ok {
+			pathVal, found := val["path"]
+			if !found {
+				return nil, errors.New("path field is not set")
+			}
+
+			path, err = cast.ToString(pathVal)
+			if err != nil {
+				return nil, errors.New("path field is invalid")
+			}
+
+			m := NewMiddleware(path)
+			return m.ServeHTTP, nil
+		}
+
+		return nil, errors.New("replace_path middleware params is invalid")
 	})
 }
 

@@ -10,17 +10,37 @@ import (
 )
 
 func init() {
-	_ = middleware.RegisterMiddleware("replace_path_regex", func(params map[string]any) (app.HandlerFunc, error) {
-		regex, ok := params["regex"].(string)
-		if !ok {
-			return nil, errors.New("regex is not set or regex is invalid")
+	_ = middleware.RegisterMiddleware("replace_path_regex", func(params any) (app.HandlerFunc, error) {
+		if params == nil {
+			return nil, errors.New("replace_path_regex middleware params is not set or invalid")
 		}
-		replacement, ok := params["replacement"].(string)
-		if !ok {
-			return nil, errors.New("replacement is not set or replacement is invalid")
+
+		if val, ok := params.(map[string]interface{}); ok {
+			regexVal, found := val["regex"]
+			if !found {
+				return nil, errors.New("regex field is not set")
+			}
+
+			regex, ok := regexVal.(string)
+			if !ok {
+				return nil, errors.New("regex field  is invalid")
+			}
+
+			replacementVal, found := val["replacement"]
+			if !found {
+				return nil, errors.New("replacement field is not set")
+			}
+
+			replacement, ok := replacementVal.(string)
+			if !ok {
+				return nil, errors.New("replacement field is invalid")
+			}
+
+			m := NewMiddleware(regex, replacement)
+			return m.ServeHTTP, nil
 		}
-		m := NewMiddleware(regex, replacement)
-		return m.ServeHTTP, nil
+
+		return nil, errors.New("replace_path_regex is not set or regex is invalid")
 	})
 
 }

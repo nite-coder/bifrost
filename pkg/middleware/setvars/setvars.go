@@ -3,74 +3,91 @@ package setvars
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 func init() {
-	_ = middleware.RegisterMiddleware("setvars", func(param map[string]any) (app.HandlerFunc, error) {
-		if len(param) == 0 {
+	_ = middleware.RegisterMiddleware("setvars", func(params any) (app.HandlerFunc, error) {
+		if params == nil {
 			return nil, errors.New("setvars middleware params is empty or invalid")
 		}
 
-		m := NewMiddleware(param)
+		options := []*Options{}
+
+		paramsSlice, ok := params.([]interface{})
+		if !ok {
+			return nil, errors.New("setvars middleware params is invalid")
+		}
+
+		err := mapstructure.Decode(paramsSlice, &options)
+		if err != nil {
+			return nil, fmt.Errorf("setvars middleware params is invalid: %w", err)
+		}
+
+		for _, opt := range options {
+			if opt.Key == "" {
+				return nil, errors.New("the key can't be empty in setvars middleware params")
+			}
+		}
+
+		m := NewMiddleware(options)
 		return m.ServeHTTP, nil
 	})
 }
 
-type varInfo struct {
-	key        string
-	value      any
-	valueStr   string
+type Options struct {
+	Key     string
+	Value   string
+	Default string
+
 	directives []string
 }
 
 type SetVarsMiddlware struct {
-	varinfos []*varInfo
+	options []*Options
 }
 
-func NewMiddleware(vars map[string]any) *SetVarsMiddlware {
-	varinfos := []*varInfo{}
+func NewMiddleware(options []*Options) *SetVarsMiddlware {
 
-	for k, v := range vars {
-		if k == "" {
+	for _, v := range options {
+		if v.Key == "" {
 			continue
 		}
 
-		val, _ := cast.ToString(v)
-
-		varinfos = append(varinfos, &varInfo{
-			key:        k,
-			value:      v,
-			valueStr:   val,
-			directives: variable.ParseDirectives(val),
-		})
+		v.directives = variable.ParseDirectives(v.Value)
 	}
 
 	return &SetVarsMiddlware{
-		varinfos: varinfos,
+		options: options,
 	}
 }
 
 func (m *SetVarsMiddlware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
-	for _, varinfo := range m.varinfos {
+	for _, varinfo := range m.options {
 		if len(varinfo.directives) > 0 {
 			replacements := make([]string, 0, len(varinfo.directives)*2)
 
 			for _, key := range varinfo.directives {
 				val := variable.GetString(key, c)
+
+				if val == "" {
+					val = varinfo.Default
+				}
+
 				replacements = append(replacements, key, val)
 			}
 
 			replacer := strings.NewReplacer(replacements...)
-			result := replacer.Replace(varinfo.valueStr)
-			c.Set(varinfo.key, result)
+			result := replacer.Replace(varinfo.Value)
+			c.Set(varinfo.Key, result)
 		} else {
-			c.Set(varinfo.key, varinfo.value)
+			c.Set(varinfo.Key, varinfo.Value)
 		}
 	}
 }

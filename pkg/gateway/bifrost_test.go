@@ -14,7 +14,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/go-resty/resty/v2"
 	"github.com/nite-coder/bifrost/pkg/config"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/setvars"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/cors"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/http2"
 )
@@ -26,6 +26,7 @@ type TestOrder struct {
 
 func TestBifrost(t *testing.T) {
 	// setup upstream
+
 	options := config.NewOptions()
 
 	options.Metrics.Prometheus.Enabled = true
@@ -82,10 +83,7 @@ func TestBifrost(t *testing.T) {
 		AccessLogID: "main",
 		Middlewares: []config.MiddlwareOptions{
 			{
-				Type: "setvars",
-				Params: map[string]any{
-					"foo": "bar",
-				},
+				Type: "cors",
 			},
 		},
 	}

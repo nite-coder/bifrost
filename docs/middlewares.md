@@ -195,14 +195,16 @@ Set variables in the request context.
 
 ```yaml
 routes:
-  route1:
+  orders:
     paths:
       - /api/v1/orders
     service_id: service1
     middlewares:
       - type: setvars
         params:
-          user_id: 123456
+          - key: user_id
+            value: "123456" # you can use directive here
+            default: "0" # if the variable is not set, the default value will be used
 ```
 
 ### StripPrefix
@@ -308,7 +310,7 @@ import (
 )
 
 func registerMiddlewares() error {
- err := middleware.RegisterMiddleware("timing", func(param map[string]any) (app.HandlerFunc, error) {
+ err := middleware.RegisterMiddleware("timing", func(param any) (app.HandlerFunc, error) {
   m := TimingMiddleware{}
   return m.ServeHTTP, nil
  })

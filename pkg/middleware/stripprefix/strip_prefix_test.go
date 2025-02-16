@@ -13,7 +13,7 @@ func TestStripMiddleware(t *testing.T) {
 	h := middleware.FindHandlerByType("strip_prefix")
 
 	params := map[string]any{
-		"prefixes": []any{"/api/v1"},
+		"prefixes": []string{"/api/v1"},
 	}
 
 	m, err := h(params)

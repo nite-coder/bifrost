@@ -5,10 +5,11 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestReplacePathRegexMiddleware_ServeHTTP(t *testing.T) {
+func TestReplacePathRegexMiddleware(t *testing.T) {
 	tests := []struct {
 		name             string
 		regex            string
@@ -44,12 +45,20 @@ func TestReplacePathRegexMiddleware_ServeHTTP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware := NewMiddleware(tt.regex, tt.replacement)
+			h := middleware.FindHandlerByType("replace_path_regex")
+
+			params := map[string]any{
+				"regex":       tt.regex,
+				"replacement": tt.replacement,
+			}
+
+			m, err := h(params)
+			assert.NoError(t, err)
 
 			ctx := app.NewContext(0)
 			ctx.Request.SetRequestURI(tt.originalFullPath)
 
-			middleware.ServeHTTP(context.Background(), ctx)
+			m(context.Background(), ctx)
 
 			uri := string(ctx.Request.URI().RequestURI())
 			assert.Equal(t, tt.expectedFullPath, uri, "Full Path should be replaced correctly")

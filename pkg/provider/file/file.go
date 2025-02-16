@@ -47,7 +47,7 @@ func (p *FileProvider) Add(path string) {
 }
 
 func (p *FileProvider) Open() ([]*ContentInfo, error) {
-	p.options.Paths = removeDuplicates(p.options.Paths)
+	p.options.Paths = slices.Compact(p.options.Paths)
 
 	var contents []*ContentInfo
 
@@ -186,18 +186,4 @@ func (p *FileProvider) addWatch(path string) error {
 
 		return p.watcher.Add(filePath)
 	})
-}
-
-func removeDuplicates(strings []string) []string {
-	seen := make(map[string]bool)
-	result := []string{}
-
-	for _, str := range strings {
-		if _, found := seen[str]; !found {
-			seen[str] = true
-			result = append(result, str)
-		}
-	}
-
-	return result
 }

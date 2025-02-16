@@ -10,7 +10,7 @@ var (
 	handlers map[string]CreateMiddlewareHandler = make(map[string]CreateMiddlewareHandler)
 )
 
-type CreateMiddlewareHandler func(param map[string]any) (app.HandlerFunc, error)
+type CreateMiddlewareHandler func(param any) (app.HandlerFunc, error)
 
 func RegisterMiddleware(kind string, handler CreateMiddlewareHandler) error {
 

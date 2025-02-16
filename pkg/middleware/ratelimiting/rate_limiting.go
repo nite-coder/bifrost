@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/config/redisclient"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
@@ -145,96 +146,16 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("rate_limiting", func(param map[string]any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("rate_limiting", func(params any) (app.HandlerFunc, error) {
+		if params == nil {
+			return nil, errors.New("rate_limiting middleware params is empty or invalid")
+		}
+
 		option := Options{}
 
-		// strategy
-		strategyVal, found := param["strategy"]
-		if !found {
-			return nil, errors.New("strategy is not found in rate-limiting middleware")
-		}
-		strategy, err := cast.ToString(strategyVal)
+		err := mapstructure.Decode(params, &option)
 		if err != nil {
-			return nil, errors.New("strategy is invalid in rate-limiting middleware")
-		}
-		option.Strategy = StrategyMode(strategy)
-
-		// limit
-		limitVal, found := param["limit"]
-		if !found {
-			return nil, errors.New("limit is not found in rate-limiting middleware1")
-		}
-		limit, err := cast.ToUint64(limitVal)
-		if err != nil {
-			return nil, errors.New("limit is invalid in rate-limiting middleware")
-		}
-		option.Limit = limit
-
-		// limit_by
-		limitByVal, found := param["limit_by"]
-		if !found {
-			return nil, errors.New("limit_by is not found in rate-limiting middleware")
-		}
-		limitBy, err := cast.ToString(limitByVal)
-		if err != nil {
-			return nil, errors.New("limit_by is invalid in rate-limiting middleware")
-		}
-		option.LimitBy = limitBy
-
-		// window_size
-		windowSizeVal, found := param["window_size"]
-		if !found {
-			return nil, errors.New("window_size is not found in rate-limiting middleware")
-		}
-		s, _ := cast.ToString(windowSizeVal)
-		windowSize, err := time.ParseDuration(s)
-		if err != nil {
-			return nil, errors.New("window_size is invalid in rate-limiting middleware")
-		}
-		option.WindowSize = windowSize
-
-		// http status
-		statusVal, found := param["http_status"]
-		if found {
-			status, err := cast.ToInt(statusVal)
-			if err != nil {
-				return nil, errors.New("http_status is invalid in rate-limiting middleware")
-			}
-			option.HTTPStatusCode = status
-		}
-
-		// http content type
-		contentTypeVal, found := param["http_content_type"]
-		if found {
-			contentType, err := cast.ToString(contentTypeVal)
-			if err != nil {
-				return nil, errors.New("http_content_type is invalid in rate-limiting middleware")
-			}
-			option.HTTPContentType = contentType
-		}
-
-		// http body
-		bodyVal, found := param["http_response_body"]
-		if found {
-			body, err := cast.ToString(bodyVal)
-			if err != nil {
-				return nil, errors.New("http_response_body is invalid in rate-limiting middleware")
-			}
-			option.HTTPResponseBody = body
-		}
-
-		// redis id
-		if option.Strategy == Redis {
-			redisIDVal, found := param["redis_id"]
-			if found {
-				redisID, err := cast.ToString(redisIDVal)
-				if err != nil {
-					return nil, errors.New("redis_id is invalid in rate-limiting middleware")
-				}
-				option.RedisID = redisID
-			} else {
-				return nil, errors.New("redis_id is not found in rate-limiting middleware")
-			}
+			return nil, fmt.Errorf("rate_limiting middleware params is invalid: %w", err)
 		}
 
 		m, err := NewMiddleware(option)

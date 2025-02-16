@@ -35,25 +35,6 @@ func createTestDir(t *testing.T) (string, func()) {
 	return dir, func() { os.RemoveAll(dir) }
 }
 
-func TestRemoveDuplicates(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    []string
-		expected []string
-	}{
-		{"No duplicates", []string{"a", "b", "c"}, []string{"a", "b", "c"}},
-		{"With duplicates", []string{"a", "a", "b"}, []string{"a", "b"}},
-		{"Empty input", []string{}, []string{}},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := removeDuplicates(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestFileProviderOpen(t *testing.T) {
 	testDir, cleanup := createTestDir(t)
 	defer cleanup()

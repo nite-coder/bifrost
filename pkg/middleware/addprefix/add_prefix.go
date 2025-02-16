@@ -12,11 +12,19 @@ import (
 )
 
 func init() {
-	_ = middleware.RegisterMiddleware("add_prefix", func(params map[string]any) (app.HandlerFunc, error) {
-		prefix, ok := params["prefix"].(string)
-		if !ok {
+	_ = middleware.RegisterMiddleware("add_prefix", func(params any) (app.HandlerFunc, error) {
+		if params == nil {
 			return nil, errors.New("prefix is not set or prefix is invalid")
 		}
+
+		var prefix string
+		if val, ok := params.(map[string]interface{}); ok {
+			prefix, ok = val["prefix"].(string)
+			if !ok {
+				return nil, errors.New("prefix is not set or prefix is invalid")
+			}
+		}
+
 		m := NewMiddleware(prefix)
 		return m.ServeHTTP, nil
 	})

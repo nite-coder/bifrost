@@ -3,6 +3,7 @@ package mirror
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -13,23 +14,16 @@ import (
 )
 
 func init() {
-	_ = middleware.RegisterMiddleware("mirror", func(params map[string]any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("mirror", func(params any) (app.HandlerFunc, error) {
+		if params == nil {
+			return nil, errors.New("mirror middleware params is empty or invalid")
+		}
 
 		opts := &Options{}
 
-		config := &mapstructure.DecoderConfig{
-			Metadata: nil,
-			Result:   opts,
-			TagName:  "mapstructure",
-		}
-
-		decoder, err := mapstructure.NewDecoder(config)
+		err := mapstructure.Decode(params, &opts)
 		if err != nil {
-			return nil, err
-		}
-
-		if err := decoder.Decode(params); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("mirror middleware params is invalid: %w", err)
 		}
 
 		if opts.ServiceID == "" {

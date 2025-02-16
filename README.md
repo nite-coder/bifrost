@@ -7,6 +7,7 @@ A low latency and high throughput API Gateway library written in Go.
 1. Low latency and high throughput.
 1. Allows writing middlewares in native `Go`.
 1. Easy to integrate with existing Go services.
+1. Easy migration from Nginx. Leverage your Nginx experience.
 1. Built as an SDK/library instead of an artifact.
 
 ## Features
@@ -33,6 +34,7 @@ A low latency and high throughput API Gateway library written in Go.
 | Built-in `Prometheus` monitoring                |   ✅    |  ❌   |
 | Built-in `OpenTelemetry` tracing                |   ✅    |  ❌   |
 | HTTP2 upstream support                          |   ✅    |  ❌   |
+| Standardized and User-Friendly Configuration    |   ✅    |  ❌   |
 | High concurrency and low latency                |   ✅    |  ✅   |
 | GRPC Load Balancer                              |   ✅    |  ✅   |
 | Sticky session                                  |   ✅    |  ✅   |

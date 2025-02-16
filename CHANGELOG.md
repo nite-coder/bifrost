@@ -6,6 +6,11 @@
 
 - Introduce the `cors` middleware.
 
+### **Refactor**
+
+- Redesigned the `setvars` middleware to support the `default` field.
+- The `params` field of middlewares has been changed to the `any` type.
+
 ### **Test**
 
 - Improve `router`, `zoer`, `gateway` `provider`, `proxy`(websocket) package test coverage.

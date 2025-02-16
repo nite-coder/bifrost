@@ -30,6 +30,7 @@ package cors
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -199,27 +200,17 @@ func NewMiddleware(config Config) app.HandlerFunc {
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("cors", func(params map[string]any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("cors", func(params any) (app.HandlerFunc, error) {
+
 		cfg := Config{}
 
-		if len(params) == 0 {
+		if params == nil {
 			cfg = DefaultConfig()
 			cfg.AllowAllOrigins = true
 		} else {
-			config := &mapstructure.DecoderConfig{
-				DecodeHook: mapstructure.StringToTimeDurationHookFunc(),
-				Metadata:   nil,
-				Result:     &cfg,
-				TagName:    "mapstructure",
-			}
-
-			decoder, err := mapstructure.NewDecoder(config)
+			err := mapstructure.Decode(params, &cfg)
 			if err != nil {
-				return nil, err
-			}
-
-			if err := decoder.Decode(params); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("cors middleware params is invalid: %w", err)
 			}
 
 			if len(cfg.AllowMethods) == 0 {

@@ -2,6 +2,8 @@ package trafficsplitter
 
 import (
 	"crypto/rand"
+	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -18,27 +20,19 @@ func getRandomNumber(max int64) (int64, error) {
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("traffic_splitter", func(params map[string]any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("traffic_splitter", func(params any) (app.HandlerFunc, error) {
+		if params == nil {
+			return nil, errors.New("traffic_splitter middleware params is empty or invalid")
+		}
 
 		opts := &Options{}
 
-		config := &mapstructure.DecoderConfig{
-			Metadata: nil,
-			Result:   opts,
-			TagName:  "mapstructure",
-		}
-
-		decoder, err := mapstructure.NewDecoder(config)
+		err := mapstructure.Decode(params, &opts)
 		if err != nil {
-			return nil, err
-		}
-
-		if err := decoder.Decode(params); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("traffic_splitter middleware params is invalid: %w", err)
 		}
 
 		m := NewMiddleware(opts)
-
 		return m.ServeHTTP, nil
 	})
 }

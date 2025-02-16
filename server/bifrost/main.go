@@ -128,7 +128,7 @@ func (f *FindMyHome) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 }
 
 func registerMiddlewares() error {
-	err := middleware.RegisterMiddleware("find_upstream", func(param map[string]any) (app.HandlerFunc, error) {
+	err := middleware.RegisterMiddleware("find_upstream", func(param any) (app.HandlerFunc, error) {
 		m := FindMyHome{}
 		return m.ServeHTTP, nil
 	})

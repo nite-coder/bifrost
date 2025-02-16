@@ -2,6 +2,8 @@ package requesttransformer
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/go-viper/mapstructure/v2"
@@ -86,26 +88,19 @@ func (m *RequestTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.R
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("request_transformer", func(params map[string]any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("request_transformer", func(params any) (app.HandlerFunc, error) {
+		if params == nil {
+			return nil, errors.New("request_transformer middleware params is empty or invalid")
+		}
+
 		opts := &Options{}
 
-		config := &mapstructure.DecoderConfig{
-			Metadata: nil,
-			Result:   opts,
-			TagName:  "mapstructure",
-		}
-
-		decoder, err := mapstructure.NewDecoder(config)
+		err := mapstructure.Decode(params, &opts)
 		if err != nil {
-			return nil, err
-		}
-
-		if err := decoder.Decode(params); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("request_transformer middleware params is invalid: %w", err)
 		}
 
 		m := NewMiddleware(*opts)
-
 		return m.ServeHTTP, nil
 	})
 }
