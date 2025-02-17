@@ -274,7 +274,7 @@ func RunAsDaemon(mainOptions config.Options) error {
 
 	err := cmd.Start()
 	if err != nil {
-		slog.Error("fail to start daemon", "error", err)
+		slog.Error("fail to run as daemon", "error", err)
 		return err
 	}
 

@@ -8,7 +8,8 @@
 
 ### **Bug Fixes**
 
-- fix systemd unit file.  No more `Can't open PID file` error
+- Fix systemd unit file.  No more `Can't open PID file` error
+- Fix validation of service URL when using IP address
 
 ### **Refactor**
 

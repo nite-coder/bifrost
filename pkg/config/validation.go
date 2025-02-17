@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"regexp"
@@ -300,8 +301,11 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 		// exist upstream
 		if hostname[0] != '$' {
 			_, found := mainOptions.Upstreams[hostname]
-			if !found && (!IsValidDomain(hostname)) {
-				return fmt.Errorf("the upstream '%s' can't be found in the service '%s'", hostname, serviceID)
+			if !found {
+				ip := net.ParseIP(hostname)
+				if !(IsValidDomain(hostname) || ip != nil) {
+					return fmt.Errorf("the upstream '%s' can't be found in the service '%s'", hostname, serviceID)
+				}
 			}
 		}
 
