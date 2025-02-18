@@ -184,14 +184,26 @@ func TestValidateUpstream(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("no upstream", func(t *testing.T) {
+	t.Run("target with local hostname", func(t *testing.T) {
 		options := NewOptions()
-		options.Upstreams["test"] = UpstreamOptions{}
+		options.Upstreams["test"] = UpstreamOptions{
+			Targets: []TargetOptions{
+				{
+					Target: "dev1:999",
+				},
+				{
+					Target: "dev2",
+				},
+			},
+		}
 
 		err := validateUpstreams(options, true)
 		assert.Error(t, err)
-	})
 
+		options.Resolver.SkipTest = true
+		err = validateUpstreams(options, true)
+		assert.NoError(t, err)
+	})
 }
 
 func TestConfigDNS(t *testing.T) {
