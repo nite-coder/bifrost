@@ -25,9 +25,15 @@ type AddOptions struct {
 	Querystring map[string]string
 }
 
+type SetOptions struct {
+	Headers     map[string]string
+	Querystring map[string]string
+}
+
 type Options struct {
 	Remove RemoveOptions
 	Add    AddOptions
+	Set    SetOptions
 }
 
 func NewMiddleware(opts Options) *RequestTransFormaterMiddleware {
@@ -66,10 +72,12 @@ func (m *RequestTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.R
 				continue
 			}
 
-			if variable.IsDirective(v) {
-				v = variable.GetString(v, c)
+			if c.Request.Header.Get(k) == "" {
+				if variable.IsDirective(v) {
+					v = variable.GetString(v, c)
+				}
+				c.Request.Header.Set(k, v)
 			}
-			c.Request.Header.Set(k, v)
 		}
 	}
 
@@ -79,10 +87,38 @@ func (m *RequestTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.R
 				continue
 			}
 
+			if c.Query(k) == "" {
+				if variable.IsDirective(v) {
+					v = variable.GetString(v, c)
+				}
+				c.Request.URI().QueryArgs().Add(k, v)
+			}
+		}
+	}
+
+	if len(m.options.Set.Headers) > 0 {
+		for k, v := range m.options.Set.Headers {
+			if k == "" {
+				continue
+			}
+
 			if variable.IsDirective(v) {
 				v = variable.GetString(v, c)
 			}
-			c.Request.URI().QueryArgs().Add(k, v)
+			c.Request.Header.Set(k, v)
+		}
+	}
+
+	if len(m.options.Set.Querystring) > 0 {
+		for k, v := range m.options.Set.Querystring {
+			if k == "" {
+				continue
+			}
+
+			if variable.IsDirective(v) {
+				v = variable.GetString(v, c)
+			}
+			c.Request.SetQueryString(k+"="+v)
 		}
 	}
 }

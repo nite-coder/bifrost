@@ -23,9 +23,14 @@ type AddOptions struct {
 	Headers map[string]string
 }
 
+type SetOptions struct {
+	Headers map[string]string
+}
+
 type Options struct {
 	Remove RemoveOptions
 	Add    AddOptions
+	Set    SetOptions
 }
 
 func NewMiddleware(opts Options) *ResponseTransFormaterMiddleware {
@@ -48,6 +53,22 @@ func (m *ResponseTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.
 
 	if len(m.options.Add.Headers) > 0 {
 		for k, v := range m.options.Add.Headers {
+			if k == "" {
+				continue
+			}
+
+			if c.Response.Header.Get(k) == "" {
+				if variable.IsDirective(v) {
+					v = variable.GetString(v, c)
+				}
+				c.Response.Header.Set(k, v)
+			}
+		}
+	}
+
+
+	if len(m.options.Set.Headers) > 0 {
+		for k, v := range m.options.Set.Headers {
 			if k == "" {
 				continue
 			}

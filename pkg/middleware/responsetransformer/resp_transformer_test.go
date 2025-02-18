@@ -38,9 +38,10 @@ func TestAdd(t *testing.T) {
 	params := map[string]any{
 		"add": map[string]any{
 			"headers": map[string]string{
-				"x-source":     "web",
-				"x-http-start": "$var.http_start",
-				"x-user-id":    "",
+				"x-source":         "web",
+				"x-http-start":     "$var.http_start",
+				"x-user-id":        "",
+				"x-existing-value": "hello",
 			},
 		},
 	}
@@ -53,9 +54,35 @@ func TestAdd(t *testing.T) {
 	hzCtx.Set("http_start", "12345678")
 	hzCtx.Request.SetMethod("GET")
 	hzCtx.Request.URI().SetPath("/foo")
+	hzCtx.Response.Header.Add("x-existing-value", "world")
 	m(ctx, hzCtx)
 
 	assert.Equal(t, "web", hzCtx.Response.Header.Get("x-source"))
 	assert.Equal(t, "12345678", hzCtx.Response.Header.Get("x-http-start"))
 	assert.Equal(t, "", hzCtx.Response.Header.Get("x-user-id"))
+	assert.Equal(t, "world", hzCtx.Response.Header.Get("x-existing-value"))
+}
+
+func TestSet(t *testing.T) {
+	h := middleware.FindHandlerByType("response_transformer")
+
+	params := map[string]any{
+		"set": map[string]any{
+			"headers": map[string]string{
+				"x-existing-value": "hello",
+			},
+		},
+	}
+
+	m, err := h(params)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	hzCtx := app.NewContext(0)
+	hzCtx.Request.SetMethod("GET")
+	hzCtx.Request.URI().SetPath("/foo")
+	hzCtx.Response.Header.Add("x-existing-value", "world")
+	m(ctx, hzCtx)
+
+	assert.Equal(t, "hello", hzCtx.Response.Header.Get("x-existing-value"))
 }

@@ -169,7 +169,7 @@ routes:
 
 ### RequestTransformer
 
-Apply a request transformation to the request.
+Apply a request transformation to the request. The `add` option means that if the value doesn't exist, the value will be added. The `set` option means that whether the value exists or not, it will be added or overwritten.
 
 ```yaml
 routes:
@@ -188,11 +188,14 @@ routes:
           add:
             headers:
               x-id: 123
+          set:
+            headers:
+              x-source: "web"
 ```
 
 ### ResponseTransformer
 
-Apply a response transformation to the response.
+Apply a response transformation to the response.  The `add` option means that if the value doesn't exist, the value will be added. The `set` option means that whether the value exists or not, it will be added or overwritten.
 
 ```yaml
 routes:
@@ -211,6 +214,9 @@ routes:
               x-source: web
               x-http-start: $http.start
               x-http-finish: $http.finish
+          set:
+            headers:
+              x-source: "web"
 ```
 
 ### SetVars
