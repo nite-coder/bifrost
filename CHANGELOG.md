@@ -15,6 +15,7 @@
 
 - Redesigned the `setvars` middleware to support the `default` field.
 - The `params` field of middlewares has been changed to the `any` type.
+- Enhance validation of `upstream` and `service` in the config package.
 
 ### **Test**
 

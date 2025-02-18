@@ -8,7 +8,193 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUpstreamDNS(t *testing.T) {
+func TestValidateRoutes(t *testing.T) {
+	t.Run("service not found", func(t *testing.T) {
+		options := NewOptions()
+		options.Routes["route1"] = RouteOptions{
+			Paths:     []string{"/hello"},
+			ServiceID: "test1",
+		}
+
+		err := validateRoutes(options, true)
+		assert.Error(t, err)
+	})
+
+	t.Run("dpulicate routes", func(t *testing.T) {
+		options := NewOptions()
+
+		options.Services["aa"] = ServiceOptions{
+			Url: "http://test1/hello",
+		}
+
+		options.Routes["test1"] = RouteOptions{
+			Paths:     []string{"/hello"},
+			ServiceID: "aa",
+		}
+
+		options.Routes["test2"] = RouteOptions{
+			Methods:   []string{"GET"},
+			Paths:     []string{"/hello"},
+			ServiceID: "aa",
+		}
+
+		err := validateRoutes(options, true)
+		assert.ErrorIs(t, err, router.ErrAlreadyExists)
+	})
+}
+
+func TestValidateService(t *testing.T) {
+
+	t.Run("service url with ip", func(t *testing.T) {
+		options := NewOptions()
+		options.Routes["route1"] = RouteOptions{
+			Paths:     []string{"/hello"},
+			ServiceID: "test1",
+		}
+		options.Services["test1"] = ServiceOptions{
+			Url: "http://10.1.2.16:8088",
+		}
+
+		err := validateServices(options, true)
+		assert.NoError(t, err)
+
+		options.Resolver.SkipTest = true
+		err = validateServices(options, true)
+		assert.NoError(t, err)
+	})
+
+	t.Run("service url with domain", func(t *testing.T) {
+		options := NewOptions()
+		options.Routes["route1"] = RouteOptions{
+			Paths:     []string{"/hello"},
+			ServiceID: "test1",
+		}
+		options.Services["test1"] = ServiceOptions{
+			Url: "http://google.com",
+		}
+
+		err := validateServices(options, true)
+		assert.NoError(t, err)
+
+		options.Resolver.SkipTest = true
+		err = validateServices(options, true)
+		assert.NoError(t, err)
+	})
+
+	t.Run("service url localhost", func(t *testing.T) {
+		options := NewOptions()
+		options.Routes["route1"] = RouteOptions{
+			Paths:     []string{"/hello"},
+			ServiceID: "test1",
+		}
+		options.Services["test1"] = ServiceOptions{
+			Url: "http://localhost:8888",
+		}
+
+		err := validateServices(options, true)
+		assert.NoError(t, err)
+
+		options.Resolver.SkipTest = true
+		err = validateServices(options, true)
+		assert.NoError(t, err)
+	})
+
+	t.Run("service url no upstream", func(t *testing.T) {
+		options := NewOptions()
+
+		options.Services["service1"] = ServiceOptions{
+			Url: "http://test1/hello",
+		}
+
+		err := validateServices(options, true)
+		assert.Error(t, err)
+
+		options.Resolver.SkipTest = true
+		err = validateServices(options, true)
+		assert.Error(t, err)
+	})
+}
+
+func TestValidateUpstream(t *testing.T) {
+
+	t.Run("upstream target with ip", func(t *testing.T) {
+		options := NewOptions()
+		options.Upstreams["test"] = UpstreamOptions{
+			Targets: []TargetOptions{
+				{
+					Target: "10.1.2.250:8088",
+				},
+				{
+					Target: "10.1.1.1",
+				},
+			},
+		}
+
+		err := validateUpstreams(options, true)
+		assert.NoError(t, err)
+
+		options.Resolver.SkipTest = true
+		err = validateUpstreams(options, true)
+		assert.NoError(t, err)
+	})
+
+	t.Run("upstream target with domain", func(t *testing.T) {
+		options := NewOptions()
+		options.Upstreams["test"] = UpstreamOptions{
+			Targets: []TargetOptions{
+				{
+					Target: "google.com",
+				},
+				{
+					Target: "github.com",
+				},
+			},
+		}
+
+		err := validateUpstreams(options, true)
+		assert.NoError(t, err)
+
+		options.Resolver.SkipTest = true
+		err = validateUpstreams(options, true)
+		assert.NoError(t, err)
+	})
+
+	t.Run("upstream target with localhost", func(t *testing.T) {
+		options := NewOptions()
+		options.Upstreams["test"] = UpstreamOptions{
+			Targets: []TargetOptions{
+				{
+					Target: "localhost:999",
+				},
+				{
+					Target: "localhost",
+				},
+				// TODO: support ipv6
+				// {
+				// 	Target: "[::1]:999",
+				// },
+			},
+		}
+
+		err := validateUpstreams(options, true)
+		assert.NoError(t, err)
+
+		options.Resolver.SkipTest = true
+		err = validateUpstreams(options, true)
+		assert.NoError(t, err)
+	})
+
+	t.Run("no upstream", func(t *testing.T) {
+		options := NewOptions()
+		options.Upstreams["test"] = UpstreamOptions{}
+
+		err := validateUpstreams(options, true)
+		assert.Error(t, err)
+	})
+
+}
+
+func TestConfigDNS(t *testing.T) {
 	options := NewOptions()
 
 	options.Servers["srv"] = ServerOptions{
@@ -43,88 +229,4 @@ func TestUpstreamDNS(t *testing.T) {
 
 	err = ValidateConfig(options, true)
 	assert.ErrorIs(t, err, dns.ErrNotFound)
-}
-
-func TestDpulicateRoutes(t *testing.T) {
-	options := NewOptions()
-
-	options.Services["aa"] = ServiceOptions{
-		Url: "http://test1/hello",
-	}
-
-	options.Routes["test1"] = RouteOptions{
-		Paths:     []string{"/hello"},
-		ServiceID: "aa",
-	}
-
-	options.Routes["test2"] = RouteOptions{
-		Methods:   []string{"GET"},
-		Paths:     []string{"/hello"},
-		ServiceID: "aa",
-	}
-
-	err := validateRoutes(options, true)
-	assert.ErrorIs(t, err, router.ErrAlreadyExists)
-}
-
-func TestEmptyTargetUpstream(t *testing.T) {
-	options := NewOptions()
-
-	options.Upstreams["test"] = UpstreamOptions{}
-
-	err := validateUpstreams(options.Upstreams)
-	assert.Error(t, err)
-}
-
-func TestValidateService(t *testing.T) {
-
-	t.Run("service not found", func(t *testing.T) {
-		options := NewOptions()
-		options.Routes["route1"] = RouteOptions{
-			Paths:     []string{"/hello"},
-			ServiceID: "test1",
-		}
-
-		err := validateRoutes(options, true)
-		assert.Error(t, err)
-	})
-
-	t.Run("service url ip", func(t *testing.T) {
-		options := NewOptions()
-		options.Routes["route1"] = RouteOptions{
-			Paths:     []string{"/hello"},
-			ServiceID: "test1",
-		}
-		options.Services["test1"] = ServiceOptions{
-			Url: "http://10.1.2.16:8088",
-		}
-
-		err := validateRoutes(options, true)
-		assert.NoError(t, err)
-	})
-
-	t.Run("service url domain", func(t *testing.T) {
-		options := NewOptions()
-		options.Routes["route1"] = RouteOptions{
-			Paths:     []string{"/hello"},
-			ServiceID: "test1",
-		}
-		options.Services["test1"] = ServiceOptions{
-			Url: "http://google.com",
-		}
-
-		err := validateRoutes(options, true)
-		assert.NoError(t, err)
-	})
-
-	t.Run("service url no upstream", func(t *testing.T) {
-		options := NewOptions()
-
-		options.Services["service1"] = ServiceOptions{
-			Url: "http://test1/hello",
-		}
-
-		err := validateServices(options, true)
-		assert.Error(t, err)
-	})
 }

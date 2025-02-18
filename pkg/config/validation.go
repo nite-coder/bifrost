@@ -36,7 +36,7 @@ func ValidateConfig(mainOpts Options, isFullMode bool) error {
 		return err
 	}
 
-	err = validateUpstreams(mainOpts.Upstreams)
+	err = validateUpstreams(mainOpts, isFullMode)
 	if err != nil {
 		return err
 	}
@@ -57,11 +57,6 @@ func ValidateConfig(mainOpts Options, isFullMode bool) error {
 	}
 
 	err = validateMetrics(mainOpts, isFullMode)
-	if err != nil {
-		return err
-	}
-
-	err = validateFQDN(mainOpts, isFullMode)
 	if err != nil {
 		return err
 	}
@@ -280,6 +275,19 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 
 func validateServices(mainOptions Options, isFullMode bool) error {
 
+	var resolver *dns.Resolver
+	var err error
+
+	if !mainOptions.Resolver.SkipTest {
+		resolver, err = dns.NewResolver(dns.Options{
+			AddrPort: mainOptions.Resolver.AddrPort,
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
 	for serviceID, service := range mainOptions.Services {
 
 		if !isFullMode {
@@ -299,12 +307,23 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 		}
 
 		// exist upstream
-		if hostname[0] != '$' {
+		if hostname[0] != '$' && !strings.EqualFold("localhost", hostname) && !strings.EqualFold("[::1]", hostname) {
 			_, found := mainOptions.Upstreams[hostname]
 			if !found {
-				ip := net.ParseIP(hostname)
-				if !(IsValidDomain(hostname) || ip != nil) {
-					return fmt.Errorf("the upstream '%s' can't be found in the service '%s'", hostname, serviceID)
+				if resolver != nil {
+					ips, err := resolver.Lookup(context.Background(), hostname)
+					if err != nil {
+						return fmt.Errorf("fail to lookup host '%s' in the service '%s', error: %w", hostname, serviceID, err)
+					}
+
+					if len(ips) == 0 {
+						return fmt.Errorf("fail to lookup host '%s' in the service '%s', error: no ip found", hostname, serviceID)
+					}
+				} else {
+					ip := net.ParseIP(hostname)
+					if !(IsValidDomain(hostname) || ip != nil) {
+						return fmt.Errorf("the upstream '%s' can't be found in the service '%s'", hostname, serviceID)
+					}
 				}
 			}
 		}
@@ -328,8 +347,26 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 	return nil
 }
 
-func validateUpstreams(options map[string]UpstreamOptions) error {
-	for upstreamID, opt := range options {
+func validateUpstreams(mainOptions Options, isFullMode bool) error {
+
+	var resolver *dns.Resolver
+	var err error
+
+	if !mainOptions.Resolver.SkipTest {
+		resolver, err = dns.NewResolver(dns.Options{
+			AddrPort: mainOptions.Resolver.AddrPort,
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	for upstreamID, opt := range mainOptions.Upstreams {
+
+		if !isFullMode {
+			continue
+		}
 
 		if upstreamID[0] == '$' {
 			msg := fmt.Sprintf("the upstream '%s' can't start with '$'", upstreamID)
@@ -354,6 +391,27 @@ func validateUpstreams(options map[string]UpstreamOptions) error {
 		if len(opt.Targets) == 0 {
 			return fmt.Errorf("the targets can't be empty in the upstream '%s'", upstreamID)
 		}
+
+		for _, target := range opt.Targets {
+			addr := extractAddr(target.Target)
+			if !strings.EqualFold("localhost", addr) && !strings.EqualFold("[::1]", addr) {
+				if resolver != nil {
+					ips, err := resolver.Lookup(context.Background(), addr)
+					if err != nil {
+						return fmt.Errorf("fail to lookup host '%s' in the upstream '%s', error: %w", addr, upstreamID, err)
+					}
+
+					if len(ips) == 0 {
+						return fmt.Errorf("fail to lookup host '%s' in the upstream '%s', error: no ip found", addr, upstreamID)
+					}
+				} else {
+					ip := net.ParseIP(addr)
+					if !(IsValidDomain(addr) || ip != nil) {
+						return fmt.Errorf("the host '%s' can't be found in the upstream '%s'", addr, upstreamID)
+					}
+				}
+			}
+		}
 	}
 
 	return nil
@@ -374,65 +432,6 @@ func validateMetrics(options Options, isFullMode bool) error {
 			msg := fmt.Sprintf("the server_id '%s' for the prometheus is not found", options.Metrics.Prometheus.ServerID)
 			structure := []string{"metrics", "prometheus", "server_id"}
 			return newInvalidConfig(structure, options.Metrics.Prometheus.ServerID, msg)
-		}
-	}
-
-	return nil
-}
-
-func validateFQDN(mainOpts Options, isFullMode bool) error {
-	if mainOpts.Resolver.SkipTest || !isFullMode {
-		return nil
-	}
-
-	// check target FQDN
-	resolver, err := dns.NewResolver(dns.Options{
-		AddrPort: mainOpts.Resolver.AddrPort,
-		Valid:    mainOpts.Resolver.Valid,
-	})
-
-	if err != nil {
-		return err
-	}
-
-	for _, upstream := range mainOpts.Upstreams {
-		for _, target := range upstream.Targets {
-			addr := extractAddr(target.Target)
-			_, err := resolver.Lookup(context.Background(), addr)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	for serviceID, service := range mainOpts.Services {
-		addr, err := url.Parse(service.Url)
-		if err != nil {
-			return err
-		}
-
-		hostname := addr.Hostname()
-
-		// validate
-		if len(hostname) == 0 {
-			return fmt.Errorf("the hostname is invalid in service url. service_id: %s", serviceID)
-		}
-
-		// dynamic upstream
-		if hostname[0] == '$' {
-			continue
-		}
-
-		// exist upstream
-		_, found := mainOpts.Upstreams[hostname]
-		if found {
-			continue
-		}
-
-		host := extractAddr(hostname)
-		_, err = resolver.Lookup(context.Background(), host)
-		if err != nil {
-			return err
 		}
 	}
 
