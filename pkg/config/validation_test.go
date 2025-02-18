@@ -20,7 +20,7 @@ func TestValidateRoutes(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("dpulicate routes", func(t *testing.T) {
+	t.Run("duplicate routes", func(t *testing.T) {
 		options := NewOptions()
 
 		options.Services["aa"] = ServiceOptions{

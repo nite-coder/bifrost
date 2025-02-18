@@ -19,24 +19,25 @@ var (
 )
 
 type Resolver struct {
-	options     *Options
-	client      *dns.Client
-	hostsCache  map[string][]string
-	dnsCache *cache.Cache[string, []string]
+	options    *Options
+	client     *dns.Client
+	hostsCache map[string][]string
+	dnsCache   *cache.Cache[string, []string]
 }
 
 type Options struct {
 	// dns server for querying
 	AddrPort string
 	Valid    time.Duration
+	SkipTest bool
 }
 
 func NewResolver(option Options) (*Resolver, error) {
 	resultCache := cache.NewCache[string, []string](cache.NoExpiration)
 
 	r := &Resolver{
-		hostsCache:  make(map[string][]string),
-		dnsCache: resultCache,
+		hostsCache: make(map[string][]string),
+		dnsCache:   resultCache,
 	}
 
 	r.options = &option
@@ -52,9 +53,11 @@ func NewResolver(option Options) (*Resolver, error) {
 		option.AddrPort = servers[0].String()
 	}
 
-	err := ValidateDNSServer(option.AddrPort)
-	if err != nil {
-		return nil, err
+	if !option.SkipTest {
+		err := ValidateDNSServer(option.AddrPort)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if err := r.loadHostsFile(); err != nil {

@@ -156,6 +156,7 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	resolveOptions := dns.Options{
 		AddrPort: mainOptions.Resolver.AddrPort,
 		Valid:    mainOptions.Resolver.Valid,
+		SkipTest: mainOptions.Resolver.SkipTest,
 	}
 
 	dnsResolver, err := dns.NewResolver(resolveOptions)
