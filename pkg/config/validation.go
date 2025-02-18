@@ -404,11 +404,6 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 					if len(ips) == 0 {
 						return fmt.Errorf("fail to lookup host '%s' in the upstream '%s', error: no ip found", addr, upstreamID)
 					}
-				} else {
-					ip := net.ParseIP(addr)
-					if !(IsValidDomain(addr) || ip != nil) {
-						return fmt.Errorf("the host '%s' can't be found in the upstream '%s'", addr, upstreamID)
-					}
 				}
 			}
 		}
