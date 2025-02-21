@@ -99,12 +99,12 @@ routes:
         params:
           - type: setvars
             params:
-              - Key: user_id
-                Value: $http.request.header.user_id
+              - key: user_id
+                value: $http.request.header.user_id
           - type: setvars
             params:
-              - Key: is_vpi
-                Value: true
+              - key: is_vip
+                value: true
 ```
 
 ### RateLimiting
@@ -246,7 +246,7 @@ Forwarded path for upstream: `/payment`
 
 ```yaml
 routes:
-  route1:
+  payment:
     paths:
       - /api/v1/payment
     service_id: service1

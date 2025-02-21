@@ -24,7 +24,15 @@ var (
 	domainRegex     = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 )
 
+func LoadAndSkipResolver(path string) (Options, error) {
+	return load(path, true)
+}
+
 func Load(path string) (Options, error) {
+	return load(path, false)
+}
+
+func load(path string, skipResolver bool) (Options, error) {
 	// load main config
 	var mainOpts Options
 
@@ -80,6 +88,10 @@ func Load(path string) (Options, error) {
 	dp, mainOpts, err := loadDynamic(mainOpts)
 	if err != nil {
 		return mainOpts, fmt.Errorf("fail to load dynamic config: %w", err)
+	}
+
+	if skipResolver {
+		mainOpts.Resolver.SkipTest = true
 	}
 
 	err = ValidateConfig(mainOpts, true)

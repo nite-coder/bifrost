@@ -68,14 +68,12 @@ Example:
 resolver:
   addr_port: "8.8.8.8:53"
   valid: 5s
-  skip_test: false
 ```
 
 | Field     | Type            | Default | Description                                                                        |
 | --------- | --------------- | ------- | ---------------------------------------------------------------------------------- |
 | addr_port | `string`        |         | DNS server address and port.  If empty, the local `/etc/resolv.conf` will be used. |
 | valid     | `time.Duration` | 0       | Time to refresh the DNS cache.  `0`: means no refresh.  It must be greater than 0. |
-| skip_test | `bool`          | false   | Skip the dns check during testing                                                  |
 
 ## pid_file
 
