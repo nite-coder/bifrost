@@ -24,8 +24,9 @@ var (
 	domainRegex     = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 )
 
-func LoadAndSkipResolver(path string) (Options, error) {
-	return load(path, true)
+func TestAndSkipResovler(path string) error {
+	_, err := load(path, true)
+	return err
 }
 
 func Load(path string) (Options, error) {
