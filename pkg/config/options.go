@@ -237,5 +237,5 @@ type RedisOptions struct {
 type ResolverOptions struct {
 	AddrPort string        `yaml:"addr_port" json:"addr_port"`
 	Valid    time.Duration `yaml:"valid" json:"valid"`
-	SkipTest bool          `yaml:"skip_test" json:"skip_test"`
+	SkipTest bool          `yaml:"-" json:"-"`
 }
