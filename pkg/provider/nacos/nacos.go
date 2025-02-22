@@ -25,6 +25,8 @@ type File struct {
 }
 
 type Config struct {
+	Username    string
+	Password    string
 	NamespaceID string
 	ContextPath string
 	LogDir      string
@@ -107,6 +109,8 @@ func NewProvider(opts Options) (*NacosProvider, error) {
 		constant.WithLogDir(logDir),
 		constant.WithCacheDir(cacheDir),
 		constant.WithLogLevel(opts.Config.LogLevel),
+		constant.WithUsername(opts.Config.Username),
+		constant.WithPassword(opts.Config.Password),
 	)
 
 	client, err := clients.NewConfigClient(

@@ -42,6 +42,11 @@ func ValidateConfig(mainOptions Options, isFullMode bool) error {
 		return err
 	}
 
+	err = validateProviders(mainOptions)
+	if err != nil {
+		return err
+	}
+
 	err = validateAccessLog(mainOptions.AccessLogs)
 	if err != nil {
 		return err
@@ -70,6 +75,36 @@ func ValidateConfig(mainOptions Options, isFullMode bool) error {
 	err = validateMetrics(mainOptions, isFullMode)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func validateProviders(mainOptions Options) error {
+
+	if mainOptions.Providers.File.Enabled && len(mainOptions.Providers.File.Paths) == 0 {
+		return errors.New("the paths can't be empty for the file provider")
+	}
+
+	if mainOptions.Providers.Nacos.Config.Enabled {
+		if len(mainOptions.Providers.Nacos.Config.Endpoints) == 0 {
+			return errors.New("the endpoints can't be empty for the nacos config provider")
+		}
+
+		for _, endpoint := range mainOptions.Providers.Nacos.Config.Endpoints {
+			_, err := url.Parse(endpoint)
+			if err != nil {
+				return fmt.Errorf("the endpoint '%s' is invalid for nacos config provider, error: %w", endpoint, err)
+			}
+
+			if !(strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://")) {
+				return fmt.Errorf("the endpoint '%s' is invalid for nacos config provider.  It should start with http:// or https://", endpoint)
+			}
+		}
+
+		if len(mainOptions.Providers.Nacos.Config.Files) == 0 {
+			return errors.New("the files can't be empty for the nacos config provider")
+		}
 	}
 
 	return nil

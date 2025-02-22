@@ -161,6 +161,8 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 
 		configOptions := nacos.Config{
 			NamespaceID: mainOptions.Providers.Nacos.Config.NamespaceID,
+			Username:    mainOptions.Providers.Nacos.Config.Username,
+			Password:    mainOptions.Providers.Nacos.Config.Password,
 			ContextPath: mainOptions.Providers.Nacos.Config.ContextPath,
 			LogDir:      mainOptions.Providers.Nacos.Config.LogDir,
 			CacheDir:    mainOptions.Providers.Nacos.Config.CacheDir,

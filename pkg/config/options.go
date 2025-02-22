@@ -70,6 +70,8 @@ type File struct {
 
 type NacosConfigOptions struct {
 	Enabled     bool          `yaml:"enabled" json:"enabled"`
+	Username    string        `yaml:"username" json:"username"`
+	Password    string        `yaml:"password" json:"password"`
 	NamespaceID string        `yaml:"namespace_id" json:"namespace_id"`
 	ContextPath string        `yaml:"context_path" json:"context_path"`
 	LogDir      string        `yaml:"log_dir" json:"log_dir"`

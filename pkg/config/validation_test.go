@@ -18,6 +18,38 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
+func TestValidateProviders(t *testing.T) {
+
+	t.Run("file provider", func(t *testing.T) {
+		options := NewOptions()
+
+		options.Providers.File.Enabled = true
+		err := validateProviders(options)
+		assert.Error(t, err)
+	})
+
+	t.Run("nacos provider", func(t *testing.T) {
+		options := NewOptions()
+
+		options.Providers.Nacos.Config.Enabled = true
+		err := validateProviders(options)
+		assert.Error(t, err)
+
+		options.Providers.Nacos.Config.Endpoints = []string{
+			"http://localhost:8848",
+		}
+
+		options.Providers.Nacos.Config.Files = []*File{
+			{
+				DataID: "abc.yaml",
+			},
+		}
+
+		err = validateProviders(options)
+		assert.NoError(t, err)
+	})
+}
+
 func TestValidateRoutes(t *testing.T) {
 	t.Run("service not found", func(t *testing.T) {
 		options := NewOptions()

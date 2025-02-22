@@ -30,7 +30,7 @@ type FileProvider struct {
 
 func NewProvider(opts Options) *FileProvider {
 	if len(opts.Extensions) == 0 {
-		opts.Extensions = []string{".yaml", ".yml", ".json"}
+		opts.Extensions = []string{".yaml", ".yml"}
 	}
 
 	return &FileProvider{

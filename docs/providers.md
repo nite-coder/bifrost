@@ -22,16 +22,15 @@ providers:
     extensions:
       - ".yaml"
       - ".yml"
-      - ".json"
     paths:
       - "./conf"
 ```
 
-| Field      | Type       | Default                | Description                                               |
-| ---------- | ---------- | ---------------------- | --------------------------------------------------------- |
-| enabled    | `bool`     | `false`                | Enables the file provider                                 |
-| extensions | `[]string` | `.yaml`,`.yml`, `json` | Allowed file extensions                                   |
-| paths      | `[]string` |                        | Directories or files to be loaded.  (Skip subdirectories) |
+| Field      | Type       | Default        | Description                                               |
+| ---------- | ---------- | -------------- | --------------------------------------------------------- |
+| enabled    | `bool`     | `false`        | Enables the file provider                                 |
+| extensions | `[]string` | `.yaml`,`.yml` | Allowed file extensions (`yaml` format is tested)         |
+| paths      | `[]string` |                | Directories or files to be loaded.  (Skip subdirectories) |
 
 ## Nacos
 
@@ -56,6 +55,8 @@ providers:
 | Field                     | Type       | Default              | Description                                                                                                               |
 | ------------------------- | ---------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | nacos.config.enabled      | `bool`     | `false`              | Enables the nacos provider                                                                                                |
+| nacos.config.username     | `string`   |                      | Username of nacos server                                                                                                  |
+| nacos.config.password     | `string`   |                      | Password of nacos server                                                                                                  |
 | nacos.config.namespace_id | `string`   |                      | the namespaceId of Nacos. when namespace is public, fill in the blank string here                                         |
 | nacos.config.context_path | `string`   | `/nacos`             | the nacos server contextpath                                                                                              |
 | nacos.config.cache_dir    | `string`   | `./logs/nacos/cache` | the directory for persist nacos service info                                                                              |
