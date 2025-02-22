@@ -6,7 +6,7 @@
 
 - Introduce the `cors`, `parallel` middlewares.
 - Introduce `set` options for `request_transformer` and `response_transformer` middlewares.
-- Introduce `nacos` config provider.
+- [[#10](https://github.com/nite-coder/bifrost/pull/10)]:Introduce `nacos` config provider.
 
 ### **Bug Fixes**
 

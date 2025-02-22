@@ -27,9 +27,9 @@ var (
 	dnsResolver      *dns.Resolver
 )
 
-func TestAndSkipResovler(path string) error {
-	_, err := load(path, true)
-	return err
+func TestAndSkipResovler(path string) (string, error) {
+	mainOptions, err := load(path, true)
+	return mainOptions.configPath, err
 }
 
 func Load(path string) (Options, error) {

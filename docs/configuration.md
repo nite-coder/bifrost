@@ -15,7 +15,6 @@ This configuration file is divided into two primary types: `static configuration
 * [pid_file](#pid_file)
 * [upgrade_sock](#upgrade_sock)
 * [providers](#providers)
-  * [file](#file)
 * [logging](#logging)
 * [metrics](#metrics)
 * [tracing](#tracing)

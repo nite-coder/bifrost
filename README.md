@@ -15,6 +15,7 @@ A low latency and high throughput API Gateway library written in Go.
 1. Support for writing middleware in `Go`.
 1. Low latency and high throughput (powered by the Hertz framework).
 1. Millisecond-level hot reloads for route updates without interrupting requests.
+1. Get gateway configurations from local files or configuration centers.
 1. Built-in Prometheus monitoring.
 1. Built-in OpenTelemetry tracing.
 1. Supports `HTTP1.1`/`HTTP2`/`H2C`/`Webosocket`/`GRPC` protocols.
@@ -34,6 +35,7 @@ A low latency and high throughput API Gateway library written in Go.
 | Built-in `Prometheus` monitoring                |   ✅    |  ❌   |
 | Built-in `OpenTelemetry` tracing                |   ✅    |  ❌   |
 | HTTP2 upstream support                          |   ✅    |  ❌   |
+| Multiple configuration providers                |   ✅    |  ❌   |
 | Standardized and User-Friendly Configuration    |   ✅    |  ❌   |
 | High concurrency and low latency                |   ✅    |  ✅   |
 | GRPC Load Balancer                              |   ✅    |  ✅   |

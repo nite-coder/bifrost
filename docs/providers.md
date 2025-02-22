@@ -4,14 +4,14 @@ Providers enable integration with various services, managing configuration files
 
 ## Built-In Providers
 
-Currently supported middlewares are below.
+The currently supported providers are listed below. You can combine multiple providers for use.
 
 * [File](#file): Get configurations from files
 * [Nacos](#nacos): Get configurations from nacos.
 
 ## File
 
-Allows gateway configuration through files.
+Get gateway configurations from files
 
 Example:
 
@@ -35,7 +35,7 @@ providers:
 
 ## Nacos
 
-allow to read configuration from nacos configuration center. (http protocol only)
+Get gateway configurations from from nacos configuration center. (http protocol only)
 
 Example:
 

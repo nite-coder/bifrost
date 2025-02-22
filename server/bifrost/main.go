@@ -49,7 +49,13 @@ func main() {
 				Name:    "test",
 				Aliases: []string{"t"},
 				Value:   false,
-				Usage:   "Test the server conf and then exit",
+				Usage:   "Test the gateway conf and then exit",
+			},
+			&cli.BoolFlag{
+				Name:    "testskip",
+				Aliases: []string{"ts"},
+				Value:   false,
+				Usage:   "Test the gateway conf and skip dns check for upstreams",
 			},
 			&cli.BoolFlag{
 				Name:    "stop",
@@ -75,8 +81,21 @@ func main() {
 			}
 
 			configPath := cCtx.String("config")
-			isTest := cCtx.Bool("test")
 
+			isTestAndSkip := cCtx.Bool("testskip")
+			if isTestAndSkip {
+				path, err := config.TestAndSkipResovler(configPath)
+				if err != nil {
+					slog.Error("fail to load config", "error", err.Error())
+					slog.Info("the configuration file test has failed")
+					return err
+				}
+
+				slog.Info("the config file tested successfully", "path", path)
+				return nil
+			}
+
+			isTest := cCtx.Bool("test")
 			mainOptions, err := config.Load(configPath)
 			if err != nil {
 				slog.Error("fail to load config", "error", err.Error())
@@ -87,7 +106,7 @@ func main() {
 			}
 
 			if isTest {
-				slog.Info("the config file tested successfully", "path", configPath)
+				slog.Info("the config file tested successfully", "path", mainOptions.ConfigPath())
 				return nil
 			}
 
