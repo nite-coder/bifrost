@@ -1,12 +1,22 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/router"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestMain(m *testing.M) {
+	dnsResolver, _ = dns.NewResolver(dns.Options{
+		AddrPort: "",
+	})
+
+	exitCode := m.Run()
+	os.Exit(exitCode)
+}
 
 func TestValidateRoutes(t *testing.T) {
 	t.Run("service not found", func(t *testing.T) {

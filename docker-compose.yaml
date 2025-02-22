@@ -13,6 +13,16 @@ services:
       - 55679:55679 # zpages extension
     network_mode: "host"
 
+  nacos:
+    image: nacos/nacos-server:v2.5.0
+    container_name: nacos
+    environment:
+      - MODE=standalone
+    ports:
+    - "7848:7848"
+    - "8848:8848"
+    - "9848:9848"
+    - "9849:9849"
 
   redis-node-0:
     image: bitnami/redis-cluster:latest

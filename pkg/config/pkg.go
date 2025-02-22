@@ -9,8 +9,10 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/provider/file"
+	"github.com/nite-coder/bifrost/pkg/provider/nacos"
 
 	"gopkg.in/yaml.v3"
 )
@@ -18,10 +20,11 @@ import (
 type ChangeFunc func() error
 
 var (
-	OnChanged       provider.ChangeFunc
-	dynamicProvider provider.Provider
-	mainProvider    provider.Provider
-	domainRegex     = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
+	OnChanged        provider.ChangeFunc
+	dynamicProviders []provider.Provider
+	mainProvider     provider.Provider
+	domainRegex      = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
+	dnsResolver      *dns.Resolver
 )
 
 func TestAndSkipResovler(path string) error {
@@ -86,7 +89,7 @@ func load(path string, skipResolver bool) (Options, error) {
 		return mainOpts, err
 	}
 
-	dp, mainOpts, err := loadDynamic(mainOpts)
+	dps, mainOpts, err := loadDynamic(mainOpts)
 	if err != nil {
 		return mainOpts, fmt.Errorf("fail to load dynamic config: %w", err)
 	}
@@ -107,16 +110,17 @@ func load(path string, skipResolver bool) (Options, error) {
 	}
 
 	mainProvider = file.NewProvider(fileProviderOpts)
-	dynamicProvider = dp
+	dynamicProviders = dps
 
 	return mainOpts, nil
 }
 
-func loadDynamic(mainOptions Options) (provider.Provider, Options, error) {
+func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
+
+	providers := make([]provider.Provider, 0)
 
 	// use file provider if enabled
 	if mainOptions.Providers.File.Enabled {
-
 		if len(mainOptions.Providers.File.Paths) == 0 {
 			return nil, mainOptions, nil
 		}
@@ -150,10 +154,63 @@ func loadDynamic(mainOptions Options) (provider.Provider, Options, error) {
 			}
 		}
 
-		return fileProvider, mainOptions, nil
+		providers = append(providers, fileProvider)
 	}
 
-	return nil, mainOptions, nil
+	if mainOptions.Providers.Nacos.Config.Enabled {
+
+		configOptions := nacos.Config{
+			NamespaceID: mainOptions.Providers.Nacos.Config.NamespaceID,
+			ContextPath: mainOptions.Providers.Nacos.Config.ContextPath,
+			LogDir:      mainOptions.Providers.Nacos.Config.LogDir,
+			CacheDir:    mainOptions.Providers.Nacos.Config.CacheDir,
+			Timeout:     mainOptions.Providers.Nacos.Config.Timeout,
+			Watch:       mainOptions.Providers.Nacos.Config.Watch,
+			Endpoints:   make([]string, 0),
+			Files:       make([]*nacos.File, 0),
+		}
+
+		configOptions.Endpoints = append(configOptions.Endpoints, mainOptions.Providers.Nacos.Config.Endpoints...)
+
+		for _, file := range mainOptions.Providers.Nacos.Config.Files {
+			configOptions.Files = append(configOptions.Files, &nacos.File{
+				DataID: file.DataID,
+				Group:  file.Group,
+			})
+		}
+
+		nacosConfigOptions := nacos.Options{
+			Config: configOptions,
+		}
+
+		nacosProvider, err := nacos.NewProvider(nacosConfigOptions)
+		if err != nil {
+			return nil, mainOptions, err
+		}
+
+		files, err := nacosProvider.ConfigOpen()
+		if err != nil {
+			return nil, mainOptions, err
+		}
+
+		for _, file := range files {
+			mainOptions, err = mergeOptions(mainOptions, file.Content)
+			if err != nil {
+				var errInvalidConfig ErrInvalidConfig
+				if errors.As(err, &errInvalidConfig) {
+					line := findConfigurationLine(file.Content, errInvalidConfig.Structure, errInvalidConfig.Value)
+					return nil, mainOptions, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), file.DataID, line)
+				}
+
+				errMsg := fmt.Sprintf("data_id: %s, error: %s", file.DataID, err.Error())
+				return nil, mainOptions, errors.New(errMsg)
+			}
+		}
+
+		providers = append(providers, nacosProvider)
+	}
+
+	return providers, mainOptions, nil
 }
 
 func Watch() error {
@@ -162,9 +219,11 @@ func Watch() error {
 		_ = mainProvider.Watch()
 	}
 
-	if dynamicProvider != nil {
-		dynamicProvider.SetOnChanged(OnChanged)
-		_ = dynamicProvider.Watch()
+	if len(dynamicProviders) > 0 {
+		for _, dynamicProvider := range dynamicProviders {
+			dynamicProvider.SetOnChanged(OnChanged)
+			_ = dynamicProvider.Watch()
+		}
 	}
 
 	return nil
