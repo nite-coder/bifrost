@@ -39,7 +39,7 @@ type Options struct {
 	Strategy         StrategyMode  `mapstructure:"strategy"`
 	Limit            uint64        `mapstructure:"limit"`
 	LimitBy          string        `mapstructure:"limit_by"`
-	WindowSize       time.Duration `mapstructure:"windows_size"`
+	WindowSize       time.Duration `mapstructure:"window_size"`
 	HeaderLimit      string        `mapstructure:"header_limit"`
 	HeaderRemaining  string        `mapstructure:"header_remaining"`
 	HeaderReset      string        `mapstructure:"header_reset"`
@@ -153,7 +153,13 @@ func init() {
 
 		option := Options{}
 
-		err := mapstructure.Decode(params, &option)
+		decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
+			WeaklyTypedInput: true,
+			Result:           &option,
+		})
+
+		err := decoder.Decode(params)
 		if err != nil {
 			return nil, fmt.Errorf("rate_limiting middleware params is invalid: %w", err)
 		}

@@ -208,7 +208,13 @@ func init() {
 			cfg = DefaultConfig()
 			cfg.AllowAllOrigins = true
 		} else {
-			err := mapstructure.Decode(params, &cfg)
+			decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+				DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
+				WeaklyTypedInput: true,
+				Result:           &cfg,
+			})
+
+			err := decoder.Decode(params)
 			if err != nil {
 				return nil, fmt.Errorf("cors middleware params is invalid: %w", err)
 			}
