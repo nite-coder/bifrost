@@ -53,13 +53,35 @@ func (opt Options) ConfigPath() string {
 }
 
 type ProviderOtions struct {
-	File FileProviderOptions `yaml:"file" json:"file"`
+	File  FileProviderOptions  `yaml:"file" json:"file"`
+	Nacos NacosProviderOptions `yaml:"nacos" json:"nacos"`
 }
 
 type FileProviderOptions struct {
 	Enabled    bool     `yaml:"enabled" json:"enabled"`
 	Paths      []string `yaml:"paths" json:"paths"`
 	Extensions []string `yaml:"extensions" json:"extensions"`
+}
+
+type File struct {
+	DataID string `yaml:"data_id" json:"data_id"`
+	Group  string `yaml:"group" json:"group"`
+}
+
+type NacosConfigOptions struct {
+	Enabled     bool          `yaml:"enabled" json:"enabled"`
+	NamespaceID string        `yaml:"namespace_id" json:"namespace_id"`
+	ContextPath string        `yaml:"context_path" json:"context_path"`
+	LogDir      string        `yaml:"log_dir" json:"log_dir"`
+	CacheDir    string        `yaml:"cache_dir" json:"cache_dir"`
+	Timeout     time.Duration `yaml:"timeout" json:"timeout"`
+	Watch       *bool         `yaml:"watch" json:"watch"`
+	Endpoints   []string      `yaml:"endpoints" json:"endpoints"`
+	Files       []*File       `yaml:"files" json:"files"`
+}
+
+type NacosProviderOptions struct {
+	Config NacosConfigOptions `yaml:"config" json:"config"`
 }
 
 type MetricsOptions struct {

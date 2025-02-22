@@ -85,31 +85,7 @@ Facilitates communication between two gateway processes during upgrades via a UN
 
 ## providers
 
-Providers enable integration with various services, managing configuration files and service discovery. Currently, only the `file` provider is supported.
-
-### file
-
-Allows gateway configuration through files.
-
-Example:
-
-```yaml
-providers:
-  file:
-    enabled: true
-    extensions:
-      - ".yaml"
-      - ".yml"
-      - ".json"
-    paths:
-      - "./conf"
-```
-
-| Field      | Type       | Default                | Description                                               |
-| ---------- | ---------- | ---------------------- | --------------------------------------------------------- |
-| enabled    | `bool`     | `false`                | Enables the file provider                                 |
-| extensions | `[]string` | `.yaml`,`.yml`, `json` | Allowed file extensions                                   |
-| paths      | `[]string` |                        | Directories or files to be loaded.  (Skip subdirectories) |
+Please refer to [providers.md](providers.md)
 
 ## logging
 

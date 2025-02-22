@@ -36,17 +36,17 @@ const (
 )
 
 type Options struct {
-	Strategy         StrategyMode
-	Limit            uint64
-	LimitBy          string
-	WindowSize       time.Duration
-	HeaderLimit      string
-	HeaderRemaining  string
-	HeaderReset      string
-	HTTPStatusCode   int
-	HTTPContentType  string
-	HTTPResponseBody string
-	RedisID          string
+	Strategy         StrategyMode  `mapstructure:"strategy"`
+	Limit            uint64        `mapstructure:"limit"`
+	LimitBy          string        `mapstructure:"limit_by"`
+	WindowSize       time.Duration `mapstructure:"windows_size"`
+	HeaderLimit      string        `mapstructure:"header_limit"`
+	HeaderRemaining  string        `mapstructure:"header_remaining"`
+	HeaderReset      string        `mapstructure:"header_reset"`
+	HTTPStatusCode   int           `mapstructure:"http_status_code"`
+	HTTPContentType  string        `mapstructure:"http_content_type"`
+	HTTPResponseBody string        `mapstructure:"http_response_body"`
+	RedisID          string        `mapstructure:"redis_id"`
 }
 
 type RateLimitingMiddleware struct {

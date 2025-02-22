@@ -19,44 +19,55 @@ import (
 )
 
 // ValidateConfig checks if the config's values are valid, but does not check if the config's value mapping is valid
-func ValidateConfig(mainOpts Options, isFullMode bool) error {
+func ValidateConfig(mainOptions Options, isFullMode bool) error {
 
-	err := validateLogging(mainOpts.Logging)
+	if dnsResolver == nil && !mainOptions.Resolver.SkipTest {
+		var err error
+		dnsResolver, err = dns.NewResolver(dns.Options{
+			AddrPort: mainOptions.Resolver.AddrPort,
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	err := validateLogging(mainOptions.Logging)
 	if err != nil {
 		return err
 	}
 
-	err = validateTracing(mainOpts.Tracing)
+	err = validateTracing(mainOptions.Tracing)
 	if err != nil {
 		return err
 	}
 
-	err = validateAccessLog(mainOpts.AccessLogs)
+	err = validateAccessLog(mainOptions.AccessLogs)
 	if err != nil {
 		return err
 	}
 
-	err = validateUpstreams(mainOpts, isFullMode)
+	err = validateUpstreams(mainOptions, isFullMode)
 	if err != nil {
 		return err
 	}
 
-	err = validateServices(mainOpts, isFullMode)
+	err = validateServices(mainOptions, isFullMode)
 	if err != nil {
 		return err
 	}
 
-	err = validateRoutes(mainOpts, isFullMode)
+	err = validateRoutes(mainOptions, isFullMode)
 	if err != nil {
 		return err
 	}
 
-	err = validateServers(mainOpts, isFullMode)
+	err = validateServers(mainOptions, isFullMode)
 	if err != nil {
 		return err
 	}
 
-	err = validateMetrics(mainOpts, isFullMode)
+	err = validateMetrics(mainOptions, isFullMode)
 	if err != nil {
 		return err
 	}
@@ -275,19 +286,6 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 
 func validateServices(mainOptions Options, isFullMode bool) error {
 
-	var resolver *dns.Resolver
-	var err error
-
-	if !mainOptions.Resolver.SkipTest {
-		resolver, err = dns.NewResolver(dns.Options{
-			AddrPort: mainOptions.Resolver.AddrPort,
-		})
-
-		if err != nil {
-			return err
-		}
-	}
-
 	for serviceID, service := range mainOptions.Services {
 
 		if !isFullMode {
@@ -310,8 +308,8 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 		if hostname[0] != '$' && !strings.EqualFold("localhost", hostname) && !strings.EqualFold("[::1]", hostname) {
 			_, found := mainOptions.Upstreams[hostname]
 			if !found {
-				if resolver != nil {
-					ips, err := resolver.Lookup(context.Background(), hostname)
+				if dnsResolver != nil && !mainOptions.Resolver.SkipTest {
+					ips, err := dnsResolver.Lookup(context.Background(), hostname)
 					if err != nil {
 						return fmt.Errorf("fail to lookup host '%s' in the service '%s', error: %w", hostname, serviceID, err)
 					}
@@ -349,19 +347,6 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 
 func validateUpstreams(mainOptions Options, isFullMode bool) error {
 
-	var resolver *dns.Resolver
-	var err error
-
-	if !mainOptions.Resolver.SkipTest {
-		resolver, err = dns.NewResolver(dns.Options{
-			AddrPort: mainOptions.Resolver.AddrPort,
-		})
-
-		if err != nil {
-			return err
-		}
-	}
-
 	for upstreamID, opt := range mainOptions.Upstreams {
 
 		if !isFullMode {
@@ -395,8 +380,8 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 		for _, target := range opt.Targets {
 			addr := extractAddr(target.Target)
 			if !strings.EqualFold("localhost", addr) && !strings.EqualFold("[::1]", addr) {
-				if resolver != nil {
-					ips, err := resolver.Lookup(context.Background(), addr)
+				if dnsResolver != nil && !mainOptions.Resolver.SkipTest {
+					ips, err := dnsResolver.Lookup(context.Background(), addr)
 					if err != nil {
 						return fmt.Errorf("fail to lookup host '%s' in the upstream '%s', error: %w", addr, upstreamID, err)
 					}

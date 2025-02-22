@@ -1,6 +1,9 @@
 package nacos
 
 import (
+	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
@@ -8,15 +11,11 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
 	"github.com/nacos-group/nacos-sdk-go/v2/vo"
 	"github.com/nite-coder/bifrost/pkg/provider"
+	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 type Options struct {
 	Config Config
-}
-
-type ServerConfig struct {
-	IPAddr string
-	Port   uint64
 }
 
 type File struct {
@@ -26,13 +25,14 @@ type File struct {
 }
 
 type Config struct {
-	Namespace   string
+	NamespaceID string
 	ContextPath string
 	LogDir      string
+	LogLevel    string // debug, info, warn, error
 	CacheDir    string
 	Timeout     time.Duration
 	Watch       *bool
-	Servers     []*ServerConfig
+	Endpoints   []string
 	Files       []*File
 }
 
@@ -58,25 +58,36 @@ func NewProvider(opts Options) (*NacosProvider, error) {
 		contextPath = opts.Config.ContextPath
 	}
 
-	logDir := "/tmp/nacos/log"
+	logDir := "./logs"
 	if opts.Config.LogDir != "" {
 		logDir = opts.Config.LogDir
 	}
 
-	cacheDir := "/tmp/nacos/cache"
+	cacheDir := "./logs/nacos/cache"
 	if opts.Config.CacheDir != "" {
 		cacheDir = opts.Config.CacheDir
 	}
 
-	namespace := "public"
-	if opts.Config.Namespace != "" {
-		namespace = opts.Config.Namespace
-	}
+	for _, endpoint := range opts.Config.Endpoints {
+		if !strings.HasPrefix(endpoint, "http://") {
+			return nil, fmt.Errorf("invalid nacos endpoint: %s", endpoint)
+		}
 
-	for _, server := range opts.Config.Servers {
+		uri, err := url.Parse(endpoint)
+		if err != nil {
+			return nil, err
+		}
+
+		ipaddr := uri.Hostname()
+		port, _ := cast.ToUint64(uri.Port())
+
+		if port == 0 {
+			port = uint64(8848)
+		}
+
 		serverConfigs = append(serverConfigs, *constant.NewServerConfig(
-			server.IPAddr,
-			server.Port,
+			ipaddr,
+			port,
 			constant.WithContextPath(contextPath),
 		))
 	}
@@ -84,17 +95,18 @@ func NewProvider(opts Options) (*NacosProvider, error) {
 	var timeoutMS uint64
 	timeout := opts.Config.Timeout.Milliseconds()
 	if timeout <= 0 {
-		timeoutMS = 5000
+		timeoutMS = 10000
 	} else {
 		timeoutMS = uint64(timeout)
 	}
 
 	configConfig := *constant.NewClientConfig(
-		constant.WithNamespaceId(namespace),
+		constant.WithNamespaceId(opts.Config.NamespaceID),
 		constant.WithTimeoutMs(timeoutMS),
 		constant.WithNotLoadCacheAtStart(true),
 		constant.WithLogDir(logDir),
 		constant.WithCacheDir(cacheDir),
+		constant.WithLogLevel(opts.Config.LogLevel),
 	)
 
 	client, err := clients.NewConfigClient(
@@ -121,23 +133,28 @@ func (p *NacosProvider) ConfigOpen() ([]*File, error) {
 	result := make([]*File, 0, len(p.options.Config.Files))
 
 	for _, file := range p.options.Config.Files {
+
+		group := "DEFAULT_GROUP"
+		if file.Group != "" {
+			group = file.Group
+		}
+
 		content, err := p.client.GetConfig(vo.ConfigParam{
 			DataId: file.DataID,
 			Group:  file.Group,
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("nacos: fail to get '%s' file from '%s' group in '%s' namespace_id, error: %w", file.DataID, file.Group, p.options.Config.NamespaceID, err)
 		}
 
 		newFile := &File{
 			DataID:  file.DataID,
-			Group:   file.Group,
+			Group:   group,
 			Content: content,
 		}
 
 		result = append(result, newFile)
 	}
-
 	return result, nil
 }
 

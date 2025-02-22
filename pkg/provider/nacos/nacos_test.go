@@ -51,14 +51,12 @@ func (m *MockConfigClient) CloseClient() {
 func TestNewProvider(t *testing.T) {
 	opts := Options{
 		Config: Config{
-			Namespace:   "test-namespace",
+			NamespaceID: "test-namespace",
 			ContextPath: "/custom-path",
 			LogDir:      "/custom-log",
 			CacheDir:    "/custom-cache",
 			Timeout:     3 * time.Second,
-			Servers: []*ServerConfig{
-				{IPAddr: "127.0.0.1", Port: 8848},
-			},
+			Endpoints:   []string{"http://localhost:8848"},
 			Files: []*File{
 				{DataID: "test-data-id", Group: "test-group"},
 			},
