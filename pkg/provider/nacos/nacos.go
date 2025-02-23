@@ -33,17 +33,9 @@ type Config struct {
 	LogLevel    string // debug, info, warn, error
 	CacheDir    string
 	Timeout     time.Duration
-	Watch       *bool
+	Watch       bool
 	Endpoints   []string
 	Files       []*File
-}
-
-func (c Config) IsWatch() bool {
-	if c.Watch == nil {
-		return true
-	}
-
-	return *c.Watch
 }
 
 type NacosProvider struct {
@@ -163,7 +155,7 @@ func (p *NacosProvider) ConfigOpen() ([]*File, error) {
 }
 
 func (p *NacosProvider) Watch() error {
-	if !p.options.Config.IsWatch() {
+	if !p.options.Config.Watch {
 		return nil
 	}
 

@@ -26,10 +26,10 @@ This configuration file is divided into two primary types: `static configuration
 
 ## watch
 
-Determines if configuration monitoring is enabled. When enabled, `dynamic configuration` changes take effect immediately upon file modification.
+If `true`, the `watch` features of each provider will be enabled.  By default, `watch` is `true`.
 
 ```yaml
-watch: true # Immediate effect
+watch: true
 ```
 
 ## timer_resolution
@@ -172,10 +172,10 @@ middlewares:
     type: timing_logger
 ```
 
-| Field  | Type             | Default | Description           |
-| ------ | ---------------- | ------- | --------------------- |
-| type   | `string`         |         | Middleware type       |
-| params | `map[string]any` |         | Middleware parameters |
+| Field  | Type     | Default | Description           |
+| ------ | -------- | ------- | --------------------- |
+| type   | `string` |         | Middleware type       |
+| params | `any`    |         | Middleware parameters |
 
 ## access_logs
 
@@ -267,7 +267,7 @@ servers:
 | access_log_id                    | `string`            |         | Specifies the access log to use                                                              |
 | observability.tracing.enabled    | `bool`              | `true`  | Enable or disable the tracing feature                                                        |
 | observability.tracing.attributes | `map[string]string` | `true`  | The attributes of the span                                                                   |
-| middlewares                      | `[]Middleware`      |         | middleware of the server                                                                     |
+| middlewares                      | `[]Middleware`      |         | middleware of the server. Details are available in the [middlewares](./middlewares.md)       |
 
 ## routes
 
@@ -286,14 +286,14 @@ routes:
       - type: xxx
 ```
 
-| Field       | Type           | Default | Description                                                         |
-| ----------- | -------------- | ------- | ------------------------------------------------------------------- |
-| methods     | `[]string`     |         | HTTP methods; if empty, all http methods are supported              |
-| paths       | `[]string`     |         | http path                                                           |
-| route       | `string`       |         | The path template is in the format used for displaying metric paths |
-| servers     | `[]string`     |         | Servers to apply the route; all servers if empty                    |
-| service_id  | `string`       |         | Service ID                                                          |
-| middlewares | `[]Middleware` |         | middleware of the routes                                            |
+| Field       | Type           | Default | Description                                                                            |
+| ----------- | -------------- | ------- | -------------------------------------------------------------------------------------- |
+| methods     | `[]string`     |         | HTTP methods; if empty, all http methods are supported                                 |
+| paths       | `[]string`     |         | http path                                                                              |
+| route       | `string`       |         | The path template is in the format used for displaying metric paths                    |
+| servers     | `[]string`     |         | Servers to apply the route; all servers if empty                                       |
+| service_id  | `string`       |         | Service ID                                                                             |
+| middlewares | `[]Middleware` |         | middleware of the routes. Details are available in the [middlewares](./middlewares.md) |
 
 ## services
 
@@ -313,18 +313,18 @@ services:
     url: http://test-server:8000
 ```
 
-| Field              | Type            | Default | Description                                                  |
-| ------------------ | --------------- | ------- | ------------------------------------------------------------ |
-| timeout.read       | `time.Duration` | `60s`   | Read timeout                                                 |
-| timeout.write      | `time.Duration` | `60s`   | Write timeout                                                |
-| timeout.idle       | `time.Duration` | `60s`   | Idle timeout                                                 |
-| timeout.dail       | `time.Duration` | `60s`   | Dial timeout                                                 |
-| timeout.grpc       | `time.Duration` | `0`     | `grpc` request timeout                                       |
-| max_conns_per_host | `int64`         | `1024`  | Maximum connections per host, no limit if `0`                |
-| tls_verify         | `bool`          | `false` | Validates server certificate                                 |
-| protocol           | `string`        | `http`  | Protocol for upstream, `http`, `http2`, `grpc` are supported |
-| url                | `string`        |         | Upstream URL                                                 |
-| middlewares        | `string`        |         | middleware of the service                                    |
+| Field              | Type            | Default | Description                                                                             |
+| ------------------ | --------------- | ------- | --------------------------------------------------------------------------------------- |
+| timeout.read       | `time.Duration` | `60s`   | Read timeout                                                                            |
+| timeout.write      | `time.Duration` | `60s`   | Write timeout                                                                           |
+| timeout.idle       | `time.Duration` | `60s`   | Idle timeout                                                                            |
+| timeout.dail       | `time.Duration` | `60s`   | Dial timeout                                                                            |
+| timeout.grpc       | `time.Duration` | `0`     | `grpc` request timeout                                                                  |
+| max_conns_per_host | `int64`         | `1024`  | Maximum connections per host, no limit if `0`                                           |
+| tls_verify         | `bool`          | `false` | Validates server certificate                                                            |
+| protocol           | `string`        | `http`  | Protocol for upstream, `http`, `http2`, `grpc` are supported                            |
+| url                | `string`        |         | Upstream URL                                                                            |
+| middlewares        | `string`        |         | middleware of the service. Details are available in the [middlewares](./middlewares.md) |
 
 ## upstreams
 

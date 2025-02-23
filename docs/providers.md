@@ -4,7 +4,7 @@ Providers enable integration with various services, managing configuration files
 
 ## Built-In Providers
 
-The currently supported providers are listed below. You can combine multiple providers for use.
+The currently supported providers are listed below. You can also combine multiple providers for use.
 
 * [File](#file): Get configurations from files
 * [Nacos](#nacos): Get configurations from nacos.
@@ -26,11 +26,12 @@ providers:
       - "./conf"
 ```
 
-| Field      | Type       | Default        | Description                                               |
-| ---------- | ---------- | -------------- | --------------------------------------------------------- |
-| enabled    | `bool`     | `false`        | Enables the file provider                                 |
-| extensions | `[]string` | `.yaml`,`.yml` | Allowed file extensions (`yaml` format is tested)         |
-| paths      | `[]string` |                | Directories or files to be loaded.  (Skip subdirectories) |
+| Field      | Type       | Default        | Description                                                            |
+| ---------- | ---------- | -------------- | ---------------------------------------------------------------------- |
+| enabled    | `bool`     | `false`        | Enables the file provider                                              |
+| extensions | `[]string` | `.yaml`,`.yml` | Allowed file extensions (`yaml` format is tested)                      |
+| paths      | `[]string` |                | Directories or files to be loaded.  (Skip subdirectories)              |
+| watch      | `bool`     | `true`         | if `true`, changes to `dynamic configuration` take effect immediately. |
 
 ## Nacos
 
@@ -52,18 +53,18 @@ providers:
           group: "DEFAULT_GROUP"
 ```
 
-| Field                     | Type       | Default              | Description                                                                                                               |
-| ------------------------- | ---------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| nacos.config.enabled      | `bool`     | `false`              | Enables the nacos provider                                                                                                |
-| nacos.config.username     | `string`   |                      | Username of nacos server                                                                                                  |
-| nacos.config.password     | `string`   |                      | Password of nacos server                                                                                                  |
-| nacos.config.namespace_id | `string`   |                      | the namespaceId of Nacos. when namespace is public, fill in the blank string here                                         |
-| nacos.config.context_path | `string`   | `/nacos`             | the nacos server contextpath                                                                                              |
-| nacos.config.cache_dir    | `string`   | `./logs/nacos/cache` | the directory for persist nacos service info                                                                              |
-| nacos.config.log_dir      | `string`   | `./logs`             | the directory for log                                                                                                     |
-| nacos.config.log_level    | `string`   | `info`               | the level of log, it's must be `debug`,`info`,`warn`, `error`                                                             |
-| nacos.config.namespace_id | `string`   |                      | the namespaceId of Nacos. when namespace is `public`, fill in the blank string here                                       |
-| nacos.config.watch        | `bool`     |                      | Determines if configuration hot reload is enabled. When enabled, `dynamic configuration` changes take effect immediately. |
-| nacos.config.timeout      | `string`   | `10s`                | timeout for requesting Nacos server                                                                                       |
-| nacos.config.endpoints    | `[]string` |                      | list of nacos server endpoints (http only)                                                                                |
-| nacos.config.files        | `[]file`   |                      | list of configuration files in nacos                                                                                      |
+| Field               | Type       | Default              | Description                                                                         |
+| ------------------- | ---------- | -------------------- | ----------------------------------------------------------------------------------- |
+| config.enabled      | `bool`     | `false`              | Enables the nacos provider                                                          |
+| config.username     | `string`   |                      | Username of nacos server                                                            |
+| config.password     | `string`   |                      | Password of nacos server                                                            |
+| config.namespace_id | `string`   |                      | the namespaceId of Nacos. when namespace is public, fill in the blank string here   |
+| config.context_path | `string`   | `/nacos`             | the nacos server contextpath                                                        |
+| config.cache_dir    | `string`   | `./logs/nacos/cache` | the directory for persist nacos service info                                        |
+| config.log_dir      | `string`   | `./logs`             | the directory for log                                                               |
+| config.log_level    | `string`   | `info`               | the level of log, it's must be `debug`,`info`,`warn`, `error`                       |
+| config.namespace_id | `string`   |                      | the namespaceId of Nacos. when namespace is `public`, fill in the blank string here |
+| config.watch        | `bool`     | `true`               | if `true`, changes to `dynamic configuration` take effect immediately.              |
+| config.timeout      | `string`   | `10s`                | timeout for requesting Nacos server                                                 |
+| config.endpoints    | `[]string` |                      | list of nacos server endpoints (http only)                                          |
+| config.files        | `[]file`   |                      | list of configuration files in nacos                                                |

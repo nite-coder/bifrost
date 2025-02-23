@@ -25,9 +25,8 @@ A low latency and high throughput API Gateway library written in Go.
 |                                                 | Bifrost | Nginx |
 | :---------------------------------------------- | :-----: | :---: |
 | SDK mode support for custom your gateway        |   ✅    |  ❌   |
-| Middleware support                              |   ✅    |  ❌   |
-| Middleware written in `Go`                      |   ✅    |  ❌   |
-| Rich middleware ecosystem                       |   ✅    |  ❌   |
+| Middleware support and written in native `Go`   |   ✅    |  ❌   |
+| Rich `Go` middleware ecosystem                  |   ✅    |  ❌   |
 | Millisecond-level hot reloads for route updates |   ✅    |  ❌   |
 | Blue-green deployment for services              |   ✅    |  ❌   |
 | High connection pool reuse rate                 |   ✅    |  ❌   |
@@ -58,12 +57,10 @@ A low latency and high throughput API Gateway library written in Go.
 ## Documents
 
 1. [Configuration](./docs/configuration.md)
+1. [Providers](./docs/providers.md)
 1. [Routes](./docs/routes.md)
 1. [Middlewares](./docs/middlewares.md)
-
-## Roadmap
-
-1. Cluster management support.
+1. [Directive](./docs/directive.md)
 
 ## Credit
 

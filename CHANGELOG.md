@@ -7,6 +7,8 @@
 - Introduce the `cors`, `parallel` middlewares.
 - Introduce `set` options for `request_transformer` and `response_transformer` middlewares.
 - [[#10](https://github.com/nite-coder/bifrost/pull/10)]:Introduce `nacos` config provider.
+- Introduce `watch` field for file provider.
+- Introduce `TestAndSkipResovler` for config package.
 
 ### **Bug Fixes**
 
@@ -28,6 +30,7 @@
 ### **Documents**
 
 - Add "user_group" section in configuration.
+- Add new `Providers` document.
 
 ## 0.2.0 (2024-02-14)
 

@@ -17,6 +17,7 @@ type ContentInfo struct {
 }
 
 type Options struct {
+	Watch      bool
 	Enabled    bool     `yaml:"enabled" json:"enabled"`
 	Paths      []string `yaml:"paths" json:"paths"`
 	Extensions []string `yaml:"extensions" json:"extensions"`
@@ -104,6 +105,10 @@ func (p *FileProvider) SetOnChanged(changeFunc provider.ChangeFunc) {
 }
 
 func (p *FileProvider) Watch() error {
+	if !p.options.Watch {
+		return nil
+	}
+
 	var err error
 
 	if len(p.options.Paths) == 0 {

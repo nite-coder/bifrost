@@ -119,17 +119,21 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 
 	providers := make([]provider.Provider, 0)
 
-	// use file provider if enabled
+	// file provider
 	if mainOptions.Providers.File.Enabled {
 		if len(mainOptions.Providers.File.Paths) == 0 {
 			return nil, mainOptions, nil
 		}
 
-		fileProviderOpts := file.Options{
+		fileOptions := file.Options{
 			Paths:      []string{},
 			Extensions: mainOptions.Providers.File.Extensions,
 		}
-		fileProvider := file.NewProvider(fileProviderOpts)
+		fileProvider := file.NewProvider(fileOptions)
+
+		if mainOptions.IsWatch() {
+			fileOptions.Watch = true
+		}
 
 		for _, content := range mainOptions.Providers.File.Paths {
 			fileProvider.Add(content)
@@ -157,6 +161,7 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 		providers = append(providers, fileProvider)
 	}
 
+	// nacos provider
 	if mainOptions.Providers.Nacos.Config.Enabled {
 
 		configOptions := nacos.Config{
@@ -167,9 +172,12 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 			LogDir:      mainOptions.Providers.Nacos.Config.LogDir,
 			CacheDir:    mainOptions.Providers.Nacos.Config.CacheDir,
 			Timeout:     mainOptions.Providers.Nacos.Config.Timeout,
-			Watch:       mainOptions.Providers.Nacos.Config.Watch,
 			Endpoints:   make([]string, 0),
 			Files:       make([]*nacos.File, 0),
+		}
+
+		if mainOptions.IsWatch() {
+			configOptions.Watch = true
 		}
 
 		configOptions.Endpoints = append(configOptions.Endpoints, mainOptions.Providers.Nacos.Config.Endpoints...)
