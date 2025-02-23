@@ -146,6 +146,7 @@ func TestFileProvider_Watch(t *testing.T) {
 	p := NewProvider(Options{
 		Paths:      []string{targetFile},
 		Extensions: []string{".yaml"},
+		Watch:      true,
 	})
 
 	var eventCounter atomic.Int32

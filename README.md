@@ -22,24 +22,24 @@ A low latency and high throughput API Gateway library written in Go.
 
 ## Comparative Analysis
 
-|                                                 | Bifrost | Nginx |
-| :---------------------------------------------- | :-----: | :---: |
-| SDK mode support for custom your gateway        |   ✅    |  ❌   |
-| Middleware support and written in native `Go`   |   ✅    |  ❌   |
-| Rich `Go` middleware ecosystem                  |   ✅    |  ❌   |
-| Millisecond-level hot reloads for route updates |   ✅    |  ❌   |
-| Blue-green deployment for services              |   ✅    |  ❌   |
-| High connection pool reuse rate                 |   ✅    |  ❌   |
-| Easy integration with existing Go programs      |   ✅    |  ❌   |
-| Built-in `Prometheus` monitoring                |   ✅    |  ❌   |
-| Built-in `OpenTelemetry` tracing                |   ✅    |  ❌   |
-| HTTP2 upstream support                          |   ✅    |  ❌   |
-| Multiple configuration providers                |   ✅    |  ❌   |
-| Standardized and User-Friendly Configuration    |   ✅    |  ❌   |
-| High concurrency and low latency                |   ✅    |  ✅   |
-| GRPC Load Balancer                              |   ✅    |  ✅   |
-| Sticky session                                  |   ✅    |  ✅   |
-| Background task support                         |   ✅    |  ✅   |
+|                                                                   | Bifrost | Nginx |
+| :---------------------------------------------------------------- | :-----: | :---: |
+| SDK mode support for custom your gateway                          |   ✅    |  ❌   |
+| Middleware support and written in native `Go`                     |   ✅    |  ❌   |
+| Rich `Go` middleware ecosystem                                    |   ✅    |  ❌   |
+| Millisecond-level hot reloads for `dynamic configuration` updates |   ✅    |  ❌   |
+| Blue-green deployment for services                                |   ✅    |  ❌   |
+| High connection pool reuse rate                                   |   ✅    |  ❌   |
+| Easy integration with existing Go programs                        |   ✅    |  ❌   |
+| Built-in `Prometheus` monitoring                                  |   ✅    |  ❌   |
+| Built-in `OpenTelemetry` tracing                                  |   ✅    |  ❌   |
+| HTTP2 upstream support                                            |   ✅    |  ❌   |
+| Multiple configuration providers                                  |   ✅    |  ❌   |
+| Standardized and User-Friendly Configuration                      |   ✅    |  ❌   |
+| High concurrency and low latency                                  |   ✅    |  ✅   |
+| GRPC Load Balancer                                                |   ✅    |  ✅   |
+| Sticky session                                                    |   ✅    |  ✅   |
+| Background task support                                           |   ✅    |  ✅   |
 
 ## Overview
 
