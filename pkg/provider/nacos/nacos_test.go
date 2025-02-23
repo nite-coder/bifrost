@@ -133,6 +133,7 @@ func TestWatch(t *testing.T) {
 
 	opts := Options{
 		Config: Config{
+			Watch: true,
 			Files: []*File{
 				{DataID: "test-data-id", Group: "test-group"},
 			},
