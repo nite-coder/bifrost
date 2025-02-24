@@ -129,11 +129,12 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 			Paths:      []string{},
 			Extensions: mainOptions.Providers.File.Extensions,
 		}
-		fileProvider := file.NewProvider(fileOptions)
 
 		if mainOptions.IsWatch() {
 			fileOptions.Watch = true
 		}
+
+		fileProvider := file.NewProvider(fileOptions)
 
 		for _, content := range mainOptions.Providers.File.Paths {
 			fileProvider.Add(content)
