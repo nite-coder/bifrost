@@ -11,6 +11,16 @@ import (
 )
 
 func TestMiddlewarePipeline(t *testing.T) {
+	testRoute := config.RouteOptions{
+		ID:    "testRoute",
+		Paths: []string{"/test"},
+		Middlewares: []config.MiddlwareOptions{
+			{
+				Use: "testMiddleware2",
+			},
+		},
+		ServiceID: "testService",
+	}
 
 	bifrost := &Bifrost{
 		options: &config.Options{
@@ -25,16 +35,8 @@ func TestMiddlewarePipeline(t *testing.T) {
 				},
 			},
 
-			Routes: map[string]config.RouteOptions{
-				"testRoute": {
-					Paths: []string{"/test"},
-					Middlewares: []config.MiddlwareOptions{
-						{
-							Use: "testMiddleware2",
-						},
-					},
-					ServiceID: "testService",
-				},
+			Routes: []*config.RouteOptions{
+				&testRoute,
 			},
 
 			Services: map[string]config.ServiceOptions{

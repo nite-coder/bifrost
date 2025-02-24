@@ -15,6 +15,7 @@
 - Fix systemd unit file.  No more `Can't open PID file` error
 - Fix validation of service URL when using IP address
 - Fix spelling error in `window_size` field for`rate_limiting` middleware.
+- Fix regex path order issue for routes.
 
 ### **Refactor**
 

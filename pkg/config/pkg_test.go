@@ -12,11 +12,17 @@ func TestConfigLoad(t *testing.T) {
 	_, err := Load(configPath)
 	assert.NoError(t, err)
 
-	configPath = "./../../test/config/good.yaml"
+	t.Run("routes order", func(t *testing.T) {
+		configPath := "./../../test/config/good.yaml"
 
-	mainOptions, err := Load(configPath)
-	assert.NoError(t, err)
-	assert.Len(t, mainOptions.Middlewares, 1)
+		mainOptions, err := Load(configPath)
+		assert.NoError(t, err)
+		assert.Len(t, mainOptions.Middlewares, 1)
+
+		assert.Equal(t, "all_routes1", mainOptions.Routes[1].ID)
+		assert.Equal(t, "all_routes2", mainOptions.Routes[2].ID)
+		assert.Equal(t, "all_routes3", mainOptions.Routes[3].ID)
+	})
 }
 
 func TestConfigFailCheck(t *testing.T) {
@@ -49,7 +55,6 @@ func TestDomainName(t *testing.T) {
 		assert.True(t, result)
 	}
 
-
 	testDomains = []string{
 		"invalid-bb",
 		"-invalid.com",
@@ -59,6 +64,6 @@ func TestDomainName(t *testing.T) {
 
 	for _, domain := range testDomains {
 		result := IsValidDomain(domain)
-		assert.False(t, result, domain + " should be false")
+		assert.False(t, result, domain+" should be false")
 	}
 }

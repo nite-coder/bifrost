@@ -30,12 +30,14 @@ func main() {
 	}
 
 	// setup route
-	options.Routes["all_routes"] = config.RouteOptions{
+	allRoutes := config.RouteOptions{
+		ID: "all_routes",
 		Paths: []string{
 			"/",
 		},
 		ServiceID: "test_service",
 	}
+	options.Routes = append(options.Routes, &allRoutes)
 
 	// setup server
 	options.Servers["api_server"] = config.ServerOptions{

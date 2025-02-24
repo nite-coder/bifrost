@@ -65,12 +65,15 @@ func TestBifrost(t *testing.T) {
 	}
 
 	// setup route
-	options.Routes["get_order"] = config.RouteOptions{
+	getOrderRoute := config.RouteOptions{
+		ID: "get_order",
 		Paths: []string{
 			"/",
 		},
 		ServiceID: "orders",
 	}
+
+	options.Routes = append(options.Routes, &getOrderRoute)
 
 	// setup server
 	options.Servers["apiv1"] = config.ServerOptions{

@@ -53,10 +53,12 @@ func TestValidateProviders(t *testing.T) {
 func TestValidateRoutes(t *testing.T) {
 	t.Run("service not found", func(t *testing.T) {
 		options := NewOptions()
-		options.Routes["route1"] = RouteOptions{
+		route1 := RouteOptions{
+			ID:        "route1",
 			Paths:     []string{"/hello"},
 			ServiceID: "test1",
 		}
+		options.Routes = append(options.Routes, &route1)
 
 		err := validateRoutes(options, true)
 		assert.Error(t, err)
@@ -69,16 +71,19 @@ func TestValidateRoutes(t *testing.T) {
 			Url: "http://test1/hello",
 		}
 
-		options.Routes["test1"] = RouteOptions{
+		test1 := &RouteOptions{
+			ID:        "test1",
 			Paths:     []string{"/hello"},
 			ServiceID: "aa",
 		}
+		options.Routes = append(options.Routes, test1)
 
-		options.Routes["test2"] = RouteOptions{
+		test2 := &RouteOptions{
 			Methods:   []string{"GET"},
 			Paths:     []string{"/hello"},
 			ServiceID: "aa",
 		}
+		options.Routes = append(options.Routes, test2)
 
 		err := validateRoutes(options, true)
 		assert.ErrorIs(t, err, router.ErrAlreadyExists)
@@ -89,10 +94,13 @@ func TestValidateService(t *testing.T) {
 
 	t.Run("service url with ip", func(t *testing.T) {
 		options := NewOptions()
-		options.Routes["route1"] = RouteOptions{
+		route1 := &RouteOptions{
+			ID:        "route1",
 			Paths:     []string{"/hello"},
 			ServiceID: "test1",
 		}
+		options.Routes = append(options.Routes, route1)
+
 		options.Services["test1"] = ServiceOptions{
 			Url: "http://10.1.2.16:8088",
 		}
@@ -107,10 +115,13 @@ func TestValidateService(t *testing.T) {
 
 	t.Run("service url with domain", func(t *testing.T) {
 		options := NewOptions()
-		options.Routes["route1"] = RouteOptions{
+		route1 := &RouteOptions{
+			ID:        "route1",
 			Paths:     []string{"/hello"},
 			ServiceID: "test1",
 		}
+		options.Routes = append(options.Routes, route1)
+
 		options.Services["test1"] = ServiceOptions{
 			Url: "http://google.com",
 		}
@@ -125,10 +136,13 @@ func TestValidateService(t *testing.T) {
 
 	t.Run("service url localhost", func(t *testing.T) {
 		options := NewOptions()
-		options.Routes["route1"] = RouteOptions{
+		route1 := &RouteOptions{
+			ID:        "route1",
 			Paths:     []string{"/hello"},
 			ServiceID: "test1",
 		}
+		options.Routes = append(options.Routes, route1)
+
 		options.Services["test1"] = ServiceOptions{
 			Url: "http://localhost:8888",
 		}

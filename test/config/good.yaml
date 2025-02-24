@@ -43,6 +43,18 @@ routes:
     paths:
       - /
     service_id: test_service
+  all_routes1:
+    paths:
+      - /order1
+    service_id: test_service
+  all_routes2:
+    paths:
+      - /order2
+    service_id: test_service
+  all_routes3:
+    paths:
+      - /order3
+    service_id: test_service
 
 services:
   test_service:

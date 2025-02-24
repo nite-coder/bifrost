@@ -27,9 +27,7 @@ type routeSetting struct {
 func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[string]*Service) (*Routes, error) {
 	route := newRoutes()
 
-	for routeID, routeOptions := range bifrost.options.Routes {
-
-		routeOptions.ID = routeID
+	for _, routeOptions := range bifrost.options.Routes {
 
 		if len(routeOptions.Servers) > 0 && !slices.Contains(routeOptions.Servers, server.ID) {
 			continue
@@ -46,7 +44,7 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 		routeMiddlewares := make([]app.HandlerFunc, 0)
 
 		rOptions := &variable.RequestRoute{
-			RouteID:   routeID,
+			RouteID:   routeOptions.ID,
 			Route:     routeOptions.Route,
 			ServiceID: routeOptions.ServiceID,
 		}
@@ -98,7 +96,7 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 			routeMiddlewares = append(routeMiddlewares, service.ServeHTTP)
 		}
 
-		err := route.Add(routeOptions, routeMiddlewares...)
+		err := route.Add(*routeOptions, routeMiddlewares...)
 		if err != nil {
 			return nil, err
 		}

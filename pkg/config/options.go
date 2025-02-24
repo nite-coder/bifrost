@@ -1,6 +1,10 @@
 package config
 
-import "time"
+import (
+	"time"
+
+	"gopkg.in/yaml.v3"
+)
 
 type Options struct {
 	configPath      string                      `yaml:"-" json:"-"`
@@ -20,18 +24,53 @@ type Options struct {
 	Tracing         TracingOptions              `yaml:"tracing" json:"tracing"`
 	AccessLogs      map[string]AccessLogOptions `yaml:"access_logs" json:"access_logs"`
 	Servers         map[string]ServerOptions    `yaml:"servers" json:"servers"`
-	Routes          map[string]RouteOptions     `yaml:"routes" json:"routes"`
+	RoutesMap       *yaml.Node                  `yaml:"routes"`
+	Routes          []*RouteOptions             `yaml:"-"`
 	Middlewares     map[string]MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
 	Services        map[string]ServiceOptions   `yaml:"services" json:"services"`
 	Upstreams       map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
 	Redis           []RedisOptions              `yaml:"redis" json:"redis"`
 }
 
+func (o *Options) UnmarshalYAML(value *yaml.Node) error {
+	type options Options
+	if err := value.Decode((*options)(o)); err != nil {
+		return err
+	}
+
+	for idx, node := range value.Content {
+		if node.Value == "routes" && len(value.Content) >= idx+1 {
+
+			routesMapNode := value.Content[idx+1]
+
+			for i, routeNode := range routesMapNode.Content {
+				if routeNode.Tag != "!!str" {
+					continue // Node is a map, so it is read out at key.
+				}
+
+				var routeOption RouteOptions
+				routeOption.ID = routeNode.Value
+
+				if len(routesMapNode.Content) >= i+1 {
+					err := routesMapNode.Content[i+1].Decode(&routeOption)
+					if err != nil {
+						return err
+					}
+
+					o.Routes = append(o.Routes, &routeOption)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 func NewOptions() Options {
 	mainOptions := Options{
 		AccessLogs:  make(map[string]AccessLogOptions),
 		Servers:     make(map[string]ServerOptions),
-		Routes:      make(map[string]RouteOptions),
+		Routes:      make([]*RouteOptions, 0),
 		Middlewares: make(map[string]MiddlwareOptions),
 		Services:    make(map[string]ServiceOptions),
 		Upstreams:   make(map[string]UpstreamOptions),

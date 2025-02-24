@@ -268,7 +268,7 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 	}
 
 	if mainOpts.Routes == nil {
-		mainOpts.Routes = make(map[string]RouteOptions)
+		mainOpts.Routes = make([]*RouteOptions, 0)
 	}
 
 	if mainOpts.Services == nil {
@@ -299,14 +299,16 @@ func mergeOptions(mainOpts Options, content string) (Options, error) {
 		mainOpts.Servers[k] = v
 	}
 
-	for k, v := range newOptions.Routes {
-		if _, found := mainOpts.Routes[k]; found {
-			msg := fmt.Sprintf("route '%s' is duplicated", k)
-			structure := []string{"routes", k}
-			return mainOpts, newInvalidConfig(structure, "", msg)
+	for _, route := range newOptions.Routes {
+		for _, mainRoute := range mainOpts.Routes {
+			if mainRoute.ID == route.ID {
+				msg := fmt.Sprintf("route '%s' is duplicated", route.ID)
+				structure := []string{"routes", route.ID}
+				return mainOpts, newInvalidConfig(structure, "", msg)
+			}
 		}
 
-		mainOpts.Routes[k] = v
+		mainOpts.Routes = append(mainOpts.Routes, route)
 	}
 
 	for k, v := range newOptions.Services {

@@ -267,16 +267,16 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 
 	router := router.NewRouter()
 
-	for routeID, route := range mainOptions.Routes {
+	for _, route := range mainOptions.Routes {
 		if route.ServiceID == "" {
-			msg := fmt.Sprintf("the 'service_id' can't be empty in the route '%s'", routeID)
-			structure := []string{"routes", routeID, "service_id"}
+			msg := fmt.Sprintf("the 'service_id' can't be empty in the route '%s'", route.ID)
+			structure := []string{"routes", route.ID, "service_id"}
 			return newInvalidConfig(structure, "", msg)
 		}
 
 		if len(route.Paths) == 0 {
-			msg := fmt.Sprintf("the paths can't be empty in the route '%s'", routeID)
-			structure := []string{"routes", routeID, "paths"}
+			msg := fmt.Sprintf("the paths can't be empty in the route '%s'", route.ID)
+			structure := []string{"routes", route.ID, "paths"}
 			return newInvalidConfig(structure, "", msg)
 		}
 
@@ -286,16 +286,16 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 
 		if route.ServiceID[0] != '$' {
 			if _, found := mainOptions.Services[route.ServiceID]; !found {
-				msg := fmt.Sprintf("the service '%s' can't be found in the route '%s'", route.ServiceID, routeID)
-				structure := []string{"routes", routeID, "service_id"}
+				msg := fmt.Sprintf("the service '%s' can't be found in the route '%s'", route.ServiceID, route.ID)
+				structure := []string{"routes", route.ID, "service_id"}
 				return newInvalidConfig(structure, "", msg)
 			}
 		}
 
 		for _, serverID := range route.Servers {
 			if _, found := mainOptions.Servers[serverID]; !found {
-				msg := fmt.Sprintf("the server '%s' can't be found in the route '%s'", serverID, routeID)
-				structure := []string{"routes", routeID, "servers"}
+				msg := fmt.Sprintf("the server '%s' can't be found in the route '%s'", serverID, route.ID)
+				structure := []string{"routes", route.ID, "servers"}
 				return newInvalidConfig(structure, serverID, msg)
 			}
 		}
@@ -303,14 +303,14 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 		for _, middleware := range route.Middlewares {
 			if len(middleware.Use) > 0 {
 				if _, found := mainOptions.Middlewares[middleware.Use]; !found {
-					msg := fmt.Sprintf("the middleware '%s' can't be found in the route '%s'", middleware.Use, routeID)
-					structure := []string{"routes", routeID, "middlewares"}
+					msg := fmt.Sprintf("the middleware '%s' can't be found in the route '%s'", middleware.Use, route.ID)
+					structure := []string{"routes", route.ID, "middlewares"}
 					return newInvalidConfig(structure, middleware.Use, msg)
 				}
 			}
 		}
 
-		err := addRoute(router, route)
+		err := addRoute(router, *route)
 		if err != nil {
 			return err
 		}
