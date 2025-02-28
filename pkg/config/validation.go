@@ -509,7 +509,7 @@ func addRoute(r *router.Router, routeOptions RouteOptions) error {
 				return fmt.Errorf("http method %s is not valid", method)
 			}
 
-			err := r.Add(method, path, nodeType)
+			err := r.Add(method, path, nodeType, func(c context.Context, ctx *app.RequestContext) {})
 			if err != nil {
 				return err
 			}
