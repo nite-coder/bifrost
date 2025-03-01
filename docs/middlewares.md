@@ -316,7 +316,7 @@ To develop a custom middleware, follow these steps:
 
 Here’s an example of building a middleware that records the request’s entry and exit time and returns this information in HTTP headers.
 
-### Developing a New Middleware
+### Create A New Middleware
 
 ```golang
 package main

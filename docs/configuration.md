@@ -1,6 +1,6 @@
 # Configuration File
 
-This configuration file is divided into two primary types: `static configuration` and `dynamic configuration`.
+This configuration file is divided into two primary types: `static configuration` and `dynamic configuration`.  The format should be `yaml`.
 
 * `static configuration`: This configuration does not update dynamically. To apply any changes, the process must be restarted; only then will the configuration take effect. Examples include modifying server ports.
 * `dynamic configuration`: This configuration takes effect immediately upon modification. Currently, only `routes`, `services`, `upstreams`, and `middlewares` fall under this category.
