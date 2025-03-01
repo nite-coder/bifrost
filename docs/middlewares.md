@@ -16,7 +16,7 @@ Currently supported middlewares are below.
 * [Cors](#cors): A Middleware for Cross-Origin Resource Sharing.
 * [Mirror](#mirror): Mirror the request to another service.
 * [Parallel](#parallel): Execute a group of middlewares concurrently.
-* [RateLimiting](#ratelimiting): To Control the Number of Requests Going to a Service
+* [RateLimit](#ratelimit): To control the Number of Requests going to a service
 * [ReplacePath](#replacepath): Replace the request path.
 * [ReplacePathRegex](#replacepathregex): Replace the request path with a regular expression.
 * [RequestTermination](#requesttermination): Response the content to client and terminate the request.
@@ -107,7 +107,28 @@ routes:
                 value: true
 ```
 
-### RateLimiting
+### RateLimit
+
+The `RateLimit` middleware ensures that services receive a fair share of requests and allows you to define what "fair" means.
+The following example allows a user to send a maximum of 10 requests within 2 seconds.
+
+```yaml
+routes:
+  order:
+    paths:
+      - /orders
+    service_id: order_service
+    middlewares:
+      - type: rate_limiting
+        params:
+          strategy: local # local, redis, local-async-redis
+          limit: 10
+          limit_by: $var.user_id
+          window_size: 2s
+          http_status_code: 429
+          http_content_type: application/json
+          http_response_body: {"error": "too many requests"}
+```
 
 ### ReplacePath
 

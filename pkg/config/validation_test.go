@@ -64,7 +64,7 @@ func TestValidateRoutes(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("duplicate routes", func(t *testing.T) {
+	t.Run("duplicate routes1", func(t *testing.T) {
 		options := NewOptions()
 
 		options.Services["aa"] = ServiceOptions{
@@ -79,7 +79,35 @@ func TestValidateRoutes(t *testing.T) {
 		options.Routes = append(options.Routes, test1)
 
 		test2 := &RouteOptions{
+			ID:        "test2",
 			Methods:   []string{"GET"},
+			Paths:     []string{"/hello"},
+			ServiceID: "aa",
+		}
+		options.Routes = append(options.Routes, test2)
+
+		err := validateRoutes(options, true)
+		assert.ErrorIs(t, err, router.ErrAlreadyExists)
+	})
+
+	t.Run("duplicate routes2", func(t *testing.T) {
+		options := NewOptions()
+
+		options.Services["aa"] = ServiceOptions{
+			Url: "http://test1/hello",
+		}
+
+		test1 := &RouteOptions{
+			ID:        "test1",
+			Methods:   []string{"GET", "POST"},
+			Paths:     []string{"/hello"},
+			ServiceID: "aa",
+		}
+		options.Routes = append(options.Routes, test1)
+
+		test2 := &RouteOptions{
+			ID:        "test2",
+			Methods:   []string{"GET", "POST"},
 			Paths:     []string{"/hello"},
 			ServiceID: "aa",
 		}
