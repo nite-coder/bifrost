@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -224,10 +223,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		endTime := timecache.Now()
 
 		dur := endTime.Sub(startTime)
-		mic := dur.Microseconds()
-		duration := float64(mic) / 1e6
-		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
-		c.Set(variable.UpstreamDuration, responseTime)
+		c.Set(variable.UpstreamDuration, dur)
 
 		// the upstream target timeout and we need to response http status 504 back to client
 		if c.GetBool(variable.TargetTimeout) {

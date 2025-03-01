@@ -145,7 +145,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 	httpBifrostRequestDuration := prom.NewHistogramVec(
 		prom.HistogramOpts{
 			Name:    "http_bifrost_request_duration",
-			Help:    "Duration of HTTP bifrost requests. (seconds)",
+			Help:    "Duration of HTTP requests handled by bifrost. (seconds)",
 			Buckets: cfg.buckets,
 		},
 		[]string{labelServer, labelMethod, labelStatusCode, labelPath},

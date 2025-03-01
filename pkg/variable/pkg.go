@@ -412,7 +412,11 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		status := c.GetInt(UpstreamResponoseStatusCode)
 		return status, true
 	case UpstreamDuration:
-		return c.GetString(UpstreamDuration), true
+		dur := c.GetDuration(UpstreamDuration)
+		mic := dur.Microseconds()
+		duration := float64(mic) / 1e6
+		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
+		return responseTime, true
 	case HTTPRequestDuration:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {

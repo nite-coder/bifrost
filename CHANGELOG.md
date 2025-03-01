@@ -16,6 +16,7 @@
 - Fix validation of service URL when using IP address
 - Fix spelling error in `window_size` field for`rate_limit` middleware.
 - Fix regex path order issue for routes.
+- Fix accuracy of `http_bifrost_request_duration` metric.
 
 ### **Refactor**
 
