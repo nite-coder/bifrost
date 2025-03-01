@@ -34,6 +34,11 @@
 - Add "user_group" section in configuration.
 - Add new `Providers` document.
 
+### **Chore**
+
+- Bump Hertz package to `v0.9.6`
+- Bump Prometheus package to `v1.21.0`
+
 ## 0.2.0 (2024-02-14)
 
 ### **Features**

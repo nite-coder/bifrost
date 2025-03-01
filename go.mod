@@ -2,14 +2,14 @@ module github.com/nite-coder/bifrost
 
 go 1.23.0
 
-replace github.com/cloudwego/hertz v0.9.5 => github.com/nite-coder/hertz v0.0.0-20250106143046-faf7d3cf17ac
+replace github.com/cloudwego/hertz v0.9.6 => github.com/nite-coder/hertz v0.9.6
 
-replace github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.0.0-20240820122516-bb9df3e1377c
+replace github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.1.8
 
 require (
 	github.com/bytedance/gopkg v0.1.1
 	github.com/bytedance/sonic v1.12.8
-	github.com/cloudwego/hertz v0.9.5
+	github.com/cloudwego/hertz v0.9.6
 	github.com/cloudwego/netpoll v0.6.5
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/go-resty/resty/v2 v2.15.3
@@ -26,7 +26,7 @@ require (
 	github.com/nacos-group/nacos-sdk-go/v2 v2.2.8
 	github.com/nite-coder/blackbear v0.0.0-20240930140346-76863193d6d4
 	github.com/ory/dockertest/v3 v3.11.0
-	github.com/prometheus/client_golang v1.20.5
+	github.com/prometheus/client_golang v1.21.0
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v2 v2.27.5
@@ -117,7 +117,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.60.0 // indirect
+	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect

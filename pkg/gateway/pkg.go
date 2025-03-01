@@ -156,7 +156,13 @@ func Run(mainOptions config.Options) (err error) {
 			}
 		}
 
-		slog.Log(ctx, log.LevelNotice, "bifrost is started successfully", "pid", os.Getpid())
+		slog.Log(ctx, log.LevelNotice, "bifrost is started successfully",
+			"pid", os.Getpid(),
+			"routes", len(bifrost.options.Routes),
+			"services", len(bifrost.options.Services),
+			"middlewares", len(bifrost.options.Middlewares),
+			"upstreams", len(bifrost.options.Upstreams),
+		)
 
 		zeroDT := bifrost.ZeroDownTime()
 
