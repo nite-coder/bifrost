@@ -125,7 +125,7 @@ routes:
           limit: 10
           limit_by: $var.user_id
           window_size: 2s
-          http_status_code: 429
+          http_status_code: 429 # when hit the rate limit
           http_content_type: application/json
           http_response_body: {"error": "too many requests"}
 ```

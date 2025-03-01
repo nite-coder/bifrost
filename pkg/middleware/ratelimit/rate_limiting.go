@@ -32,7 +32,7 @@ type StrategyMode string
 const (
 	Local           StrategyMode = "local"
 	Redis           StrategyMode = "redis"
-	LocalAsyncRedis StrategyMode = "local-async-redis" // nolint
+	LocalAsyncRedis StrategyMode = "local_async_redis" // nolint
 )
 
 type Options struct {
@@ -56,18 +56,6 @@ type RateLimitingMiddleware struct {
 
 func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 
-	if options.HeaderLimit == "" {
-		options.HeaderLimit = "X-RateLimit-Limit"
-	}
-
-	if options.HeaderRemaining == "" {
-		options.HeaderRemaining = "X-RateLimit-Remaining"
-	}
-
-	if options.HeaderReset == "" {
-		options.HeaderReset = "X-RateLimit-Reset"
-	}
-
 	if options.HTTPStatusCode == 0 {
 		options.HTTPStatusCode = 429
 	}
@@ -90,11 +78,11 @@ func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 	case Redis:
 		client, found := redisclient.Get(options.RedisID)
 		if !found {
-			return nil, fmt.Errorf("redis id '%s' not found in ratelimiting middleware", options.RedisID)
+			return nil, fmt.Errorf("redis id '%s' not found for rate_limit middleware", options.RedisID)
 		}
 		m.limter = NewRedisLimiter(client, options)
 	default:
-		return nil, fmt.Errorf("strategy '%s' is invalid", options.Strategy)
+		return nil, fmt.Errorf("strategy '%s' is invalid for rate_limit middleware", options.Strategy)
 	}
 
 	return m, nil
@@ -123,18 +111,41 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 
 		if result.Allow {
 			c.Next(ctx)
-			c.Response.Header.Set(m.options.HeaderLimit, strconv.FormatUint(result.Limit, 10))
-			c.Response.Header.Set(m.options.HeaderRemaining, strconv.FormatUint(result.Remaining, 10))
-			c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
+
+			if len(m.options.HeaderLimit) > 0 {
+				c.Response.Header.Set(m.options.HeaderLimit, strconv.FormatUint(result.Limit, 10))
+			}
+
+			if len(m.options.HeaderRemaining) > 0 {
+				c.Response.Header.Set(m.options.HeaderRemaining, strconv.FormatUint(result.Remaining, 10))
+			}
+
+			if len(m.options.HeaderReset) > 0 {
+				c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
+			}
+
 			return
 		} else {
-			c.Response.Header.Set(m.options.HeaderLimit, strconv.FormatUint(result.Limit, 10))
-			c.Response.Header.Set(m.options.HeaderRemaining, strconv.FormatUint(result.Remaining, 10))
-			c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
+			if len(m.options.HeaderLimit) > 0 {
+				c.Response.Header.Set(m.options.HeaderLimit, strconv.FormatUint(result.Limit, 10))
+			}
+
+			if len(m.options.HeaderRemaining) > 0 {
+				c.Response.Header.Set(m.options.HeaderRemaining, strconv.FormatUint(result.Remaining, 10))
+			}
+
+			if len(m.options.HeaderReset) > 0 {
+				c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
+			}
 
 			c.SetStatusCode(m.options.HTTPStatusCode)
+
 			c.Response.Header.Set("Content-Type", "application/json; charset=utf8")
-			if m.options.HTTPResponseBody != "" {
+			if len(m.options.HTTPContentType) > 0 {
+				c.Response.Header.Set("Content-Type", m.options.HTTPContentType)
+			}
+
+			if len(m.options.HTTPResponseBody) > 0 {
 				c.Response.SetBody([]byte(m.options.HTTPResponseBody))
 			}
 			c.Abort()
@@ -146,9 +157,9 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("rate_limiting", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.RegisterMiddleware("rate_limit", func(params any) (app.HandlerFunc, error) {
 		if params == nil {
-			return nil, errors.New("rate_limiting middleware params is empty or invalid")
+			return nil, errors.New("rate_limit middleware params is empty or invalid")
 		}
 
 		option := Options{}
@@ -161,7 +172,23 @@ func init() {
 
 		err := decoder.Decode(params)
 		if err != nil {
-			return nil, fmt.Errorf("rate_limiting middleware params is invalid: %w", err)
+			return nil, fmt.Errorf("rate_limit middleware params is invalid: %w", err)
+		}
+
+		if len(option.LimitBy) == 0 {
+			return nil, errors.New("limit_by can't be empty for rate_limit middleware")
+		}
+
+		switch option.Strategy {
+		case Local, Redis:
+		case "":
+			option.Strategy = Local
+		default:
+			return nil, fmt.Errorf("strategy '%s' is invalid", option.Strategy)
+		}
+
+		if option.WindowSize == 0 {
+			return nil, errors.New("window_size must be greater than 0 for rate_limit middleware")
 		}
 
 		m, err := NewMiddleware(option)
@@ -170,5 +197,4 @@ func init() {
 		}
 		return m.ServeHTTP, nil
 	})
-
 }

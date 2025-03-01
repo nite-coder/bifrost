@@ -51,6 +51,54 @@ func TestValidateProviders(t *testing.T) {
 }
 
 func TestValidateRoutes(t *testing.T) {
+
+	t.Run("success", func(t *testing.T) {
+		options := NewOptions()
+
+		options.Services["aa"] = ServiceOptions{
+			Url: "http://test1/hello",
+		}
+
+		route1 := RouteOptions{
+			ID:        "route1",
+			Paths:     []string{"/hello"},
+			ServiceID: "aa",
+		}
+		options.Routes = append(options.Routes, &route1)
+
+		route2 := RouteOptions{
+			ID:        "route2",
+			Paths:     []string{"= /hello"},
+			ServiceID: "aa",
+		}
+		options.Routes = append(options.Routes, &route2)
+
+		route3 := RouteOptions{
+			ID:        "route3",
+			Methods:   []string{"GET"},
+			Paths:     []string{"^~ /hello"},
+			ServiceID: "aa",
+		}
+		options.Routes = append(options.Routes, &route3)
+
+		route4 := RouteOptions{
+			ID:        "route4",
+			Paths:     []string{"~ /hello"},
+			ServiceID: "aa",
+		}
+		options.Routes = append(options.Routes, &route4)
+
+		route5 := RouteOptions{
+			ID:        "route5",
+			Paths:     []string{"~* /hello"},
+			ServiceID: "aa",
+		}
+		options.Routes = append(options.Routes, &route5)
+
+		err := validateRoutes(options, true)
+		assert.NoError(t, err)
+	})
+
 	t.Run("service not found", func(t *testing.T) {
 		options := NewOptions()
 		route1 := RouteOptions{
@@ -61,7 +109,7 @@ func TestValidateRoutes(t *testing.T) {
 		options.Routes = append(options.Routes, &route1)
 
 		err := validateRoutes(options, true)
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "the service 'test1' can't be found in the route 'route1'")
 	})
 
 	t.Run("duplicate routes1", func(t *testing.T) {
@@ -288,6 +336,46 @@ func TestValidateUpstream(t *testing.T) {
 		err = validateUpstreams(options, true)
 		assert.NoError(t, err)
 	})
+}
+
+func TestValidateMetrics(t *testing.T) {
+
+	t.Run("success", func(t *testing.T) {
+		options := NewOptions()
+
+		options.Metrics.Prometheus.Enabled = true
+		options.Metrics.Prometheus.ServerID = "test"
+
+		options.Servers["test"] = ServerOptions{
+			ID:   "test",
+			Bind: ":8080",
+		}
+
+		err := validateMetrics(options, true)
+		assert.NoError(t, err)
+	})
+
+	t.Run("no server id", func(t *testing.T) {
+		options := NewOptions()
+
+		options.Metrics.Prometheus.Enabled = true
+		options.Metrics.Prometheus.ServerID = "test"
+
+		err := validateMetrics(options, true)
+		assert.ErrorContains(t, err, "the server_id 'test' for the prometheus is not found")
+	})
+
+}
+
+func TestValidateTracing(t *testing.T) {
+	options := NewOptions()
+
+	options.Tracing.Enabled = true
+	options.Tracing.ServiceName = "bifrost"
+	options.Tracing.Propagators = append(options.Tracing.Propagators, "tracecontext", "baggage")
+
+	err := validateTracing(options.Tracing)
+	assert.NoError(t, err)
 }
 
 func TestConfigDNS(t *testing.T) {
