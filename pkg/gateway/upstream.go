@@ -83,13 +83,9 @@ func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, ups
 		return nil, err
 	}
 
-	if len(proxies) == 0 {
-		return nil, fmt.Errorf("proxies can't be empty. upstream id: %s", upstreamOptions.ID)
-	}
-
 	upstream.proxies.Store(proxies)
 
-	if bifrost.dnsResolver != nil && bifrost.options.Resolver.Valid.Seconds() > 0 {
+	if bifrost.resolver != nil && bifrost.resolver.Valid().Seconds() > 0 {
 		ticker := time.NewTicker(bifrost.options.Resolver.Valid)
 
 		go func() {
@@ -166,7 +162,7 @@ func createGRPCUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, 
 
 	upstream.proxies.Store(proxies)
 
-	if bifrost.dnsResolver != nil && bifrost.options.Resolver.Valid.Seconds() > 0 {
+	if bifrost.resolver != nil && bifrost.resolver.Valid().Seconds() > 0 {
 		ticker := time.NewTicker(bifrost.options.Resolver.Valid)
 
 		go func() {
@@ -248,6 +244,9 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, upstreamOp
 
 func (u *Upstream) roundRobin() proxy.Proxy {
 	proxies := u.proxies.Load().([]proxy.Proxy)
+	if len(proxies) == 0 {
+		return nil
+	}
 
 	if len(proxies) == 1 {
 		proxy := proxies[0]
@@ -286,6 +285,9 @@ findLoop:
 
 func (u *Upstream) weighted() proxy.Proxy {
 	proxies := u.proxies.Load().([]proxy.Proxy)
+	if len(proxies) == 0 {
+		return nil
+	}
 
 	if len(proxies) == 1 {
 		proxy := proxies[0]
@@ -329,6 +331,9 @@ findLoop:
 
 func (u *Upstream) random() proxy.Proxy {
 	proxies := u.proxies.Load().([]proxy.Proxy)
+	if len(proxies) == 0 {
+		return nil
+	}
 
 	if len(proxies) == 1 {
 		proxy := proxies[0]
@@ -359,6 +364,9 @@ findLoop:
 
 func (u *Upstream) hasing(key string) proxy.Proxy {
 	proxies := u.proxies.Load().([]proxy.Proxy)
+	if len(proxies) == 0 {
+		return nil
+	}
 
 	if len(proxies) == 1 {
 		proxy := proxies[0]
@@ -428,7 +436,7 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 			targetHost = targetOpts.Target
 		}
 
-		ips, err := bifrost.dnsResolver.Lookup(context.Background(), targetHost)
+		ips, err := bifrost.resolver.Lookup(context.Background(), targetHost)
 		if err != nil {
 			return nil, fmt.Errorf("lookup upstream host '%s' error: %w", targetHost, err)
 		}
@@ -506,7 +514,7 @@ func buildGRPCProxyList(bifrost *Bifrost, upstream *Upstream, serviceOptions con
 			targetHost = targetOpts.Target
 		}
 
-		ips, err := bifrost.dnsResolver.Lookup(context.Background(), targetHost)
+		ips, err := bifrost.resolver.Lookup(context.Background(), targetHost)
 		if err != nil {
 			return nil, fmt.Errorf("lookup upstream host error: %w", err)
 		}

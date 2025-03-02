@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,7 +23,11 @@ func TestMiddlewarePipeline(t *testing.T) {
 		ServiceID: "testService",
 	}
 
+	dnsResolver, err := dns.NewResolver(dns.Options{})
+	assert.NoError(t, err)
+
 	bifrost := &Bifrost{
+		resolver: dnsResolver,
 		options: &config.Options{
 			Servers: map[string]config.ServerOptions{
 				"testServer": {

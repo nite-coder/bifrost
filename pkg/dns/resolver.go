@@ -112,6 +112,10 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 	return ips, nil
 }
 
+func (r *Resolver) Valid() time.Duration {
+	return r.options.Valid
+}
+
 func (r *Resolver) loadHostsFile() error {
 	if _, err := os.Stat("/etc/hosts"); errors.Is(err, os.ErrNotExist) {
 		return nil

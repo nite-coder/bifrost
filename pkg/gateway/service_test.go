@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/dns"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
@@ -49,7 +50,11 @@ func TestServices(t *testing.T) {
 		_ = h.Shutdown(ctx)
 	}()
 
+	dnsResolver, err := dns.NewResolver(dns.Options{})
+	assert.NoError(t, err)
+
 	bifrost := &Bifrost{
+		resolver: dnsResolver,
 		options: &config.Options{
 			Services: map[string]config.ServiceOptions{
 				"testService": {
@@ -128,7 +133,11 @@ func TestDynamicService(t *testing.T) {
 		_ = h.Shutdown(ctx)
 	}()
 
+	dnsResolver, err := dns.NewResolver(dns.Options{})
+	assert.NoError(t, err)
+
 	bifrost := &Bifrost{
+		resolver: dnsResolver,
 		options: &config.Options{
 			Services: map[string]config.ServiceOptions{
 				"testService": {
@@ -171,8 +180,11 @@ func TestDynamicService(t *testing.T) {
 }
 
 func TestDynamicServiceMiddleware(t *testing.T) {
+	dnsResolver, err := dns.NewResolver(dns.Options{})
+	assert.NoError(t, err)
 
 	bifrost := &Bifrost{
+		resolver: dnsResolver,
 		options: &config.Options{
 			Services: map[string]config.ServiceOptions{
 				"testService": {

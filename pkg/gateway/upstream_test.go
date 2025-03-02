@@ -397,7 +397,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 				"test": upstreamOptions,
 			},
 		},
-		dnsResolver: dnsResolver,
+		resolver: dnsResolver,
 	}
 
 	testService := config.ServiceOptions{

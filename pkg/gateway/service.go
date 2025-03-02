@@ -118,7 +118,7 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	}
 
 	// exist upstream
-	// the hostname can be not found in upstreams because user can use real domain name like www.google.com
+	// the hostname can't be found in upstreams because user can use real domain name like www.google.com
 	upstream, found := svc.upstreams[hostname]
 	if found {
 		svc.upstream = upstream

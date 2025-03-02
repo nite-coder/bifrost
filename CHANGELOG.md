@@ -25,6 +25,7 @@
 - Enhance validation of `upstream` and `service` in the config package.
 - Remove `skip_test` from resolver.
 - Require `root` permissions to run as daemon.
+- Redesign resolver system to support multiple resolvers.
 
 ### **Test**
 
