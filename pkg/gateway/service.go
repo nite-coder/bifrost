@@ -2,22 +2,18 @@ package gateway
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
-	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/app/client"
+	"github.com/google/uuid"
 	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/proxy"
-	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
-	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/nite-coder/blackbear/pkg/cast"
@@ -27,7 +23,6 @@ type Service struct {
 	bifrost         *Bifrost
 	options         *config.ServiceOptions
 	upstreams       map[string]*Upstream
-	proxy           proxy.Proxy
 	upstream        *Upstream
 	dynamicUpstream string
 	middlewares     []app.HandlerFunc
@@ -131,19 +126,30 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	}
 
 	// direct proxy
+	upstreamOptions := config.UpstreamOptions{
+		ID:       uuid.NewString(),
+		Strategy: config.RoundRobinStrategy,
+		Targets: []config.TargetOptions{
+			{
+				Target: hostname,
+				Weight: 1,
+			},
+		},
+	}
+
 	switch serviceOptions.Protocol {
 	case config.ProtocolHTTP, config.ProtocolHTTP2:
-		httpProxy, err := initHTTPProxy(bifrost, serviceOptions, addr)
+		upstream, err := createHTTPUpstream(bifrost, serviceOptions, upstreamOptions)
 		if err != nil {
 			return nil, err
 		}
-		svc.proxy = httpProxy
+		svc.upstream = upstream
 	case config.ProtocolGRPC:
-		grpcProxy, err := initGRPCProxy(bifrost, serviceOptions, addr)
+		upstream, err := createGRPCUpstream(bifrost, serviceOptions, upstreamOptions)
 		if err != nil {
 			return nil, err
 		}
-		svc.proxy = grpcProxy
+		svc.upstream = upstream
 	}
 
 	return svc, nil
@@ -185,8 +191,8 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			}
 		}
 
-		proxy := svc.proxy
-		if svc.upstream != nil && proxy == nil {
+		var proxy proxy.Proxy
+		if svc.upstream != nil {
 			c.Set(variable.UpstreamID, svc.upstream.opts.ID)
 
 			switch svc.upstream.opts.Strategy {
@@ -280,100 +286,4 @@ func (svc *DynamicService) ServeHTTP(c context.Context, ctx *app.RequestContext)
 	ctx.SetIndex(-1)
 	ctx.SetHandlers(service.middlewares)
 	ctx.Next(c)
-}
-
-func initHTTPProxy(bifrost *Bifrost, serviceOptions config.ServiceOptions, addr *url.URL) (proxy.Proxy, error) {
-	clientOpts := httpproxy.DefaultClientOptions()
-
-	if serviceOptions.Timeout.Dail > 0 {
-		clientOpts = append(clientOpts, client.WithDialTimeout(serviceOptions.Timeout.Dail))
-	}
-
-	if serviceOptions.Timeout.Read > 0 {
-		clientOpts = append(clientOpts, client.WithClientReadTimeout(serviceOptions.Timeout.Read))
-	}
-
-	if serviceOptions.Timeout.Write > 0 {
-		clientOpts = append(clientOpts, client.WithWriteTimeout(serviceOptions.Timeout.Write))
-	}
-
-	if serviceOptions.Timeout.MaxConnWait > 0 {
-		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(serviceOptions.Timeout.MaxConnWait))
-	}
-
-	if serviceOptions.MaxConnsPerHost != nil {
-		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*serviceOptions.MaxConnsPerHost))
-	}
-
-	hostname := addr.Hostname()
-
-	if strings.EqualFold(addr.Scheme, "https") {
-		clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
-			ServerName:         hostname,
-			InsecureSkipVerify: !serviceOptions.TLSVerify, //nolint:gosec
-		}))
-	}
-
-	ips, err := bifrost.dnsResolver.Lookup(context.Background(), hostname)
-	if err != nil {
-		return nil, fmt.Errorf("lookup host '%s' error: %w", hostname, err)
-	}
-
-	if len(ips) == 0 {
-		return nil, fmt.Errorf("lookup host '%s' error: no ip found", hostname)
-	}
-
-	url := fmt.Sprintf("%s://%s%s", addr.Scheme, ips[0], addr.Path)
-	if addr.Port() != "" {
-		url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, ips[0], addr.Port(), addr.Path)
-	}
-
-	clientOptions := httpproxy.ClientOptions{
-		IsHTTP2:   serviceOptions.Protocol == config.ProtocolHTTP2,
-		HZOptions: clientOpts,
-	}
-
-	client, err := httpproxy.NewClient(clientOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	proxyOptions := httpproxy.Options{
-		Target:           url,
-		Protocol:         serviceOptions.Protocol,
-		Weight:           0,
-		HeaderHost:       hostname,
-		IsTracingEnabled: bifrost.options.Tracing.Enabled,
-		ServiceID:        serviceOptions.ID,
-	}
-
-	httpProxy, err := httpproxy.New(proxyOptions, client)
-	if err != nil {
-		return nil, err
-	}
-
-	return httpProxy, nil
-}
-
-func initGRPCProxy(bifrost *Bifrost, serviceOptions config.ServiceOptions, addr *url.URL) (proxy.Proxy, error) {
-	hostname := addr.Hostname()
-
-	url := fmt.Sprintf("grpc://%s%s", hostname, addr.Path)
-	if addr.Port() != "" {
-		url = fmt.Sprintf("grpc://%s:%s%s", hostname, addr.Port(), addr.Path)
-	}
-
-	grpcOptions := grpcproxy.Options{
-		Target:    url,
-		TLSVerify: serviceOptions.TLSVerify,
-		Weight:    1,
-		Timeout:   serviceOptions.Timeout.GRPC,
-	}
-
-	grpcProxy, err := grpcproxy.New(grpcOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	return grpcProxy, nil
 }
