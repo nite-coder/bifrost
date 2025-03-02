@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"syscall"
@@ -235,6 +236,13 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	z.state = waitingState
 	z.mu.Unlock()
 
+	dir := filepath.Dir(z.options.GetUpgradeSock())
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+	}
+
 	socket, err := net.Listen("unix", z.options.GetUpgradeSock())
 	if err != nil {
 		return fmt.Errorf("failed to open upgrade socket: %w", err)
@@ -368,6 +376,14 @@ func (z *ZeroDownTime) KillProcess(ctx context.Context, pid int, removePIDFile b
 
 func (z *ZeroDownTime) WritePID() error {
 	pid := os.Getpid()
+
+	dir := filepath.Dir(z.options.GetPIDFile())
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+	}
+
 	data := []byte(strconv.Itoa(pid))
 	err := os.WriteFile(z.options.GetPIDFile(), data, 0600)
 	if err != nil {

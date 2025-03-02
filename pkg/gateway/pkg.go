@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -12,7 +13,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"os/user"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -226,19 +226,8 @@ func Run(mainOptions config.Options) (err error) {
 // It takes mainOptions of type config.Options which contains the user and group information to run the daemon process.
 // Returns an error if the daemon process fails to start.
 func RunAsDaemon(mainOptions config.Options) error {
-	// verify permissions to create the PID file and the upgrade socket file
-	dir := filepath.Dir(mainOptions.PIDFile)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
-		}
-	}
-
-	dir = filepath.Dir(mainOptions.UpgradeSock)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
-		}
+	if os.Geteuid() != 0 {
+		return errors.New("must run as root to execute as daemon")
 	}
 
 	cmd := exec.Command(os.Args[0], os.Args[1:]...)
