@@ -35,7 +35,7 @@ Forwarded path for upstream: `/api/v1/foo`
 
 ```yaml
 routes:
-  route1:
+  foo:
     paths:
       - /foo
     service_id: service1
@@ -54,7 +54,7 @@ Forwarded path for upstream: `/api/v1/foo`
 
 ```yaml
 routes:
-  route1:
+  foo:
     paths:
       - /foo
     service_id: service1
@@ -74,7 +74,7 @@ Mirrors the request to another service.
 
 ```yaml
 routes:
-  route1:
+  foo:
     paths:
       - /foo
     service_id: service1
@@ -119,7 +119,7 @@ routes:
       - /orders
     service_id: order_service
     middlewares:
-      - type: rate_limiting
+      - type: rate_limit
         params:
           strategy: local # local, redis, local-async-redis
           limit: 10
@@ -139,7 +139,7 @@ Forwarded path for upstream: `/hoo/user?name=john`
 
 ```yaml
 routes:
-  route1:
+  user:
     paths:
       - /api/v1/user
     service_id: service1
@@ -158,7 +158,7 @@ Forwarded path for upstream: `/hoo/user?name=john`
 
 ```yaml
 routes:
-  route1:
+  user:
     paths:
       - /api/v1/user
     service_id: service1

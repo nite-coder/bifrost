@@ -60,10 +60,6 @@ func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 		options.HTTPStatusCode = 429
 	}
 
-	if options.HTTPContentType == "" {
-		options.HeaderReset = "application/json; charset=utf8"
-	}
-
 	if options.WindowSize == 0 {
 		return nil, errors.New("window_size must be greater than 0")
 	}
@@ -140,7 +136,6 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 
 			c.SetStatusCode(m.options.HTTPStatusCode)
 
-			c.Response.Header.Set("Content-Type", "application/json; charset=utf8")
 			if len(m.options.HTTPContentType) > 0 {
 				c.Response.Header.Set("Content-Type", m.options.HTTPContentType)
 			}
