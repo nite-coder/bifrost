@@ -22,6 +22,7 @@ type Options struct {
 	Logging         LoggingOtions               `yaml:"logging" json:"logging"`
 	Metrics         MetricsOptions              `yaml:"metrics" json:"metrics"`
 	Tracing         TracingOptions              `yaml:"tracing" json:"tracing"`
+	Default         DefaultOptions              `yaml:"default" json:"default"`
 	AccessLogs      map[string]AccessLogOptions `yaml:"access_logs" json:"access_logs"`
 	Servers         map[string]ServerOptions    `yaml:"servers" json:"servers"`
 	RoutesMap       *yaml.Node                  `yaml:"routes"`
@@ -235,7 +236,7 @@ const (
 
 type TargetOptions struct {
 	Target      string        `yaml:"target" json:"target"`
-	MaxFails    uint          `yaml:"max_fails" json:"max_fails"`
+	MaxFails    *uint         `yaml:"max_fails" json:"max_fails"`
 	FailTimeout time.Duration `yaml:"fail_timeout" json:"fail_timeout"`
 	Weight      uint32        `yaml:"weight" json:"weight"`
 }
@@ -302,4 +303,20 @@ type ResolverOptions struct {
 	AddrPort string        `yaml:"addr_port" json:"addr_port"`
 	Valid    time.Duration `yaml:"valid" json:"valid"`
 	SkipTest bool          `yaml:"-" json:"-"`
+}
+
+type DefaultServiceOptions struct {
+	MaxConnsPerHost *int                  `yaml:"max_conns_per_host" json:"max_conns_per_host"`
+	Protocol        Protocol              `yaml:"protocol" json:"protocol"`
+	Timeout         ServiceTimeoutOptions `yaml:"timeout" json:"timeout"`
+}
+
+type DefaultUpstreamOptions struct {
+	MaxFails    uint          `yaml:"max_fails" json:"max_fails"`
+	FailTimeout time.Duration `yaml:"fail_timeout" json:"fail_timeout"`
+}
+
+type DefaultOptions struct {
+	Service  DefaultServiceOptions  `yaml:"service" json:"service"`
+	Upstream DefaultUpstreamOptions `yaml:"upstream" json:"upstream"`
 }

@@ -55,22 +55,32 @@ func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, ups
 
 	if serviceOpts.Timeout.Dail > 0 {
 		clientOpts = append(clientOpts, client.WithDialTimeout(serviceOpts.Timeout.Dail))
+	} else if bifrost.options.Default.Service.Timeout.Dail > 0 {
+		clientOpts = append(clientOpts, client.WithDialTimeout(bifrost.options.Default.Service.Timeout.Dail))
 	}
 
 	if serviceOpts.Timeout.Read > 0 {
 		clientOpts = append(clientOpts, client.WithClientReadTimeout(serviceOpts.Timeout.Read))
+	} else if bifrost.options.Default.Service.Timeout.Read > 0 {
+		clientOpts = append(clientOpts, client.WithDialTimeout(bifrost.options.Default.Service.Timeout.Read))
 	}
 
 	if serviceOpts.Timeout.Write > 0 {
 		clientOpts = append(clientOpts, client.WithWriteTimeout(serviceOpts.Timeout.Write))
+	} else if bifrost.options.Default.Service.Timeout.Write > 0 {
+		clientOpts = append(clientOpts, client.WithDialTimeout(bifrost.options.Default.Service.Timeout.Write))
 	}
 
 	if serviceOpts.Timeout.MaxConnWait > 0 {
 		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(serviceOpts.Timeout.MaxConnWait))
+	} else if bifrost.options.Default.Service.Timeout.MaxConnWait > 0 {
+		clientOpts = append(clientOpts, client.WithDialTimeout(bifrost.options.Default.Service.Timeout.MaxConnWait))
 	}
 
 	if serviceOpts.MaxConnsPerHost != nil {
 		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*serviceOpts.MaxConnsPerHost))
+	} else if bifrost.options.Default.Service.MaxConnsPerHost != nil {
+		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*bifrost.options.Default.Service.MaxConnsPerHost))
 	}
 
 	upstream := &Upstream{
@@ -475,12 +485,26 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 				return nil, err
 			}
 
+			var maxFails uint
+			if targetOpts.MaxFails == nil {
+				maxFails = bifrost.options.Default.Upstream.MaxFails
+			} else {
+				maxFails = *targetOpts.MaxFails
+			}
+
+			var failTimeout time.Duration
+			if targetOpts.FailTimeout > 0 {
+				failTimeout = targetOpts.FailTimeout
+			} else if bifrost.options.Default.Upstream.FailTimeout > 0 {
+				failTimeout = bifrost.options.Default.Upstream.FailTimeout
+			}
+
 			proxyOptions := httpproxy.Options{
 				Target:           url,
 				Protocol:         serviceOptions.Protocol,
 				Weight:           targetOpts.Weight,
-				MaxFails:         targetOpts.MaxFails,
-				FailTimeout:      targetOpts.FailTimeout,
+				MaxFails:         maxFails,
+				FailTimeout:      failTimeout,
 				HeaderHost:       targetHost,
 				IsTracingEnabled: bifrost.options.Tracing.Enabled,
 				ServiceID:        serviceOptions.ID,
@@ -535,12 +559,26 @@ func buildGRPCProxyList(bifrost *Bifrost, upstream *Upstream, serviceOptions con
 				url = fmt.Sprintf("grpc://%s:%s%s", ip, port, addr.Path)
 			}
 
+			var maxFails uint
+			if targetOpts.MaxFails == nil {
+				maxFails = bifrost.options.Default.Upstream.MaxFails
+			} else {
+				maxFails = *targetOpts.MaxFails
+			}
+
+			var failTimeout time.Duration
+			if targetOpts.FailTimeout > 0 {
+				failTimeout = targetOpts.FailTimeout
+			} else if bifrost.options.Default.Upstream.FailTimeout > 0 {
+				failTimeout = bifrost.options.Default.Upstream.FailTimeout
+			}
+
 			grpcOptions := grpcproxy.Options{
 				Target:      url,
 				TLSVerify:   serviceOptions.TLSVerify,
 				Weight:      1,
-				MaxFails:    targetOpts.MaxFails,
-				FailTimeout: targetOpts.FailTimeout,
+				MaxFails:    maxFails,
+				FailTimeout: failTimeout,
 				Timeout:     serviceOptions.Timeout.GRPC,
 			}
 

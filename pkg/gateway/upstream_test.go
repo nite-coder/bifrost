@@ -355,24 +355,27 @@ func TestHashing(t *testing.T) {
 
 func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 
+	var one uint
+	var zero uint
+
 	targetOptions := []config.TargetOptions{
 		{
 			Target:      "127.0.0.1:1234",
 			Weight:      1,
 			FailTimeout: time.Second,
-			MaxFails:    1,
+			MaxFails:    &one,
 		},
 		{
 			Target:      "127.0.0.1:1234",
 			Weight:      1,
 			FailTimeout: 10 * time.Second,
-			MaxFails:    1,
+			MaxFails:    &one,
 		},
 		{
 			Target:      "127.0.0.1:1234",
 			Weight:      1,
 			FailTimeout: 10 * time.Second,
-			MaxFails:    0,
+			MaxFails:    &zero,
 		},
 	}
 

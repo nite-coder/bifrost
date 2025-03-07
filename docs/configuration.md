@@ -23,6 +23,8 @@ This configuration file is divided into two primary types: `static configuration
 * [routes](#routes)
 * [services](#services)
 * [upstreams](#upstreams)
+* [default](#default)
+
 
 ## watch
 
@@ -348,5 +350,33 @@ upstreams:
 | hash_on              | `string` |               | Variable used for hash-based load balancing, effective only if strategy is `hashing` |
 | targets.target       | `string` |               | Target IP                                                                            |
 | targets.max_fails    | `int32`  | `0`           | Maximum failure count; `0` - indicates no limit                                      |
-| targets.fail_timeout | `int32`  | `10s`         | Time window for tracking failure counts                                              |
+| targets.fail_timeout | `int32`  | `0`           | Time window for tracking failure counts                                              |
 | targets.weight       | `int32`  | `1`           | Weight for load balancing                                                            |
+
+## default
+
+The default option allow you to set default value for `service`, `upstream` object.
+
+```yaml
+default:
+  service:
+    timeout:
+      read: 3s
+      write: 3s
+      idle: 600s
+      dail: 3s
+  upstream:
+    max_fails: 1
+    fail_timeout: 10s
+```
+
+| Field                 | Type            | Default | Description                                                  |
+| --------------------- | --------------- | ------- | ------------------------------------------------------------ |
+| service.protocol      | `string`        |         | Protocol for upstream, `http`, `http2`, `grpc` are supported |
+| service.timeout.read  | `time.Duration` |         | Read timeout                                                 |
+| service.timeout.write | `time.Duration` |         | Write timeout                                                |
+| service.timeout.idle  | `time.Duration` |         | Idle timeout                                                 |
+| service.timeout.dail  | `time.Duration` |         | Dial timeout                                                 |
+| service.timeout.grpc  | `time.Duration` |         | `grpc` request timeout                                       |
+| upstream.max_fails    | `int32`         |         | Maximum failure count; `0` - indicates no limit              |
+| upstream.fail_timeout | `int32`         |         | Time window for tracking failure counts                      |

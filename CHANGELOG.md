@@ -9,6 +9,7 @@
 - [[#10](https://github.com/nite-coder/bifrost/pull/10)]:Introduce `nacos` config provider.
 - Introduce `watch` field for file provider.
 - Introduce `TestAndSkipResovler` for config package.
+- Introduce `Default` object for configuration file.
 
 ### **Bug Fixes**
 

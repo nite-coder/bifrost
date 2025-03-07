@@ -8,7 +8,7 @@ replace github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.
 
 require (
 	github.com/bytedance/gopkg v0.1.1
-	github.com/bytedance/sonic v1.12.8
+	github.com/bytedance/sonic v1.13.1
 	github.com/cloudwego/hertz v0.9.6
 	github.com/cloudwego/netpoll v0.6.5
 	github.com/fsnotify/fsnotify v1.8.0
@@ -76,7 +76,7 @@ require (
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
-	github.com/bytedance/sonic/loader v0.2.2 // indirect
+	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clbanning/mxj/v2 v2.5.5 // indirect

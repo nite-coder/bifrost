@@ -49,8 +49,8 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 			ServiceID: routeOptions.ServiceID,
 		}
 
-		initRouteMiddleware := newFirstRouteMiddleware(rOptions)
-		routeMiddlewares = append(routeMiddlewares, initRouteMiddleware.ServeHTTP)
+		firstRouteMiddleware := newFirstRouteMiddleware(rOptions)
+		routeMiddlewares = append(routeMiddlewares, firstRouteMiddleware.ServeHTTP)
 
 		for _, m := range routeOptions.Middlewares {
 			if len(m.Use) > 0 {

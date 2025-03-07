@@ -55,7 +55,9 @@ func loadServices(bifrost *Bifrost) (map[string]*Service, error) {
 
 func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Service, error) {
 
-	if len(serviceOptions.Protocol) == 0 {
+	if len(serviceOptions.Protocol) == 0 && len(bifrost.options.Default.Service.Protocol) > 0 {
+		serviceOptions.Protocol = bifrost.options.Default.Service.Protocol
+	} else if len(serviceOptions.Protocol) == 0 && len(bifrost.options.Default.Service.Protocol) == 0 {
 		serviceOptions.Protocol = config.ProtocolHTTP
 	}
 
