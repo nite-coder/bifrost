@@ -266,26 +266,39 @@ func newDynamicService(name string, services map[string]*Service) *DynamicServic
 	}
 }
 
-func (svc *DynamicService) ServeHTTP(c context.Context, ctx *app.RequestContext) {
-	logger := log.FromContext(c)
-	serviceName := ctx.GetString(svc.name)
+func (svc *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+	logger := log.FromContext(ctx)
+	serviceName := c.GetString(svc.name)
+	routeID := variable.GetString(variable.RouteID, c)
+
+	fullURI := fullURI(&c.Request)
 
 	if len(serviceName) == 0 {
-		logger.Error("service name is empty", slog.String("path", cast.B2S(ctx.Request.Path())))
-		ctx.Abort()
+		logger.Error("service name is empty",
+			slog.String("route_id", routeID),
+			slog.String("client_ip", c.ClientIP()),
+			slog.String("full_uri", fullURI),
+			slog.String("dynamic_service_name", svc.name),
+		)
+		c.Abort()
 		return
 	}
 
 	service, found := svc.services[serviceName]
 	if !found {
-		logger.Warn("service is not found", slog.String("name", serviceName))
-		ctx.Abort()
+		logger.Warn("service name is not found",
+			slog.String("route_id", routeID),
+			slog.String("client_ip", c.ClientIP()),
+			slog.String("full_uri", fullURI),
+			slog.String("service_name", svc.name),
+		)
+		c.Abort()
 		return
 	}
-	ctx.Set(variable.ServiceID, serviceName)
+	c.Set(variable.ServiceID, serviceName)
 
 	service.middlewares = append(service.middlewares, service.ServeHTTP)
-	ctx.SetIndex(-1)
-	ctx.SetHandlers(service.middlewares)
-	ctx.Next(c)
+	c.SetIndex(-1)
+	c.SetHandlers(service.middlewares)
+	c.Next(ctx)
 }

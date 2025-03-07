@@ -12,5 +12,13 @@ ExecReload=/home/my-gateway/bifrost -u -c=conf/config.yaml
 ExecStop=/home/my-gateway/bifrost -s -c=conf/config.yaml
 Restart=on-failure
 
+LimitNOFILE=1048576
+LimitMEMLOCK=infinity
+LimitCPU=infinity
+LimitAS=infinity
+
+MemoryDenyWriteExecute=true
+MemoryLock=true
+
 [Install]
 WantedBy=multi-user.target

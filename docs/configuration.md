@@ -322,7 +322,7 @@ services:
 | timeout.idle       | `time.Duration` | `60s`   | Idle timeout                                                                            |
 | timeout.dail       | `time.Duration` | `60s`   | Dial timeout                                                                            |
 | timeout.grpc       | `time.Duration` | `0`     | `grpc` request timeout                                                                  |
-| max_conns_per_host | `int64`         | `1024`  | Maximum connections per host, no limit if `0`                                           |
+| max_conns_per_host | `int64`         | `1024`  | Maximum connections per host                                                            |
 | tls_verify         | `bool`          | `false` | Validates server certificate                                                            |
 | protocol           | `string`        | `http`  | Protocol for upstream, `http`, `http2`, `grpc` are supported                            |
 | url                | `string`        |         | Upstream URL                                                                            |
