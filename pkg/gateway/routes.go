@@ -132,7 +132,7 @@ func (r *Routes) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		return
 	}
 
-	// regexp routes
+	// regular expression match
 	for _, route := range r.regexpRoutes {
 		if checkRegexpRoute(route, method, path) {
 			ctx.SetIndex(-1)
@@ -143,7 +143,7 @@ func (r *Routes) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		}
 	}
 
-	// general routes
+	// preifx match
 	if len(middlewares) > 0 {
 		ctx.SetIndex(-1)
 		ctx.SetHandlers(middlewares)

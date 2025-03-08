@@ -362,7 +362,14 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
+
 		info := (val).(*RequestRoute)
+
+		if IsDirective(info.ServiceID) {
+			svcID := GetString(info.ServiceID, c)
+			return svcID, true
+		}
+
 		return info.ServiceID, true
 	case UpstreamID:
 		upstream := c.GetString(UpstreamID)

@@ -432,7 +432,10 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 	val, _ := variable.Get(variable.HTTPRequestPath, c)
 	originalPath, _ := cast.ToString(val)
 
+	routeID := variable.GetString(variable.RouteID, c)
+
 	logger.ErrorContext(ctx, "fail to send request to upstream",
+		slog.String("route_id", routeID),
 		slog.String("client_ip", c.ClientIP()),
 		slog.String("error", err.Error()),
 		slog.String("original_path", originalPath),

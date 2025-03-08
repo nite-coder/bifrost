@@ -33,7 +33,17 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	defer func() {
 		if r := recover(); r != nil {
 			stackTrace := runtime.StackTrace()
-			logger.Error("error recovered", slog.Any("unhandled error", r), slog.String("stack", stackTrace))
+			fullURI := fullURI(&c.Request)
+			routeID := variable.GetString(variable.RouteID, c)
+
+			logger.Error("error recovered",
+				slog.String("route_id", routeID),
+				slog.String("client_ip", c.ClientIP()),
+				slog.String("full_uri", fullURI),
+				slog.Any("unhandled error", r),
+				slog.String("stack", stackTrace),
+			)
+			c.SetStatusCode(500)
 			c.Abort()
 		}
 	}()

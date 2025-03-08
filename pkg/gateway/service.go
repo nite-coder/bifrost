@@ -244,7 +244,11 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	select {
 	case <-ctx.Done():
 		fullURI := fullURI(&c.Request)
+		routeID := variable.GetString(variable.RouteID, c)
+		
 		logger.WarnContext(ctx, "client cancel the request",
+			slog.String("route_id", routeID),
+			slog.String("client_ip", c.ClientIP()),
 			slog.String("full_uri", fullURI),
 		)
 
