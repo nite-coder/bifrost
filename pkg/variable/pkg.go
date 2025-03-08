@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
@@ -135,6 +136,18 @@ func GetBool(key string, c *app.RequestContext) bool {
 	return result
 }
 
+func GetTime(key string, c *app.RequestContext) time.Time {
+	val, found := Get(key, c)
+	if !found {
+		return time.Time{}
+	}
+	result, ok := val.(time.Time)
+	if !ok {
+		return time.Time{}
+	}
+	return result
+}
+
 func IsDirective(key string) bool {
 	if strings.HasPrefix(key, "$var.") || strings.HasPrefix(key, "$http.request.header.") || strings.HasPrefix(key, "$http.response.header.") || strings.HasPrefix(key, "$http.request.query.") {
 		return true
@@ -238,24 +251,24 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return nil, false
 		}
 
-		start := event.Time().UnixMicro()
+		start := event.Time()
 		return start, true
 	case HTTPFinish:
 		traceInfo := c.GetTraceInfo()
 		if traceInfo == nil {
-			return timecache.Now().UnixMicro(), true
+			return timecache.Now(), true
 		}
 		httpStats := traceInfo.Stats()
 		if httpStats == nil {
-			return timecache.Now().UnixMicro(), true
+			return timecache.Now(), true
 		}
 
 		event := httpStats.GetEvent(stats.HTTPFinish)
 		if event == nil {
-			return timecache.Now().UnixMicro(), true
+			return timecache.Now(), true
 		}
 
-		finish := event.Time().UnixMicro()
+		finish := event.Time()
 		return finish, true
 	case HTTPRequest:
 		val, found := c.Get(RequestOrig)

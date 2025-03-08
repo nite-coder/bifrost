@@ -81,11 +81,11 @@ func TestGetDirective(t *testing.T) {
 	sendSize := GetString(HTTPResponseSize, hzCtx)
 	assert.Equal(t, "0", sendSize)
 
-	httpStart := GetString(HTTPStart, hzCtx)
-	assert.Equal(t, "", httpStart)
+	httpStart := GetTime(HTTPStart, hzCtx)
+	assert.True(t, httpStart.IsZero())
 
-	httpFinish := GetString(HTTPFinish, hzCtx)
-	assert.NotEmpty(t, httpFinish)
+	httpFinish := GetTime(HTTPFinish, hzCtx)
+	assert.False(t, httpFinish.IsZero())
 
 	clientIP := GetString(ClientIP, hzCtx)
 	assert.Equal(t, "127.0.0.1", clientIP)
