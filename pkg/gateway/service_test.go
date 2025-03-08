@@ -212,9 +212,18 @@ func TestDynamicServiceMiddleware(t *testing.T) {
 	assert.NoError(t, err)
 
 	dynamicService := newDynamicService("$var.myservice", services)
+
 	hzCtx := app.NewContext(0)
 	hzCtx.Set("myservice", "testService")
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
 	dynamicService.ServeHTTP(ctx, hzCtx)
 	assert.Equal(t, 1, hit)
+
+	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
+	dynamicService.ServeHTTP(ctx, hzCtx)
+	assert.Equal(t, 2, hit)
+
+	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
+	dynamicService.ServeHTTP(ctx, hzCtx)
+	assert.Equal(t, 3, hit)
 }

@@ -302,8 +302,9 @@ func (svc *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext)
 	}
 	c.Set(variable.ServiceID, serviceName)
 
-	service.middlewares = append(service.middlewares, service.ServeHTTP)
+	// Create a new slice to avoid modifying the original service.middlewares
+	middlewares := append(service.middlewares, service.ServeHTTP) // nolint
 	c.SetIndex(-1)
-	c.SetHandlers(service.middlewares)
+	c.SetHandlers(middlewares)
 	c.Next(ctx)
 }
