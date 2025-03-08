@@ -257,7 +257,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			duration = time.Since(httpStart.(time.Time))
 		}
 
-		logger.WarnContext(ctx, "client cancel the request",
+		logger.InfoContext(ctx, "client cancel the request",
 			slog.String("route_id", routeID),
 			slog.String("client_ip", c.ClientIP()),
 			slog.String("full_uri", fullURI),
