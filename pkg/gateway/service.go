@@ -245,7 +245,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	case <-ctx.Done():
 		fullURI := fullURI(&c.Request)
 		routeID := variable.GetString(variable.RouteID, c)
-		
+
 		logger.WarnContext(ctx, "client cancel the request",
 			slog.String("route_id", routeID),
 			slog.String("client_ip", c.ClientIP()),
@@ -272,12 +272,11 @@ func newDynamicService(name string, services map[string]*Service) *DynamicServic
 
 func (svc *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
-	serviceName := c.GetString(svc.name)
-	routeID := variable.GetString(variable.RouteID, c)
-
-	fullURI := fullURI(&c.Request)
+	serviceName := variable.GetString(svc.name, c)
 
 	if len(serviceName) == 0 {
+		routeID := variable.GetString(variable.RouteID, c)
+		fullURI := fullURI(&c.Request)
 		logger.Error("service name is empty",
 			slog.String("route_id", routeID),
 			slog.String("client_ip", c.ClientIP()),
@@ -290,6 +289,8 @@ func (svc *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext)
 
 	service, found := svc.services[serviceName]
 	if !found {
+		routeID := variable.GetString(variable.RouteID, c)
+		fullURI := fullURI(&c.Request)
 		logger.Warn("service name is not found",
 			slog.String("route_id", routeID),
 			slog.String("client_ip", c.ClientIP()),

@@ -17,7 +17,7 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Set("money", "123.456")
 	hzCtx.Request.Header.SetUserAgentBytes([]byte("my_user_agent"))
 	hzCtx.Set(RouteID, "routeA")
-	hzCtx.Set(ServiceID, "serviceA")
+	hzCtx.Set("myservice", "serviceA")
 	hzCtx.Set(UpstreamID, "upstreamA")
 	hzCtx.Set(UpstreamRequestHost, "1.2.3.4")
 	hzCtx.Set(UpstreamResponoseStatusCode, 200)
@@ -49,7 +49,7 @@ func TestGetDirective(t *testing.T) {
 	reqRoute := &RequestRoute{
 		RouteID:   "routeA",
 		Route:     "/orders/{order_id}",
-		ServiceID: "serviceA",
+		ServiceID: "$var.myservice",
 	}
 
 	hzCtx.Set(BifrostRoute, reqRoute)
@@ -96,7 +96,7 @@ func TestGetDirective(t *testing.T) {
 	routeID := GetString(RouteID, hzCtx)
 	assert.Equal(t, "routeA", routeID)
 
-	serviceID := GetString(ServiceID, hzCtx)
+	serviceID := GetString("$var.myservice", hzCtx)
 	assert.Equal(t, "serviceA", serviceID)
 
 	upstreamID := GetString(UpstreamID, hzCtx)
