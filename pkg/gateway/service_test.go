@@ -114,12 +114,12 @@ func TestServices(t *testing.T) {
 
 	// dynamic upstream
 	serviceOpts = bifrost.options.Services["testService"]
-	serviceOpts.Url = "http://$test"
+	serviceOpts.Url = "http://$var.test"
 	service, err = newService(bifrost, serviceOpts)
 	assert.NoError(t, err)
 
 	hzCtx = app.NewContext(0)
-	hzCtx.Set("$test", "testUpstream")
+	hzCtx.Set("test", "testUpstream")
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
 	service.ServeHTTP(ctx, hzCtx)
 	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
