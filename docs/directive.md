@@ -5,7 +5,7 @@ The currently supports the following directives:
 | Directive                        | Description                                                                                                          | Example                                 |
 | :------------------------------- | :------------------------------------------------------------------------------------------------------------------- | :-------------------------------------- |
 | `$time`                          | Time the request log is generated. (use timecache)                                                                   | `2024-03-15 14:30:21`                   |
-| `$hostname`                      | The hostname of server                                                                                               | `sim01`                                 |
+| `$hostname`                      | The hostname of server                                                                                               | `machine01`                             |
 | `$network.peer.address`          | Peer address of the network connection                                                                               | `192.168.1.100`                         |
 | `$service_id`                    | The service id of the request                                                                                        | `user-service-prod`                     |
 | `$route_id`                      | The route id of the request                                                                                          | `get-user-profile`                      |
@@ -16,7 +16,7 @@ The currently supports the following directives:
 | `$http.start`                    | HTTP request start                                                                                                   | `1737793075600742`                      |
 | `$http.end`                      | HTTP request finish                                                                                                  | `1737793075600742`                      |
 | `$http.request`                  | HTTP request info                                                                                                    | `GET /users/profile?id=12345 HTTP/1.1`  |
-| `$http.request.size`             | The total size of the request in bytes. This should be the total number of bytes sent over the wire (unit:bye)       | `832000`                                |
+| `$http.request.size`             | The total size of the request in bytes. This should be the total number of bytes sent over the wire (unit:byte)      | `832000`                                |
 | `$http.request.scheme`           | HTTP request scheme                                                                                                  | `http`                                  |
 | `$http.request.host`             | HTTP request host                                                                                                    | `api.example.com`                       |
 | `$http.request.method`           | HTTP request method                                                                                                  | `GET`                                   |
@@ -27,7 +27,7 @@ The currently supports the following directives:
 | `$http.request.body`             | HTTP request body                                                                                                    | `{"userId": 12345, "action": "update"}` |
 | `$http.request.header.<key>`     | HTTP request headers, `<key>` being the normalized HTTP Header name (lowercase), the value being the header values   | `$http.request.header.x-forwarded-for`  |
 | `$http.request.query.<key>`      | HTTP request query, `<key>` being the normalized HTTP query name (lowercase), the value being the querystring values | `$http.request.header.order_id`         |
-| `$http.response.size`            | The total size of the response in bytes. This should be the total number of bytes sent over the wire (unit:bye)      | `832000`                                |
+| `$http.response.size`            | The total size of the response in bytes. This should be the total number of bytes sent over the wire (unit:byte)     | `832000`                                |
 | `$http.response.header.<key>`    | HTTP response headers, `<key>` being the normalized HTTP Header name (lowercase), the value being the header values  | `ab123456-7890-1234-5678-90abcdef1234`  |
 | `$http.response.status_code`     | HTTP response status code                                                                                            | `200`                                   |
 | `$http.request.duration`         | Duration of HTTP server requests                                                                                     | `0.250`                                 |

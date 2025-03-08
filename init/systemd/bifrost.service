@@ -16,7 +16,8 @@ LimitNOFILE=1048576
 LimitMEMLOCK=infinity
 LimitCPU=infinity
 LimitAS=infinity
-
+ProtectSystem=full
+PrivateTmp=true
 MemoryDenyWriteExecute=true
 MemoryLock=true
 

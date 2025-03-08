@@ -37,7 +37,7 @@ const (
     local ttl = redis.call("TTL", key)
 
     if ttl == -1 then
-        redis.call("EXPIRE", key, window)
+	    redis.call("EXPIRE", key, window)
         ttl = window
     end
 
@@ -66,13 +66,13 @@ func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 			trace.WithSpanKind(trace.SpanKindClient),
 		}
 
-		ctx, span = tracer.Start(ctx, "ratelimiting_redis", spanOptions...)
+		ctx, span = tracer.Start(ctx, "ratelimit_redis", spanOptions...)
 	}
 
 	result, err := l.client.Eval(ctx, luaScript, []string{key}, tokens, l.options.Limit, int(l.options.WindowSize.Seconds()), t).Result()
 	if err != nil {
-		logger.Error("ratelimiting: redis eval error", "error", err)
-		span.SetStatus(otelcodes.Error, err.Error())
+		logger.Error("ratelimit: redis eval error", "error", err)
+		span.SetStatus(otelcodes.Error, "")
 		span.End()
 		return &AllowResult{
 			Allow:     true,
@@ -82,7 +82,6 @@ func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 		}
 	}
 
-	span.SetStatus(otelcodes.Ok, "")
 	span.End()
 
 	resultArray := result.([]any)

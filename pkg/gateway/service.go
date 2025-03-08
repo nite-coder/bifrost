@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
@@ -176,10 +177,12 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}()
 
 		if len(svc.dynamicUpstream) > 0 {
-			upstreamName := c.GetString(svc.dynamicUpstream)
+			upstreamName := variable.GetString(svc.dynamicUpstream, c)
 
 			if len(upstreamName) == 0 {
-				logger.Warn("upstream is empty", slog.String("path", cast.B2S(c.Request.Path())))
+				logger.Warn("upstream is empty",
+					slog.String("path", cast.B2S(c.Request.Path())),
+				)
 				c.Abort()
 				return
 			}
@@ -187,7 +190,9 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			var found bool
 			svc.upstream, found = svc.upstreams[upstreamName]
 			if !found {
-				logger.Warn("upstream is not found", slog.String("name", upstreamName))
+				logger.Warn("upstream is not found",
+					slog.String("name", upstreamName),
+				)
 				c.Abort()
 				return
 			}
@@ -246,13 +251,20 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		fullURI := fullURI(&c.Request)
 		routeID := variable.GetString(variable.RouteID, c)
 
+		httpStart, _ := variable.Get(variable.HTTPStart, c)
+		var duration time.Duration
+		if httpStart != nil {
+			duration = time.Since(httpStart.(time.Time))
+		}
+
 		logger.WarnContext(ctx, "client cancel the request",
 			slog.String("route_id", routeID),
 			slog.String("client_ip", c.ClientIP()),
 			slog.String("full_uri", fullURI),
+			slog.Duration("duration", duration),
 		)
 
-		// The client canceled the request
+		// client canceled the request
 		c.Response.SetStatusCode(499)
 	case <-done:
 	}
