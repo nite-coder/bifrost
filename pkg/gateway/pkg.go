@@ -226,7 +226,7 @@ func Run(mainOptions config.Options) (err error) {
 // Returns an error if the daemon process fails to start.
 func RunAsDaemon(mainOptions config.Options) error {
 	if os.Geteuid() != 0 {
-		return errors.New("must run as root to execute as daemon")
+		return errors.New("must be run as root to execute in daemon mode")
 	}
 
 	cmd := exec.Command(os.Args[0], os.Args[1:]...)

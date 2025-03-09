@@ -8,7 +8,7 @@
 - Introduce `set` options for `request_transformer` and `response_transformer` middlewares.
 - [[#10](https://github.com/nite-coder/bifrost/pull/10)]:Introduce `nacos` config provider.
 - Introduce `watch` field for file provider.
-- Introduce `TestAndSkipResovler` for config package.
+- Introduce `TestAndSkipResovler` function for config package.
 - Introduce `Default` object for configuration file.
 
 ### **Bug Fixes**
@@ -41,7 +41,7 @@
 ### **Chore**
 
 - Bump Hertz package to `v0.9.6`
-- Bump Prometheus package to `v1.21.0`
+- Bump Prometheus package to `v1.21.1`
 
 ## 0.2.0 (2024-02-14)
 

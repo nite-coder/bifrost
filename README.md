@@ -2,7 +2,7 @@
 
 A low latency and high throughput API Gateway library written in Go.
 
-## Goal
+## Reasons to use Bifrost
 
 1. Low latency and high throughput.
 1. Allows writing middlewares in native `Go`.
@@ -10,15 +10,16 @@ A low latency and high throughput API Gateway library written in Go.
 1. Easy migration from Nginx. Leverage your Nginx experience.
 1. Built as an SDK/library instead of an artifact.
 
-## Features
+## Feature highlights
 
 1. Support for writing middleware in `Go`.
 1. Low latency and high throughput (powered by the Hertz framework).
-1. Millisecond-level hot reloads for route updates without interrupting requests.
+1. Millisecond-level graceful reload for route updates without interrupting requests.
 1. Get gateway configurations from local files or configuration centers.
 1. Built-in Prometheus monitoring.
 1. Built-in OpenTelemetry tracing.
 1. Supports `HTTP1.1`/`HTTP2`/`H2C`/`Webosocket`/`GRPC` protocols.
+1. Multiple strategies for load balancing (`round_robin`, `random`, `weighted`, `hashing`)
 
 ## Comparative Analysis
 

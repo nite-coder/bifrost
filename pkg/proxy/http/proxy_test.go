@@ -83,10 +83,11 @@ func TestReverseProxy(t *testing.T) {
 	})
 
 	proxyOptions := Options{
-		Target:     "http://127.0.0.1:9990/proxy",
-		Protocol:   config.ProtocolHTTP,
-		Weight:     1,
-		HeaderHost: "127.0.0.1",
+		Target:           "http://127.0.0.1:9990/proxy",
+		Protocol:         config.ProtocolHTTP,
+		Weight:           1,
+		HeaderHost:       "127.0.0.1",
+		IsTracingEnabled: true,
 	}
 
 	proxy, err := New(proxyOptions, nil)
