@@ -1,4 +1,4 @@
-package gateway
+package prometheus
 
 import (
 	"bytes"
@@ -9,11 +9,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+var (
+	httpGET = []byte("GET")
+)
+
 type PromMetricMiddleware struct {
 	path []byte
 }
 
-func newPromMetricMiddleware(path string) *PromMetricMiddleware {
+func NewMetricMiddleware(path string) *PromMetricMiddleware {
+	if path == "" {
+		path = "/metrics"
+	}
+
 	return &PromMetricMiddleware{
 		path: []byte(path),
 	}

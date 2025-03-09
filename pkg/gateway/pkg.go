@@ -32,7 +32,6 @@ import (
 var (
 	defaultBifrost = &atomic.Value{}
 	runTask        = gopool.CtxGo
-	httpGET        = []byte("GET")
 	spaceByte      = []byte{byte(' ')}
 )
 

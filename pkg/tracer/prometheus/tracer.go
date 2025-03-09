@@ -8,6 +8,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/tracer"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
 	"github.com/nite-coder/bifrost/pkg/variable"
+	"github.com/nite-coder/blackbear/pkg/cast"
 	prom "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -31,6 +32,9 @@ func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 	path := variable.GetString(variable.HTTPRoute, c)
 	if path == "" {
 		path = variable.GetString(variable.HTTPRequestPath, c)
+		if path == "" {
+			path = cast.B2S(c.Request.Path())
+		}
 	}
 	labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
 

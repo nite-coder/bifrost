@@ -31,7 +31,7 @@
 
 ### **Test**
 
-- Improve `router`, `zero`, `gateway` `provider`, `proxy`(websocket) package test coverage.
+- Improve `router`, `zero`, `gateway`, `tracer(prometheus)` `provider`, `proxy(websocket)` package test coverage.
 
 ### **Documents**
 
