@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/common/utils"
 	"github.com/cloudwego/hertz/pkg/network"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	reqHelper "github.com/cloudwego/hertz/pkg/protocol/http1/req"
@@ -34,6 +36,13 @@ func (p *HTTPProxy) roundTrip(ctx context.Context, clientCtx *app.RequestContext
 	dailer := p.client.GetOptions().Dialer
 
 	host := string(req.Host())
+
+	if bytes.EqualFold(req.Scheme(), https) {
+		host = utils.AddMissingPort(host, true)
+	} else {
+		host = utils.AddMissingPort(host, false)
+	}
+
 	backendConn, err := dailer.DialConnection("tcp", host, p.client.GetOptions().DialTimeout, p.client.GetOptions().TLSConfig)
 	if err != nil {
 		return err

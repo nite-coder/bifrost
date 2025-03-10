@@ -9,6 +9,7 @@ import (
 
 var (
 	spaceByte = []byte{byte(' ')}
+	https     = []byte("https")
 )
 
 // IsASCIIPrint returns whether s is ASCII and printable according to
