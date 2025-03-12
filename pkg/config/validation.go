@@ -62,12 +62,12 @@ func ValidateConfig(mainOptions Options, isFullMode bool) error {
 		return err
 	}
 
-	err = validateRoutes(mainOptions, isFullMode)
+	err = validateServers(mainOptions, isFullMode)
 	if err != nil {
 		return err
 	}
 
-	err = validateServers(mainOptions, isFullMode)
+	err = validateRoutes(mainOptions, isFullMode)
 	if err != nil {
 		return err
 	}
@@ -265,7 +265,11 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 
 func validateRoutes(mainOptions Options, isFullMode bool) error {
 
-	router := router.NewRouter()
+	servers := map[string]*router.Router{}
+
+	for serverID := range mainOptions.Servers {
+		servers[serverID] = router.NewRouter()
+	}
 
 	for _, route := range mainOptions.Routes {
 		if route.ServiceID == "" {
@@ -310,9 +314,21 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 			}
 		}
 
-		err := addRoute(router, *route)
-		if err != nil {
-			return err
+		if len(route.Servers) == 0 {
+			for _, router := range servers {
+				err := addRoute(router, *route)
+				if err != nil {
+					return err
+				}
+			}
+		} else if len(route.Servers) > 0 {
+			for _, serverName := range route.Servers {
+				router := servers[serverName]
+				err := addRoute(router, *route)
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 

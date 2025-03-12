@@ -119,6 +119,8 @@ func TestValidateRoutes(t *testing.T) {
 			Url: "http://test1/hello",
 		}
 
+		options.Servers["apiv1"] = ServerOptions{}
+
 		test1 := &RouteOptions{
 			ID:        "test1",
 			Paths:     []string{"/hello"},
@@ -141,6 +143,8 @@ func TestValidateRoutes(t *testing.T) {
 	t.Run("duplicate routes2", func(t *testing.T) {
 		options := NewOptions()
 
+		options.Servers["apiv1"] = ServerOptions{}
+
 		options.Services["aa"] = ServiceOptions{
 			Url: "http://test1/hello",
 		}
@@ -162,6 +166,47 @@ func TestValidateRoutes(t *testing.T) {
 		options.Routes = append(options.Routes, test2)
 
 		err := validateRoutes(options, true)
+		assert.ErrorIs(t, err, router.ErrAlreadyExists)
+	})
+
+	t.Run("two servers", func(t *testing.T) {
+		options := NewOptions()
+
+		options.Servers["apiv1"] = ServerOptions{}
+		options.Servers["apiv2"] = ServerOptions{}
+
+		options.Services["aa"] = ServiceOptions{
+			Url: "http://test1/hello",
+		}
+
+		route1 := RouteOptions{
+			ID:        "route1",
+			Servers:   []string{"apiv1"},
+			Paths:     []string{"/hello"},
+			ServiceID: "aa",
+		}
+		options.Routes = append(options.Routes, &route1)
+
+		route2 := RouteOptions{
+			ID:        "route2",
+			Servers:   []string{"apiv2"},
+			Paths:     []string{"/hello"},
+			ServiceID: "aa",
+		}
+		options.Routes = append(options.Routes, &route2)
+
+		err := validateRoutes(options, true)
+		assert.NoError(t, err)
+
+		route3 := RouteOptions{
+			ID:        "route3",
+			Servers:   []string{"apiv2"},
+			Paths:     []string{"/hello"},
+			ServiceID: "aa",
+		}
+		options.Routes = append(options.Routes, &route3)
+
+		err = validateRoutes(options, true)
 		assert.ErrorIs(t, err, router.ErrAlreadyExists)
 	})
 }

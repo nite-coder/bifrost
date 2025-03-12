@@ -19,6 +19,7 @@
 - Fix regex path order issue for routes.
 - Fix accuracy of `http_bifrost_request_duration` metric.
 - Fix dynamic service has been executed many times.
+- Fix multiple server with the same route path.
 
 ### **Refactor**
 
