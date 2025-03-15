@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
@@ -33,7 +34,7 @@ type HTTPServer struct {
 	server   *server.Hertz
 }
 
-func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []tracer.Tracer, disableListener bool) (*HTTPServer, error) {
+func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers []tracer.Tracer, disableListener bool) (*HTTPServer, error) {
 	ctx := context.Background()
 
 	httpServer := &HTTPServer{}
@@ -62,21 +63,21 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 			Control: func(network, address string, c syscall.RawConn) error {
 				var opErr error
 				err := c.Control(func(fd uintptr) {
-					if serverOpts.ReusePort {
+					if serverOptions.ReusePort {
 						if err := setTCPReusePort(fd); err != nil {
 							opErr = err
 							return
 						}
 					}
 
-					if serverOpts.TCPQuickAck {
+					if serverOptions.TCPQuickAck {
 						if err := setTCPQuickAck(fd); err != nil {
 							opErr = err
 							return
 						}
 					}
 
-					if serverOpts.TCPFastOpen {
+					if serverOptions.TCPFastOpen {
 						if err := setTCPFastOpen(fd); err != nil {
 							opErr = err
 							return
@@ -90,12 +91,12 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 			},
 		}
 
-		listener, err := bifrost.zero.Listener(ctx, "tcp", serverOpts.Bind, listenerConfig)
+		listener, err := bifrost.zero.Listener(ctx, "tcp", serverOptions.Bind, listenerConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		if serverOpts.Backlog > 0 && runtime.GOOS == "linux" {
+		if serverOptions.Backlog > 0 && runtime.GOOS == "linux" {
 			tl, ok := listener.(*net.TCPListener)
 			if !ok {
 				return nil, fmt.Errorf("only tcp listener supported, called with %#v", listener)
@@ -105,7 +106,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 				return nil, err
 			}
 			fd := int(file.Fd())
-			err = unix.Listen(fd, serverOpts.Backlog)
+			err = unix.Listen(fd, serverOptions.Backlog)
 			if err != nil {
 				return nil, err
 			}
@@ -114,35 +115,35 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		hzOpts = append(hzOpts, server.WithListener(listener))
 	}
 
-	if serverOpts.Timeout.KeepAlive > 0 {
-		hzOpts = append(hzOpts, server.WithKeepAliveTimeout(serverOpts.Timeout.KeepAlive))
+	if serverOptions.Timeout.KeepAlive > 0 {
+		hzOpts = append(hzOpts, server.WithKeepAliveTimeout(serverOptions.Timeout.KeepAlive))
 	}
 
-	if serverOpts.Timeout.Idle > 0 {
-		hzOpts = append(hzOpts, server.WithIdleTimeout(serverOpts.Timeout.Idle))
+	if serverOptions.Timeout.Idle > 0 {
+		hzOpts = append(hzOpts, server.WithIdleTimeout(serverOptions.Timeout.Idle))
 	}
 
-	if serverOpts.Timeout.Read > 0 {
-		hzOpts = append(hzOpts, server.WithReadTimeout(serverOpts.Timeout.Read))
+	if serverOptions.Timeout.Read > 0 {
+		hzOpts = append(hzOpts, server.WithReadTimeout(serverOptions.Timeout.Read))
 	}
 
-	if serverOpts.Timeout.Write > 0 {
-		hzOpts = append(hzOpts, server.WithWriteTimeout(serverOpts.Timeout.Write))
+	if serverOptions.Timeout.Write > 0 {
+		hzOpts = append(hzOpts, server.WithWriteTimeout(serverOptions.Timeout.Write))
 	}
 
-	if serverOpts.Timeout.Graceful > 0 {
-		hzOpts = append(hzOpts, server.WithExitWaitTime(serverOpts.Timeout.Graceful))
+	if serverOptions.Timeout.Graceful > 0 {
+		hzOpts = append(hzOpts, server.WithExitWaitTime(serverOptions.Timeout.Graceful))
 	}
 
-	if serverOpts.MaxRequestBodySize > 0 {
-		hzOpts = append(hzOpts, server.WithMaxRequestBodySize(serverOpts.MaxRequestBodySize))
+	if serverOptions.MaxRequestBodySize > 0 {
+		hzOpts = append(hzOpts, server.WithMaxRequestBodySize(serverOptions.MaxRequestBodySize))
 	}
 
-	if serverOpts.ReadBufferSize > 0 {
-		hzOpts = append(hzOpts, server.WithReadBufferSize(serverOpts.ReadBufferSize))
+	if serverOptions.ReadBufferSize > 0 {
+		hzOpts = append(hzOpts, server.WithReadBufferSize(serverOptions.ReadBufferSize))
 	}
 
-	engine, err := newEngine(bifrost, serverOpts)
+	engine, err := newEngine(bifrost, serverOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -161,12 +162,12 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		hzOpts = append(hzOpts, server.WithTracer(tracer))
 	}
 
-	if serverOpts.HTTP2 && (len(serverOpts.TLS.CertPEM) == 0 || len(serverOpts.TLS.KeyPEM) == 0) {
+	if serverOptions.HTTP2 && (len(serverOptions.TLS.CertPEM) == 0 || len(serverOptions.TLS.KeyPEM) == 0) {
 		hzOpts = append(hzOpts, server.WithH2C(true))
 	}
 
 	var tlsConfig *tls.Config
-	if len(serverOpts.TLS.CertPEM) > 0 || len(serverOpts.TLS.KeyPEM) > 0 {
+	if len(serverOptions.TLS.CertPEM) > 0 || len(serverOptions.TLS.KeyPEM) > 0 {
 		tlsConfig = &tls.Config{
 			MinVersion:               tls.VersionTLS13,
 			CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256},
@@ -178,20 +179,20 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 			},
 		}
 
-		if serverOpts.TLS.CertPEM == "" {
+		if serverOptions.TLS.CertPEM == "" {
 			return nil, errors.New("cert_pem can't be empty")
 		}
 
-		if serverOpts.TLS.KeyPEM == "" {
+		if serverOptions.TLS.KeyPEM == "" {
 			return nil, errors.New("key_pem can't be empty")
 		}
 
-		certPEM, err := os.ReadFile(serverOpts.TLS.CertPEM)
+		certPEM, err := os.ReadFile(serverOptions.TLS.CertPEM)
 		if err != nil {
 			return nil, err
 		}
 
-		keyPEM, err := os.ReadFile(serverOpts.TLS.KeyPEM)
+		keyPEM, err := os.ReadFile(serverOptions.TLS.KeyPEM)
 		if err != nil {
 			return nil, err
 		}
@@ -204,22 +205,45 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		hzOpts = append(hzOpts, server.WithTLS(tlsConfig))
 	}
 
-	httpServer.options = &serverOpts
+	httpServer.options = &serverOptions
 
 	h := server.Default(hzOpts...)
 
-	if serverOpts.HTTP2 {
+	if len(serverOptions.RemoteIPHeaders) > 0 || len(serverOptions.TrustedCIDRS) > 0 {
+		clientIPOptions := app.ClientIPOptions{
+			RemoteIPHeaders: []string{"X-Forwarded-For", "X-Real-IP"},
+			TrustedCIDRs:    defaultTrustedCIDRs,
+		}
+
+		if len(serverOptions.RemoteIPHeaders) > 0 {
+			clientIPOptions.RemoteIPHeaders = serverOptions.RemoteIPHeaders
+		}
+
+		if len(serverOptions.TrustedCIDRS) > 0 {
+			clientIPOptions.TrustedCIDRs = make([]*net.IPNet, len(serverOptions.TrustedCIDRS))
+			for i, ip := range serverOptions.TrustedCIDRS {
+				_, clientIPOptions.TrustedCIDRs[i], err = net.ParseCIDR(ip)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		h.SetClientIPFunc(app.ClientIPWithOption(clientIPOptions))
+	}
+
+	if serverOptions.HTTP2 {
 		http2opts := []configHTTP2.Option{}
 
-		if serverOpts.Timeout.Idle > 0 {
-			http2opts = append(http2opts, configHTTP2.WithIdleTimeout(serverOpts.Timeout.Idle))
+		if serverOptions.Timeout.Idle > 0 {
+			http2opts = append(http2opts, configHTTP2.WithIdleTimeout(serverOptions.Timeout.Idle))
 		}
 
-		if serverOpts.Timeout.Read > 0 {
-			http2opts = append(http2opts, configHTTP2.WithReadTimeout(serverOpts.Timeout.Read))
+		if serverOptions.Timeout.Read > 0 {
+			http2opts = append(http2opts, configHTTP2.WithReadTimeout(serverOptions.Timeout.Read))
 		}
 
-		if len(serverOpts.TLS.CertPEM) > 0 || len(serverOpts.TLS.KeyPEM) > 0 {
+		if len(serverOptions.TLS.CertPEM) > 0 || len(serverOptions.TLS.KeyPEM) > 0 {
 			h.AddProtocol("h2", factory.NewServerFactory(http2opts...))
 			tlsConfig.NextProtos = append(tlsConfig.NextProtos, "h2")
 		} else {
@@ -235,7 +259,7 @@ func newHTTPServer(bifrost *Bifrost, serverOpts config.ServerOptions, tracers []
 		}
 	})
 
-	if serverOpts.PPROF {
+	if serverOptions.PPROF {
 		pprof.Register(h)
 	}
 

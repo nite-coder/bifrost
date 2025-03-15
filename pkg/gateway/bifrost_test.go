@@ -84,6 +84,9 @@ func TestBifrost(t *testing.T) {
 		Backlog:     4096,
 		PPROF:       true,
 		AccessLogID: "main",
+		TrustedCIDRS: []string{
+			"127.0.0.1/32",
+		},
 		Middlewares: []config.MiddlwareOptions{
 			{
 				Type: "cors",
@@ -124,6 +127,9 @@ func TestBifrost(t *testing.T) {
 			ID:    "1",
 			Price: "100",
 		}
+
+		clientIP := c.ClientIP()
+		assert.Equal(t, "127.0.0.1", clientIP)
 
 		c.JSON(200, order)
 	})

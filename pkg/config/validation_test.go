@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/nite-coder/bifrost/pkg/dns"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/cors"
 	"github.com/nite-coder/bifrost/pkg/router"
 	"github.com/stretchr/testify/assert"
 )
@@ -209,6 +210,136 @@ func TestValidateRoutes(t *testing.T) {
 		err = validateRoutes(options, true)
 		assert.ErrorIs(t, err, router.ErrAlreadyExists)
 	})
+
+	t.Run("middlewares", func(t *testing.T) {
+		options := NewOptions()
+		route1 := &RouteOptions{
+			ID:        "route1",
+			Paths:     []string{"/hello"},
+			ServiceID: "test1",
+		}
+		options.Routes = append(options.Routes, route1)
+
+		service := ServiceOptions{
+			ID:  "test1",
+			Url: "http://localhost:8888",
+		}
+
+		corsMiddleware := MiddlwareOptions{
+			ID:   "cors",
+			Type: "cors",
+		}
+
+		route1.Middlewares = append(route1.Middlewares, corsMiddleware)
+
+		options.Services["test1"] = service
+
+		err := validateRoutes(options, true)
+		assert.NoError(t, err)
+
+		noMiddleware := MiddlwareOptions{
+			ID:  "no",
+			Use: "no",
+		}
+
+		route1.Middlewares = append(route1.Middlewares, noMiddleware)
+
+		err = validateRoutes(options, true)
+		assert.Error(t, err)
+	})
+}
+
+func TestValidateServer(t *testing.T) {
+
+	t.Run("client ip", func(t *testing.T) {
+		options := NewOptions()
+
+		server := ServerOptions{
+			Bind: ":8080",
+			TrustedCIDRS: []string{
+				"0.0.0.0/0",
+				"192.168.0.10/32",
+			},
+		}
+
+		options.Servers["apiv1"] = server
+
+		err := validateServers(options, true)
+		assert.NoError(t, err)
+
+		server = ServerOptions{
+			Bind: ":8080",
+			TrustedCIDRS: []string{
+				"192.168.0.1",
+			},
+		}
+
+		options.Servers["apiv1"] = server
+
+		err = validateServers(options, true)
+		assert.Error(t, err)
+	})
+
+	t.Run("access log", func(t *testing.T) {
+		options := NewOptions()
+
+		options.AccessLogs["mylog"] = AccessLogOptions{
+			Output: "stdout",
+		}
+
+		server := ServerOptions{
+			Bind:        ":8080",
+			AccessLogID: "mylog",
+		}
+
+		options.Servers["apiv1"] = server
+
+		err := validateServers(options, true)
+		assert.NoError(t, err)
+
+		server = ServerOptions{
+			Bind:        ":8080",
+			AccessLogID: "mylog1",
+		}
+
+		options.Servers["apiv1"] = server
+
+		err = validateServers(options, true)
+		assert.Error(t, err)
+	})
+
+	t.Run("middlewares", func(t *testing.T) {
+		options := NewOptions()
+
+		server := ServerOptions{
+			Bind: ":8080",
+		}
+
+		corsMiddleware := MiddlwareOptions{
+			ID:   "cors",
+			Type: "cors",
+		}
+
+		server.Middlewares = append(server.Middlewares, corsMiddleware)
+
+		options.Servers["apiv1"] = server
+
+		err := validateServers(options, true)
+		assert.NoError(t, err)
+
+		noMiddleware := MiddlwareOptions{
+			ID:  "aaa",
+			Use: "aaa",
+		}
+
+		server.Middlewares = append(server.Middlewares, noMiddleware)
+
+		options.Servers["apiv1"] = server
+
+		err = validateServers(options, true)
+		assert.Error(t, err)
+	})
+
 }
 
 func TestValidateService(t *testing.T) {
@@ -287,6 +418,44 @@ func TestValidateService(t *testing.T) {
 		assert.Error(t, err)
 
 		options.Resolver.SkipTest = true
+		err = validateServices(options, true)
+		assert.Error(t, err)
+	})
+
+	t.Run("middlewares", func(t *testing.T) {
+		options := NewOptions()
+		route1 := &RouteOptions{
+			ID:        "route1",
+			Paths:     []string{"/hello"},
+			ServiceID: "test1",
+		}
+		options.Routes = append(options.Routes, route1)
+
+		service := ServiceOptions{
+			ID:  "test1",
+			Url: "http://localhost:8888",
+		}
+
+		corsMiddleware := MiddlwareOptions{
+			ID:   "cors",
+			Type: "cors",
+		}
+
+		service.Middlewares = append(service.Middlewares, corsMiddleware)
+
+		options.Services["test1"] = service
+
+		err := validateServices(options, true)
+		assert.NoError(t, err)
+
+		noMiddleware := MiddlwareOptions{
+			ID:  "no",
+			Use: "no",
+		}
+
+		service.Middlewares = append(service.Middlewares, noMiddleware)
+		options.Services["test1"] = service
+
 		err = validateServices(options, true)
 		assert.Error(t, err)
 	})

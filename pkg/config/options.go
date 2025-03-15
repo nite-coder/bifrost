@@ -191,6 +191,8 @@ type ServerOptions struct {
 	PPROF              bool                 `yaml:"pprof" json:"pprof"`
 	AccessLogID        string               `yaml:"access_log_id" json:"access_log_id"`
 	Observability      Observability        `yaml:"observability" json:"observability"`
+	TrustedCIDRS       []string             `yaml:"trusted_cidrs" json:"trusted_cidrs"`
+	RemoteIPHeaders    []string             `yaml:"remote_ip_headers" json:"remote_ip_headers"`
 }
 
 type ServerTimeoutOptions struct {

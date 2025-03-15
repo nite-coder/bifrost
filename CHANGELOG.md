@@ -10,6 +10,7 @@
 - Introduce `watch` field for file provider.
 - Introduce `TestAndSkipResovler` function for config package.
 - Introduce `Default` object for configuration file.
+- Introduce `trusted_cidrs` and `remote_ip_headers` field for servers options.
 
 ### **Bug Fixes**
 

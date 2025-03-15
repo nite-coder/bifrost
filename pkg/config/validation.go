@@ -242,6 +242,15 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 			}
 		}
 
+		for _, cidr := range serverOptions.TrustedCIDRS {
+			_, _, err := net.ParseCIDR(cidr)
+			if err != nil {
+				msg := fmt.Sprintf("the cidr '%s' is invalid for server '%s'", cidr, serverID)
+				structure := []string{"servers", serverID, "trusted_cidrs"}
+				return newInvalidConfig(structure, cidr, msg)
+			}
+		}
+
 		if isFullMode {
 			for _, m := range serverOptions.Middlewares {
 				if len(m.Use) > 0 {
@@ -304,12 +313,19 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 			}
 		}
 
-		for _, middleware := range route.Middlewares {
-			if len(middleware.Use) > 0 {
-				if _, found := mainOptions.Middlewares[middleware.Use]; !found {
-					msg := fmt.Sprintf("the middleware '%s' can't be found in the route '%s'", middleware.Use, route.ID)
+		for _, m := range route.Middlewares {
+			if len(m.Use) > 0 {
+				if _, found := mainOptions.Middlewares[m.Use]; !found {
+					msg := fmt.Sprintf("the middleware '%s' can't be found in the route '%s'", m.Use, route.ID)
 					structure := []string{"routes", route.ID, "middlewares"}
-					return newInvalidConfig(structure, middleware.Use, msg)
+					return newInvalidConfig(structure, m.Use, msg)
+				}
+			}
+
+			if len(m.Type) > 0 {
+				hander := middleware.FindHandlerByType(m.Type)
+				if hander == nil {
+					return fmt.Errorf("the middleware '%s' can't be found in the route '%s'", m.Type, route.ID)
 				}
 			}
 		}

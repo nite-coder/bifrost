@@ -2,10 +2,6 @@ module github.com/nite-coder/bifrost
 
 go 1.23.0
 
-replace github.com/cloudwego/hertz v0.9.6 => github.com/nite-coder/hertz v0.9.6
-
-replace github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.1.8
-
 require (
 	github.com/bytedance/gopkg v0.1.1
 	github.com/bytedance/sonic v1.13.1
@@ -151,4 +147,9 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+)
+
+replace (
+	github.com/cloudwego/hertz v0.9.6 => github.com/nite-coder/hertz v0.9.6
+	github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.1.8
 )
