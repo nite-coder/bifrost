@@ -15,3 +15,7 @@ build:
 	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -o bin/testServer server/testserver/main.go
 
 release: build lint test
+
+
+coverage:
+	go tool cover -func=cover.out

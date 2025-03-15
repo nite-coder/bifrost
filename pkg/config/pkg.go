@@ -40,32 +40,9 @@ func load(path string, skipResolver bool) (Options, error) {
 	// load main config
 	var mainOpts Options
 
-	if path == "" {
-		defaultPaths := []string{
-			"./config.yaml",
-			"./conf/config.yaml",
-			"./config/config.yaml",
-		}
-
-		for _, dpath := range defaultPaths {
-			_, err := os.Stat(dpath)
-			if err != nil {
-				if errors.Is(err, os.ErrNotExist) {
-					continue
-				}
-			}
-
-			path = dpath
-			break
-		}
-
-		if path == "" {
-			return mainOpts, errors.New("config file not found")
-		}
-	}
-
-	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-		return mainOpts, errors.New("config file not found")
+	path, err := defaultPath(path)
+	if err != nil {
+		return mainOpts, err
 	}
 
 	b, err := os.ReadFile(path)
@@ -429,4 +406,36 @@ func IsValidDomain(domain string) bool {
 		return true
 	}
 	return false
+}
+
+func defaultPath(path string) (string, error) {
+	if path == "" {
+		defaultPaths := []string{
+			"./config.yaml",
+			"./conf/config.yaml",
+			"./config/config.yaml",
+		}
+
+		for _, dpath := range defaultPaths {
+			_, err := os.Stat(dpath)
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					continue
+				}
+			}
+
+			path = dpath
+			break
+		}
+
+		if path == "" {
+			return "", errors.New("config file not found")
+		}
+	}
+
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return path, errors.New("config file not found")
+	}
+
+	return path, nil
 }

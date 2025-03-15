@@ -67,3 +67,13 @@ func TestDomainName(t *testing.T) {
 		assert.False(t, result, domain+" should be false")
 	}
 }
+
+func TestDefaultPath(t *testing.T) {
+	configPath := "./../../test/config/min.yaml"
+	_, err := defaultPath(configPath)
+	assert.NoError(t, err)
+
+	configPath = ""
+	_, err = defaultPath(configPath)
+	assert.Error(t, err, "config file not found")
+}

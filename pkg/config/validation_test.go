@@ -153,7 +153,7 @@ func TestValidateRoutes(t *testing.T) {
 		test1 := &RouteOptions{
 			ID:        "test1",
 			Methods:   []string{"GET", "POST"},
-			Paths:     []string{"/hello"},
+			Paths:     []string{"= /hello"},
 			ServiceID: "aa",
 		}
 		options.Routes = append(options.Routes, test1)
@@ -161,7 +161,7 @@ func TestValidateRoutes(t *testing.T) {
 		test2 := &RouteOptions{
 			ID:        "test2",
 			Methods:   []string{"GET", "POST"},
-			Paths:     []string{"/hello"},
+			Paths:     []string{"= /hello"},
 			ServiceID: "aa",
 		}
 		options.Routes = append(options.Routes, test2)
@@ -191,7 +191,7 @@ func TestValidateRoutes(t *testing.T) {
 		route2 := RouteOptions{
 			ID:        "route2",
 			Servers:   []string{"apiv2"},
-			Paths:     []string{"/hello"},
+			Paths:     []string{"^~ /hello"},
 			ServiceID: "aa",
 		}
 		options.Routes = append(options.Routes, &route2)
@@ -202,7 +202,7 @@ func TestValidateRoutes(t *testing.T) {
 		route3 := RouteOptions{
 			ID:        "route3",
 			Servers:   []string{"apiv2"},
-			Paths:     []string{"/hello"},
+			Paths:     []string{"^~ /hello"},
 			ServiceID: "aa",
 		}
 		options.Routes = append(options.Routes, &route3)
@@ -250,6 +250,19 @@ func TestValidateRoutes(t *testing.T) {
 }
 
 func TestValidateServer(t *testing.T) {
+
+	t.Run("bind", func(t *testing.T) {
+		options := NewOptions()
+
+		server := ServerOptions{
+			Bind: "",
+		}
+
+		options.Servers["apiv1"] = server
+
+		err := validateServers(options, true)
+		assert.ErrorContains(t, err, "the bind can't be empty for server")
+	})
 
 	t.Run("client ip", func(t *testing.T) {
 		options := NewOptions()
