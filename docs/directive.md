@@ -7,6 +7,7 @@ The currently supports the following directives:
 | `$time`                          | Time the request log is generated. (use timecache)                                                                   | `2024-03-15 14:30:21`                   |
 | `$hostname`                      | The hostname of server                                                                                               | `machine01`                             |
 | `$network.peer.address`          | Peer address of the network connection                                                                               | `192.168.1.100`                         |
+| `$client_ip`                     | Client IP address                                                                                                    | `192.168.1.100`                         |
 | `$service_id`                    | The service id of the request                                                                                        | `user-service-prod`                     |
 | `$route_id`                      | The route id of the request                                                                                          | `get-user-profile`                      |
 | `$upstream_id`                   | The upstream id of the request                                                                                       | `backend-cluster-01`                    |

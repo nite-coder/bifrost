@@ -2,6 +2,7 @@ package variable
 
 import (
 	"testing"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/traceinfo"
@@ -17,10 +18,12 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Set("money", "123.456")
 	hzCtx.Request.Header.SetUserAgentBytes([]byte("my_user_agent"))
 	hzCtx.Set(RouteID, "routeA")
+	hzCtx.Set(ServiceID, "serviceA")
 	hzCtx.Set("myservice", "serviceA")
 	hzCtx.Set(UpstreamID, "upstreamA")
 	hzCtx.Set(UpstreamRequestHost, "1.2.3.4")
 	hzCtx.Set(UpstreamResponoseStatusCode, 200)
+	hzCtx.Set(UpstreamDuration, time.Duration(1*time.Second))
 	hzCtx.Set(HTTPRoute, "/orders/{order_id}")
 
 	tracerInfo := traceinfo.NewTraceInfo()
@@ -43,6 +46,7 @@ func TestGetDirective(t *testing.T) {
 		Protocol: hzCtx.Request.Header.GetProtocol(),
 		Method:   hzCtx.Request.Method(),
 		Query:    hzCtx.Request.QueryString(),
+		Scheme:   hzCtx.Request.Scheme(),
 	}
 	hzCtx.Set(RequestOrig, reqInfo)
 
@@ -96,7 +100,10 @@ func TestGetDirective(t *testing.T) {
 	routeID := GetString(RouteID, hzCtx)
 	assert.Equal(t, "routeA", routeID)
 
-	serviceID := GetString("$var.myservice", hzCtx)
+	serviceID := GetString(ServiceID, hzCtx)
+	assert.Equal(t, "serviceA", serviceID)
+
+	serviceID = GetString("$var.myservice", hzCtx)
 	assert.Equal(t, "serviceA", serviceID)
 
 	upstreamID := GetString(UpstreamID, hzCtx)
@@ -104,6 +111,9 @@ func TestGetDirective(t *testing.T) {
 
 	request := GetString(HTTPRequest, hzCtx)
 	assert.Equal(t, "POST /foo?bar=baz HTTP/1.1", request)
+
+	requestScheme := GetString(HTTPRequestScheme, hzCtx)
+	assert.Equal(t, "http", requestScheme)
 
 	requestMethod := GetString(HTTPRequestMethod, hzCtx)
 	assert.Equal(t, "POST", requestMethod)
@@ -162,6 +172,10 @@ func TestGetDirective(t *testing.T) {
 	val, found := Get(HTTPRequestDuration, hzCtx)
 	assert.False(t, found)
 	assert.Nil(t, val)
+
+	val, found = Get(UpstreamDuration, hzCtx)
+	assert.True(t, found)
+	assert.Equal(t, "1", val)
 
 	val, found = Get("", hzCtx)
 	assert.False(t, found)

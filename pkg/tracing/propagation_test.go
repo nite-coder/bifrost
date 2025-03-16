@@ -74,3 +74,17 @@ func TestInject(t *testing.T) {
 		})
 	}
 }
+
+func TestMetadataProviderKeys(t *testing.T) {
+
+	headers := &protocol.RequestHeader{}
+	headers.DisableNormalizing()
+
+	headers.Set("test-key1", "test-value1")
+	headers.Set("test-key2", "test-value2")
+	m := &metadataProvider{headers: headers}
+
+	keys := m.Keys()
+	assert.Contains(t, keys, "test-key1")
+	assert.Contains(t, keys, "test-key2")
+}
