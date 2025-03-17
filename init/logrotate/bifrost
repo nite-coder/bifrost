@@ -1,0 +1,16 @@
+/home/bifrost/logs/*.log {
+    hourly
+    missingok
+    dateext
+    rotate 3
+    compress
+    delaycompress
+    notifempty
+    create 0640 nobody nogroup
+    sharedscripts
+    postrotate
+        if [ -f /home/bifrost/logs/bifrost.pid ]; then
+                kill -USR1 `cat /home/bifrost/logs/bifrost.pid`
+        fi
+    endscript
+}

@@ -4,6 +4,7 @@ test:
 	go test -race -coverprofile=cover.out -covermode=atomic ./pkg/... -v
 
 lint:
+	golangci-lint cache clean
 	golangci-lint run --timeout 5m --verbose ./pkg/... -v
 
 docker.lint:

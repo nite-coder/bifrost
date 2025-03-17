@@ -10,6 +10,7 @@ This configuration file is divided into two primary types: `static configuration
 * [watch](#watch)
 * [timer_resolution](#timer_resolution)
 * [num_loops](#num_loops)
+* [gopool](#gopool)
 * [user_group](#user_group)
 * [resolver](#resolver)
 * [pid_file](#pid_file)
@@ -48,6 +49,14 @@ This represents the number of epoll created by bifrost, which has been automatic
 
 ```yaml
 num_loops: 4
+```
+
+## gopool
+
+If `true`, the goroutine pool is used.  Default is `false`
+
+```yaml
+gopool: true
 ```
 
 ## user_group
