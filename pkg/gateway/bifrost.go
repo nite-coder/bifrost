@@ -132,12 +132,6 @@ func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 // The isReload parameter indicates whether the function is being called during a reload operation.
 // The function returns a pointer to Bifrost and an error.
 func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
-	// validate config file
-	err := config.ValidateConfig(mainOptions, true)
-	if err != nil {
-		return nil, err
-	}
-
 	tCache := timecache.New(mainOptions.TimerResolution)
 	timecache.Set(tCache)
 

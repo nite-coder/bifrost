@@ -1,4 +1,4 @@
-package redisclient
+package redis
 
 import (
 	"context"
@@ -112,7 +112,7 @@ func TestInitialize(t *testing.T) {
 	}
 }
 
-func TestInitialize_SingleRedis(t *testing.T) {
+func TestInitializeSingleRedis(t *testing.T) {
 	options := []config.RedisOptions{
 		{
 			Addrs:    []string{"localhost:6379"},
@@ -133,7 +133,7 @@ func TestInitialize_SingleRedis(t *testing.T) {
 	assert.Nil(t, client)
 }
 
-func TestInitialize_MultiRedis(t *testing.T) {
+func TestInitializeMultiRedis(t *testing.T) {
 	options := []config.RedisOptions{
 		{
 			Addrs:    []string{"localhost:6379", "localhost:6380"},

@@ -24,6 +24,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/netpoll"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/connector/redis"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/zero"
 	"github.com/valyala/bytebufferpool"
@@ -65,6 +66,12 @@ func SetBifrost(bifrost *Bifrost) {
 // mainOptions is the configuration for the bifrost server.
 // err is the error that occurred during the startup process.
 func Run(mainOptions config.Options) (err error) {
+	// validate config file
+	err = config.ValidateConfig(mainOptions, true)
+	if err != nil {
+		return err
+	}
+
 	if !mainOptions.Gopool {
 		_ = DisableGopool()
 	}
@@ -76,6 +83,11 @@ func Run(mainOptions config.Options) (err error) {
 	}
 
 	err = netpoll.Configure(netpollConfig)
+	if err != nil {
+		return err
+	}
+
+	err = redis.Initialize(context.Background(), mainOptions.Redis)
 	if err != nil {
 		return err
 	}
@@ -120,6 +132,12 @@ func Run(mainOptions config.Options) (err error) {
 				slog.Error("bifrost is reloaded successfully", "isReloaded", false)
 				return nil
 			}
+		}
+
+		// validate config file
+		err = config.ValidateConfig(mainOptions, true)
+		if err != nil {
+			return err
 		}
 
 		newBifrost, err := NewBifrost(mainOptions, true)

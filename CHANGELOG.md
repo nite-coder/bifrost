@@ -11,6 +11,7 @@
 - Introduce `TestAndSkipResovler` function for config package.
 - Introduce `Default` object for configuration file.
 - Introduce `trusted_cidrs` and `remote_ip_headers` field for servers options.
+- Introduced the `connector` package, which manages third-party connections and can be utilized by middlewares.
 
 ### **Bug Fixes**
 
@@ -37,7 +38,7 @@
 
 ### **Documents**
 
-- Add "user_group" section in configuration.
+- Add `user_group`, `gopool` objects in configuration.
 - Add new `Providers` document.
 
 ### **Chore**

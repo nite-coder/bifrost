@@ -1,4 +1,4 @@
-package redisclient
+package redis
 
 import (
 	"context"
@@ -31,6 +31,9 @@ func Initialize(ctx context.Context, options []config.RedisOptions) error {
 	if len(options) == 0 {
 		return nil
 	}
+
+	mu.Lock()
+	defer mu.Unlock()
 
 	for _, option := range options {
 		if len(option.Addrs) == 0 {
@@ -93,9 +96,5 @@ func Initialize(ctx context.Context, options []config.RedisOptions) error {
 
 	}
 
-	return nil
-}
-
-func Shutdown(ctx context.Context) error {
 	return nil
 }

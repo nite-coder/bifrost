@@ -10,7 +10,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/go-viper/mapstructure/v2"
-	"github.com/nite-coder/bifrost/pkg/config/redisclient"
+	"github.com/nite-coder/bifrost/pkg/connector/redis"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/nite-coder/blackbear/pkg/cast"
@@ -72,7 +72,7 @@ func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 	case Local:
 		m.limter = NewLocalLimiter(options)
 	case Redis:
-		client, found := redisclient.Get(options.RedisID)
+		client, found := redis.Get(options.RedisID)
 		if !found {
 			return nil, fmt.Errorf("redis id '%s' not found for rate_limit middleware", options.RedisID)
 		}
