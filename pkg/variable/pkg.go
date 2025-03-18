@@ -69,13 +69,8 @@ func Get(key string, c *app.RequestContext) (val any, found bool) {
 	key = strings.TrimSpace(key)
 	key = strings.ToLower(key)
 
-	if key == "" || key[0] != '$' || c == nil {
+	if key == "" || key[0] != '$'{
 		return nil, false
-	}
-
-	if strings.HasPrefix(key, "$var.") {
-		key = key[5:]
-		return c.Get(key)
 	}
 
 	if strings.HasPrefix(key, "$env.") {
@@ -84,6 +79,17 @@ func Get(key string, c *app.RequestContext) (val any, found bool) {
 		val := os.Getenv(key)
 		return val, true
 	}
+
+	if c == nil {
+		return nil, false
+	}
+
+	if strings.HasPrefix(key, "$var.") {
+		key = key[5:]
+		return c.Get(key)
+	}
+
+
 
 	return directive(key, c)
 

@@ -212,10 +212,8 @@ func TestIsDirective(t *testing.T) {
 }
 
 func TestEnvDirective(t *testing.T) {
-	hzCtx := app.NewContext(0)
 	os.Setenv("foo", "bar")
-
-	val, _ := Get("$env.foo", hzCtx)
+	val, _ := Get("$env.foo", nil)
 	assert.Equal(t, "bar", val)
 }
 
