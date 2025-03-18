@@ -177,7 +177,7 @@ func init() {
 		switch option.Strategy {
 		case Local, Redis:
 		case "":
-			option.Strategy = Local
+			return nil, errors.New("strategy can't be empty for rate_limit middleware")
 		default:
 			return nil, fmt.Errorf("strategy '%s' is invalid", option.Strategy)
 		}

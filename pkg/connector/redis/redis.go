@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -51,6 +52,14 @@ func Initialize(ctx context.Context, options []config.RedisOptions) error {
 				return errors.New("redis addrs can't be empty")
 			}
 
+			if variable.IsDirective(option.Username) {
+				option.Username = variable.GetString(option.Username, nil)
+			}
+
+			if variable.IsDirective(option.Password) {
+				option.Password = variable.GetString(option.Password, nil)
+			}
+
 			client := redis.NewClient(&redis.Options{
 				Addr:     addr,
 				Username: option.Username,
@@ -76,6 +85,14 @@ func Initialize(ctx context.Context, options []config.RedisOptions) error {
 					return errors.New("redis addrs can't be empty")
 				}
 				addrs = append(addrs, addr)
+			}
+
+			if variable.IsDirective(option.Username) {
+				option.Username = variable.GetString(option.Username, nil)
+			}
+
+			if variable.IsDirective(option.Password) {
+				option.Password = variable.GetString(option.Password, nil)
 			}
 
 			client := redis.NewClusterClient(&redis.ClusterOptions{
