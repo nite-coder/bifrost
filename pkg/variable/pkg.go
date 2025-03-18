@@ -78,6 +78,13 @@ func Get(key string, c *app.RequestContext) (val any, found bool) {
 		return c.Get(key)
 	}
 
+	if strings.HasPrefix(key, "$env.") {
+		key = key[5:]
+
+		val := os.Getenv(key)
+		return val, true
+	}
+
 	return directive(key, c)
 
 }
@@ -149,7 +156,11 @@ func GetTime(key string, c *app.RequestContext) time.Time {
 }
 
 func IsDirective(key string) bool {
-	if strings.HasPrefix(key, "$var.") || strings.HasPrefix(key, "$http.request.header.") || strings.HasPrefix(key, "$http.response.header.") || strings.HasPrefix(key, "$http.request.query.") {
+	if strings.HasPrefix(key, "$var.") ||
+		strings.HasPrefix(key, "$env.") ||
+		strings.HasPrefix(key, "$http.request.header.") ||
+		strings.HasPrefix(key, "$http.response.header.") ||
+		strings.HasPrefix(key, "$http.request.query.") {
 		return true
 	}
 

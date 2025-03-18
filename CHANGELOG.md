@@ -11,7 +11,8 @@
 - Introduce `TestAndSkipResovler` function for config package.
 - Introduce `Default` object for configuration file.
 - Introduce `trusted_cidrs` and `remote_ip_headers` field for servers options.
-- Introduced the `connector` package, which manages third-party connections and can be utilized by middlewares.
+- Introduce the `connector` package, which manages third-party connections and can be utilized by middlewares.
+- Introduce the `$env` directive, which allow to get value from environment variable.
 
 ### **Bug Fixes**
 

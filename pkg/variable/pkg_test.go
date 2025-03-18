@@ -1,6 +1,7 @@
 package variable
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -208,6 +209,14 @@ func TestIsDirective(t *testing.T) {
 	assert.True(t, IsDirective("$http.request.header.user-Agent"))
 	assert.True(t, IsDirective("$http.response.header.x-trace-id"))
 	assert.False(t, IsDirective("$abc"))
+}
+
+func TestEnvDirective(t *testing.T) {
+	hzCtx := app.NewContext(0)
+	os.Setenv("foo", "bar")
+
+	val, _ := Get("$env.foo", hzCtx)
+	assert.Equal(t, "bar", val)
 }
 
 func TestParseDirectives(t *testing.T) {

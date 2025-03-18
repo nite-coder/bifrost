@@ -44,3 +44,4 @@ The currently supports the following directives:
 | `$upstream.duration`             | Time taken to process the upstream request (use timecache)                                                           | `0.125`                                 |
 | `$grpc.status_code`              | GRPC STATUS CODE returned by the upstream target                                                                     | `0`                                     |
 | `$grpc.messaage`                 | GRPC Message returned by the upstream target                                                                         | `OK`                                    |
+| `$env.<key>`                     | Allow to get value from environment variables                                                                        | `$env.your_pass`                        |
