@@ -23,6 +23,8 @@
 - Fix accuracy of `http_bifrost_request_duration` metric.
 - Fix dynamic service has been executed many times.
 - Fix multiple server with the same route path.
+- Fix goroutine leak in service request.
+- Fix issue where panic recovery does not return HTTP status 500
 
 ### **Refactor**
 

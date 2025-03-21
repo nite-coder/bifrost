@@ -164,11 +164,11 @@ func (svc *Service) Middlewares() []app.HandlerFunc {
 
 func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
-	done := make(chan bool)
+	done := make(chan struct{})
 
 	runTask(ctx, func() {
 		defer func() {
-			done <- true
+			close(done)
 			if r := recover(); r != nil {
 				stackTrace := runtime.StackTrace()
 				logger.ErrorContext(ctx, "service panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
