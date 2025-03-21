@@ -172,6 +172,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			if r := recover(); r != nil {
 				stackTrace := runtime.StackTrace()
 				logger.ErrorContext(ctx, "service panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
+				c.SetStatusCode(500)
 				c.Abort()
 			}
 		}()
