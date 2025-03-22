@@ -19,7 +19,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
-	"github.com/cloudwego/hertz/pkg/network"
+	hznetpoll "github.com/cloudwego/hertz/pkg/network/netpoll"
+	"github.com/cloudwego/netpoll"
 	configHTTP2 "github.com/hertz-contrib/http2/config"
 	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
@@ -51,9 +52,18 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 		server.WithKeepAlive(true),
 		server.WithALPN(true),
 		server.WithStreamBody(true),
-		server.WithOnConnect(func(ctx context.Context, conn network.Conn) context.Context {
-			// TODO: add new tcp counter
-			return ctx
+		server.WithOnAccept(func(conn net.Conn) context.Context {
+			if conn != nil {
+				hzConn, ok := conn.(*hznetpoll.Conn)
+				if ok {
+					nc, ok := hzConn.Conn.(netpoll.Conn)
+					if ok {
+						_ = setCloExec(nc.Fd())
+					}
+				}
+			}
+
+			return context.Background()
 		}),
 		withDefaultServerHeader(true),
 	}
@@ -63,11 +73,6 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 			Control: func(network, address string, c syscall.RawConn) error {
 				var opErr error
 				err := c.Control(func(fd uintptr) {
-					if err := setCloExec(fd); err != nil {
-						opErr = err
-						return
-					}
-
 					if serverOptions.ReusePort {
 						if err := setTCPReusePort(fd); err != nil {
 							opErr = err

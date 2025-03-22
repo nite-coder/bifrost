@@ -44,13 +44,9 @@ func setUserAndGroup(cmd *exec.Cmd, uid, gid uint32) {
 	}
 }
 
-func setCloExec(fd uintptr) error {
-	flags, err := unix.FcntlInt(uintptr(fd), unix.F_GETFD, 0)
-	if err != nil {
-		return err
-	}
-	_, err = unix.FcntlInt(uintptr(fd), unix.F_SETFD, flags|unix.FD_CLOEXEC)
-	return err
+func setCloExec(fd int) error {
+	unix.CloseOnExec(fd)
+	return nil
 }
 
 func DisableGopool() error {

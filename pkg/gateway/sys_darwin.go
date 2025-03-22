@@ -26,7 +26,7 @@ func setTCPFastOpen(fd uintptr) error {
 	return nil
 }
 
-func setCloExec(fd uintptr) error {
+func setCloExec(fd int)  error {
 	return nil
 }
 
