@@ -44,6 +44,15 @@ func setUserAndGroup(cmd *exec.Cmd, uid, gid uint32) {
 	}
 }
 
+func setCloExec(fd uintptr) error {
+	flags, err := unix.FcntlInt(uintptr(fd), unix.F_GETFD, 0)
+	if err != nil {
+		return err
+	}
+	_, err = unix.FcntlInt(uintptr(fd), unix.F_SETFD, flags|unix.FD_CLOEXEC)
+	return err
+}
+
 func DisableGopool() error {
 	_ = netpoll.DisableGopool()
 	runTask = func(ctx context.Context, f func()) {

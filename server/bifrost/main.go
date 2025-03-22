@@ -133,6 +133,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
+		slog.Error("fail to run", "error", err.Error())
 		os.Exit(-1)
 	}
 }

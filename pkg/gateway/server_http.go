@@ -63,6 +63,11 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 			Control: func(network, address string, c syscall.RawConn) error {
 				var opErr error
 				err := c.Control(func(fd uintptr) {
+					if err := setCloExec(fd); err != nil {
+						opErr = err
+						return
+					}
+
 					if serverOptions.ReusePort {
 						if err := setTCPReusePort(fd); err != nil {
 							opErr = err

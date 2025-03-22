@@ -52,7 +52,7 @@ func (d *defaultProcessFinder) FindProcess(pid int) (process, error) {
 }
 
 var defaultFileOpener = func(name string) (*os.File, error) {
-	return os.OpenFile(name, os.O_RDWR|os.O_CREATE, 0600)
+	return os.OpenFile(name, os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC, 0600)
 }
 
 type listenInfo struct {

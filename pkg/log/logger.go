@@ -38,7 +38,7 @@ func (fw *fileWriter) reopen() error {
 	}
 
 	// Reopen the file
-	file, err := os.OpenFile(fw.file.Name(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(fw.file.Name(), os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0644)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 		writer = os.Stderr // Write logs to stderr
 	default:
 		// Open the log file for appending, creating it if it doesn't exist
-		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0644)
 		if err != nil {
 			return nil, err
 		}

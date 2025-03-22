@@ -26,9 +26,15 @@ func setTCPFastOpen(fd uintptr) error {
 	return nil
 }
 
+func setCloExec(fd uintptr) error {
+	return nil
+}
+
 func setUserAndGroup(cmd *exec.Cmd, uid, gid uint32) {
 
 }
+
+
 
 func DisableGopool() error {
 	_ = netpoll.DisableGopool()

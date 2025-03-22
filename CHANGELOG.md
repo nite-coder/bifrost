@@ -25,6 +25,7 @@
 - Fix multiple server with the same route path.
 - Fix goroutine leak in service request.
 - Fix issue where panic recovery does not return HTTP status 500
+- Fix FD leak issue
 
 ### **Refactor**
 

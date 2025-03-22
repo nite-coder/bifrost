@@ -41,7 +41,7 @@ func NewBufferedLogger(opts config.AccessLogOptions) (*BufferedLogger, error) {
 		writer = os.Stderr // Write logs to stderr
 	default:
 		// Open the log file for appending, creating it if it doesn't exist
-		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0600)
 		if err != nil {
 			return nil, err
 		}
@@ -148,7 +148,7 @@ func (l *BufferedLogger) reopenFile() error {
 	}
 
 	// Reopen the file
-	file, err := os.OpenFile(l.options.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	file, err := os.OpenFile(l.options.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0600)
 	if err != nil {
 		return fmt.Errorf("failed to reopen file: %w", err)
 	}
