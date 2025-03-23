@@ -1,6 +1,6 @@
 middlewares:
   ip_limiter:
-    type: rate-limiting
+    type: rate-limit
     params:
       strategy: local
       limit_by: $client_ip
