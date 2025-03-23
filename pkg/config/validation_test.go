@@ -249,6 +249,41 @@ func TestValidateRoutes(t *testing.T) {
 	})
 }
 
+
+func TestValidateMiddlewares(t *testing.T) {
+
+	t.Run("normal", func(t *testing.T) {
+		options := NewOptions()
+
+		options.Middlewares["cors_id"] = MiddlwareOptions{
+			Type: "cors",
+		}
+		err := validateMiddlewares(options, true)
+		assert.NoError(t, err)
+	})
+
+
+	t.Run("not found middleware", func(t *testing.T) {
+		options := NewOptions()
+
+		options.Middlewares["cors_id"] = MiddlwareOptions{
+			Type: "cors11",
+		}
+		err := validateMiddlewares(options, true)
+		assert.Error(t, err)
+	})
+
+	t.Run("can't run as use mode", func(t *testing.T) {
+		options := NewOptions()
+
+		options.Middlewares["cors_id"] = MiddlwareOptions{
+			Use: "cors",
+		}
+		err := validateMiddlewares(options, true)
+		assert.Error(t, err)
+	})
+}
+
 func TestValidateServer(t *testing.T) {
 
 	t.Run("bind", func(t *testing.T) {

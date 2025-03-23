@@ -31,14 +31,14 @@
 
 - Redesigned the `setvars` middleware to support the `default` field.
 - The `params` field of middlewares has been changed to the `any` type.
-- Enhance validation of `upstream` and `service` in the config package.
+- Enhance validation of `upstreams`, `middlewares`, `services` in the config package.
 - Remove `skip_test` from resolver.
 - Require `root` permissions to run as daemon.
 - Redesign resolver system to support multiple resolvers.
 
 ### **Test**
 
-- Improve `router`, `zero`, `gateway`, `tracer(prometheus)` `provider`, `proxy(websocket)` package test coverage.
+- Improve `router`, `zero`, `gateway`, `config`, `tracer(prometheus)` `provider`, `proxy(websocket)` package test coverage.
 
 ### **Documents**
 

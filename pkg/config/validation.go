@@ -52,6 +52,11 @@ func ValidateConfig(mainOptions Options, isFullMode bool) error {
 		return err
 	}
 
+	err = validateMiddlewares(mainOptions, isFullMode)
+	if err != nil {
+		return err
+	}
+
 	err = validateUpstreams(mainOptions, isFullMode)
 	if err != nil {
 		return err
@@ -190,6 +195,30 @@ func validateAccessLog(options map[string]AccessLogOptions) error {
 		for _, directive := range directives {
 			if !variable.IsDirective(directive) {
 				return fmt.Errorf("the directive '%s' is not supported in the access log '%s'", directive, id)
+			}
+		}
+	}
+
+	return nil
+}
+
+func validateMiddlewares(mainOptions Options, isFullMode bool) error {
+
+	for middlewareID, middlewareOptions := range mainOptions.Middlewares {
+		if len(middlewareOptions.Use) > 0 {
+			return fmt.Errorf("the middleware '%s' can't run as `use` mode for the middleware id '%s'", middlewareOptions.Use, middlewareID)
+		}
+
+		if len(middlewareOptions.Type) == 0 {
+			return fmt.Errorf("the middleware type can't be empty for the middleware id '%s'", middlewareID)
+		}
+
+		if isFullMode {
+			if len(middlewareOptions.Type) > 0 {
+				hander := middleware.FindHandlerByType(middlewareOptions.Type)
+				if hander == nil {
+					return fmt.Errorf("the middleware '%s' can't be found for the middleware id '%s'", middlewareOptions.Type, middlewareID)
+				}
 			}
 		}
 	}
