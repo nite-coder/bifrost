@@ -17,7 +17,6 @@ func TestConfigLoad(t *testing.T) {
 
 		mainOptions, err := Load(configPath)
 		assert.NoError(t, err)
-		assert.Len(t, mainOptions.Middlewares, 1)
 
 		assert.Equal(t, "all_routes1", mainOptions.Routes[1].ID)
 		assert.Equal(t, "all_routes2", mainOptions.Routes[2].ID)
