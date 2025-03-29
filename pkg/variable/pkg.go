@@ -567,8 +567,3 @@ func (s byLengthAndContent) Less(i, j int) bool {
 func sortBifrostVariables(slice []string) {
 	sort.Sort(byLengthAndContent(slice))
 }
-
-func jsonByPath(content string, path string) (string, error) {
-	val := gjson.Get(content, path)
-	return val.String(), nil
-}
