@@ -233,3 +233,22 @@ func TestParseDirectives(t *testing.T) {
 	assert.Equal(t, 1, len(directives))
 	assert.Equal(t, "$type", directives[0])
 }
+
+func TestJSONPath(t *testing.T) {
+	hzCtx := app.NewContext(0)
+	hzCtx.Request.SetMethod("POST")
+	hzCtx.Request.URI().SetPath("/foo")
+
+	body := []byte(`{"name":{"first":"Janet","last":"Prichard"},"age":47}`)
+	hzCtx.Request.SetBody(body)
+	hzCtx.Response.SetBody([]byte(`{"student":{"first":"Janet","last":"Prichard"},"age":47}`))
+
+	val := GetString("$http.request.body.json.name.last", hzCtx)
+	assert.Equal(t, "Prichard", val)
+
+	val = GetString("$http.request.body.json.name_not_Found", hzCtx)
+	assert.Equal(t, "", val)
+
+	val = GetString("$http.response.body.json.age", hzCtx)
+	assert.Equal(t, "47", val)
+}

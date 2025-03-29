@@ -5,6 +5,7 @@ go 1.23.0
 require (
 	github.com/bytedance/gopkg v0.1.1
 	github.com/bytedance/sonic v1.13.1
+	github.com/cloudwego/gjson v0.1.0
 	github.com/cloudwego/hertz v0.9.6
 	github.com/cloudwego/netpoll v0.6.5
 	github.com/fsnotify/fsnotify v1.8.0

@@ -114,6 +114,8 @@ github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDk
 github.com/cloudwego/base64x v0.1.4/go.mod h1:0zlkT4Wn5C6NdauXdJRhSKRlJvmclQ1hhJgA0rcu/8w=
 github.com/cloudwego/base64x v0.1.5 h1:XPciSp1xaq2VCSt6lF0phncD4koWyULpl5bUxbfCyP4=
 github.com/cloudwego/base64x v0.1.5/go.mod h1:0zlkT4Wn5C6NdauXdJRhSKRlJvmclQ1hhJgA0rcu/8w=
+github.com/cloudwego/gjson v0.1.0 h1:NlWuw78guIoJDa4A6C3xN3If2Y+WrruCYHWCjEysvhA=
+github.com/cloudwego/gjson v0.1.0/go.mod h1:ox4r6tcfNfRPfJs7ehW7cRG8hSalHidvbTwggx7lTVk=
 github.com/cloudwego/hertz v0.9.4-0.20241021100040-3477b0309b81/go.mod h1:gGVUfJU/BOkJv/ZTzrw7FS7uy7171JeYIZvAyV3wS3o=
 github.com/cloudwego/iasm v0.2.0/go.mod h1:8rXZaNYT2n95jn+zTI1sDr+IgcD2GVs0nlbbQPiEFhY=
 github.com/cloudwego/netpoll v0.6.2/go.mod h1:kaqvfZ70qd4T2WtIIpCOi5Cxyob8viEpzLhCrTrz3HM=

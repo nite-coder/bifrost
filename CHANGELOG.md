@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## next version
+
+### **Features**
+
+- Introduce `$http.request.body.json.<key>` directive, which get values from a json document in request body
+- Introduce `$http.response.body.json.<key>` directive, which get values from a json document in response body
+
 ## 0.3.0 (2025-03-29)
 
 ### **Features**

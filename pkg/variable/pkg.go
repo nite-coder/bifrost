@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudwego/gjson"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
 	"github.com/nite-coder/bifrost/pkg/timecache"
@@ -69,7 +70,7 @@ func Get(key string, c *app.RequestContext) (val any, found bool) {
 	key = strings.TrimSpace(key)
 	key = strings.ToLower(key)
 
-	if key == "" || key[0] != '$'{
+	if key == "" || key[0] != '$' {
 		return nil, false
 	}
 
@@ -88,8 +89,6 @@ func Get(key string, c *app.RequestContext) (val any, found bool) {
 		key = key[5:]
 		return c.Get(key)
 	}
-
-
 
 	return directive(key, c)
 
@@ -517,6 +516,26 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return val, true
 		}
 
+		if strings.HasPrefix(key, "$http.request.body.json.") {
+			jsonPath := key[len("$http.request.body.json."):]
+			if len(jsonPath) == 0 {
+				return "", false
+			}
+
+			val := gjson.Get(cast.B2S(c.Request.Body()), jsonPath)
+			return val.String(), true
+		}
+
+		if strings.HasPrefix(key, "$http.response.body.json.") {
+			jsonPath := key[len("$http.response.body.json."):]
+			if len(jsonPath) == 0 {
+				return "", false
+			}
+
+			val := gjson.Get(cast.B2S(c.Response.Body()), jsonPath)
+			return val.String(), true
+		}
+
 		return nil, false
 	}
 }
@@ -547,4 +566,9 @@ func (s byLengthAndContent) Less(i, j int) bool {
 
 func sortBifrostVariables(slice []string) {
 	sort.Sort(byLengthAndContent(slice))
+}
+
+func jsonByPath(content string, path string) (string, error) {
+	val := gjson.Get(content, path)
+	return val.String(), nil
 }
