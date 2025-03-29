@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## Next
+## 0.3.0 (2025-03-29)
 
 ### **Features**
 
