@@ -64,9 +64,11 @@ func TestPromethusTracer(t *testing.T) {
 
 	metricsResStr := string(metricsResBytes)
 
-	assert.True(t, strings.Contains(metricsResStr, `http_server_requests{method="GET",path="/test_get",server="unknown",statusCode="200"} 10`))
-	assert.True(t, strings.Contains(metricsResStr, `http_server_requests{method="POST",path="/test_post",server="unknown",statusCode="200"} 10`))
-	assert.True(t, strings.Contains(metricsResStr, `http_bifrost_request_duration_bucket{method="GET",path="/test_get",server="unknown",statusCode="200",le="5"} 10`))
-	assert.True(t, strings.Contains(metricsResStr, `http_server_request_duration_bucket{method="POST",path="/test_post",server="unknown",statusCode="200",le="1"} 10`))
-	assert.True(t, strings.Contains(metricsResStr, `http_server_request_duration_count{method="GET",path="/test_get",server="unknown",statusCode="200"} 10`))
+	//t.Log(metricsResStr)
+
+	assert.True(t, strings.Contains(metricsResStr, `http_server_requests{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`))
+	assert.True(t, strings.Contains(metricsResStr, `http_server_requests{method="POST",path="/test_post",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`))
+	assert.True(t, strings.Contains(metricsResStr, `http_bifrost_request_duration_bucket{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200",le="0.005"} 10`))
+	assert.True(t, strings.Contains(metricsResStr, `http_bifrost_request_duration_bucket{method="POST",path="/test_post",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200",le="0.05"} 10`))
+	assert.True(t, strings.Contains(metricsResStr, `http_bifrost_request_duration_count{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`))
 }

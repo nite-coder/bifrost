@@ -13,10 +13,12 @@ import (
 )
 
 const (
-	labelServer       = "server"
+	labelServerID     = "server_id"
 	labelMethod       = "method"
 	labelPath         = "path"
-	labelStatusCode   = "statusCode"
+	labelRouteID      = "route_id"
+	labelServiceID    = "service_id"
+	labelStatusCode   = "status_code"
 	unknownLabelValue = "unknown"
 )
 
@@ -25,7 +27,12 @@ func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 	labels := make(prom.Labels)
 
 	serverID := variable.GetString(variable.ServerID, c)
-	labels[labelServer] = defaultValIfEmpty(serverID, unknownLabelValue)
+	routeID := variable.GetString(variable.RouteID, c)
+	serviceID := variable.GetString(variable.ServiceID, c)
+
+	labels[labelServerID] = defaultValIfEmpty(serverID, unknownLabelValue)
+	labels[labelRouteID] = defaultValIfEmpty(routeID, unknownLabelValue)
+	labels[labelServiceID] = defaultValIfEmpty(serviceID, unknownLabelValue)
 	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(c.Response.Header.StatusCode()), unknownLabelValue)
 
@@ -83,7 +90,7 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	_ = histogramObserve(s.httpBifrostRequestDuration, bifrostDuration, genRequestDurationLabels(c))
 
 	serverLabel := make(prom.Labels)
-	serverLabel[labelServer] = serverID
+	serverLabel[labelServerID] = serverID
 	requestSize := info.RecvSize()
 	responseSize := info.SendSize()
 
@@ -105,7 +112,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 			Name: "http_server_request_body_size",
 			Help: "Size of HTTP server request bodies.",
 		},
-		[]string{labelServer},
+		[]string{labelServerID},
 	)
 	prom.MustRegister(httpServerRequestBodySize)
 
@@ -114,7 +121,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 			Name: "http_server_response_body_size",
 			Help: "Size of HTTP server response bodies.",
 		},
-		[]string{labelServer},
+		[]string{labelServerID},
 	)
 	prom.MustRegister(httpServerResponseBodySize)
 
@@ -123,7 +130,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 			Name: "http_server_requests",
 			Help: "Total number of HTTPs completed by the server, regardless of success or failure",
 		},
-		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
+		[]string{labelMethod, labelPath, labelStatusCode, labelServerID, labelRouteID, labelServiceID},
 	)
 	prom.MustRegister(httpServerRequests)
 
@@ -142,7 +149,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 			Help:    "Duration of HTTP server requests. (seconds)",
 			Buckets: cfg.buckets,
 		},
-		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
+		[]string{labelMethod, labelPath, labelStatusCode, labelServerID, labelRouteID, labelServiceID},
 	)
 	prom.MustRegister(httpServerRequestDuration)
 
@@ -152,7 +159,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 			Help:    "Duration of HTTP requests handled by bifrost. (seconds)",
 			Buckets: cfg.buckets,
 		},
-		[]string{labelServer, labelMethod, labelStatusCode, labelPath},
+		[]string{labelMethod, labelPath, labelStatusCode, labelServerID, labelRouteID, labelServiceID},
 	)
 	prom.MustRegister(httpBifrostRequestDuration)
 

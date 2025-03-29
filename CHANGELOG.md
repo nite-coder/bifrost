@@ -35,6 +35,7 @@
 - Remove `skip_test` from resolver.
 - Require `root` permissions to run as daemon.
 - Redesign resolver system to support multiple resolvers.
+- rename `statusCode` to `status_code` and add `service_id`, `route_id` in http_server_requests metric.
 
 ### **Test**
 
