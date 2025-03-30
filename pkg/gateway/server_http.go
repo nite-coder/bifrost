@@ -80,13 +80,15 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 						_ = setCloExec(nc.Fd())
 					}
 
-					netpollConn, ok := hzConn.Conn.(netpoll.Connection)
-					if ok {
-						httpServer.totalConnections.Add(1)
-						_ = netpollConn.AddCloseCallback(func(connection netpoll.Connection) error {
-							httpServer.totalConnections.Add(-1)
-							return nil
-						})
+					if bifrost.options.Metrics.Prometheus.Enabled {
+						netpollConn, ok := hzConn.Conn.(netpoll.Connection)
+						if ok {
+							httpServer.totalConnections.Add(1)
+							_ = netpollConn.AddCloseCallback(func(connection netpoll.Connection) error {
+								httpServer.totalConnections.Add(-1)
+								return nil
+							})
+						}
 					}
 				}
 			}
