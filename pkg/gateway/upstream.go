@@ -487,13 +487,15 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 				}))
 			}
 
-			clientOpts = append(clientOpts, client.WithConnStateObserve(func(hcs hzconfig.HostClientState) {
-				labels := make(prom.Labels)
-				labels["service_id"] = serviceOptions.ID
-				labels["target"] = hcs.ConnPoolState().Addr
+			if bifrost.options.Metrics.Prometheus.Enabled {
+				clientOpts = append(clientOpts, client.WithConnStateObserve(func(hcs hzconfig.HostClientState) {
+					labels := make(prom.Labels)
+					labels["service_id"] = serviceOptions.ID
+					labels["target"] = hcs.ConnPoolState().Addr
 
-				httpServiceOpenConnections.With(labels).Set(float64(hcs.ConnPoolState().TotalConnNum))
-			}))
+					httpServiceOpenConnections.With(labels).Set(float64(hcs.ConnPoolState().TotalConnNum))
+				}))
+			}
 
 			url := fmt.Sprintf("%s://%s%s", addr.Scheme, ip, addr.Path)
 
