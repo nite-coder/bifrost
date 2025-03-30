@@ -6,6 +6,7 @@
 
 - Introduce `$http.request.body.json.<key>` directive, which get values from a json document in request body
 - Introduce `$http.response.body.json.<key>` directive, which get values from a json document in response body
+- [[#13](https://github.com/nite-coder/bifrost/pull/13)]Introduce `http_service_open_connections` metric for bifrost service
 
 ## 0.3.0 (2025-03-29)
 

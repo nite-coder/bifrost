@@ -22,7 +22,24 @@ import (
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 
 	"github.com/cloudwego/hertz/pkg/app/client"
+	prom "github.com/prometheus/client_golang/prometheus"
 )
+
+var (
+	httpServiceOpenConnections *prom.GaugeVec
+)
+
+func init() {
+	httpServiceOpenConnections = prom.NewGaugeVec(
+		prom.GaugeOpts{
+			Name: "http_service_open_connections",
+			Help: "Number of open connections for services",
+		},
+		[]string{"service_id", "target"},
+	)
+
+	prom.MustRegister(httpServiceOpenConnections)
+}
 
 type Upstream struct {
 	opts        *config.UpstreamOptions
@@ -464,8 +481,19 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 
 			if strings.EqualFold(addr.Scheme, "https") {
 				clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
+					// when client uses ip address to connect to server, client need to set the ServerName to the domain name you want to use
 					ServerName:         targetHost,
 					InsecureSkipVerify: !serviceOptions.TLSVerify, //nolint:gosec
+				}))
+			}
+
+			if bifrost.options.Metrics.Prometheus.Enabled {
+				clientOpts = append(clientOpts, client.WithConnStateObserve(func(hcs hzconfig.HostClientState) {
+					labels := make(prom.Labels)
+					labels["service_id"] = serviceOptions.ID
+					labels["target"] = hcs.ConnPoolState().Addr
+
+					httpServiceOpenConnections.With(labels).Set(float64(hcs.ConnPoolState().TotalConnNum))
 				}))
 			}
 

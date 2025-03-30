@@ -27,6 +27,7 @@ func main() {
 		client.WithMaxConnsPerHost(1024),
 		//client.WithDialer(standard.NewDialer()),
 		client.WithTLSConfig(&tls.Config{
+			// when you use ip address to connect to server, you need to set the ServerName to the domain name you want to use
 			ServerName:         "echo.free.beeceptor.com", // magic part
 			InsecureSkipVerify: false,
 		}),
