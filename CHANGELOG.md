@@ -6,7 +6,8 @@
 
 - Introduce `$http.request.body.json.<key>` directive, which get values from a json document in request body
 - Introduce `$http.response.body.json.<key>` directive, which get values from a json document in response body
-- [[#13](https://github.com/nite-coder/bifrost/pull/13)]Introduce `http_service_open_connections` metric for bifrost service
+- [[#13](https://github.com/nite-coder/bifrost/pull/13)] Introduce `http_service_open_connections` metric for bifrost service
+- [[#14](https://github.com/nite-coder/bifrost/pull/14)] Introduce `http_server_open_connections` metric for bifrost server
 
 ## 0.3.0 (2025-03-29)
 
@@ -14,7 +15,7 @@
 
 - Introduce the `cors`, `parallel` middlewares.
 - Introduce `set` options for `request_transformer` and `response_transformer` middlewares.
-- [[#10](https://github.com/nite-coder/bifrost/pull/10)]:Introduce `nacos` config provider.
+- [[#10](https://github.com/nite-coder/bifrost/pull/10)] Introduce `nacos` config provider.
 - Introduce `watch` field for file provider.
 - Introduce `TestAndSkipResovler` function for config package.
 - Introduce `Default` object for configuration file.
@@ -101,8 +102,8 @@
 
 ### **Pull Requests**
 
-- [[#7](https://github.com/nite-coder/bifrost/pull/7)]: Upgraded and renamed access log directives.
-- [[#8](https://github.com/nite-coder/bifrost/pull/8)]: Introduced a new `response-transformer` middleware.
+- [[#7](https://github.com/nite-coder/bifrost/pull/7)] Upgraded and renamed access log directives.
+- [[#8](https://github.com/nite-coder/bifrost/pull/8)] Introduced a new `response-transformer` middleware.
 
 ## 0.1.0 (2024-12-22)
 
