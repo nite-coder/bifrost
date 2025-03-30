@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -26,13 +27,31 @@ import (
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/pprof"
 	"github.com/nite-coder/bifrost/pkg/config"
+	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/unix"
 )
 
+var (
+	httpServerOpenConnections *prom.GaugeVec
+)
+
+func init() {
+	httpServerOpenConnections = prom.NewGaugeVec(
+		prom.GaugeOpts{
+			Name: "http_server_open_connections",
+			Help: "Number of open connections for servers",
+		},
+		[]string{"server_id"},
+	)
+
+	prom.MustRegister(httpServerOpenConnections)
+}
+
 type HTTPServer struct {
-	options  *config.ServerOptions
-	switcher *switcher
-	server   *server.Hertz
+	options          *config.ServerOptions
+	switcher         *switcher
+	server           *server.Hertz
+	totalConnections atomic.Int64
 }
 
 func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers []tracer.Tracer, disableListener bool) (*HTTPServer, error) {
@@ -60,12 +79,39 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 					if ok {
 						_ = setCloExec(nc.Fd())
 					}
+
+					netpollConn, ok := hzConn.Conn.(netpoll.Connection)
+					if ok {
+						httpServer.totalConnections.Add(1)
+						_ = netpollConn.AddCloseCallback(func(connection netpoll.Connection) error {
+							httpServer.totalConnections.Add(-1)
+							return nil
+						})
+					}
 				}
 			}
 
 			return context.Background()
 		}),
 		withDefaultServerHeader(true),
+	}
+
+	if bifrost.options.Metrics.Prometheus.Enabled {
+		go func() {
+			ticker := time.NewTicker(time.Second * 10)
+
+			for range ticker.C {
+				if !bifrost.IsActive() {
+					break
+				}
+
+				labels := make(prom.Labels)
+				labels["server_id"] = serverOptions.ID
+				totalConn := httpServer.totalConnections.Load()
+
+				httpServerOpenConnections.With(labels).Set(float64(totalConn))
+			}
+		}()
 	}
 
 	if !disableListener {
