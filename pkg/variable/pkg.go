@@ -60,6 +60,7 @@ var (
 		UpstreamRequestURI:          {},
 		UpstreamResponoseStatusCode: {},
 		UpstreamDuration:            {},
+		UpstreamConnAcquisitionTime: {},
 		HTTPRequestDuration:         {},
 		GRPCStatusCode:              {},
 		GRPCMessage:                 {},
@@ -449,6 +450,12 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		return status, true
 	case UpstreamDuration:
 		dur := c.GetDuration(UpstreamDuration)
+		mic := dur.Microseconds()
+		duration := float64(mic) / 1e6
+		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
+		return responseTime, true
+	case UpstreamConnAcquisitionTime:
+		dur := c.GetDuration(UpstreamConnAcquisitionTime)
 		mic := dur.Microseconds()
 		duration := float64(mic) / 1e6
 		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)

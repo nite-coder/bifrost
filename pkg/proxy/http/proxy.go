@@ -353,6 +353,7 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 ProxyPassLoop:
 
 	err = p.client.Do(ctx, outReq, outResp)
+	c.Set(variable.UpstreamConnAcquisitionTime, outReq.ConnAcquisitionTime())
 	if err != nil {
 		if errors.Is(err, hzerrors.ErrBadPoolConn) {
 			goto ProxyPassLoop
