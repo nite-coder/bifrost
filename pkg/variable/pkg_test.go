@@ -25,6 +25,7 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Set(UpstreamRequestHost, "1.2.3.4")
 	hzCtx.Set(UpstreamResponoseStatusCode, 200)
 	hzCtx.Set(UpstreamDuration, time.Duration(1*time.Second))
+	hzCtx.Set(UpstreamConnAcquisitionTime, time.Duration(1*time.Microsecond))
 	hzCtx.Set(HTTPRoute, "/orders/{order_id}")
 
 	tracerInfo := traceinfo.NewTraceInfo()
@@ -178,6 +179,10 @@ func TestGetDirective(t *testing.T) {
 	assert.True(t, found)
 	assert.Equal(t, "1", val)
 
+	val, found = Get(UpstreamConnAcquisitionTime, hzCtx)
+	assert.True(t, found)
+	assert.Equal(t, "0.000001", val)
+
 	val, found = Get("", hzCtx)
 	assert.False(t, found)
 	assert.Nil(t, val)
@@ -208,6 +213,7 @@ func TestIsDirective(t *testing.T) {
 	assert.True(t, IsDirective("$http.request"))
 	assert.True(t, IsDirective("$http.request.header.user-Agent"))
 	assert.True(t, IsDirective("$http.response.header.x-trace-id"))
+	assert.True(t, IsDirective("$upstream.conn_acquisition_time"))
 	assert.False(t, IsDirective("$abc"))
 }
 
