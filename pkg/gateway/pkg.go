@@ -152,6 +152,7 @@ func Run(mainOptions config.Options) (err error) {
 			if found && httpServer.Bind() == newHTTPServer.Bind() {
 				httpServer.SetEngine(newHTTPServer.Engine())
 				isReloaded = true
+				_ = newHTTPServer.Shutdown(ctx)
 			}
 		}
 

@@ -48,6 +48,7 @@ func init() {
 }
 
 type HTTPServer struct {
+	isActive         atomic.Bool
 	options          *config.ServerOptions
 	switcher         *switcher
 	server           *server.Hertz
@@ -58,6 +59,7 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 	ctx := context.Background()
 
 	httpServer := &HTTPServer{}
+	httpServer.isActive.Store(true)
 
 	hzOpts := []hzconfig.Option{
 		server.WithDisableDefaultDate(true),
@@ -103,7 +105,7 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 			ticker := time.NewTicker(time.Second * 10)
 
 			for range ticker.C {
-				if !bifrost.IsActive() {
+				if !httpServer.isActive.Load() {
 					break
 				}
 
@@ -335,6 +337,7 @@ func (s *HTTPServer) Run() {
 }
 
 func (s *HTTPServer) Shutdown(ctx context.Context) error {
+	s.isActive.Store(false)
 	return s.server.Shutdown(ctx)
 }
 
