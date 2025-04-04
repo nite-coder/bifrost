@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/bytedance/gopkg/util/logger"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
@@ -38,6 +40,7 @@ func init() {
 
 type Options struct {
 	ServiceID string `mapstructure:"service_id"`
+	QueueSize int64  `mapstructure:"queue_size"`
 }
 
 type MirrorMiddleware struct {
@@ -51,12 +54,25 @@ type mirrorContext struct {
 }
 
 func NewMiddleware(options Options) *MirrorMiddleware {
-	m := &MirrorMiddleware{
-		options: &options,
-		queue:   make(chan *mirrorContext, 10000),
+	if options.QueueSize <= 0 {
+		options.QueueSize = 10000
 	}
 
-	go m.Run()
+	m := &MirrorMiddleware{
+		options: &options,
+		queue:   make(chan *mirrorContext, options.QueueSize),
+	}
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				stackTrace := runtime.StackTrace()
+				logger.Error("mirror panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
+			}
+		}()
+		m.Run()
+	}()
+
 	return m
 }
 

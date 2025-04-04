@@ -10,6 +10,10 @@
 - Introduce `http_server_open_connections` metric for bifrost server [[#14](https://github.com/nite-coder/bifrost/pull/14)]
 - Introduce `$upstream.conn_acquisition_time` directive, which indicates the time taken to get the upstream connection [[#15](https://github.com/nite-coder/bifrost/pull/15)]
 
+### **Test**
+
+- Improve `middlware(mirror)` package test coverage.
+
 ## 0.3.0 (2025-03-29)
 
 ### **Features**
