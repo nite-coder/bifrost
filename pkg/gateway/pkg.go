@@ -46,6 +46,12 @@ var (
 	}
 )
 
+func init() {
+	runTask = func(ctx context.Context, f func()) {
+		go f()
+	}
+}
+
 // GetBifrost retrieves the current instance of Bifrost.
 // It returns a pointer to the Bifrost instance stored in the defaultBifrost atomic value.
 func GetBifrost() *Bifrost {
