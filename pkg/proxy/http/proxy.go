@@ -447,6 +447,11 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 		c.Set(variable.TargetTimeout, true)
 	}
 
+	if errors.Is(err, hzerrors.ErrNoFreeConns) {
+		c.Response.Header.SetStatusCode(http.StatusInternalServerError)
+		return
+	}
+
 	c.Response.Header.SetStatusCode(http.StatusBadGateway)
 }
 

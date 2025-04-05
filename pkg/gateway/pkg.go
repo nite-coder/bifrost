@@ -19,8 +19,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/bytedance/sonic"
+	cgopool "github.com/cloudwego/gopkg/concurrency/gopool"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/netpoll"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -32,7 +32,7 @@ import (
 
 var (
 	defaultBifrost      = &atomic.Value{}
-	runTask             = gopool.CtxGo
+	runTask             func(ctx context.Context, f func())
 	spaceByte           = []byte{byte(' ')}
 	defaultTrustedCIDRs = []*net.IPNet{
 		{ // 0.0.0.0/0 (IPv4)
@@ -78,8 +78,15 @@ func Run(mainOptions config.Options) (err error) {
 		netpollConfig.PollerNum = mainOptions.NumLoops
 	}
 
-	if !mainOptions.Gopool {
+	if mainOptions.Gopool {
+		netpollConfig.Runner = cgopool.CtxGo
+		runTask = cgopool.CtxGo
+	} else {
 		netpollConfig.Runner = func(ctx context.Context, f func()) {
+			go f()
+		}
+
+		runTask = func(ctx context.Context, f func()) {
 			go f()
 		}
 	}

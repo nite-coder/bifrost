@@ -11,6 +11,10 @@
 - Introduce `$upstream.conn_acquisition_time` directive, which indicates the time taken to get the upstream connection [[#15](https://github.com/nite-coder/bifrost/pull/15)]
 - Add `Set` function to redis connector
 
+### **Bug Fixes**
+
+- When the service encounters a `no free connections available to host` error, return HTTP status code `500` instead of `502`
+
 ### **Test**
 
 - Improve `middlware(mirror)` package test coverage.
