@@ -72,14 +72,16 @@ func Run(mainOptions config.Options) (err error) {
 		return err
 	}
 
-	if !mainOptions.Gopool {
-		_ = DisableGopool()
-	}
-
 	netpollConfig := netpoll.Config{}
 
 	if mainOptions.NumLoops > 0 {
 		netpollConfig.PollerNum = mainOptions.NumLoops
+	}
+
+	if !mainOptions.Gopool {
+		netpollConfig.Runner = func(ctx context.Context, f func()) {
+			go f()
+		}
 	}
 
 	err = netpoll.Configure(netpollConfig)

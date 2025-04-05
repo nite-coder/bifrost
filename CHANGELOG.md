@@ -9,6 +9,7 @@
 - Introduce `http_service_open_connections` metric for bifrost service [[#13](https://github.com/nite-coder/bifrost/pull/13)]
 - Introduce `http_server_open_connections` metric for bifrost server [[#14](https://github.com/nite-coder/bifrost/pull/14)]
 - Introduce `$upstream.conn_acquisition_time` directive, which indicates the time taken to get the upstream connection [[#15](https://github.com/nite-coder/bifrost/pull/15)]
+- Add `Set` function to redis connector
 
 ### **Test**
 

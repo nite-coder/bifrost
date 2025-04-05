@@ -28,6 +28,13 @@ func Get(id string) (redis.UniversalClient, bool) {
 	return nil, false
 }
 
+func Set(id string, client redis.UniversalClient) {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	clients[id] = client
+}
+
 func Initialize(ctx context.Context, options []config.RedisOptions) error {
 	if len(options) == 0 {
 		return nil

@@ -3,7 +3,6 @@
 package gateway
 
 import (
-	"context"
 	"os/exec"
 )
 
@@ -24,11 +23,4 @@ func setCloExec(fd int) error {
 }
 
 func setUserAndGroup(cmd *exec.Cmd, uid, gid uint32) {
-}
-
-func DisableGopool() error {
-	runTask = func(ctx context.Context, f func()) {
-		go f()
-	}
-	return nil
 }

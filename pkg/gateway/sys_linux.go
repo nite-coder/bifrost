@@ -3,11 +3,9 @@
 package gateway
 
 import (
-	"context"
 	"os/exec"
 	"syscall"
 
-	"github.com/cloudwego/netpoll"
 	"golang.org/x/sys/unix"
 )
 
@@ -46,13 +44,5 @@ func setUserAndGroup(cmd *exec.Cmd, uid, gid uint32) {
 
 func setCloExec(fd int) error {
 	unix.CloseOnExec(fd)
-	return nil
-}
-
-func DisableGopool() error {
-	_ = netpoll.DisableGopool()
-	runTask = func(ctx context.Context, f func()) {
-		go f()
-	}
 	return nil
 }
