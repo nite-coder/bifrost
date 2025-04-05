@@ -128,7 +128,12 @@ func TestInitializeSingleRedis(t *testing.T) {
 	assert.True(t, ok)
 	assert.NotNil(t, client)
 
+	Set("test2", client)
 	client, found := Get("test2")
+	assert.True(t, found)
+	assert.NotNil(t, client)
+
+	client, found = Get("test3")
 	assert.False(t, found)
 	assert.Nil(t, client)
 }
