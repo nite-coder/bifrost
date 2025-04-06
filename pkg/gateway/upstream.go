@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
-	"log/slog"
 	"math"
 	"net"
 	"net/url"
@@ -112,63 +111,6 @@ func createHTTPUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, ups
 
 	upstream.proxies.Store(proxies)
 
-	if bifrost.resolver != nil && bifrost.resolver.Valid().Seconds() > 0 {
-		ticker := time.NewTicker(bifrost.options.Resolver.Valid)
-
-		go func() {
-			defer ticker.Stop()
-
-			for range ticker.C {
-				oldProxies := upstream.proxies.Load().([]proxy.Proxy)
-
-				newProxies, err := buildHTTPProxyList(bifrost, upstream, clientOpts, serviceOpts, upstreamOptions)
-				if err != nil {
-					slog.Debug("fail to build http upstream", slog.String("upstream_id", upstreamOptions.ID), slog.String("error", err.Error()))
-					continue
-				}
-
-				if len(newProxies) == 0 {
-					slog.Debug("fail to build http upstream because proxies is empty", slog.String("upstream_id", upstreamOptions.ID))
-					continue
-				}
-
-				var updatedProxies []proxy.Proxy
-
-				// remove old proxy if not exist in new proxies list
-				for _, oldProxy := range oldProxies {
-					isFound := false
-					for _, newProxy := range newProxies {
-						if oldProxy.Target() == newProxy.Target() {
-							isFound = true
-							break
-						}
-					}
-
-					if isFound {
-						updatedProxies = append(updatedProxies, oldProxy)
-					}
-				}
-
-				// add new proxy if not exist in updatedProxies
-				for _, newProxy := range newProxies {
-					isFound := false
-					for _, proxy := range updatedProxies {
-						if proxy.Target() == newProxy.Target() {
-							isFound = true
-							break
-						}
-					}
-
-					if !isFound {
-						updatedProxies = append(updatedProxies, newProxy)
-					}
-				}
-
-				upstream.proxies.Store(updatedProxies)
-			}
-		}()
-	}
-
 	return upstream, nil
 }
 
@@ -183,68 +125,7 @@ func createGRPCUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, 
 		return nil, err
 	}
 
-	if len(proxies) == 0 {
-		return nil, fmt.Errorf("proxies can't be empty. upstream id: %s", upstreamOptions.ID)
-	}
-
 	upstream.proxies.Store(proxies)
-
-	if bifrost.resolver != nil && bifrost.resolver.Valid().Seconds() > 0 {
-		ticker := time.NewTicker(bifrost.options.Resolver.Valid)
-
-		go func() {
-			defer ticker.Stop()
-
-			for range ticker.C {
-				oldProxies := upstream.proxies.Load().([]proxy.Proxy)
-
-				newProxies, err := buildGRPCProxyList(bifrost, upstream, serviceOptions, upstreamOptions)
-				if err != nil {
-					slog.Warn("fail to build grpc upstream", slog.String("upstream_id", upstreamOptions.ID), slog.String("error", err.Error()))
-					continue
-				}
-
-				if len(newProxies) == 0 {
-					slog.Warn("fail to build grpc upstream because proxies is empty", slog.String("upstream_id", upstreamOptions.ID))
-					continue
-				}
-
-				var updatedProxies []proxy.Proxy
-
-				// remove old proxy if not exist in new proxies list
-				for _, oldProxy := range oldProxies {
-					isFound := false
-					for _, newProxy := range newProxies {
-						if oldProxy.Target() == newProxy.Target() {
-							isFound = true
-							break
-						}
-					}
-
-					if isFound {
-						updatedProxies = append(updatedProxies, oldProxy)
-					}
-				}
-
-				// add new proxy if not exist in updatedProxies
-				for _, newProxy := range newProxies {
-					isFound := false
-					for _, proxy := range updatedProxies {
-						if proxy.Target() == newProxy.Target() {
-							isFound = true
-							break
-						}
-					}
-
-					if !isFound {
-						updatedProxies = append(updatedProxies, newProxy)
-					}
-				}
-
-				upstream.proxies.Store(updatedProxies)
-			}
-		}()
-	}
 
 	return upstream, nil
 }
@@ -514,15 +395,15 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 			}
 
 			var maxFails uint
-			if targetOpts.MaxFails == nil {
+			if updateOptions.HealthCheck.Passive.MaxFails == nil {
 				maxFails = bifrost.options.Default.Upstream.MaxFails
 			} else {
-				maxFails = *targetOpts.MaxFails
+				maxFails = *updateOptions.HealthCheck.Passive.MaxFails
 			}
 
 			var failTimeout time.Duration
-			if targetOpts.FailTimeout > 0 {
-				failTimeout = targetOpts.FailTimeout
+			if updateOptions.HealthCheck.Passive.FailTimeout > 0 {
+				failTimeout = updateOptions.HealthCheck.Passive.FailTimeout
 			} else if bifrost.options.Default.Upstream.FailTimeout > 0 {
 				failTimeout = bifrost.options.Default.Upstream.FailTimeout
 			}
@@ -588,15 +469,15 @@ func buildGRPCProxyList(bifrost *Bifrost, upstream *Upstream, serviceOptions con
 			}
 
 			var maxFails uint
-			if targetOpts.MaxFails == nil {
+			if upstreamOptions.HealthCheck.Passive.MaxFails == nil {
 				maxFails = bifrost.options.Default.Upstream.MaxFails
 			} else {
-				maxFails = *targetOpts.MaxFails
+				maxFails = *upstreamOptions.HealthCheck.Passive.MaxFails
 			}
 
 			var failTimeout time.Duration
-			if targetOpts.FailTimeout > 0 {
-				failTimeout = targetOpts.FailTimeout
+			if upstreamOptions.HealthCheck.Passive.FailTimeout > 0 {
+				failTimeout = upstreamOptions.HealthCheck.Passive.FailTimeout
 			} else if bifrost.options.Default.Upstream.FailTimeout > 0 {
 				failTimeout = bifrost.options.Default.Upstream.FailTimeout
 			}

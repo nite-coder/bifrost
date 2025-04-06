@@ -355,27 +355,18 @@ func TestHashing(t *testing.T) {
 
 func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 
-	var one uint
-	var zero uint
-
 	targetOptions := []config.TargetOptions{
 		{
-			Target:      "127.0.0.1:1234",
-			Weight:      1,
-			FailTimeout: time.Second,
-			MaxFails:    &one,
+			Target: "127.0.0.1:1234",
+			Weight: 1,
 		},
 		{
-			Target:      "127.0.0.1:1234",
-			Weight:      1,
-			FailTimeout: 10 * time.Second,
-			MaxFails:    &one,
+			Target: "127.0.0.1:1234",
+			Weight: 1,
 		},
 		{
-			Target:      "127.0.0.1:1234",
-			Weight:      1,
-			FailTimeout: 10 * time.Second,
-			MaxFails:    &zero,
+			Target: "127.0.0.1:1234",
+			Weight: 1,
 		},
 	}
 
@@ -422,8 +413,6 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 		},
 	)
 
-	time.Sleep(3 * time.Second)
-
 	assert.NoError(t, err)
 	assert.Len(t, upstream.proxies.Load().([]proxy.Proxy), 3)
 
@@ -439,8 +428,6 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 			Targets:  targetOptions,
 		},
 	)
-
-	time.Sleep(3 * time.Second)
 
 	assert.NoError(t, err)
 	assert.Len(t, upstream.proxies.Load().([]proxy.Proxy), 3)

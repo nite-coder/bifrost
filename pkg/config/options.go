@@ -236,18 +236,36 @@ const (
 	HashingStrategy    UpstreamStrategy = "hashing"
 )
 
-type TargetOptions struct {
-	Target      string        `yaml:"target" json:"target"`
-	MaxFails    *uint         `yaml:"max_fails" json:"max_fails"`
+type PassiveHealthOptions struct {
 	FailTimeout time.Duration `yaml:"fail_timeout" json:"fail_timeout"`
-	Weight      uint32        `yaml:"weight" json:"weight"`
+	MaxFails    *uint         `yaml:"max_fails" json:"max_fails"`
+}
+
+type ActiveHealthOptions struct {
+	Interval         time.Duration `yaml:"interval" json:"interval"`
+	Path             string        `yaml:"path" json:"path"`
+	Method           string        `yaml:"method" json:"method"`
+	Port             int           `yaml:"port" json:"port"`
+	SuccessThreshold int           `yaml:"success_threshold" json:"success_threshold"`
+	FailureThreshold int           `yaml:"failure_threshold" json:"failure_threshold"`
+}
+
+type HealthCheckOptions struct {
+	Passive PassiveHealthOptions `yaml:"passive" json:"passive"`
+	Active  ActiveHealthOptions  `yaml:"active" json:"active"`
+}
+
+type TargetOptions struct {
+	Target string `yaml:"target" json:"target"`
+	Weight uint32 `yaml:"weight" json:"weight"`
 }
 
 type UpstreamOptions struct {
-	ID       string           `yaml:"-" json:"-"`
-	Strategy UpstreamStrategy `yaml:"strategy" json:"strategy"`
-	HashOn   string           `yaml:"hash_on" json:"hash_on"`
-	Targets  []TargetOptions  `yaml:"targets" json:"targets"`
+	ID          string             `yaml:"-" json:"-"`
+	Strategy    UpstreamStrategy   `yaml:"strategy" json:"strategy"`
+	HashOn      string             `yaml:"hash_on" json:"hash_on"`
+	Targets     []TargetOptions    `yaml:"targets" json:"targets"`
+	HealthCheck HealthCheckOptions `yaml:"health_check" json:"health_check"`
 }
 
 type RouteOptions struct {
