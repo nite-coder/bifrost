@@ -395,15 +395,15 @@ func buildHTTPProxyList(bifrost *Bifrost, upstream *Upstream, clientOpts []hzcon
 			}
 
 			var maxFails uint
-			if targetOpts.MaxFails == nil {
+			if updateOptions.HealthCheck.Passive.MaxFails == nil {
 				maxFails = bifrost.options.Default.Upstream.MaxFails
 			} else {
-				maxFails = *targetOpts.MaxFails
+				maxFails = *updateOptions.HealthCheck.Passive.MaxFails
 			}
 
 			var failTimeout time.Duration
-			if targetOpts.FailTimeout > 0 {
-				failTimeout = targetOpts.FailTimeout
+			if updateOptions.HealthCheck.Passive.FailTimeout > 0 {
+				failTimeout = updateOptions.HealthCheck.Passive.FailTimeout
 			} else if bifrost.options.Default.Upstream.FailTimeout > 0 {
 				failTimeout = bifrost.options.Default.Upstream.FailTimeout
 			}
@@ -469,15 +469,15 @@ func buildGRPCProxyList(bifrost *Bifrost, upstream *Upstream, serviceOptions con
 			}
 
 			var maxFails uint
-			if targetOpts.MaxFails == nil {
+			if upstreamOptions.HealthCheck.Passive.MaxFails == nil {
 				maxFails = bifrost.options.Default.Upstream.MaxFails
 			} else {
-				maxFails = *targetOpts.MaxFails
+				maxFails = *upstreamOptions.HealthCheck.Passive.MaxFails
 			}
 
 			var failTimeout time.Duration
-			if targetOpts.FailTimeout > 0 {
-				failTimeout = targetOpts.FailTimeout
+			if upstreamOptions.HealthCheck.Passive.FailTimeout > 0 {
+				failTimeout = upstreamOptions.HealthCheck.Passive.FailTimeout
 			} else if bifrost.options.Default.Upstream.FailTimeout > 0 {
 				failTimeout = bifrost.options.Default.Upstream.FailTimeout
 			}

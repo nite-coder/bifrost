@@ -26,7 +26,6 @@ This configuration file is divided into two primary types: `static configuration
 * [upstreams](#upstreams)
 * [default](#default)
 
-
 ## watch
 
 If `true`, the `watch` features of each provider will be enabled.  By default, `watch` is `true`.
@@ -348,21 +347,23 @@ upstreams:
   test-server: # Unique upstream name
     strategy: "round_robin"
     hash_on: ""
-    targets:
-      - target: "127.0.0.1:8000"
+    health_check:
+      passive:
         max_fails: 1
         fail_timeout: 10s
+    targets:
+      - target: "127.0.0.1:8000"
         weight: 1
 ```
 
-| Field                | Type     | Default       | Description                                                                          |
-| -------------------- | -------- | ------------- | ------------------------------------------------------------------------------------ |
-| strategy             | `string` | `round_robin` | Load balancing algorithm; supports `round_robin`、`random`、`weighted`、`hashing`    |
-| hash_on              | `string` |               | Variable used for hash-based load balancing, effective only if strategy is `hashing` |
-| targets.target       | `string` |               | Target IP                                                                            |
-| targets.max_fails    | `int32`  | `0`           | Maximum failure count; `0` - indicates no limit                                      |
-| targets.fail_timeout | `int32`  | `0`           | Time window for tracking failure counts                                              |
-| targets.weight       | `int32`  | `1`           | Weight for load balancing                                                            |
+| Field                             | Type            | Default       | Description                                                                          |
+| --------------------------------- | --------------- | ------------- | ------------------------------------------------------------------------------------ |
+| strategy                          | `string`        | `round_robin` | Load balancing algorithm; supports `round_robin`、`random`、`weighted`、`hashing`    |
+| hash_on                           | `string`        |               | Variable used for hash-based load balancing, effective only if strategy is `hashing` |
+| health_check.passive.max_fails    | `int32`         | `0`           | Maximum failure count; `0` - indicates no limit                                      |
+| health_check.passive.fail_timeout | `time.Duration` | `0`           | Time window for tracking failure counts                                              |
+| targets.target                    | `string`        |               | Target address                                                                       |
+| targets.weight                    | `int32`         | `1`           | Weight for load balancing                                                            |
 
 ## default
 

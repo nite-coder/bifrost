@@ -15,6 +15,10 @@
 
 - When the service encounters a `no free connections available to host` error, return HTTP status code `500` instead of `502`
 
+### **Refactor**
+
+- move `fail_timeout` and `max_fails` from target to upstream level (passive healthcheck)
+
 ### **Test**
 
 - Improve `middlware(mirror)` package test coverage.
