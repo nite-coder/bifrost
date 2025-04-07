@@ -42,6 +42,9 @@ func (i *Instance) Address() net.Addr {
 }
 
 func (i *Instance) Weight() uint32 {
+	if i.weight <= 0 {
+		return 1
+	}
 	return i.weight
 }
 

@@ -140,20 +140,11 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 		},
 	}
 
-	switch serviceOptions.Protocol {
-	case config.ProtocolHTTP, config.ProtocolHTTP2:
-		upstream, err := createHTTPUpstream(bifrost, serviceOptions, upstreamOptions)
-		if err != nil {
-			return nil, err
-		}
-		svc.upstream = upstream
-	case config.ProtocolGRPC:
-		upstream, err := createGRPCUpstream(bifrost, serviceOptions, upstreamOptions)
-		if err != nil {
-			return nil, err
-		}
-		svc.upstream = upstream
+	upstream, err = newUpstream(bifrost, serviceOptions, upstreamOptions)
+	if err != nil {
+		return nil, err
 	}
+	svc.upstream = upstream
 
 	return svc, nil
 }

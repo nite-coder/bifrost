@@ -129,8 +129,9 @@ type NacosProviderOptions struct {
 }
 
 type DNSProviderOptions struct {
-	Enabled bool     `yaml:"enabled" json:"enabled"`
-	Servers []string `yaml:"servers" json:"servers"`
+	Enabled bool          `yaml:"enabled" json:"enabled"`
+	Servers []string      `yaml:"servers" json:"servers"`
+	Valid   time.Duration `yaml:"valid" json:"valid"`
 }
 
 type MetricsOptions struct {

@@ -52,8 +52,7 @@ type Upstream struct {
 	hasher         hash.Hash32
 }
 
-func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, upstreamOptions config.UpstreamOptions) (*Upstream, error) {
-
+func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstreamOptions config.UpstreamOptions) (*Upstream, error) {
 	if len(upstreamOptions.ID) == 0 {
 		return nil, errors.New("upstream id can't be empty")
 	}
@@ -62,14 +61,32 @@ func newUpstream(bifrost *Bifrost, serviceOpts config.ServiceOptions, upstreamOp
 		return nil, fmt.Errorf("targets can't be empty. upstream id: %s", upstreamOptions.ID)
 	}
 
-	switch serviceOpts.Protocol {
-	case config.ProtocolHTTP, config.ProtocolHTTP2:
-		return createHTTPUpstream(bifrost, serviceOpts, upstreamOptions)
-	case config.ProtocolGRPC:
-		return createGRPCUpstream(bifrost, serviceOpts, upstreamOptions)
+	upstream := &Upstream{
+		bifrost:        bifrost,
+		options:        &upstreamOptions,
+		ServiceOptions: &serviceOptions,
+		hasher:         fnv.New32a(),
 	}
 
-	return nil, nil
+	switch strings.ToLower(upstreamOptions.Discovery.Type) {
+	case "dns":
+		discovery := dns.NewDNSServiceDiscovery(bifrost.options.Providers.DNS.Servers, bifrost.resolver.Valid())
+		upstream.discovery = discovery
+	default:
+		discovery := NewResolverDiscovery(upstream)
+		upstream.discovery = discovery
+	}
+
+	err := upstream.refreshProxies(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		_ = upstream.watch()
+	}()
+
+	return upstream, nil
 }
 
 func (u *Upstream) roundRobin() proxy.Proxy {
@@ -338,22 +355,6 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			}))
 		}
 
-		url := fmt.Sprintf("%s://%s%s", addr.Scheme, targetHost, addr.Path)
-
-		if port != "" {
-			url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
-		}
-
-		clientOptions := httpproxy.ClientOptions{
-			IsHTTP2:   u.ServiceOptions.Protocol == config.ProtocolHTTP2,
-			HZOptions: clientOpts,
-		}
-
-		client, err := httpproxy.NewClient(clientOptions)
-		if err != nil {
-			return err
-		}
-
 		var maxFails uint
 		if u.options.HealthCheck.Passive.MaxFails == nil {
 			maxFails = u.bifrost.options.Default.Upstream.MaxFails
@@ -368,22 +369,63 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			failTimeout = u.bifrost.options.Default.Upstream.FailTimeout
 		}
 
-		proxyOptions := httpproxy.Options{
-			Target:           url,
-			Protocol:         u.ServiceOptions.Protocol,
-			Weight:           instance.Weight(),
-			MaxFails:         maxFails,
-			FailTimeout:      failTimeout,
-			HeaderHost:       serverName, // when client uses ip address to connect to server, client need to set the host to the domain name you want to use
-			IsTracingEnabled: u.bifrost.options.Tracing.Enabled,
-			ServiceID:        u.ServiceOptions.ID,
-		}
+		url := ""
+		switch u.ServiceOptions.Protocol {
+		case config.ProtocolHTTP, config.ProtocolHTTP2:
+			url = fmt.Sprintf("%s://%s%s", addr.Scheme, targetHost, addr.Path)
 
-		proxy, err := httpproxy.New(proxyOptions, client)
-		if err != nil {
-			return err
+			if port != "" {
+				url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
+			}
+
+			clientOptions := httpproxy.ClientOptions{
+				IsHTTP2:   u.ServiceOptions.Protocol == config.ProtocolHTTP2,
+				HZOptions: clientOpts,
+			}
+
+			client, err := httpproxy.NewClient(clientOptions)
+			if err != nil {
+				return err
+			}
+
+			proxyOptions := httpproxy.Options{
+				Target:           url,
+				Protocol:         u.ServiceOptions.Protocol,
+				Weight:           instance.Weight(),
+				MaxFails:         maxFails,
+				FailTimeout:      failTimeout,
+				HeaderHost:       serverName, // when client uses ip address to connect to server, client need to set the host to the domain name you want to use
+				IsTracingEnabled: u.bifrost.options.Tracing.Enabled,
+				ServiceID:        u.ServiceOptions.ID,
+			}
+
+			proxy, err := httpproxy.New(proxyOptions, client)
+			if err != nil {
+				return err
+			}
+			proxies = append(proxies, proxy)
+		case config.ProtocolGRPC:
+			url = fmt.Sprintf("grpc://%s%s", targetHost, addr.Path)
+
+			if port != "" {
+				url = fmt.Sprintf("grpc://%s:%s%s", targetHost, port, addr.Path)
+			}
+
+			grpcOptions := grpcproxy.Options{
+				Target:      url,
+				TLSVerify:   u.ServiceOptions.TLSVerify,
+				Weight:      1,
+				MaxFails:    maxFails,
+				FailTimeout: failTimeout,
+				Timeout:     u.ServiceOptions.Timeout.GRPC,
+			}
+
+			grpcProxy, err := grpcproxy.New(grpcOptions)
+			if err != nil {
+				return err
+			}
+			proxies = append(proxies, grpcProxy)
 		}
-		proxies = append(proxies, proxy)
 	}
 
 	u.proxies.Store(proxies)
@@ -419,120 +461,4 @@ func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[str
 	}
 
 	return upstreams, nil
-}
-
-func createHTTPUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstreamOptions config.UpstreamOptions) (*Upstream, error) {
-	upstream := &Upstream{
-		bifrost:        bifrost,
-		options:        &upstreamOptions,
-		ServiceOptions: &serviceOptions,
-		hasher:         fnv.New32a(),
-	}
-
-	switch strings.ToLower(upstreamOptions.Discovery.Type) {
-	case "dns":
-		discovery := dns.NewDNSServiceDiscovery(bifrost.options.Providers.DNS.Servers, bifrost.resolver.Valid())
-		upstream.discovery = discovery
-	default:
-		discovery := NewResolverDiscovery(upstream)
-		upstream.discovery = discovery
-	}
-
-	err := upstream.refreshProxies(nil)
-	if err != nil {
-		return nil, err
-	}
-
-	go func() {
-		_ = upstream.watch()
-	}()
-
-	return upstream, nil
-}
-
-func createGRPCUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstreamOptions config.UpstreamOptions) (*Upstream, error) {
-	upstream := &Upstream{
-		options: &upstreamOptions,
-		hasher:  fnv.New32a(),
-	}
-
-	proxies, err := buildGRPCProxyList(bifrost, upstream, serviceOptions, upstreamOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	upstream.proxies.Store(proxies)
-
-	return upstream, nil
-}
-
-func buildGRPCProxyList(bifrost *Bifrost, upstream *Upstream, serviceOptions config.ServiceOptions, upstreamOptions config.UpstreamOptions) ([]proxy.Proxy, error) {
-	proxies := make([]proxy.Proxy, 0)
-
-	for _, targetOpts := range upstreamOptions.Targets {
-
-		if upstreamOptions.Strategy == config.WeightedStrategy && targetOpts.Weight == 0 {
-			return nil, fmt.Errorf("weight can't be 0. upstream id: %s, target: %s", upstreamOptions.ID, targetOpts.Target)
-		}
-
-		upstream.totalWeight += targetOpts.Weight
-
-		targetHost, targetPort, err := net.SplitHostPort(targetOpts.Target)
-		if err != nil {
-			targetHost = targetOpts.Target
-		}
-
-		ips, err := bifrost.resolver.Lookup(context.Background(), targetHost)
-		if err != nil {
-			return nil, fmt.Errorf("lookup upstream host error: %w", err)
-		}
-
-		for _, ip := range ips {
-			addr, err := url.Parse(serviceOptions.Url)
-			if err != nil {
-				return nil, err
-			}
-
-			port := targetPort
-			if len(addr.Port()) > 0 {
-				port = addr.Port()
-			}
-
-			url := fmt.Sprintf("grpc://%s%s", ip, addr.Path)
-			if port != "" {
-				url = fmt.Sprintf("grpc://%s:%s%s", ip, port, addr.Path)
-			}
-
-			var maxFails uint
-			if upstreamOptions.HealthCheck.Passive.MaxFails == nil {
-				maxFails = bifrost.options.Default.Upstream.MaxFails
-			} else {
-				maxFails = *upstreamOptions.HealthCheck.Passive.MaxFails
-			}
-
-			var failTimeout time.Duration
-			if upstreamOptions.HealthCheck.Passive.FailTimeout > 0 {
-				failTimeout = upstreamOptions.HealthCheck.Passive.FailTimeout
-			} else if bifrost.options.Default.Upstream.FailTimeout > 0 {
-				failTimeout = bifrost.options.Default.Upstream.FailTimeout
-			}
-
-			grpcOptions := grpcproxy.Options{
-				Target:      url,
-				TLSVerify:   serviceOptions.TLSVerify,
-				Weight:      1,
-				MaxFails:    maxFails,
-				FailTimeout: failTimeout,
-				Timeout:     serviceOptions.Timeout.GRPC,
-			}
-
-			grpcProxy, err := grpcproxy.New(grpcOptions)
-			if err != nil {
-				return nil, err
-			}
-			proxies = append(proxies, grpcProxy)
-		}
-	}
-
-	return proxies, nil
 }
