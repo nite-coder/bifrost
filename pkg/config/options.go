@@ -96,6 +96,7 @@ func (opt Options) ConfigPath() string {
 type ProviderOtions struct {
 	File  FileProviderOptions  `yaml:"file" json:"file"`
 	Nacos NacosProviderOptions `yaml:"nacos" json:"nacos"`
+	DNS   DNSProviderOptions   `yaml:"dns" json:"dns"`
 }
 
 type FileProviderOptions struct {
@@ -125,6 +126,11 @@ type NacosConfigOptions struct {
 
 type NacosProviderOptions struct {
 	Config NacosConfigOptions `yaml:"config" json:"config"`
+}
+
+type DNSProviderOptions struct {
+	Enabled bool     `yaml:"enabled" json:"enabled"`
+	Servers []string `yaml:"servers" json:"servers"`
 }
 
 type MetricsOptions struct {
@@ -260,10 +266,16 @@ type TargetOptions struct {
 	Weight uint32 `yaml:"weight" json:"weight"`
 }
 
+type DiscoveryOptions struct {
+	Type        string `yaml:"type" json:"type"`
+	ServiceName string `yaml:"service_name" json:"service_name"`
+}
+
 type UpstreamOptions struct {
 	ID          string             `yaml:"-" json:"-"`
 	Strategy    UpstreamStrategy   `yaml:"strategy" json:"strategy"`
 	HashOn      string             `yaml:"hash_on" json:"hash_on"`
+	Discovery   DiscoveryOptions   `yaml:"discovery" json:"discovery"`
 	Targets     []TargetOptions    `yaml:"targets" json:"targets"`
 	HealthCheck HealthCheckOptions `yaml:"health_check" json:"health_check"`
 }
