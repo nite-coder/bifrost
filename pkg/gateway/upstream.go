@@ -438,6 +438,10 @@ func (u *Upstream) watch() error {
 		return err
 	}
 
+	if watchCh == nil {
+		return nil
+	}
+
 	for instances := range watchCh {
 		_ = u.refreshProxies(instances)
 	}
