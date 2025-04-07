@@ -67,22 +67,15 @@ user: nobody
 group: nogroup
 ```
 
-## resolver
+## resolvers
 
-The DNS resolver configuration.  By default, Bifrost will resolve all domain name and cache all IPs at beginning.  The cache will not refresh until the gateway is restarted or reloaded.
+The list of dns servers.  By default, Bifrost will resolve all domain name and cache all IPs when the gateway starts.  The cache will not refresh until the gateway is restarted or reloaded.
 
 Example:
 
 ```yaml
-resolver:
-  addr_port: "8.8.8.8:53"
-  valid: 5s
+resolvers: ["8.8.8.8:53"]
 ```
-
-| Field     | Type            | Default | Description                                                                        |
-| --------- | --------------- | ------- | ---------------------------------------------------------------------------------- |
-| addr_port | `string`        |         | DNS server address and port.  If empty, the local `/etc/resolv.conf` will be used. |
-| valid     | `time.Duration` | 0       | Time to refresh the DNS cache.  `0`: means no refresh.  It must be greater than 0. |
 
 ## pid_file
 

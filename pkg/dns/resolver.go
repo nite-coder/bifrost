@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"strings"
@@ -27,8 +28,7 @@ type Resolver struct {
 
 type Options struct {
 	// dns server for querying
-	AddrPort string
-	Valid    time.Duration
+	Servers  []string
 	SkipTest bool
 }
 
@@ -43,21 +43,24 @@ func NewResolver(option Options) (*Resolver, error) {
 	r.options = &option
 	r.client = new(dns.Client)
 
-	if option.AddrPort == "" {
+	if len(option.Servers) == 0 {
 		servers := GetDNSServers()
 
 		if len(servers) == 0 {
 			return nil, fmt.Errorf("dns: %w; can't get dns server", ErrNotFound)
 		}
 
-		option.AddrPort = servers[0].String()
+		for _, server := range servers {
+			option.Servers = append(option.Servers, server.String())
+		}
 	}
 
 	if !option.SkipTest {
-		err := ValidateDNSServer(option.AddrPort)
+		validServers, err := ValidateDNSServer(option.Servers)
 		if err != nil {
 			return nil, err
 		}
+		option.Servers = validServers
 	}
 
 	if err := r.loadHostsFile(); err != nil {
@@ -92,28 +95,39 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 	m := new(dns.Msg)
 	m.SetQuestion(dns.Fqdn(host), dns.TypeA)
 
-	in, _, err := r.client.ExchangeContext(ctx, m, r.options.AddrPort)
-	if err != nil {
-		return nil, fmt.Errorf("dns: fail to query '%s' to dns server '%s', error: %w", host, r.options.AddrPort, err)
-	}
-
 	var ips []string
-	for _, answer := range in.Answer {
-		if a, ok := answer.(*dns.A); ok {
-			ips = append(ips, a.A.String())
+	var minTTL uint32 = 0
+
+	for _, server := range r.options.Servers {
+		in, _, err := r.client.ExchangeContext(ctx, m, server)
+		if err != nil {
+			slog.Debug("dns: failed to resolve host", "host", host, "server", server, "error", err)
+			continue
 		}
+
+		for _, answer := range in.Answer {
+			if a, ok := answer.(*dns.A); ok {
+				ips = append(ips, a.A.String())
+
+				if minTTL == 0 || a.Hdr.Ttl < minTTL {
+					minTTL = a.Hdr.Ttl
+				}
+			}
+		}
+
+		if len(ips) == 0 {
+			continue
+		}
+
+		ttlDuration := time.Duration(minTTL) * time.Second
+		r.dnsCache.PutWithTTL(host, ips, ttlDuration)
 	}
 
 	if len(ips) == 0 {
 		return nil, fmt.Errorf("dns: %w; can't resolve host '%s'", ErrNotFound, host)
 	}
 
-	r.dnsCache.PutWithTTL(host, ips, r.options.Valid)
 	return ips, nil
-}
-
-func (r *Resolver) Valid() time.Duration {
-	return r.options.Valid
 }
 
 func (r *Resolver) loadHostsFile() error {
@@ -145,13 +159,11 @@ func (r *Resolver) loadHostsFile() error {
 	return scanner.Err()
 }
 
-// ValidateDNSServer checks the responsiveness and validity of a DNS server.
-// It sends a query to the given DNS server address and verifies if the server
-// responds and returns a successful status code. If the server does not respond
-// or returns an error code, an error is returned detailing the issue.
+// ValidateDNSServer validates a list of DNS servers by sending a query to each of them
+// and checking if they respond with a valid answer. It returns a list of valid servers
+// and an error if no valid server is found.
 
-func ValidateDNSServer(addr string) error {
-
+func ValidateDNSServer(servers []string) ([]string, error) {
 	m := new(dns.Msg)
 	m.SetQuestion(".", dns.TypeNS)
 	m.RecursionDesired = true
@@ -159,18 +171,30 @@ func ValidateDNSServer(addr string) error {
 	c := new(dns.Client)
 	c.Timeout = 5 * time.Second
 
-	resp, _, err := c.Exchange(m, addr)
-	if err != nil {
-		return fmt.Errorf("DNS server is not responding: %w", err)
+	result := make([]string, 0)
+	for _, server := range servers {
+		resp, _, err := c.Exchange(m, server)
+		if err != nil {
+			slog.Debug("DNS server is not responding", "server", server, "error", err)
+			continue
+		}
+
+		if resp == nil {
+			slog.Debug("no response from DNS server", "server", server)
+			continue
+		}
+
+		if resp.Rcode != dns.RcodeSuccess && resp.Rcode != dns.RcodeNameError {
+			slog.Debug("DNS server returned error code", "server", server, "code", dns.RcodeToString[resp.Rcode])
+			continue
+		}
+
+		result = append(result, server)
 	}
 
-	if resp == nil {
-		return errors.New("no response from DNS server")
+	if len(result) == 0 {
+		return nil, errors.New("no valid DNS server found")
 	}
 
-	if resp.Rcode != dns.RcodeSuccess && resp.Rcode != dns.RcodeNameError {
-		return fmt.Errorf("DNS server returned error code: %v", dns.RcodeToString[resp.Rcode])
-	}
-
-	return nil
+	return result, nil
 }

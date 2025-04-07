@@ -70,7 +70,7 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 
 	switch strings.ToLower(upstreamOptions.Discovery.Type) {
 	case "dns":
-		discovery := dns.NewDNSServiceDiscovery(bifrost.options.Providers.DNS.Servers, bifrost.resolver.Valid())
+		discovery := dns.NewDNSServiceDiscovery(bifrost.options.Providers.DNS.Servers, bifrost.options.Providers.DNS.Valid)
 		upstream.discovery = discovery
 	default:
 		discovery := NewResolverDiscovery(upstream)

@@ -9,10 +9,11 @@ import (
 type Options struct {
 	configPath      string                      `yaml:"-" json:"-"`
 	IsDaemon        bool                        `yaml:"-" json:"-"`
+	SkipResolver    bool                        `yaml:"-" json:"-"`
 	PIDFile         string                      `yaml:"pid_file" json:"pid_file"`
 	UpgradeSock     string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
 	Gopool          bool                        `yaml:"gopool" json:"gopool"`
-	Resolver        ResolverOptions             `yaml:"resolver" json:"resolver"`
+	Resolvers       []string                    `yaml:"resolvers" json:"resolvers"`
 	NumLoops        int                         `yaml:"num_loops" json:"num_loops"`
 	Watch           *bool                       `yaml:"watch" json:"watch"`
 	User            string                      `yaml:"user" json:"user"`
@@ -333,9 +334,7 @@ type RedisOptions struct {
 }
 
 type ResolverOptions struct {
-	AddrPort string        `yaml:"addr_port" json:"addr_port"`
-	Valid    time.Duration `yaml:"valid" json:"valid"`
-	SkipTest bool          `yaml:"-" json:"-"`
+	AddrPort string `yaml:"addr_port" json:"addr_port"`
 }
 
 type DefaultServiceOptions struct {

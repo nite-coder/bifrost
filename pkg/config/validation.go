@@ -21,10 +21,10 @@ import (
 // ValidateConfig checks if the config's values are valid, but does not check if the config's value mapping is valid
 func ValidateConfig(mainOptions Options, isFullMode bool) error {
 
-	if dnsResolver == nil && !mainOptions.Resolver.SkipTest {
+	if dnsResolver == nil && !mainOptions.SkipResolver {
 		var err error
 		dnsResolver, err = dns.NewResolver(dns.Options{
-			AddrPort: mainOptions.Resolver.AddrPort,
+			Servers: mainOptions.Resolvers,
 		})
 
 		if err != nil {
@@ -404,7 +404,7 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 		if hostname[0] != '$' && !strings.EqualFold("localhost", hostname) && !strings.EqualFold("[::1]", hostname) {
 			_, found := mainOptions.Upstreams[hostname]
 			if !found {
-				if dnsResolver != nil && !mainOptions.Resolver.SkipTest {
+				if dnsResolver != nil && !mainOptions.SkipResolver {
 					ips, err := dnsResolver.Lookup(context.Background(), hostname)
 					if err != nil {
 						return fmt.Errorf("fail to lookup host '%s' in the service '%s', error: %w", hostname, serviceID, err)
@@ -476,7 +476,7 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 		for _, target := range opt.Targets {
 			addr := extractAddr(target.Target)
 			if !strings.EqualFold("localhost", addr) && !strings.EqualFold("[::1]", addr) {
-				if dnsResolver != nil && !mainOptions.Resolver.SkipTest {
+				if dnsResolver != nil && !mainOptions.SkipResolver {
 					ips, err := dnsResolver.Lookup(context.Background(), addr)
 					if err != nil {
 						return fmt.Errorf("fail to lookup host '%s' in the upstream '%s', error: %w", addr, upstreamID, err)
