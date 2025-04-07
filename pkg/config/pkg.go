@@ -72,7 +72,7 @@ func load(path string, skipResolver bool) (Options, error) {
 	}
 
 	if skipResolver {
-		mainOpts.Resolver.SkipTest = true
+		mainOpts.SkipResolver = true
 	}
 
 	err = ValidateConfig(mainOpts, true)

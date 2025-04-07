@@ -140,20 +140,11 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 		},
 	}
 
-	switch serviceOptions.Protocol {
-	case config.ProtocolHTTP, config.ProtocolHTTP2:
-		upstream, err := createHTTPUpstream(bifrost, serviceOptions, upstreamOptions)
-		if err != nil {
-			return nil, err
-		}
-		svc.upstream = upstream
-	case config.ProtocolGRPC:
-		upstream, err := createGRPCUpstream(bifrost, serviceOptions, upstreamOptions)
-		if err != nil {
-			return nil, err
-		}
-		svc.upstream = upstream
+	upstream, err = newUpstream(bifrost, serviceOptions, upstreamOptions)
+	if err != nil {
+		return nil, err
 	}
+	svc.upstream = upstream
 
 	return svc, nil
 }
@@ -201,9 +192,9 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 		var proxy proxy.Proxy
 		if svc.upstream != nil {
-			c.Set(variable.UpstreamID, svc.upstream.opts.ID)
+			c.Set(variable.UpstreamID, svc.upstream.options.ID)
 
-			switch svc.upstream.opts.Strategy {
+			switch svc.upstream.options.Strategy {
 			case config.RoundRobinStrategy, "":
 				proxy = svc.upstream.roundRobin()
 			case config.WeightedStrategy:
@@ -211,7 +202,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			case config.RandomStrategy:
 				proxy = svc.upstream.random()
 			case config.HashingStrategy:
-				hashon := svc.upstream.opts.HashOn
+				hashon := svc.upstream.options.HashOn
 				val := variable.GetString(hashon, c)
 				proxy = svc.upstream.hasing(val)
 			}

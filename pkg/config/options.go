@@ -9,10 +9,11 @@ import (
 type Options struct {
 	configPath      string                      `yaml:"-" json:"-"`
 	IsDaemon        bool                        `yaml:"-" json:"-"`
+	SkipResolver    bool                        `yaml:"-" json:"-"`
 	PIDFile         string                      `yaml:"pid_file" json:"pid_file"`
 	UpgradeSock     string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
 	Gopool          bool                        `yaml:"gopool" json:"gopool"`
-	Resolver        ResolverOptions             `yaml:"resolver" json:"resolver"`
+	Resolvers       []string                    `yaml:"resolvers" json:"resolvers"`
 	NumLoops        int                         `yaml:"num_loops" json:"num_loops"`
 	Watch           *bool                       `yaml:"watch" json:"watch"`
 	User            string                      `yaml:"user" json:"user"`
@@ -96,6 +97,7 @@ func (opt Options) ConfigPath() string {
 type ProviderOtions struct {
 	File  FileProviderOptions  `yaml:"file" json:"file"`
 	Nacos NacosProviderOptions `yaml:"nacos" json:"nacos"`
+	DNS   DNSProviderOptions   `yaml:"dns" json:"dns"`
 }
 
 type FileProviderOptions struct {
@@ -125,6 +127,12 @@ type NacosConfigOptions struct {
 
 type NacosProviderOptions struct {
 	Config NacosConfigOptions `yaml:"config" json:"config"`
+}
+
+type DNSProviderOptions struct {
+	Enabled bool          `yaml:"enabled" json:"enabled"`
+	Servers []string      `yaml:"servers" json:"servers"`
+	Valid   time.Duration `yaml:"valid" json:"valid"`
 }
 
 type MetricsOptions struct {
@@ -260,10 +268,16 @@ type TargetOptions struct {
 	Weight uint32 `yaml:"weight" json:"weight"`
 }
 
+type DiscoveryOptions struct {
+	Type        string `yaml:"type" json:"type"`
+	ServiceName string `yaml:"service_name" json:"service_name"`
+}
+
 type UpstreamOptions struct {
 	ID          string             `yaml:"-" json:"-"`
 	Strategy    UpstreamStrategy   `yaml:"strategy" json:"strategy"`
 	HashOn      string             `yaml:"hash_on" json:"hash_on"`
+	Discovery   DiscoveryOptions   `yaml:"discovery" json:"discovery"`
 	Targets     []TargetOptions    `yaml:"targets" json:"targets"`
 	HealthCheck HealthCheckOptions `yaml:"health_check" json:"health_check"`
 }
@@ -320,9 +334,7 @@ type RedisOptions struct {
 }
 
 type ResolverOptions struct {
-	AddrPort string        `yaml:"addr_port" json:"addr_port"`
-	Valid    time.Duration `yaml:"valid" json:"valid"`
-	SkipTest bool          `yaml:"-" json:"-"`
+	AddrPort string `yaml:"addr_port" json:"addr_port"`
 }
 
 type DefaultServiceOptions struct {

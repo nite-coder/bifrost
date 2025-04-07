@@ -376,17 +376,12 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 		Targets:  targetOptions,
 	}
 
-	dnsResolver, err := dns.NewResolver(dns.Options{
-		Valid: time.Second,
-	})
+	dnsResolver, err := dns.NewResolver(dns.Options{})
 	assert.NoError(t, err)
 
 	bifrost := &Bifrost{
 		options: &config.Options{
-			Resolver: config.ResolverOptions{
-				SkipTest: true,
-				Valid:    time.Second,
-			},
+			SkipResolver: true,
 			Upstreams: map[string]config.UpstreamOptions{
 				"test": upstreamOptions,
 			},

@@ -11,10 +11,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	dnsResolver, _ = dns.NewResolver(dns.Options{
-		AddrPort: "",
-	})
-
+	dnsResolver, _ = dns.NewResolver(dns.Options{})
 	exitCode := m.Run()
 	os.Exit(exitCode)
 }
@@ -249,7 +246,6 @@ func TestValidateRoutes(t *testing.T) {
 	})
 }
 
-
 func TestValidateMiddlewares(t *testing.T) {
 
 	t.Run("normal", func(t *testing.T) {
@@ -261,7 +257,6 @@ func TestValidateMiddlewares(t *testing.T) {
 		err := validateMiddlewares(options, true)
 		assert.NoError(t, err)
 	})
-
 
 	t.Run("not found middleware", func(t *testing.T) {
 		options := NewOptions()
@@ -408,7 +403,7 @@ func TestValidateService(t *testing.T) {
 		err := validateServices(options, true)
 		assert.NoError(t, err)
 
-		options.Resolver.SkipTest = true
+		options.SkipResolver = true
 		err = validateServices(options, true)
 		assert.NoError(t, err)
 	})
@@ -429,7 +424,7 @@ func TestValidateService(t *testing.T) {
 		err := validateServices(options, true)
 		assert.NoError(t, err)
 
-		options.Resolver.SkipTest = true
+		options.SkipResolver = true
 		err = validateServices(options, true)
 		assert.NoError(t, err)
 	})
@@ -450,7 +445,7 @@ func TestValidateService(t *testing.T) {
 		err := validateServices(options, true)
 		assert.NoError(t, err)
 
-		options.Resolver.SkipTest = true
+		options.SkipResolver = true
 		err = validateServices(options, true)
 		assert.NoError(t, err)
 	})
@@ -465,7 +460,7 @@ func TestValidateService(t *testing.T) {
 		err := validateServices(options, true)
 		assert.Error(t, err)
 
-		options.Resolver.SkipTest = true
+		options.SkipResolver = true
 		err = validateServices(options, true)
 		assert.Error(t, err)
 	})
@@ -527,7 +522,7 @@ func TestValidateUpstream(t *testing.T) {
 		err := validateUpstreams(options, true)
 		assert.NoError(t, err)
 
-		options.Resolver.SkipTest = true
+		options.SkipResolver = true
 		err = validateUpstreams(options, true)
 		assert.NoError(t, err)
 	})
@@ -548,7 +543,7 @@ func TestValidateUpstream(t *testing.T) {
 		err := validateUpstreams(options, true)
 		assert.NoError(t, err)
 
-		options.Resolver.SkipTest = true
+		options.SkipResolver = true
 		err = validateUpstreams(options, true)
 		assert.NoError(t, err)
 	})
@@ -573,7 +568,7 @@ func TestValidateUpstream(t *testing.T) {
 		err := validateUpstreams(options, true)
 		assert.NoError(t, err)
 
-		options.Resolver.SkipTest = true
+		options.SkipResolver = true
 		err = validateUpstreams(options, true)
 		assert.NoError(t, err)
 	})
@@ -594,7 +589,7 @@ func TestValidateUpstream(t *testing.T) {
 		err := validateUpstreams(options, true)
 		assert.Error(t, err)
 
-		options.Resolver.SkipTest = true
+		options.SkipResolver = true
 		err = validateUpstreams(options, true)
 		assert.NoError(t, err)
 	})

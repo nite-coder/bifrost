@@ -25,7 +25,7 @@ type Bifrost struct {
 	state          uint32
 	tracerProvider *sdktrace.TracerProvider
 	options        *config.Options
-	resolver       resolver
+	resolver       *dns.Resolver
 	zero           *zero.ZeroDownTime
 	middlewares    map[string]app.HandlerFunc
 	services       map[string]*Service
@@ -148,9 +148,8 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	}
 
 	resolveOptions := dns.Options{
-		AddrPort: mainOptions.Resolver.AddrPort,
-		Valid:    mainOptions.Resolver.Valid,
-		SkipTest: mainOptions.Resolver.SkipTest,
+		Servers:  mainOptions.Resolvers,
+		SkipTest: mainOptions.SkipResolver,
 	}
 
 	dnsResolver, err := dns.NewResolver(resolveOptions)
