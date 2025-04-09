@@ -469,8 +469,19 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 			return newInvalidConfig(structure, "", msg)
 		}
 
-		if upstreamOptions.Discovery.Type == "" && len(upstreamOptions.Targets) == 0 {
-			return fmt.Errorf("the targets can't be empty in the upstream '%s'", upstreamID)
+		switch upstreamOptions.Discovery.Type {
+		case "dns":
+			if !mainOptions.Providers.DNS.Enabled {
+				return fmt.Errorf("dns provider is disabled. upstream id: %s", upstreamID)
+			}
+		case "":
+			if upstreamOptions.Discovery.Type == "" && len(upstreamOptions.Targets) == 0 {
+				return fmt.Errorf("the targets can't be empty in the upstream '%s'", upstreamID)
+			}
+		default:
+			msg := fmt.Sprintf("the discovery type '%s' for the upstream '%s' is not supported", upstreamOptions.Discovery.Type, upstreamID)
+			structure := []string{"upstreams", upstreamID, "discovery", "type"}
+			return newInvalidConfig(structure, upstreamOptions.Discovery.Type, msg)
 		}
 
 		for _, target := range upstreamOptions.Targets {

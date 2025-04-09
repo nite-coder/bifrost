@@ -60,7 +60,7 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 		return nil, errors.New("upstream id can't be empty")
 	}
 
-	if len(upstreamOptions.Targets) == 0 {
+	if upstreamOptions.Discovery.Type == "" && len(upstreamOptions.Targets) == 0 {
 		return nil, fmt.Errorf("targets can't be empty. upstream id: %s", upstreamOptions.ID)
 	}
 
@@ -73,6 +73,9 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 
 	switch strings.ToLower(upstreamOptions.Discovery.Type) {
 	case "dns":
+		if !bifrost.options.Providers.DNS.Enabled {
+			return nil, fmt.Errorf("dns provider is disabled. upstream id: %s", upstreamOptions.ID)
+		}
 		discovery := dns.NewDNSServiceDiscovery(bifrost.options.Providers.DNS.Servers, bifrost.options.Providers.DNS.Valid)
 		upstream.discovery = discovery
 	default:
