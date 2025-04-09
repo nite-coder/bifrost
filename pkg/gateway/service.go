@@ -125,6 +125,7 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	upstream, found := svc.upstreams[hostname]
 	if found {
 		svc.upstream = upstream
+		upstream.watch()
 		return svc, nil
 	}
 
@@ -145,6 +146,7 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 		return nil, err
 	}
 	svc.upstream = upstream
+	upstream.watch()
 
 	return svc, nil
 }
@@ -188,6 +190,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 				c.Abort()
 				return
 			}
+			svc.upstream.watch()
 		}
 
 		var proxy proxy.Proxy

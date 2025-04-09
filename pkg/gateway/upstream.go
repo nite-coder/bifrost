@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
+	"log/slog"
 	"math"
 	"net"
 	"net/url"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -50,6 +52,7 @@ type Upstream struct {
 	counter        atomic.Uint64
 	totalWeight    uint32
 	hasher         hash.Hash32
+	watchOnce      sync.Once
 }
 
 func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstreamOptions config.UpstreamOptions) (*Upstream, error) {
@@ -81,10 +84,6 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 	if err != nil {
 		return nil, err
 	}
-
-	go func() {
-		_ = upstream.watch()
-	}()
 
 	return upstream, nil
 }
@@ -432,21 +431,19 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	return nil
 }
 
-func (u *Upstream) watch() error {
-	watchCh, err := u.discovery.Watch(context.Background(), u.options.Discovery.ServiceName)
-	if err != nil {
-		return err
-	}
+func (u *Upstream) watch() {
+	u.watchOnce.Do(func() {
+		watchCh, err := u.discovery.Watch(context.Background(), u.options.Discovery.ServiceName)
+		if err != nil {
+			slog.Error("fail to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
+		}
 
-	if watchCh == nil {
-		return nil
-	}
-
-	for instances := range watchCh {
-		_ = u.refreshProxies(instances)
-	}
-
-	return nil
+		go func() {
+			for instances := range watchCh {
+				_ = u.refreshProxies(instances)
+			}
+		}()
+	})
 }
 
 func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[string]*Upstream, error) {
