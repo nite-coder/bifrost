@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
+	"log/slog"
 	"math"
 	"net"
 	"net/url"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -50,6 +52,7 @@ type Upstream struct {
 	counter        atomic.Uint64
 	totalWeight    uint32
 	hasher         hash.Hash32
+	watchOnce      sync.Once
 }
 
 func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstreamOptions config.UpstreamOptions) (*Upstream, error) {
@@ -57,7 +60,7 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 		return nil, errors.New("upstream id can't be empty")
 	}
 
-	if len(upstreamOptions.Targets) == 0 {
+	if upstreamOptions.Discovery.Type == "" && len(upstreamOptions.Targets) == 0 {
 		return nil, fmt.Errorf("targets can't be empty. upstream id: %s", upstreamOptions.ID)
 	}
 
@@ -70,6 +73,9 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 
 	switch strings.ToLower(upstreamOptions.Discovery.Type) {
 	case "dns":
+		if !bifrost.options.Providers.DNS.Enabled {
+			return nil, fmt.Errorf("dns provider is disabled. upstream id: %s", upstreamOptions.ID)
+		}
 		discovery := dns.NewDNSServiceDiscovery(bifrost.options.Providers.DNS.Servers, bifrost.options.Providers.DNS.Valid)
 		upstream.discovery = discovery
 	default:
@@ -81,10 +87,6 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 	if err != nil {
 		return nil, err
 	}
-
-	go func() {
-		_ = upstream.watch()
-	}()
 
 	return upstream, nil
 }
@@ -276,7 +278,11 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		}
 	}
 
-	proxies := make([]proxy.Proxy, 0)
+	if len(instances) == 0 {
+		return fmt.Errorf("no instances found, upstream id: %s", u.options.ID)
+	}
+
+	newProxies := make([]proxy.Proxy, 0)
 
 	for _, instance := range instances {
 
@@ -403,7 +409,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			if err != nil {
 				return err
 			}
-			proxies = append(proxies, proxy)
+			newProxies = append(newProxies, proxy)
 		case config.ProtocolGRPC:
 			url = fmt.Sprintf("grpc://%s%s", targetHost, addr.Path)
 
@@ -424,29 +430,69 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			if err != nil {
 				return err
 			}
-			proxies = append(proxies, grpcProxy)
+			newProxies = append(newProxies, grpcProxy)
 		}
 	}
 
-	u.proxies.Store(proxies)
+	var updatedProxies []proxy.Proxy
+
+	// remove old proxy if not exist in new proxies list
+	oldProxies := make([]proxy.Proxy, 0)
+	proxies := u.proxies.Load()
+	if proxies != nil {
+		oldProxies = proxies.([]proxy.Proxy)
+	}
+
+	for _, oldProxy := range oldProxies {
+		isFound := false
+		for _, newProxy := range newProxies {
+			if oldProxy.Target() == newProxy.Target() {
+				isFound = true
+				break
+			}
+		}
+
+		if isFound {
+			updatedProxies = append(updatedProxies, oldProxy)
+		}
+	}
+
+	// add new proxy if not exist in updatedProxies
+	for _, newProxy := range newProxies {
+		isFound := false
+		for _, proxy := range updatedProxies {
+			if proxy.Target() == newProxy.Target() {
+				isFound = true
+				break
+			}
+		}
+
+		if !isFound {
+			updatedProxies = append(updatedProxies, newProxy)
+		}
+	}
+
+	if len(updatedProxies) > 0 {
+		u.proxies.Store(newProxies)
+	}
+
 	return nil
 }
 
-func (u *Upstream) watch() error {
-	watchCh, err := u.discovery.Watch(context.Background(), u.options.Discovery.ServiceName)
-	if err != nil {
-		return err
-	}
+func (u *Upstream) watch() {
+	u.watchOnce.Do(func() {
+		watchCh, err := u.discovery.Watch(context.Background(), u.options.Discovery.ServiceName)
+		if err != nil {
+			slog.Error("fail to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
+		}
 
-	if watchCh == nil {
-		return nil
-	}
-
-	for instances := range watchCh {
-		_ = u.refreshProxies(instances)
-	}
-
-	return nil
+		go func() {
+			for instances := range watchCh {
+				err = u.refreshProxies(instances)
+				slog.Warn("upstream refresh failed", "error", err.Error(), "upstream_id", u.options.ID)
+			}
+		}()
+	})
 }
 
 func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[string]*Upstream, error) {

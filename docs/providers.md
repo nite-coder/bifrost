@@ -6,8 +6,30 @@ Providers enable integration with various services, managing configuration files
 
 The currently supported providers are listed below. You can also combine multiple providers for use.
 
+* [DNS](#dns): DNS service discovery
 * [File](#file): Get configurations from files
 * [Nacos](#nacos): Get configurations from nacos.
+
+## DNS
+
+dns service discovery
+
+Example:
+
+```yaml
+providers:
+  dns:
+    enabled: true
+    valid: 300s
+    servers:
+      - "8.8.8.8:53"
+```
+
+| Field   | Type            | Default | Description                                                                                                   |
+| ------- | --------------- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| enabled | `bool`          | `false` | Enables the file provider                                                                                     |
+| servers | `[]string`      |         | list of dns servers (ip:port) If port is not specified, the port 53 is used                                   |
+| valid   | `time.Duration` |         | provider caches answers using the TTL value of a response. An valid parameter allows overriding it if present |
 
 ## File
 

@@ -443,7 +443,7 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 
 func validateUpstreams(mainOptions Options, isFullMode bool) error {
 
-	for upstreamID, opt := range mainOptions.Upstreams {
+	for upstreamID, upstreamOptions := range mainOptions.Upstreams {
 
 		if !isFullMode {
 			continue
@@ -455,25 +455,36 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 			return newInvalidConfig(structure, "", msg)
 		}
 
-		switch opt.Strategy {
+		switch upstreamOptions.Strategy {
 		case WeightedStrategy, RandomStrategy, HashingStrategy, RoundRobinStrategy, "":
 		default:
-			msg := fmt.Sprintf("the strategy '%s' for the upstream '%s' is not supported", opt.Strategy, upstreamID)
+			msg := fmt.Sprintf("the strategy '%s' for the upstream '%s' is not supported", upstreamOptions.Strategy, upstreamID)
 			structure := []string{"upstreams", upstreamID, "strategy"}
-			return newInvalidConfig(structure, opt.Strategy, msg)
+			return newInvalidConfig(structure, upstreamOptions.Strategy, msg)
 		}
 
-		if opt.Strategy == HashingStrategy && opt.HashOn == "" {
+		if upstreamOptions.Strategy == HashingStrategy && upstreamOptions.HashOn == "" {
 			msg := fmt.Sprintf("the hash_on can't be empty in the upstream '%s'", upstreamID)
 			structure := []string{"upstreams", upstreamID, "hash_on"}
 			return newInvalidConfig(structure, "", msg)
 		}
 
-		if len(opt.Targets) == 0 {
-			return fmt.Errorf("the targets can't be empty in the upstream '%s'", upstreamID)
+		switch upstreamOptions.Discovery.Type {
+		case "dns":
+			if !mainOptions.Providers.DNS.Enabled {
+				return fmt.Errorf("dns provider is disabled. upstream id: %s", upstreamID)
+			}
+		case "":
+			if upstreamOptions.Discovery.Type == "" && len(upstreamOptions.Targets) == 0 {
+				return fmt.Errorf("the targets can't be empty in the upstream '%s'", upstreamID)
+			}
+		default:
+			msg := fmt.Sprintf("the discovery type '%s' for the upstream '%s' is not supported", upstreamOptions.Discovery.Type, upstreamID)
+			structure := []string{"upstreams", upstreamID, "discovery", "type"}
+			return newInvalidConfig(structure, upstreamOptions.Discovery.Type, msg)
 		}
 
-		for _, target := range opt.Targets {
+		for _, target := range upstreamOptions.Targets {
 			addr := extractAddr(target.Target)
 			if !strings.EqualFold("localhost", addr) && !strings.EqualFold("[::1]", addr) {
 				if dnsResolver != nil && !mainOptions.SkipResolver {
