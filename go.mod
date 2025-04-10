@@ -6,6 +6,7 @@ require (
 	github.com/bytedance/gopkg v0.1.2
 	github.com/bytedance/sonic v1.13.2
 	github.com/cloudwego/gjson v0.1.0
+	github.com/cloudwego/gopkg v0.1.4
 	github.com/cloudwego/hertz v0.9.6
 	github.com/cloudwego/netpoll v0.7.0
 	github.com/fsnotify/fsnotify v1.9.0
@@ -78,7 +79,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clbanning/mxj/v2 v2.5.5 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
-	github.com/cloudwego/gopkg v0.1.4 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -153,6 +153,6 @@ require (
 )
 
 replace (
-	github.com/cloudwego/hertz v0.9.6 => github.com/nite-coder/hertz v0.9.7-0.20250331154831-c5139b981427
+	github.com/cloudwego/hertz v0.9.6 => github.com/nite-coder/hertz v0.9.7-0.20250410083506-f337df64dbb5
 	github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.1.8
 )
