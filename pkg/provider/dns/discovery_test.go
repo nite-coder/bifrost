@@ -20,17 +20,17 @@ func TestDNSServiceDiscovery_GetInstances(t *testing.T) {
 		{
 			name:        "valid service with port",
 			servers:     []string{"8.8.8.8:53"},
-			serviceName: "no.com:8080",
+			serviceName: "www.google.com:8080",
 			valid:       time.Duration(0),
-			mockIPs:     []string{"104.18.4.119:8080", "104.18.5.119:8080"},
+			mockIPs:     []string{"142.250.198.68:8080"},
 			wantErr:     false,
 		},
 		{
 			name:        "valid service without port",
 			servers:     []string{"1.1.1.1"},
-			serviceName: "no.com",
+			serviceName: "www.google.com",
 			valid:       time.Duration(10 * time.Minute),
-			mockIPs:     []string{"104.18.4.119", "104.18.5.119"},
+			mockIPs:     []string{"142.250.198.68"},
 			wantErr:     false,
 		},
 		{

@@ -278,7 +278,11 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		}
 	}
 
-	proxies := make([]proxy.Proxy, 0)
+	if len(instances) == 0 {
+		return fmt.Errorf("no instances found, upstream id: %s", u.options.ID)
+	}
+
+	newProxies := make([]proxy.Proxy, 0)
 
 	for _, instance := range instances {
 
@@ -405,7 +409,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			if err != nil {
 				return err
 			}
-			proxies = append(proxies, proxy)
+			newProxies = append(newProxies, proxy)
 		case config.ProtocolGRPC:
 			url = fmt.Sprintf("grpc://%s%s", targetHost, addr.Path)
 
@@ -426,11 +430,52 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			if err != nil {
 				return err
 			}
-			proxies = append(proxies, grpcProxy)
+			newProxies = append(newProxies, grpcProxy)
 		}
 	}
 
-	u.proxies.Store(proxies)
+	var updatedProxies []proxy.Proxy
+
+	// remove old proxy if not exist in new proxies list
+	oldProxies := make([]proxy.Proxy, 0)
+	proxies := u.proxies.Load()
+	if proxies != nil {
+		oldProxies = proxies.([]proxy.Proxy)
+	}
+
+	for _, oldProxy := range oldProxies {
+		isFound := false
+		for _, newProxy := range newProxies {
+			if oldProxy.Target() == newProxy.Target() {
+				isFound = true
+				break
+			}
+		}
+
+		if isFound {
+			updatedProxies = append(updatedProxies, oldProxy)
+		}
+	}
+
+	// add new proxy if not exist in updatedProxies
+	for _, newProxy := range newProxies {
+		isFound := false
+		for _, proxy := range updatedProxies {
+			if proxy.Target() == newProxy.Target() {
+				isFound = true
+				break
+			}
+		}
+
+		if !isFound {
+			updatedProxies = append(updatedProxies, newProxy)
+		}
+	}
+
+	if len(updatedProxies) > 0 {
+		u.proxies.Store(newProxies)
+	}
+
 	return nil
 }
 
@@ -443,7 +488,8 @@ func (u *Upstream) watch() {
 
 		go func() {
 			for instances := range watchCh {
-				_ = u.refreshProxies(instances)
+				err = u.refreshProxies(instances)
+				slog.Warn("upstream refresh failed", "error", err.Error(), "upstream_id", u.options.ID)
 			}
 		}()
 	})

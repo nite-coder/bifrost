@@ -128,7 +128,7 @@ func (d *DNSServiceDiscovery) Lookup(ctx context.Context, host string) ([]string
 	for _, server := range d.servers {
 		in, _, err := d.client.ExchangeContext(ctx, m, server)
 		if err != nil {
-			slog.Debug("dns: failed to resolve host", "host", host, "server", server, "error", err)
+			slog.Debug("dns: failed to resolve host", "host", host, "server", server, "error", err.Error())
 			continue
 		}
 
