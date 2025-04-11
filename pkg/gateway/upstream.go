@@ -274,7 +274,8 @@ findLoop:
 
 func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	var err error
-	if len(instances) == 0 {
+
+	if len(instances) == 0 && u.discovery != nil {
 		instances, err = u.discovery.GetInstances(context.Background(), u.options.Discovery.ServiceName)
 		if err != nil {
 			return err
@@ -286,7 +287,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	}
 
 	newProxies := make([]proxy.Proxy, 0)
-
+	u.totalWeight = 0
 	for _, instance := range instances {
 
 		if u.options.Strategy == config.WeightedStrategy && instance.Weight() == 0 {
@@ -294,15 +295,15 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		}
 
 		u.totalWeight += instance.Weight()
-
 		targetHost, targetPort, err := net.SplitHostPort(instance.Address().String())
 		if err != nil {
+			fmt.Println(instance.Address().String())
 			targetHost = instance.Address().String()
 		}
 
 		addr, err := url.Parse(u.ServiceOptions.Url)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to parse service URL '%s': %w", u.ServiceOptions.Url, err)
 		}
 
 		port := ""
@@ -476,7 +477,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	}
 
 	if len(updatedProxies) > 0 {
-		u.proxies.Store(newProxies)
+		u.proxies.Store(updatedProxies)
 	}
 
 	return nil

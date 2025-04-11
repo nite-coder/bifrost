@@ -88,6 +88,7 @@ func New(options Options) (*GRPCProxy, error) {
 
 	return &GRPCProxy{
 		id:         uuid.New().String(),
+		target:     options.Target,
 		targetHost: addr.Host,
 		options:    &options,
 		client:     client,

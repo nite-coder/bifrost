@@ -12,7 +12,7 @@ This configuration file is divided into two primary types: `static configuration
 * [num_loops](#num_loops)
 * [gopool](#gopool)
 * [user_group](#user_group)
-* [resolvers](#resolvers)
+* [resolver](#resolver)
 * [pid_file](#pid_file)
 * [upgrade_sock](#upgrade_sock)
 * [providers](#providers)
@@ -67,14 +67,14 @@ user: nobody
 group: nogroup
 ```
 
-## resolvers
+## resolver
 
 The list of dns servers.  By default, Bifrost will resolve all domain name and cache all IPs when the gateway starts.  The cache will not refresh until the gateway is restarted or reloaded.
 
 Example:
 
 ```yaml
-resolver: 
+resolver:
   servers: ["8.8.8.8:53"]
 ```
 

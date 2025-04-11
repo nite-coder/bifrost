@@ -2,12 +2,14 @@ package gateway
 
 import (
 	"hash/fnv"
+	"net"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/dns"
+	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 
@@ -361,11 +363,11 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 			Weight: 1,
 		},
 		{
-			Target: "127.0.0.1:1234",
+			Target: "127.0.0.2:1235",
 			Weight: 1,
 		},
 		{
-			Target: "127.0.0.1:1234",
+			Target: "127.0.0.3:1236",
 			Weight: 1,
 		},
 	}
@@ -425,5 +427,91 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 	)
 
 	assert.NoError(t, err)
-	assert.Len(t, upstream.proxies.Load().([]proxy.Proxy), 3)
+	proxiies := upstream.proxies.Load().([]proxy.Proxy)
+	assert.Len(t, proxiies, 3)
+}
+
+func TestRefreshProxies(t *testing.T) {
+	t.Run("success with initial DNS instances", func(t *testing.T) {
+		dnsResolver, err := dns.NewResolver(dns.Options{})
+		assert.NoError(t, err)
+
+		upstream := &Upstream{
+			bifrost: &Bifrost{
+				options: &config.Options{
+					SkipResolver: true,
+				},
+				resolver: dnsResolver,
+			},
+			options: &config.UpstreamOptions{
+				ID: "test",
+				Discovery: config.DiscoveryOptions{
+					Type:        "dns",
+					ServiceName: "test.service",
+				},
+			},
+			ServiceOptions: &config.ServiceOptions{
+				Protocol: config.ProtocolHTTP,
+				Url:      "http://test.service",
+			},
+		}
+
+		addr1, err := net.ResolveTCPAddr("tcp", "127.0.0.1:8080")
+		assert.NoError(t, err)
+		ins1 := provider.NewInstance(addr1, 2)
+
+		addr2, err := net.ResolveTCPAddr("tcp", "127.0.0.2:8080")
+		assert.NoError(t, err)
+		ins2 := provider.NewInstance(addr2, 3)
+
+		instances := []provider.Instancer{ins1, ins2}
+
+		err = upstream.refreshProxies(instances)
+		assert.NoError(t, err)
+
+		plist1 := upstream.proxies.Load().([]proxy.Proxy)
+		assert.Len(t, plist1, 2)
+		assert.Equal(t, uint32(5), upstream.totalWeight)
+
+		// should be no update
+		err = upstream.refreshProxies(instances)
+		assert.NoError(t, err)
+
+		plist2 := upstream.proxies.Load().([]proxy.Proxy)
+		assert.Len(t, plist2, 2)
+		assert.Equal(t, uint32(5), upstream.totalWeight)
+
+		assert.Equal(t, plist1[0].ID(), plist2[0].ID())
+		assert.Equal(t, plist1[1].ID(), plist2[1].ID())
+
+	})
+
+	t.Run("fail with no instances", func(t *testing.T) {
+		dnsResolver, err := dns.NewResolver(dns.Options{})
+		assert.NoError(t, err)
+
+		upstream := &Upstream{
+			bifrost: &Bifrost{
+				options: &config.Options{
+					SkipResolver: true,
+				},
+				resolver: dnsResolver,
+			},
+			options: &config.UpstreamOptions{
+				ID: "test",
+				Discovery: config.DiscoveryOptions{
+					Type:        "dns",
+					ServiceName: "test.service",
+				},
+			},
+			ServiceOptions: &config.ServiceOptions{
+				Protocol: config.ProtocolHTTP,
+				Url:      "http://test.service",
+			},
+		}
+
+		err = upstream.refreshProxies([]provider.Instancer{})
+		assert.Error(t, err)
+	})
+
 }
