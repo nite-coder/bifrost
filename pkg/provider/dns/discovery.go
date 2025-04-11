@@ -24,7 +24,7 @@ type DNSServiceDiscovery struct {
 	ticker  *time.Ticker
 }
 
-func NewDNSServiceDiscovery(servers []string, valid time.Duration) *DNSServiceDiscovery {
+func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*DNSServiceDiscovery, error) {
 	newServers := make([]string, 0)
 
 	for _, server := range servers {
@@ -47,6 +47,14 @@ func NewDNSServiceDiscovery(servers []string, valid time.Duration) *DNSServiceDi
 		newServers = append(newServers, targetHost)
 	}
 
+	if len(newServers) == 0 {
+		return nil, errors.New("no valid dns server found for dns provider")
+	}
+
+	if valid.Seconds() <= 0 {
+		valid = 30 * time.Second
+	}
+
 	d := &DNSServiceDiscovery{
 		client:  new(dns.Client),
 		servers: newServers,
@@ -58,7 +66,7 @@ func NewDNSServiceDiscovery(servers []string, valid time.Duration) *DNSServiceDi
 		d.ticker = time.NewTicker(valid)
 	}
 
-	return d
+	return d, nil
 }
 
 func (d *DNSServiceDiscovery) GetInstances(ctx context.Context, serviceName string) ([]provider.Instancer, error) {
@@ -147,12 +155,11 @@ func (d *DNSServiceDiscovery) Lookup(ctx context.Context, host string) ([]string
 		}
 
 		ttlDuration := time.Duration(minTTL) * time.Second
-		if d.valid.Seconds() == 0 && ttlDuration > 0 {
-			d.ticker.Reset(ttlDuration)
-		} else if d.valid.Seconds() == 0 && ttlDuration.Seconds() == 0 {
-			// default; no ttl
-			d.ticker.Reset(10 * time.Minute)
+		if ttlDuration.Seconds() < d.valid.Seconds() {
+			ttlDuration = d.valid
 		}
+
+		d.ticker.Reset(ttlDuration)
 	}
 
 	if len(ips) == 0 {

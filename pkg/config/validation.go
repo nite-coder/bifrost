@@ -24,7 +24,7 @@ func ValidateConfig(mainOptions Options, isFullMode bool) error {
 	if dnsResolver == nil && !mainOptions.SkipResolver {
 		var err error
 		dnsResolver, err = dns.NewResolver(dns.Options{
-			Servers: mainOptions.Resolvers,
+			Servers: mainOptions.Resolver.Servers,
 		})
 
 		if err != nil {

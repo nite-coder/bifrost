@@ -148,7 +148,7 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	}
 
 	resolveOptions := dns.Options{
-		Servers:  mainOptions.Resolvers,
+		Servers:  mainOptions.Resolver.Servers,
 		SkipTest: mainOptions.SkipResolver,
 	}
 

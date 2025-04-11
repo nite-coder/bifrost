@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDNSServiceDiscovery_GetInstances(t *testing.T) {
@@ -54,7 +56,8 @@ func TestDNSServiceDiscovery_GetInstances(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDNSServiceDiscovery(tt.servers, tt.valid)
+			d, err := NewDNSServiceDiscovery(tt.servers, tt.valid)
+			assert.NoError(t, err)
 
 			ctx := context.Background()
 			got, err := d.GetInstances(ctx, tt.serviceName)

@@ -13,7 +13,7 @@ type Options struct {
 	PIDFile         string                      `yaml:"pid_file" json:"pid_file"`
 	UpgradeSock     string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
 	Gopool          bool                        `yaml:"gopool" json:"gopool"`
-	Resolvers       []string                    `yaml:"resolvers" json:"resolvers"`
+	Resolver        ResolverOptions             `yaml:"resolver" json:"resolver"`
 	NumLoops        int                         `yaml:"num_loops" json:"num_loops"`
 	Watch           *bool                       `yaml:"watch" json:"watch"`
 	User            string                      `yaml:"user" json:"user"`
@@ -334,7 +334,7 @@ type RedisOptions struct {
 }
 
 type ResolverOptions struct {
-	AddrPort string `yaml:"addr_port" json:"addr_port"`
+	Servers []string `yaml:"servers" json:"servers"`
 }
 
 type DefaultServiceOptions struct {

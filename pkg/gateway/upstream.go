@@ -76,7 +76,10 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 		if !bifrost.options.Providers.DNS.Enabled {
 			return nil, fmt.Errorf("dns provider is disabled. upstream id: %s", upstreamOptions.ID)
 		}
-		discovery := dns.NewDNSServiceDiscovery(bifrost.options.Providers.DNS.Servers, bifrost.options.Providers.DNS.Valid)
+		discovery, err := dns.NewDNSServiceDiscovery(bifrost.options.Providers.DNS.Servers, bifrost.options.Providers.DNS.Valid)
+		if err != nil {
+			return nil, err
+		}
 		upstream.discovery = discovery
 	default:
 		discovery := NewResolverDiscovery(upstream)

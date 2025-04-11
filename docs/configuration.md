@@ -12,7 +12,7 @@ This configuration file is divided into two primary types: `static configuration
 * [num_loops](#num_loops)
 * [gopool](#gopool)
 * [user_group](#user_group)
-* [resolver](#resolver)
+* [resolvers](#resolvers)
 * [pid_file](#pid_file)
 * [upgrade_sock](#upgrade_sock)
 * [providers](#providers)
@@ -74,7 +74,8 @@ The list of dns servers.  By default, Bifrost will resolve all domain name and c
 Example:
 
 ```yaml
-resolvers: ["8.8.8.8:53"]
+resolver: 
+  servers: ["8.8.8.8:53"]
 ```
 
 ## pid_file
