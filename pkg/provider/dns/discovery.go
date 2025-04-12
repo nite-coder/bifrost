@@ -57,7 +57,6 @@ func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*DNSServiceD
 	}
 
 	client := new(dns.Client)
-	//client.Timeout = 5 * time.Second
 
 	d := &DNSServiceDiscovery{
 		client:  client,
@@ -155,7 +154,6 @@ func (d *DNSServiceDiscovery) Lookup(ctx context.Context, host string) ([]string
 		}
 
 		ttlDuration := time.Duration(minTTL) * time.Second
-		ttlDuration = 0
 		if ttlDuration.Seconds() < d.valid.Seconds() {
 			ttlDuration = d.valid
 		}
