@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"slices"
 	"strings"
 	"time"
 
@@ -166,6 +167,8 @@ func (d *DNSServiceDiscovery) Lookup(ctx context.Context, host string) ([]string
 	if len(ips) == 0 {
 		return nil, fmt.Errorf("dns: %w; can't resolve host '%s'", ErrNotFound, host)
 	}
+
+	ips = slices.Compact(ips)
 
 	return ips, nil
 }

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -126,6 +127,8 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 	if len(ips) == 0 {
 		return nil, fmt.Errorf("dns: %w; can't resolve host '%s'", ErrNotFound, host)
 	}
+
+	ips = slices.Compact(ips)
 
 	return ips, nil
 }

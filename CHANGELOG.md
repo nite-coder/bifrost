@@ -10,7 +10,7 @@
 - Introduce `http_server_open_connections` metric for bifrost server in [[#14](https://github.com/nite-coder/bifrost/pull/14)]
 - Introduce `$upstream.conn_acquisition_time` directive, which indicates the time taken to get the upstream connection in [[#15](https://github.com/nite-coder/bifrost/pull/15)]
 - Introduce service discovery provider in [[#18](https://github.com/nite-coder/bifrost/pull/18)]
-- Introduce `dns` provider provider in [[#19](https://github.com/nite-coder/bifrost/pull/19)]
+- Introduce `dns` service discovery provider in [[#19](https://github.com/nite-coder/bifrost/pull/19)]
 - Add `Set` function to redis connector
 
 ### **Bug Fixes**
@@ -20,7 +20,7 @@
 ### **Refactor**
 
 - move `fail_timeout` and `max_fails` from target to upstream level (passive healthcheck) in [[#17](https://github.com/nite-coder/bifrost/pull/17)]
-- change `resolvers` to support multiple dns servers in [[#18](https://github.com/nite-coder/bifrost/pull/18)]
+- change `resolver` to support multiple dns servers in [[#18](https://github.com/nite-coder/bifrost/pull/18)]
 
 ### **Test**
 

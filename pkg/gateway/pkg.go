@@ -23,6 +23,7 @@ import (
 	cgopool "github.com/cloudwego/gopkg/concurrency/gopool"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/netpoll"
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/connector/redis"
 	"github.com/nite-coder/bifrost/pkg/log"
@@ -93,6 +94,22 @@ func Run(mainOptions config.Options) (err error) {
 		}
 
 		runTask = func(ctx context.Context, f func()) {
+			defer func() {
+				if r := recover(); r != nil {
+					var err error
+					switch v := r.(type) {
+					case error:
+						err = v
+					default:
+						err = fmt.Errorf("%v", v)
+					}
+					stackTrace := runtime.StackTrace()
+					slog.Error("runTask panic recovered",
+						slog.String("error", err.Error()),
+						slog.String("stack", stackTrace),
+					)
+				}
+			}()
 			go f()
 		}
 	}
