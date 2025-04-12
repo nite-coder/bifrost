@@ -240,11 +240,13 @@ func (m *mockProcessFinder) FindProcess(pid int) (process, error) {
 	return m.proc, nil
 }
 
-func TestKillProcess(t *testing.T) {
-	t.Run("normal kill", func(t *testing.T) {
+func TestQuitProcess(t *testing.T) {
+	t.Run("normal quit", func(t *testing.T) {
 		mp := &mockProcess{pid: 123}
 
-		z := New(Options{})
+		z := New(Options{
+			QuitTimout: 1 * time.Second,
+		})
 		z.processFinder = &mockProcessFinder{proc: mp}
 
 		err := z.Quit(context.Background(), 123, false)
@@ -252,15 +254,17 @@ func TestKillProcess(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(mp.signals) == 0 || mp.signals[0] != syscall.SIGTERM {
-			t.Error("Expected SIGTERM signal")
+		if len(mp.signals) == 0 || mp.signals[0] != syscall.SIGHUP {
+			t.Error("Expected SIGHUP signal")
 		}
 	})
 
-	t.Run("kill timeout", func(t *testing.T) {
+	t.Run("quit timeout", func(t *testing.T) {
 		mp := &mockProcess{pid: 123, wait: true}
 
-		z := New(Options{KillTimout: 2 * time.Second})
+		z := New(Options{
+			QuitTimout: 1 * time.Second,
+		})
 		z.processFinder = &mockProcessFinder{proc: mp}
 
 		err := z.Quit(context.Background(), 123, false)

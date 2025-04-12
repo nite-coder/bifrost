@@ -75,7 +75,7 @@ type ZeroDownTime struct {
 	isShutdownCh  chan bool
 	listenerOnce  sync.Once
 	state         State
-	killTimeout   time.Duration
+	QuitTimeout   time.Duration
 	command       CommandRunner
 	envGetter     EnvGetter
 	processFinder ProcessFinder
@@ -85,7 +85,7 @@ type ZeroDownTime struct {
 type Options struct {
 	UpgradeSock string
 	PIDFile     string
-	KillTimout  time.Duration
+	QuitTimout  time.Duration
 }
 
 func (opts Options) GetPIDFile() string {
@@ -103,9 +103,9 @@ func (opts Options) GetUpgradeSock() string {
 }
 
 func New(opts Options) *ZeroDownTime {
-	killTimeout := 10 * time.Second
-	if opts.KillTimout > 0 {
-		killTimeout = opts.KillTimout
+	quitTimeout := 10 * time.Second
+	if opts.QuitTimout > 0 {
+		quitTimeout = opts.QuitTimout
 	}
 
 	return &ZeroDownTime{
@@ -117,7 +117,7 @@ func New(opts Options) *ZeroDownTime {
 		envGetter:     defaultEnvGetter,
 		processFinder: &defaultProcessFinder{},
 		fileOpener:    defaultFileOpener,
-		killTimeout:   killTimeout,
+		QuitTimeout:   quitTimeout,
 	}
 }
 
@@ -350,7 +350,7 @@ func (z *ZeroDownTime) Quit(ctx context.Context, pid int, removePIDFile bool) er
 	defer ticker.Stop()
 
 	// Set timeout deadline
-	deadline := time.Now().Add(z.killTimeout)
+	deadline := time.Now().Add(z.QuitTimeout)
 
 	for time.Now().Before(deadline) {
 		<-ticker.C
