@@ -29,20 +29,21 @@ type Resolver struct {
 
 type Options struct {
 	// dns server for querying
-	Servers  []string
-	SkipTest bool
+	Servers   []string
+	Hostsfile string
+	Order     []string
+	Timeout   time.Duration
+	SkipTest  bool
 }
 
 func NewResolver(option Options) (*Resolver, error) {
-	resultCache := cache.NewCache[string, []string](cache.NoExpiration)
-
-	r := &Resolver{
-		hostsCache: make(map[string][]string),
-		dnsCache:   resultCache,
+	if option.Hostsfile == "" {
+		option.Hostsfile = "/etc/hosts"
 	}
 
-	r.options = &option
-	r.client = new(dns.Client)
+	if len(option.Order) == 0 {
+		option.Order = []string{"last", "a", "cname"}
+	}
 
 	if len(option.Servers) == 0 {
 		servers := GetDNSServers()
@@ -56,6 +57,28 @@ func NewResolver(option Options) (*Resolver, error) {
 		}
 	}
 
+	newServers := make([]string, 0)
+	for _, server := range option.Servers {
+		server = strings.TrimSpace(server)
+
+		if len(server) == 0 {
+			continue
+		}
+
+		targetHost, targetPort, err := net.SplitHostPort(server)
+		if err != nil {
+			targetHost = server
+		}
+
+		if len(targetPort) == 0 {
+			targetPort = "53"
+		}
+
+		targetHost = net.JoinHostPort(targetHost, targetPort)
+		newServers = append(newServers, targetHost)
+	}
+	option.Servers = newServers
+
 	if !option.SkipTest {
 		validServers, err := ValidateDNSServer(option.Servers)
 		if err != nil {
@@ -64,15 +87,26 @@ func NewResolver(option Options) (*Resolver, error) {
 		option.Servers = validServers
 	}
 
+	client := &dns.Client{
+		Timeout: option.Timeout,
+	}
+
+	r := &Resolver{
+		options:    &option,
+		client:     client,
+		hostsCache: make(map[string][]string),
+		dnsCache:   cache.NewCache[string, []string](5 * time.Minute),
+	}
+
 	if err := r.loadHostsFile(); err != nil {
-		return nil, fmt.Errorf("dns: failed to load hosts file: %w", err)
+		return nil, fmt.Errorf("dns: fail to load hosts file: %w", err)
 	}
 
 	return r, nil
 }
 
 func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
-	if host == "localhost" || host == "[::1]" {
+	if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]" {
 		return []string{"127.0.0.1"}, nil
 	}
 
@@ -88,57 +122,117 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 		}
 	}
 
-	// Second, check the result cache
-	if ips, ok := r.dnsCache.Get(host); ok {
-		return ips, nil
-	}
-
-	m := new(dns.Msg)
-	m.SetQuestion(dns.Fqdn(host), dns.TypeA)
-
-	var ips []string
-	var minTTL uint32 = 0
-
-	for _, server := range r.options.Servers {
-		in, _, err := r.client.ExchangeContext(ctx, m, server)
-		if err != nil {
-			slog.Debug("dns: failed to resolve host", "host", host, "server", server, "error", err)
-			continue
-		}
-
-		for _, answer := range in.Answer {
-			if a, ok := answer.(*dns.A); ok {
-				ips = append(ips, a.A.String())
-
-				if minTTL == 0 || a.Hdr.Ttl < minTTL {
-					minTTL = a.Hdr.Ttl
-				}
+	for _, order := range r.options.Order {
+		order = strings.TrimSpace(order)
+		switch strings.ToLower(order) {
+		case "last":
+			if ips, ok := r.dnsCache.Get(host); ok {
+				return ips, nil
 			}
+		case "a":
+			// A record
+			var ips []string
+			var minTTL uint32 = 0
+
+			m := new(dns.Msg)
+			m.SetQuestion(dns.Fqdn(host), dns.TypeA)
+
+			for _, server := range r.options.Servers {
+				in, _, err := r.client.ExchangeContext(ctx, m, server)
+				if err != nil {
+					slog.Debug("dns: failed to resolve A record", "host", host, "server", server, "error", err)
+					continue
+				}
+
+				for _, answer := range in.Answer {
+					if a, ok := answer.(*dns.A); ok {
+						ips = append(ips, a.A.String())
+
+						if minTTL == 0 || a.Hdr.Ttl < minTTL {
+							minTTL = a.Hdr.Ttl
+						}
+					}
+				}
+
+				if len(ips) == 0 {
+					continue
+				}
+
+				ttlDuration := time.Duration(minTTL) * time.Second
+				r.dnsCache.PutWithTTL(host, ips, ttlDuration)
+				break
+			}
+
+			if len(ips) > 0 {
+				ips = slices.Compact(ips)
+				return ips, nil
+			}
+		case "cname":
+			// CNAME record
+			var ips []string
+			var minTTL uint32 = 0
+
+			m := new(dns.Msg)
+			m.SetQuestion(dns.Fqdn(host), dns.TypeCNAME)
+
+			for _, server := range r.options.Servers {
+				in, _, err := r.client.ExchangeContext(ctx, m, server)
+				if err != nil {
+					slog.Debug("dns: fail to resolve CNAME record", "host", host, "server", server, "error", err)
+					continue
+				}
+
+				for _, answer := range in.Answer {
+					if cname, ok := answer.(*dns.CNAME); ok {
+						ips, err = r.Lookup(ctx, cname.String())
+						if err != nil {
+							slog.Debug("dns: fail to resolve CNAME record", "host", host, "server", server, "error", err)
+							continue
+						}
+
+						ips = append(ips, ips...)
+
+						if minTTL == 0 || cname.Hdr.Ttl < minTTL {
+							minTTL = cname.Hdr.Ttl
+						}
+					}
+				}
+
+				if len(ips) == 0 {
+					continue
+				}
+
+				ttlDuration := time.Duration(minTTL) * time.Second
+				r.dnsCache.PutWithTTL(host, ips, ttlDuration)
+			}
+
+			if len(ips) > 0 {
+				ips = slices.Compact(ips)
+				return ips, nil
+			}
+		default:
+			return nil, fmt.Errorf("dns: unknown order '%s'", order)
 		}
 
-		if len(ips) == 0 {
-			continue
-		}
-
-		ttlDuration := time.Duration(minTTL) * time.Second
-		r.dnsCache.PutWithTTL(host, ips, ttlDuration)
 	}
 
-	if len(ips) == 0 {
-		return nil, fmt.Errorf("dns: %w; can't resolve host '%s'", ErrNotFound, host)
-	}
-
-	ips = slices.Compact(ips)
-
-	return ips, nil
+	return nil, fmt.Errorf("dns: %w; can't resolve '%s'", ErrNotFound, host)
 }
 
 func (r *Resolver) loadHostsFile() error {
-	if _, err := os.Stat("/etc/hosts"); errors.Is(err, os.ErrNotExist) {
-		return nil
+	if len(r.options.Hostsfile) == 0 {
+		if _, err := os.Stat("/etc/hosts"); errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+
+		r.options.Hostsfile = "/etc/hosts"
 	}
 
-	file, err := os.Open("/etc/hosts")
+	if _, err := os.Stat(r.options.Hostsfile); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("dns: hosts file '%s' not found", r.options.Hostsfile)
+	}
+
+	file, err := os.Open(r.options.Hostsfile)
 	if err != nil {
 		return err
 	}

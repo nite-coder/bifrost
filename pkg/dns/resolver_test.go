@@ -9,7 +9,10 @@ import (
 
 func TestQueryHost(t *testing.T) {
 
-	r, err := NewResolver(Options{})
+	r, err := NewResolver(Options{
+		Servers: []string{"8.8.8.8", "1.1.1.1:53"},
+		Order:   []string{"a"},
+	})
 	assert.NoError(t, err)
 
 	result, err := r.Lookup(context.Background(), "www.google.com")
