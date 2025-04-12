@@ -180,13 +180,13 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 
 				for _, answer := range in.Answer {
 					if cname, ok := answer.(*dns.CNAME); ok {
-						ips, err = r.Lookup(ctx, cname.String())
+						resolvedIPs, err := r.Lookup(ctx, cname.Target)
 						if err != nil {
 							slog.Debug("dns: fail to resolve CNAME record", "host", host, "server", server, "error", err)
 							continue
 						}
 
-						ips = append(ips, ips...)
+						ips = append(ips, resolvedIPs...)
 
 						if minTTL == 0 || cname.Hdr.Ttl < minTTL {
 							minTTL = cname.Hdr.Ttl
