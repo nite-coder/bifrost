@@ -12,8 +12,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
 	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/log"
+	"github.com/nite-coder/bifrost/pkg/resolver"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/tracer/accesslog"
 	"github.com/nite-coder/bifrost/pkg/tracer/prometheus"
@@ -25,7 +25,7 @@ type Bifrost struct {
 	state          uint32
 	tracerProvider *sdktrace.TracerProvider
 	options        *config.Options
-	resolver       *dns.Resolver
+	resolver       *resolver.Resolver
 	zero           *zero.ZeroDownTime
 	middlewares    map[string]app.HandlerFunc
 	services       map[string]*Service
@@ -147,12 +147,12 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 		PIDFile:     mainOptions.PIDFile,
 	}
 
-	resolveOptions := dns.Options{
+	resolveOptions := resolver.Options{
 		Servers:  mainOptions.Resolver.Servers,
 		SkipTest: mainOptions.SkipResolver,
 	}
 
-	dnsResolver, err := dns.NewResolver(resolveOptions)
+	dnsResolver, err := resolver.NewResolver(resolveOptions)
 	if err != nil {
 		return nil, err
 	}

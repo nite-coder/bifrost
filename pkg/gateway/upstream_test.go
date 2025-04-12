@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
+	"github.com/nite-coder/bifrost/pkg/resolver"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -378,7 +378,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 		Targets:  targetOptions,
 	}
 
-	dnsResolver, err := dns.NewResolver(dns.Options{})
+	dnsResolver, err := resolver.NewResolver(resolver.Options{})
 	assert.NoError(t, err)
 
 	bifrost := &Bifrost{
@@ -433,7 +433,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 
 func TestRefreshProxies(t *testing.T) {
 	t.Run("success with initial DNS instances", func(t *testing.T) {
-		dnsResolver, err := dns.NewResolver(dns.Options{})
+		dnsResolver, err := resolver.NewResolver(resolver.Options{})
 		assert.NoError(t, err)
 
 		upstream := &Upstream{
@@ -487,7 +487,7 @@ func TestRefreshProxies(t *testing.T) {
 	})
 
 	t.Run("fail with no instances", func(t *testing.T) {
-		dnsResolver, err := dns.NewResolver(dns.Options{})
+		dnsResolver, err := resolver.NewResolver(resolver.Options{})
 		assert.NoError(t, err)
 
 		upstream := &Upstream{

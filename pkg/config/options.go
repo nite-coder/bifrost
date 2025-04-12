@@ -334,7 +334,10 @@ type RedisOptions struct {
 }
 
 type ResolverOptions struct {
-	Servers []string `yaml:"servers" json:"servers"`
+	Servers   []string      `yaml:"servers" json:"servers"`
+	Hostsfile string        `yaml:"hostsfile" json:"hostsfile"`
+	Order     []string      `yaml:"order" json:"order"`
+	Timeout   time.Duration `yaml:"timeout" json:"timeout"`
 }
 
 type DefaultServiceOptions struct {

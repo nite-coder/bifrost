@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/middleware"
+	"github.com/nite-coder/bifrost/pkg/resolver"
 	"github.com/nite-coder/bifrost/pkg/router"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -23,7 +23,7 @@ func ValidateConfig(mainOptions Options, isFullMode bool) error {
 
 	if dnsResolver == nil && !mainOptions.SkipResolver {
 		var err error
-		dnsResolver, err = dns.NewResolver(dns.Options{
+		dnsResolver, err = resolver.NewResolver(resolver.Options{
 			Servers: mainOptions.Resolver.Servers,
 		})
 
@@ -33,6 +33,11 @@ func ValidateConfig(mainOptions Options, isFullMode bool) error {
 	}
 
 	err := validateLogging(mainOptions.Logging)
+	if err != nil {
+		return err
+	}
+
+	err = validateResolver(mainOptions)
 	if err != nil {
 		return err
 	}
@@ -519,6 +524,30 @@ func validateMetrics(options Options, isFullMode bool) error {
 			msg := fmt.Sprintf("the server_id '%s' for the prometheus is not found", options.Metrics.Prometheus.ServerID)
 			structure := []string{"metrics", "prometheus", "server_id"}
 			return newInvalidConfig(structure, options.Metrics.Prometheus.ServerID, msg)
+		}
+	}
+
+	return nil
+}
+
+func validateResolver(options Options) error {
+
+	if len(options.Resolver.Hostsfile) > 0 {
+		if _, err := os.Stat(options.Resolver.Hostsfile); errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("hosts file '%s' not found", options.Resolver.Hostsfile)
+		}
+	}
+
+	if len(options.Resolver.Order) > 0 {
+		for _, order := range options.Resolver.Order {
+			order = strings.TrimSpace(order)
+			switch strings.ToLower(order) {
+			case "last", "a", "cname":
+			default:
+				msg := fmt.Sprintf("the order '%s' is not supported", order)
+				structure := []string{"resolver", "order"}
+				return newInvalidConfig(structure, order, msg)
+			}
 		}
 	}
 

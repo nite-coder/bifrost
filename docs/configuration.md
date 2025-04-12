@@ -76,7 +76,17 @@ Example:
 ```yaml
 resolver:
   servers: ["8.8.8.8:53"]
+  timeout: 3s
+  hostsfile: "/etc/hosts"
+  order: ["last", "a", "cname"]
 ```
+
+| Field     | Type       | Default                  | Description                                                            |
+| --------- | ---------- | ------------------------ | ---------------------------------------------------------------------- |
+| servers   | `[]string` |                          | List of dns servers.  Default load dns servers from `/etc/resolv.conf` |
+| timeout   | `string`   | `0s`                     | Query timeout for dns server                                           |
+| hostsfile | `string`   | `/etc/hosts`             | Path of hosts file                                                     |
+| order     | `[]string` | `["last", "a", "cname"]` | Order of dns resolution                                                |
 
 ## pid_file
 

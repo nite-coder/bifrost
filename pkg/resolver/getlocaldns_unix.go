@@ -1,6 +1,6 @@
 //go:build !js && !windows
 
-package dns
+package resolver
 
 import (
 	"net/netip"

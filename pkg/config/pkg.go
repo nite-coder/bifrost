@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
-	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/provider/file"
 	"github.com/nite-coder/bifrost/pkg/provider/nacos"
+	"github.com/nite-coder/bifrost/pkg/resolver"
 
 	"gopkg.in/yaml.v3"
 )
@@ -24,7 +24,7 @@ var (
 	dynamicProviders []provider.Provider
 	mainProvider     provider.Provider
 	domainRegex      = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
-	dnsResolver      *dns.Resolver
+	dnsResolver      *resolver.Resolver
 )
 
 func TestAndSkipResovler(path string) (string, error) {

@@ -117,7 +117,7 @@ func (d *DNSServiceDiscovery) Watch(ctx context.Context, serviceName string) (<-
 }
 
 func (d *DNSServiceDiscovery) Lookup(ctx context.Context, host string) ([]string, error) {
-	if host == "localhost" || host == "[::1]" {
+	if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]" {
 		return []string{"127.0.0.1"}, nil
 	}
 
