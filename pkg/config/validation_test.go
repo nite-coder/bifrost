@@ -635,6 +635,24 @@ func TestValidateTracing(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestValidateResolver(t *testing.T) {
+	options := NewOptions()
+	err := validateResolver(options)
+	assert.NoError(t, err)
+
+	options.Resolver.Order = []string{"last", "a", "cname"}
+	err = validateResolver(options)
+	assert.NoError(t, err)
+
+	options.Resolver.Order = []string{"srv"}
+	err = validateResolver(options)
+	assert.Error(t, err)
+
+	options.Resolver.Hostsfile = "/not/exists"
+	err = validateResolver(options)
+	assert.Error(t, err)
+}
+
 func TestConfigDNS(t *testing.T) {
 	options := NewOptions()
 
