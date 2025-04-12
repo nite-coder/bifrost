@@ -315,7 +315,16 @@ var (
 	ErrKillTimeout = errors.New("process did not terminate within the timeout period")
 )
 
-func (z *ZeroDownTime) KillProcess(ctx context.Context, pid int, removePIDFile bool) error {
+// Quit sends a signal to the process and waits for it to exit. If the process
+// does not exit within the timeout period, it will be sent a SIGKILL signal.
+// If removePIDFile is true, the PID file will be removed if it exists.
+//
+// The signal sent is SIGHUP, which is usually used to restart a process.
+// If the process has already exited, this method will return nil immediately.
+//
+// If the process does not exit within the timeout period, ErrKillTimeout will
+// be returned.
+func (z *ZeroDownTime) Quit(ctx context.Context, pid int, removePIDFile bool) error {
 	if removePIDFile {
 		if err := os.Remove(z.options.GetPIDFile()); err != nil {
 			slog.Error("failed to remove PID file", "error", err)
@@ -329,7 +338,8 @@ func (z *ZeroDownTime) KillProcess(ctx context.Context, pid int, removePIDFile b
 		return err
 	}
 
-	err = process.Signal(syscall.SIGTERM)
+	// graceful shutdown must send SIGHUP
+	err = process.Signal(syscall.SIGHUP)
 	if err != nil {
 		slog.Error("send signal error", "error", err)
 		return err

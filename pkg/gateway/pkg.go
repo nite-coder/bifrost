@@ -238,7 +238,7 @@ func Run(mainOptions config.Options) (err error) {
 				return
 			}
 
-			err = zeroDT.KillProcess(ctx, oldPID, false)
+			err = zeroDT.Quit(ctx, oldPID, false)
 			if err != nil {
 				return
 			}
@@ -355,7 +355,7 @@ func StopDaemon(mainOptions config.Options) error {
 	if err != nil {
 		return err
 	}
-	err = zeroDT.KillProcess(ctx, oldPID, true)
+	err = zeroDT.Quit(ctx, oldPID, true)
 	if err != nil {
 		slog.Error("fail to stop", "error", err)
 		return err

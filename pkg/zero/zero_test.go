@@ -247,7 +247,7 @@ func TestKillProcess(t *testing.T) {
 		z := New(Options{})
 		z.processFinder = &mockProcessFinder{proc: mp}
 
-		err := z.KillProcess(context.Background(), 123, false)
+		err := z.Quit(context.Background(), 123, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -263,7 +263,7 @@ func TestKillProcess(t *testing.T) {
 		z := New(Options{KillTimout: 2 * time.Second})
 		z.processFinder = &mockProcessFinder{proc: mp}
 
-		err := z.KillProcess(context.Background(), 123, false)
+		err := z.Quit(context.Background(), 123, false)
 		assert.ErrorIs(t, err, ErrKillTimeout)
 	})
 }

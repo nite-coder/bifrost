@@ -65,7 +65,7 @@ func main() {
 			slog.Error("shutdown error", "error", err)
 			return
 		}
-		_ = zeroDT.KillProcess(ctx, oldPID, true)
+		_ = zeroDT.Quit(ctx, oldPID, true)
 		return
 	}
 
@@ -80,7 +80,7 @@ func main() {
 				return
 			}
 
-			err = zeroDT.KillProcess(ctx, oldPID, false)
+			err = zeroDT.Quit(ctx, oldPID, false)
 			if err != nil {
 				return
 			}
