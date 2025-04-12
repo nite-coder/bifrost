@@ -55,15 +55,14 @@ func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*DNSServiceD
 		valid = 30 * time.Second
 	}
 
+	client := new(dns.Client)
+	//client.Timeout = 5 * time.Second
+
 	d := &DNSServiceDiscovery{
-		client:  new(dns.Client),
+		client:  client,
 		servers: newServers,
 		valid:   valid,
-		ticker:  time.NewTicker(time.Duration(time.Hour * 24 * 365)),
-	}
-
-	if valid.Seconds() > 0 {
-		d.ticker = time.NewTicker(valid)
+		ticker:  time.NewTicker(valid),
 	}
 
 	return d, nil
@@ -155,11 +154,13 @@ func (d *DNSServiceDiscovery) Lookup(ctx context.Context, host string) ([]string
 		}
 
 		ttlDuration := time.Duration(minTTL) * time.Second
+		ttlDuration = 0
 		if ttlDuration.Seconds() < d.valid.Seconds() {
 			ttlDuration = d.valid
 		}
 
 		d.ticker.Reset(ttlDuration)
+		slog.Debug("ttl updated", "host", host, "ips", ips, "ttl", ttlDuration)
 	}
 
 	if len(ips) == 0 {

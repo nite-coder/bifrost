@@ -477,6 +477,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	}
 
 	if len(updatedProxies) > 0 {
+		slog.Debug("upstream refresh success", "upstream_id", u.options.ID, "proxy_id", updatedProxies[0].ID(), "len", len(updatedProxies))
 		u.proxies.Store(updatedProxies)
 	}
 
@@ -492,8 +493,10 @@ func (u *Upstream) watch() {
 
 		go func() {
 			for instances := range watchCh {
-				err = u.refreshProxies(instances)
-				slog.Warn("upstream refresh failed", "error", err.Error(), "upstream_id", u.options.ID)
+				err := u.refreshProxies(instances)
+				if err != nil {
+					slog.Warn("upstream refresh failed", "error", err.Error(), "upstream_id", u.options.ID)
+				}
 			}
 		}()
 	})
