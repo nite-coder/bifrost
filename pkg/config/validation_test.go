@@ -4,14 +4,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/nite-coder/bifrost/pkg/dns"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/cors"
+	"github.com/nite-coder/bifrost/pkg/resolver"
 	"github.com/nite-coder/bifrost/pkg/router"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
-	dnsResolver, _ = dns.NewResolver(dns.Options{})
+	dnsResolver, _ = resolver.NewResolver(resolver.Options{})
 	exitCode := m.Run()
 	os.Exit(exitCode)
 }
@@ -669,5 +669,5 @@ func TestConfigDNS(t *testing.T) {
 	}
 
 	err = ValidateConfig(options, true)
-	assert.ErrorIs(t, err, dns.ErrNotFound)
+	assert.ErrorIs(t, err, resolver.ErrNotFound)
 }

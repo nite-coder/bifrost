@@ -1,4 +1,4 @@
-package dns
+package resolver
 
 import (
 	"bufio"
@@ -37,10 +37,6 @@ type Options struct {
 }
 
 func NewResolver(option Options) (*Resolver, error) {
-	if option.Hostsfile == "" {
-		option.Hostsfile = "/etc/hosts"
-	}
-
 	if len(option.Order) == 0 {
 		option.Order = []string{"last", "a", "cname"}
 	}

@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/bifrost/pkg/dns"
 	"github.com/nite-coder/bifrost/pkg/middleware"
+	"github.com/nite-coder/bifrost/pkg/resolver"
 	"github.com/nite-coder/bifrost/pkg/router"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -23,7 +23,7 @@ func ValidateConfig(mainOptions Options, isFullMode bool) error {
 
 	if dnsResolver == nil && !mainOptions.SkipResolver {
 		var err error
-		dnsResolver, err = dns.NewResolver(dns.Options{
+		dnsResolver, err = resolver.NewResolver(resolver.Options{
 			Servers: mainOptions.Resolver.Servers,
 		})
 
