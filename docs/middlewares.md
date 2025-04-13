@@ -26,6 +26,7 @@ Currently supported middlewares are below.
 * [SetVars](#setvars): Set variables in the request context.
 * [StripPrefix](#stripprefix): Remove a prefix from the request path.
 * [TrafficSplitter](#trafficsplitter): Route requests to different services based on weights.
+* [UARestriction](#uarestriction): Control user agent that can access the service.
 
 ### AddPrefix
 
@@ -72,9 +73,6 @@ routes:
 ### IPRestriction
 
 Control client IP address that can access the service.  Either one of `allow` or `deny` attribute must be specified. They cannot be used together.
-
-Original request: `/foo` \
-Forwarded path for upstream: `/api/v1/foo`
 
 ```yaml
 routes:
@@ -323,6 +321,26 @@ servers:
               to: old_service
             - weight: 20
               to: new_service
+```
+
+### UARestriction
+
+Control user agent that can access the service.  Either one of `allow` or `deny` attribute must be specified. They cannot be used together.
+You can use regex to match user agent.
+
+```yaml
+routes:
+  foo:
+    paths:
+      - /foo
+    service_id: service1
+    middlewares:
+      - type: ip_restriction
+        params:
+          deny: ["bad-agent"] # allow and deny can't be used at the same time
+          rejected_http_status_code: 403
+          rejected_http_content_type: application/json
+          rejected_http_response_body: "forbidden"
 ```
 
 ## Custom Middlewares

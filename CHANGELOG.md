@@ -13,6 +13,7 @@
 - Introduce `dns` service discovery provider in [[#19](https://github.com/nite-coder/bifrost/pull/19)]
 - Add `Set` function to redis connector
 - Introduce `ip_restriction` middleware in [[#22](https://github.com/nite-coder/bifrost/pull/22)]
+- Introduce `ua_restriction` middleware in [[#23](https://github.com/nite-coder/bifrost/pull/23)]
 
 ### **Bug Fixes**
 
