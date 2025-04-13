@@ -14,14 +14,14 @@ func TestRateLimitMiddleware(t *testing.T) {
 	h := middleware.FindHandlerByType("rate_limit")
 
 	params := map[string]any{
-		"strategy":           "local",
-		"limit":              3,
-		"window_size":        10 * time.Second,
-		"limit_by":           "$client_ip",
-		"http_status_code":   429,
-		"http_response_body": "too many requests",
-		"header_limit":       "X-RateLimit-Limit",
-		"header_remaining":   "X-RateLimit-Remaining",
+		"strategy":                    "local",
+		"limit":                       3,
+		"window_size":                 10 * time.Second,
+		"limit_by":                    "$client_ip",
+		"header_limit":                "X-RateLimit-Limit",
+		"header_remaining":            "X-RateLimit-Remaining",
+		"rejected_http_status_code":   429,
+		"rejected_http_response_body": "too many requests",
 	}
 
 	t.Run("local strategy", func(t *testing.T) {
