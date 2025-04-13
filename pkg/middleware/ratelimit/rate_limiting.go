@@ -36,17 +36,17 @@ const (
 )
 
 type Options struct {
-	Strategy         StrategyMode  `mapstructure:"strategy"`
-	Limit            uint64        `mapstructure:"limit"`
-	LimitBy          string        `mapstructure:"limit_by"`
-	WindowSize       time.Duration `mapstructure:"window_size"`
-	HeaderLimit      string        `mapstructure:"header_limit"`
-	HeaderRemaining  string        `mapstructure:"header_remaining"`
-	HeaderReset      string        `mapstructure:"header_reset"`
-	HTTPStatusCode   int           `mapstructure:"http_status_code"`
-	HTTPContentType  string        `mapstructure:"http_content_type"`
-	HTTPResponseBody string        `mapstructure:"http_response_body"`
-	RedisID          string        `mapstructure:"redis_id"`
+	Strategy                 StrategyMode  `mapstructure:"strategy"`
+	Limit                    uint64        `mapstructure:"limit"`
+	LimitBy                  string        `mapstructure:"limit_by"`
+	WindowSize               time.Duration `mapstructure:"window_size"`
+	HeaderLimit              string        `mapstructure:"header_limit"`
+	HeaderRemaining          string        `mapstructure:"header_remaining"`
+	HeaderReset              string        `mapstructure:"header_reset"`
+	RejectedHTTPStatusCode   int           `mapstructure:"rejected_http_status_code"`
+	RejectedHTTPContentType  string        `mapstructure:"rejected_http_content_type"`
+	RejectedHTTPResponseBody string        `mapstructure:"rejected_http_response_body"`
+	RedisID                  string        `mapstructure:"redis_id"`
 }
 
 type RateLimitingMiddleware struct {
@@ -56,8 +56,8 @@ type RateLimitingMiddleware struct {
 
 func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 
-	if options.HTTPStatusCode == 0 {
-		options.HTTPStatusCode = 429
+	if options.RejectedHTTPStatusCode == 0 {
+		options.RejectedHTTPStatusCode = 429
 	}
 
 	if options.WindowSize == 0 {
@@ -134,14 +134,14 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 				c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
 			}
 
-			c.SetStatusCode(m.options.HTTPStatusCode)
+			c.SetStatusCode(m.options.RejectedHTTPStatusCode)
 
-			if len(m.options.HTTPContentType) > 0 {
-				c.Response.Header.Set("Content-Type", m.options.HTTPContentType)
+			if len(m.options.RejectedHTTPContentType) > 0 {
+				c.Response.Header.Set("Content-Type", m.options.RejectedHTTPContentType)
 			}
 
-			if len(m.options.HTTPResponseBody) > 0 {
-				c.Response.SetBody([]byte(m.options.HTTPResponseBody))
+			if len(m.options.RejectedHTTPResponseBody) > 0 {
+				c.Response.SetBody([]byte(m.options.RejectedHTTPResponseBody))
 			}
 			c.Abort()
 			return

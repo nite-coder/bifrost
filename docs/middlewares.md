@@ -125,9 +125,12 @@ routes:
           limit: 10
           limit_by: $var.user_id
           window_size: 2s
-          http_status_code: 429 # when hit the rate limit
-          http_content_type: application/json
-          http_response_body: {"error": "too many requests"}
+          header_limit: x-ratelimit-limit
+          header_remaining: x-ratelimit-remaining
+          header_reset: x-ratelimit-reset
+          rejected_http_status_code: 429 # when hit the rate limit
+          rejected_http_content_type: application/json
+          rejected_http_response_body: {"error": "too many requests"}
 ```
 
 ### ReplacePath
