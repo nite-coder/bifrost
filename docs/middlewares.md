@@ -14,6 +14,7 @@ Currently supported middlewares are below.
 
 * [AddPrefix](#addprefix): Add a prefix to the request path.
 * [Cors](#cors): A Middleware for Cross-Origin Resource Sharing.
+* [IPRestriction](#iprestriction): Control the IP address that can access the service.
 * [Mirror](#mirror): Mirror the request to another service.
 * [Parallel](#parallel): Execute a group of middlewares concurrently.
 * [RateLimit](#ratelimit): To control the Number of Requests going to a service
@@ -66,6 +67,29 @@ routes:
             ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
           allow_headers: ["Origin", "Content-Length", "Content-Type"]
           max_age: 12m
+```
+
+### IPRestriction
+
+Control the IP address that can access the service.  Allow and deny can't be used at the same time.
+
+Original request: `/foo` \
+Forwarded path for upstream: `/api/v1/foo`
+
+```yaml
+routes:
+  foo:
+    paths:
+      - /foo
+    service_id: service1
+    middlewares:
+      - type: ip_restriction
+        params:
+          allow: ["192.168.1.1"]
+          deny: ["192.168.1.0/24"]
+          rejected_http_status_code: 403 # when hit the rate limit
+          rejected_http_content_type: application/json
+          rejected_http_response_body: "forbidden"
 ```
 
 ### Mirror
