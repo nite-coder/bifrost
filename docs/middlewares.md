@@ -85,9 +85,9 @@ routes:
     middlewares:
       - type: ip_restriction
         params:
-          allow: ["192.168.1.1"]
+          allow: ["192.168.1.1"] # allow and deny can't be used at the same time
           deny: ["192.168.1.0/24"]
-          rejected_http_status_code: 403 # when hit the rate limit
+          rejected_http_status_code: 403
           rejected_http_content_type: application/json
           rejected_http_response_body: "forbidden"
 ```
