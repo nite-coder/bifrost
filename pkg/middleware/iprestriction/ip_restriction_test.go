@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -147,4 +148,18 @@ func TestIPRestriction(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewMiddleware(t *testing.T) {
+	h := middleware.FindHandlerByType("ip_restriction")
+
+	params := map[string]any{
+		"deny":                        []string{"192.16.8.0/24", "192.168.1.1"},
+		"rejected_http_status_code":   403,
+		"rejected_http_content_type":  "application/json",
+		"rejected_http_response_body": "forbidden",
+	}
+
+	_, err := h(params)
+	assert.NoError(t, err)
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -108,4 +109,19 @@ func TestUARestriction(t *testing.T) {
 			assert.Equal(t, tt.wantNext, called)
 		})
 	}
+}
+
+func TestNewMiddleware(t *testing.T) {
+	h := middleware.FindHandlerByType("ua_restriction")
+
+	params := map[string]any{
+		"bypass_missing":              true,
+		"deny":                        []string{"test-agent"},
+		"rejected_http_status_code":   403,
+		"rejected_http_content_type":  "application/json",
+		"rejected_http_response_body": "forbidden",
+	}
+
+	_, err := h(params)
+	assert.NoError(t, err)
 }
