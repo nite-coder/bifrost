@@ -14,6 +14,7 @@ import (
 	_ "github.com/nite-coder/bifrost/pkg/middleware/setvars"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/stripprefix"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/trafficsplitter"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/uarestriction"
 )
 
 func Middleware() error {

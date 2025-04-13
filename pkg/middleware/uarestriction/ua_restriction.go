@@ -3,9 +3,12 @@ package uarestriction
 import (
 	"context"
 	"errors"
+	"fmt"
 	"regexp"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/go-viper/mapstructure/v2"
+	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
@@ -107,4 +110,31 @@ func (m *UARestriction) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 
+}
+
+func init() {
+	_ = middleware.RegisterMiddleware("ua_restriction", func(params any) (app.HandlerFunc, error) {
+		if params == nil {
+			return nil, errors.New("ua_restriction middleware params is empty or invalid")
+		}
+
+		option := Options{}
+
+		decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
+			WeaklyTypedInput: true,
+			Result:           &option,
+		})
+
+		err := decoder.Decode(params)
+		if err != nil {
+			return nil, fmt.Errorf("ua_restriction middleware params is invalid: %w", err)
+		}
+
+		m, err := NewMiddleware(option)
+		if err != nil {
+			return nil, err
+		}
+		return m.ServeHTTP, nil
+	})
 }
