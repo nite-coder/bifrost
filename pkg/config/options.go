@@ -335,7 +335,7 @@ type RedisOptions struct {
 
 type ResolverOptions struct {
 	Servers   []string      `yaml:"servers" json:"servers"`
-	Hostsfile string        `yaml:"hostsfile" json:"hostsfile"`
+	Hostsfile string        `yaml:"hosts_file" json:"hosts_file"`
 	Order     []string      `yaml:"order" json:"order"`
 	Timeout   time.Duration `yaml:"timeout" json:"timeout"`
 }

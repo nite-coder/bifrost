@@ -56,16 +56,16 @@ func TestQueryHost(t *testing.T) {
 		assert.ErrorIs(t, err, ErrNotFound)
 	})
 
-	// t.Run("cname resolver", func(t *testing.T) {
-	// 	r, err := NewResolver(Options{
-	// 		Servers: []string{"1.1.1.1:53"},
-	// 		Order:   []string{"cname"},
-	// 	})
-	// 	assert.NoError(t, err)
+	t.Run("cname resolver", func(t *testing.T) {
+		r, err := NewResolver(Options{
+			Servers: []string{"1.1.1.1:53"},
+			Order:   []string{"cname"},
+		})
+		assert.NoError(t, err)
 
-	// 	result, err := r.Lookup(context.Background(), "bifrost.jasonlee.xyz")
-	// 	assert.NoError(t, err)
-	// 	assert.GreaterOrEqual(t, len(result), 1)
-	// })
+		result, err := r.Lookup(context.Background(), "test-cname-cloaking.testpanw.com")
+		assert.NoError(t, err)
+		assert.GreaterOrEqual(t, len(result), 1)
+	})
 
 }

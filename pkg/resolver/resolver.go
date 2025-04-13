@@ -101,7 +101,7 @@ func NewResolver(option Options) (*Resolver, error) {
 	return r, nil
 }
 
-func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
+func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]string) ([]string, error) {
 	if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]" {
 		return []string{"127.0.0.1"}, nil
 	}
@@ -111,6 +111,9 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 		return []string{ip.String()}, nil
 	}
 
+	// remove last dot
+	host = strings.TrimSuffix(host, ".")
+
 	// First, check the hosts cache
 	if len(r.hostsCache) > 0 {
 		if ips, ok := r.hostsCache[host]; ok && len(ips) > 0 {
@@ -118,7 +121,11 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 		}
 	}
 
-	for _, order := range r.options.Order {
+	if len(queryOrder) == 0 {
+		queryOrder = [][]string{r.options.Order}
+	}
+
+	for _, order := range queryOrder[0] {
 		order = strings.TrimSpace(order)
 		switch strings.ToLower(order) {
 		case "last":
@@ -180,9 +187,9 @@ func (r *Resolver) Lookup(ctx context.Context, host string) ([]string, error) {
 
 				for _, answer := range in.Answer {
 					if cname, ok := answer.(*dns.CNAME); ok {
-						resolvedIPs, err := r.Lookup(ctx, cname.Target)
+						resolvedIPs, err := r.Lookup(ctx, cname.Target, []string{"a"})
 						if err != nil {
-							slog.Debug("dns: fail to resolve CNAME record", "host", host, "server", server, "error", err)
+							slog.Debug("dns: fail to resolve CNAME record", "host", cname.String(), "server", server, "error", err)
 							continue
 						}
 
