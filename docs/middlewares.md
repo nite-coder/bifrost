@@ -14,7 +14,7 @@ Currently supported middlewares are below.
 
 * [AddPrefix](#addprefix): Add a prefix to the request path.
 * [Cors](#cors): A Middleware for Cross-Origin Resource Sharing.
-* [IPRestriction](#iprestriction): Control the IP address that can access the service.
+* [IPRestriction](#iprestriction): Control client IP address that can access the service.
 * [Mirror](#mirror): Mirror the request to another service.
 * [Parallel](#parallel): Execute a group of middlewares concurrently.
 * [RateLimit](#ratelimit): To control the Number of Requests going to a service
@@ -71,7 +71,7 @@ routes:
 
 ### IPRestriction
 
-Control the IP address that can access the service.  Allow and deny can't be used at the same time.
+Control client IP address that can access the service.  Either one of `allow` or `deny` attribute must be specified. They cannot be used together.
 
 Original request: `/foo` \
 Forwarded path for upstream: `/api/v1/foo`
