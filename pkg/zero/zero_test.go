@@ -254,8 +254,8 @@ func TestQuitProcess(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(mp.signals) == 0 || mp.signals[0] != syscall.SIGHUP {
-			t.Error("Expected SIGHUP signal")
+		if len(mp.signals) == 0 || mp.signals[0] != syscall.SIGTERM {
+			t.Error("Expected SIGTERM signal")
 		}
 	})
 
