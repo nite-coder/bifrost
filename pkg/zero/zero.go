@@ -338,8 +338,7 @@ func (z *ZeroDownTime) Quit(ctx context.Context, pid int, removePIDFile bool) er
 		return err
 	}
 
-	// graceful shutdown must send SIGHUP
-	err = process.Signal(syscall.SIGHUP)
+	err = process.Signal(syscall.SIGTERM)
 	if err != nil {
 		slog.Error("send signal error", "error", err)
 		return err

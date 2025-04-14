@@ -89,10 +89,6 @@ func (b *Bifrost) SetActive(value bool) {
 func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 	b.SetActive(false)
 
-	if b.tracerProvider != nil {
-		_ = b.tracerProvider.Shutdown(ctx)
-	}
-
 	wg := &sync.WaitGroup{}
 	maxTimeout := 10 * time.Second
 
@@ -122,6 +118,11 @@ func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 		maxTimeout = 500 * time.Millisecond
 	}
 	waitTimeout(wg, maxTimeout)
+
+	if b.tracerProvider != nil {
+		_ = b.tracerProvider.Shutdown(ctx)
+	}
+
 	return b.zero.Close(ctx)
 }
 

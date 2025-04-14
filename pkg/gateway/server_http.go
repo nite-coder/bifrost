@@ -333,7 +333,7 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 
 func (s *HTTPServer) Run() {
 	slog.Info("starting server", "id", s.options.ID, "bind", s.options.Bind, "transporter", s.server.GetTransporterName())
-	s.server.Spin()
+	_ = s.server.Run()
 }
 
 func (s *HTTPServer) Shutdown(ctx context.Context) error {
