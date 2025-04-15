@@ -14,6 +14,7 @@ type RequestRoute struct {
 	RouteID   string
 	Route     string
 	ServiceID string
+	Tags      []string
 }
 
 const (
@@ -38,6 +39,7 @@ const (
 	HTTPRequestQuery            = "$http.request.query"
 	HTTPRequestProtocol         = "$http.request.protocol"
 	HTTPRequestURI              = "$http.request.uri"
+	HTTPRequestTags             = "$http.request.tags"
 	HTTPRequestBody             = "$http.request.body"
 	HTTPResponseSize            = "$http.response.size"
 	HTTPResponseStatusCode      = "$http.response.status_code"

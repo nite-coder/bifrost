@@ -297,6 +297,7 @@ routes:
       - /api/v1/orders
     route: /api/v1/orders/{order_id}
     servers: ["extenal", "extenal_tls"]
+    tags: ["order"]
     service_id: api-service
     middlewares:
       - type: xxx
@@ -308,6 +309,7 @@ routes:
 | paths       | `[]string`     |         | http path                                                                              |
 | route       | `string`       |         | The path template is in the format used for displaying metric paths                    |
 | servers     | `[]string`     |         | Servers to apply the route; all servers if empty                                       |
+| tags        | `[]string`     |         | List of tags                                                                           |
 | service_id  | `string`       |         | Service ID                                                                             |
 | middlewares | `[]Middleware` |         | middleware of the routes. Details are available in the [middlewares](./middlewares.md) |
 

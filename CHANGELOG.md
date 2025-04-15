@@ -14,6 +14,7 @@
 - Add `Set` function to redis connector
 - Introduce `ip_restriction` middleware in [[#22](https://github.com/nite-coder/bifrost/pull/22)]
 - Introduce `ua_restriction` middleware in [[#23](https://github.com/nite-coder/bifrost/pull/23)]
+- Introduce `tags` for routes in [[#24](https://github.com/nite-coder/bifrost/pull/24)]
 
 ### **Bug Fixes**
 

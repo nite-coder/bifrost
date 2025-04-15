@@ -76,3 +76,26 @@ func TestDefaultPath(t *testing.T) {
 	_, err = defaultPath(configPath)
 	assert.Error(t, err, "config file not found")
 }
+
+func TestDynamicProvider(t *testing.T) {
+	watch := false
+
+	mainOptions := Options{
+		Providers: ProviderOtions{
+			Nacos: NacosProviderOptions{
+				Config: NacosConfigOptions{
+					Enabled: true,
+					Endpoints: []string{
+						"http://10.1.1.1:8848",
+					},
+					Watch: &watch,
+				},
+			},
+		},
+	}
+
+	providers, options, err := loadDynamic(mainOptions)
+	assert.NoError(t, err)
+	assert.Equal(t, options, mainOptions)
+	assert.Equal(t, len(providers), 1)
+}
