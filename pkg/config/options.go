@@ -288,6 +288,7 @@ type RouteOptions struct {
 	Paths       []string           `yaml:"paths" json:"paths"`
 	Route       string             `yaml:"route" json:"route"`
 	Servers     []string           `yaml:"servers" json:"servers"`
+	Tags        []string           `yaml:"tags" json:"tags"`
 	Middlewares []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
 	ServiceID   string             `yaml:"service_id" json:"service_id"`
 }

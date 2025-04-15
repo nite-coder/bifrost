@@ -46,6 +46,7 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 		rOptions := &variable.RequestRoute{
 			RouteID:   routeOptions.ID,
 			Route:     routeOptions.Route,
+			Tags:      routeOptions.Tags,
 			ServiceID: routeOptions.ServiceID,
 		}
 

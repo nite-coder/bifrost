@@ -48,6 +48,7 @@ var (
 		HTTPRequestQuery:            {},
 		HTTPRequestBody:             {},
 		HTTPRequestURI:              {},
+		HTTPRequestTags:             {},
 		HTTPRequestProtocol:         {},
 		HTTPResponseStatusCode:      {},
 		UpstreamRequest:             {},
@@ -379,6 +380,14 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 		info := (val).(*RequestOriginal)
 		return info.Protocol, true
+	case HTTPRequestTags:
+		val, found := c.Get(BifrostRoute)
+		if !found {
+			return nil, false
+		}
+
+		info := (val).(*RequestRoute)
+		return info.Tags, true
 
 	case RouteID:
 		val, found := c.Get(BifrostRoute)

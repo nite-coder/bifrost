@@ -1,6 +1,7 @@
 package variable
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -56,6 +57,7 @@ func TestGetDirective(t *testing.T) {
 		RouteID:   "routeA",
 		Route:     "/orders/{order_id}",
 		ServiceID: "$var.myservice",
+		Tags:      []string{"tag1", "tag2"},
 	}
 
 	hzCtx.Set(BifrostRoute, reqRoute)
@@ -190,6 +192,15 @@ func TestGetDirective(t *testing.T) {
 	val, found = Get("aaa", nil)
 	assert.False(t, found)
 	assert.Nil(t, val)
+
+	val, found = Get(HTTPRequestTags, hzCtx)
+	assert.True(t, found)
+	tags := val.([]string)
+	assert.Equal(t, 2, len(tags))
+
+	aaa := GetString(HTTPRequestTags, hzCtx)
+	fmt.Println("aaa", aaa)
+
 }
 
 func TestGetVariable(t *testing.T) {
