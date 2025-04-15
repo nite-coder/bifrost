@@ -63,8 +63,8 @@ func NewProvider(opts Options) (*NacosProvider, error) {
 	}
 
 	for _, endpoint := range opts.Config.Endpoints {
-		if !strings.HasPrefix(endpoint, "http://") {
-			return nil, fmt.Errorf("invalid nacos endpoint: %s", endpoint)
+		if (!strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://")) {
+			return nil, fmt.Errorf("invalid nacos endpoint, must start with http:// or https://: %s", endpoint)
 		}
 
 		uri, err := url.Parse(endpoint)
