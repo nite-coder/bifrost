@@ -94,6 +94,8 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 			Prefix:      bifrost.options.Providers.Nacos.Discovery.Prefix,
 			CacheDir:    bifrost.options.Providers.Nacos.Discovery.CacheDir,
 			Endpoints:   bifrost.options.Providers.Nacos.Discovery.Endpoints,
+			LogDir:      bifrost.options.Providers.Nacos.Discovery.LogDir,
+			LogLevel:    bifrost.options.Providers.Nacos.Discovery.LogLevel,
 		}
 
 		discovery, err := nacos.NewNacosServiceDiscovery(options)

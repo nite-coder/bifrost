@@ -148,6 +148,7 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 			Password:    mainOptions.Providers.Nacos.Config.Password,
 			Prefix:      mainOptions.Providers.Nacos.Config.Prefix,
 			LogDir:      mainOptions.Providers.Nacos.Config.LogDir,
+			LogLevel:    mainOptions.Providers.Nacos.Config.LogLevel,
 			CacheDir:    mainOptions.Providers.Nacos.Config.CacheDir,
 			Timeout:     mainOptions.Providers.Nacos.Config.Timeout,
 			Endpoints:   make([]string, 0),
