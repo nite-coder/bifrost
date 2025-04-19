@@ -80,29 +80,29 @@ providers:
         - "http://127.0.0.1:8848"
 ```
 
-| Field                  | Type       | Default              | Description                                                                   |
-| ---------------------- | ---------- | -------------------- | ----------------------------------------------------------------------------- |
-| config.enabled         | `bool`     | `false`              | Enables the nacos provider                                                    |
-| config.username        | `string`   |                      | Username of nacos server                                                      |
-| config.password        | `string`   |                      | Password of nacos server                                                      |
-| config.namespace_id    | `string`   |                      | the namespaceId of Nacos. when namespace is public, fill in the blank  here   |
-| config.prefix          | `string`   | `/nacos`             | the nacos server preifx                                                       |
-| config.cache_dir       | `string`   | `./logs/nacos/cache` | the directory for persist nacos service info                                  |
-| config.log_dir         | `string`   | `./logs`             | the directory for log                                                         |
-| config.log_level       | `string`   | `info`               | the level of log, it's must be `debug`,`info`,`warn`, `error`                 |
-| config.namespace_id    | `string`   |                      | the namespaceId of Nacos. when namespace is `public`, fill in the blank here  |
-| config.watch           | `bool`     | `true`               | if `true`, changes to `dynamic configuration` take effect immediately.        |
-| config.timeout         | `string`   | `10s`                | timeout for requesting Nacos server                                           |
-| config.endpoints       | `[]string` |                      | list of nacos server endpoints (http only)                                    |
-| config.files           | `[]file`   |                      | list of configuration files in nacos                                          |
-| discovery.enabled      | `bool`     | `false`              | Enables the nacos provider                                                    |
-| discovery.username     | `string`   |                      | Username of nacos server                                                      |
-| discovery.password     | `string`   |                      | Password of nacos server                                                      |
-| discovery.namespace_id | `string`   |                      | the namespaceId of Nacos. when namespace is public, fill in the blank here    |
-| discovery.prefix       | `string`   | `/nacos`             | the nacos server preifx                                                       |
-| discovery.cache_dir    | `string`   | `./logs/nacos/cache` | the directory for persist nacos service info                                  |
-| discovery.log_dir      | `string`   | `./logs`             | the directory for log                                                         |
-| discovery.log_level    | `string`   | `info`               | the level of log, it's must be `debug`,`info`,`warn`, `error`                 |
-| discovery.namespace_id | `string`   |                      | the namespaceId of Nacos. when namespace is `public`, fill in the blank  here |
-| discovery.timeout      | `string`   | `10s`                | timeout for requesting Nacos server                                           |
-| discovery.endpoints    | `[]string` |                      | list of nacos server endpoints (http only)                                    |
+| Field                  | Type       | Default  | Description                                                                   |
+| ---------------------- | ---------- | -------- | ----------------------------------------------------------------------------- |
+| config.enabled         | `bool`     | `false`  | Enables the nacos provider                                                    |
+| config.username        | `string`   |          | Username of nacos server                                                      |
+| config.password        | `string`   |          | Password of nacos server                                                      |
+| config.namespace_id    | `string`   |          | the namespaceId of Nacos. when namespace is public, fill in the blank  here   |
+| config.prefix          | `string`   | `/nacos` | the nacos server preifx                                                       |
+| config.cache_dir       | `string`   |          | the directory for persist nacos service info                                  |
+| config.log_dir         | `string`   |          | the directory for log                                                         |
+| config.log_level       | `string`   | `info`   | the level of log, it's must be `debug`,`info`,`warn`, `error`                 |
+| config.namespace_id    | `string`   |          | the namespaceId of Nacos. when namespace is `public`, fill in the blank here  |
+| config.watch           | `bool`     | `true`   | if `true`, changes to `dynamic configuration` take effect immediately.        |
+| config.timeout         | `string`   | `10s`    | timeout for requesting Nacos server                                           |
+| config.endpoints       | `[]string` |          | list of nacos server endpoints (http only)                                    |
+| config.files           | `[]file`   |          | list of configuration files in nacos                                          |
+| discovery.enabled      | `bool`     | `false`  | Enables the nacos provider                                                    |
+| discovery.username     | `string`   |          | Username of nacos server                                                      |
+| discovery.password     | `string`   |          | Password of nacos server                                                      |
+| discovery.namespace_id | `string`   |          | the namespaceId of Nacos. when namespace is public, fill in the blank here    |
+| discovery.prefix       | `string`   | `/nacos` | the nacos server preifx                                                       |
+| discovery.cache_dir    | `string`   |          | the directory for persist nacos service info                                  |
+| discovery.log_dir      | `string`   |          | the directory for log                                                         |
+| discovery.log_level    | `string`   | `info`   | the level of log, it's must be `debug`,`info`,`warn`, `error`                 |
+| discovery.namespace_id | `string`   |          | the namespaceId of Nacos. when namespace is `public`, fill in the blank  here |
+| discovery.timeout      | `string`   | `10s`    | timeout for requesting Nacos server                                           |
+| discovery.endpoints    | `[]string` |          | list of nacos server endpoints (http only)                                    |
