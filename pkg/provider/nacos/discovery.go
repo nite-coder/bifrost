@@ -109,7 +109,7 @@ func (d *NacosServiceDiscovery) GetInstances(ctx context.Context, options provid
 		if err.Error() == "instance list is empty!" {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("fail to select instances from nacos '%s', error: %w", options.ID, err)
+		return nil, fmt.Errorf("fail to select instances from nacos, error: %w, discovery id: %s, group: %s", err, options.ID, options.Group)
 	}
 
 	instances := ToProviderInstance(nacosInstances)
