@@ -26,7 +26,7 @@ func TestValidateProviders(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("nacos provider", func(t *testing.T) {
+	t.Run("nacos config provider", func(t *testing.T) {
 		options := NewOptions()
 
 		options.Providers.Nacos.Config.Enabled = true
@@ -41,6 +41,21 @@ func TestValidateProviders(t *testing.T) {
 			{
 				DataID: "abc.yaml",
 			},
+		}
+
+		err = validateProviders(options)
+		assert.NoError(t, err)
+	})
+
+	t.Run("nacos discovery provider", func(t *testing.T) {
+		options := NewOptions()
+
+		options.Providers.Nacos.Discovery.Enabled = true
+		err := validateProviders(options)
+		assert.Error(t, err)
+
+		options.Providers.Nacos.Discovery.Endpoints = []string{
+			"http://localhost:8848",
 		}
 
 		err = validateProviders(options)

@@ -81,7 +81,7 @@ providers:
 | config.username     | `string`   |                      | Username of nacos server                                                            |
 | config.password     | `string`   |                      | Password of nacos server                                                            |
 | config.namespace_id | `string`   |                      | the namespaceId of Nacos. when namespace is public, fill in the blank string here   |
-| config.context_path | `string`   | `/nacos`             | the nacos server contextpath                                                        |
+| config.prefix       | `string`   | `/nacos`             | the nacos server preifx                                                             |
 | config.cache_dir    | `string`   | `./logs/nacos/cache` | the directory for persist nacos service info                                        |
 | config.log_dir      | `string`   | `./logs`             | the directory for log                                                               |
 | config.log_level    | `string`   | `info`               | the level of log, it's must be `debug`,`info`,`warn`, `error`                       |

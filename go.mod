@@ -7,7 +7,7 @@ require (
 	github.com/bytedance/sonic v1.13.2
 	github.com/cloudwego/gjson v0.1.0
 	github.com/cloudwego/gopkg v0.1.4
-	github.com/cloudwego/hertz v0.9.6
+	github.com/cloudwego/hertz v0.9.7
 	github.com/cloudwego/netpoll v0.7.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-resty/resty/v2 v2.15.3
@@ -153,6 +153,6 @@ require (
 )
 
 replace (
-	github.com/cloudwego/hertz v0.9.6 => github.com/nite-coder/hertz v0.9.7-0.20250410083506-f337df64dbb5
+	github.com/cloudwego/hertz v0.9.7 => github.com/nite-coder/hertz v0.9.7-0.20250410083506-f337df64dbb5
 	github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.1.8
 )
