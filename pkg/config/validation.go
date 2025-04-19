@@ -479,6 +479,7 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 			if !mainOptions.Providers.DNS.Enabled {
 				return fmt.Errorf("dns provider is disabled. upstream id: %s", upstreamID)
 			}
+		case "nacos":
 		case "":
 			if upstreamOptions.Discovery.Type == "" && len(upstreamOptions.Targets) == 0 {
 				return fmt.Errorf("the targets can't be empty in the upstream '%s'", upstreamID)

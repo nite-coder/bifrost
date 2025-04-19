@@ -68,12 +68,12 @@ func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*DNSServiceD
 	return d, nil
 }
 
-func (d *DNSServiceDiscovery) GetInstances(ctx context.Context, serviceName string) ([]provider.Instancer, error) {
+func (d *DNSServiceDiscovery) GetInstances(ctx context.Context, options provider.GetInstanceOptions) ([]provider.Instancer, error) {
 	instances := make([]provider.Instancer, 0)
 
-	targetHost, targetPort, err := net.SplitHostPort(serviceName)
+	targetHost, targetPort, err := net.SplitHostPort(options.ID)
 	if err != nil {
-		targetHost = serviceName
+		targetHost = options.ID
 	}
 
 	ips, err := d.Lookup(ctx, targetHost)
@@ -102,7 +102,7 @@ func (d *DNSServiceDiscovery) GetInstances(ctx context.Context, serviceName stri
 	return instances, nil
 }
 
-func (d *DNSServiceDiscovery) Watch(ctx context.Context, serviceName string) (<-chan []provider.Instancer, error) {
+func (d *DNSServiceDiscovery) Watch(ctx context.Context, options provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
 	ch := make(chan []provider.Instancer, 1)
 
 	go func() {
