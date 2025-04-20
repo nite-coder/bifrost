@@ -446,8 +446,8 @@ func TestRefreshProxies(t *testing.T) {
 			options: &config.UpstreamOptions{
 				ID: "test",
 				Discovery: config.DiscoveryOptions{
-					Type:        "dns",
-					ServiceName: "test.service",
+					Type: "dns",
+					ID:   "test.service",
 				},
 			},
 			ServiceOptions: &config.ServiceOptions{
@@ -500,8 +500,8 @@ func TestRefreshProxies(t *testing.T) {
 			options: &config.UpstreamOptions{
 				ID: "test",
 				Discovery: config.DiscoveryOptions{
-					Type:        "dns",
-					ServiceName: "test.service",
+					Type: "dns",
+					ID:   "test.service",
 				},
 			},
 			ServiceOptions: &config.ServiceOptions{

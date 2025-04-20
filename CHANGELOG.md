@@ -11,6 +11,7 @@
 - Introduce `$upstream.conn_acquisition_time` directive, which indicates the time taken to get the upstream connection in [[#15](https://github.com/nite-coder/bifrost/pull/15)]
 - Introduce service discovery provider in [[#18](https://github.com/nite-coder/bifrost/pull/18)]
 - Introduce `dns` service discovery provider in [[#19](https://github.com/nite-coder/bifrost/pull/19)]
+- Introduce `nacos` service discovery provider in [[#26](https://github.com/nite-coder/bifrost/pull/26)]
 - Add `Set` function to redis connector
 - Introduce `ip_restriction` middleware in [[#22](https://github.com/nite-coder/bifrost/pull/22)]
 - Introduce `ua_restriction` middleware in [[#23](https://github.com/nite-coder/bifrost/pull/23)]

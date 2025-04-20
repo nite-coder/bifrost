@@ -116,7 +116,8 @@ type NacosConfigOptions struct {
 	Username    string        `yaml:"username" json:"username"`
 	Password    string        `yaml:"password" json:"password"`
 	NamespaceID string        `yaml:"namespace_id" json:"namespace_id"`
-	ContextPath string        `yaml:"context_path" json:"context_path"`
+	Prefix      string        `yaml:"prefix" json:"prefix"`
+	LogLevel    string        `yaml:"log_level" json:"log_level"`
 	LogDir      string        `yaml:"log_dir" json:"log_dir"`
 	CacheDir    string        `yaml:"cache_dir" json:"cache_dir"`
 	Timeout     time.Duration `yaml:"timeout" json:"timeout"`
@@ -125,8 +126,22 @@ type NacosConfigOptions struct {
 	Files       []*File       `yaml:"files" json:"files"`
 }
 
+type NacosDiscoveryOptions struct {
+	Enabled     bool          `yaml:"enabled" json:"enabled"`
+	Username    string        `yaml:"username" json:"username"`
+	Password    string        `yaml:"password" json:"password"`
+	NamespaceID string        `yaml:"namespace_id" json:"namespace_id"`
+	Prefix      string        `yaml:"prefix" json:"prefix"`
+	LogDir      string        `yaml:"log_dir" json:"log_dir"`
+	LogLevel    string        `yaml:"log_level" json:"log_level"`
+	CacheDir    string        `yaml:"cache_dir" json:"cache_dir"`
+	Timeout     time.Duration `yaml:"timeout" json:"timeout"`
+	Endpoints   []string      `yaml:"endpoints" json:"endpoints"`
+}
+
 type NacosProviderOptions struct {
-	Config NacosConfigOptions `yaml:"config" json:"config"`
+	Config    NacosConfigOptions    `yaml:"config" json:"config"`
+	Discovery NacosDiscoveryOptions `yaml:"discovery" json:"discovery"`
 }
 
 type DNSProviderOptions struct {
@@ -269,8 +284,8 @@ type TargetOptions struct {
 }
 
 type DiscoveryOptions struct {
-	Type        string `yaml:"type" json:"type"`
-	ServiceName string `yaml:"service_name" json:"service_name"`
+	Type string `yaml:"type" json:"type"`
+	ID   string `yaml:"id" json:"id"`
 }
 
 type UpstreamOptions struct {

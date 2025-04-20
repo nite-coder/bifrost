@@ -21,6 +21,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/provider/dns"
+	"github.com/nite-coder/bifrost/pkg/provider/nacos"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
@@ -81,6 +82,27 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 			return nil, err
 		}
 		upstream.discovery = discovery
+	case "nacos":
+		if !bifrost.options.Providers.Nacos.Discovery.Enabled {
+			return nil, fmt.Errorf("nacos discovery provider is disabled. upstream id: %s", upstreamOptions.ID)
+		}
+
+		options := nacos.Options{
+			Username:    bifrost.options.Providers.Nacos.Discovery.Username,
+			Password:    bifrost.options.Providers.Nacos.Discovery.Password,
+			NamespaceID: bifrost.options.Providers.Nacos.Discovery.NamespaceID,
+			Prefix:      bifrost.options.Providers.Nacos.Discovery.Prefix,
+			CacheDir:    bifrost.options.Providers.Nacos.Discovery.CacheDir,
+			Endpoints:   bifrost.options.Providers.Nacos.Discovery.Endpoints,
+			LogDir:      bifrost.options.Providers.Nacos.Discovery.LogDir,
+			LogLevel:    bifrost.options.Providers.Nacos.Discovery.LogLevel,
+		}
+
+		discovery, err := nacos.NewNacosServiceDiscovery(options)
+		if err != nil {
+			return nil, err
+		}
+		upstream.discovery = discovery
 	default:
 		discovery := NewResolverDiscovery(upstream)
 		upstream.discovery = discovery
@@ -95,7 +117,12 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 }
 
 func (u *Upstream) roundRobin() proxy.Proxy {
-	proxies := u.proxies.Load().([]proxy.Proxy)
+	list := u.proxies.Load()
+	if list == nil {
+		return nil
+	}
+
+	proxies := list.([]proxy.Proxy)
 	if len(proxies) == 0 {
 		return nil
 	}
@@ -136,7 +163,12 @@ findLoop:
 }
 
 func (u *Upstream) weighted() proxy.Proxy {
-	proxies := u.proxies.Load().([]proxy.Proxy)
+	list := u.proxies.Load()
+	if list == nil {
+		return nil
+	}
+
+	proxies := list.([]proxy.Proxy)
 	if len(proxies) == 0 {
 		return nil
 	}
@@ -182,7 +214,12 @@ findLoop:
 }
 
 func (u *Upstream) random() proxy.Proxy {
-	proxies := u.proxies.Load().([]proxy.Proxy)
+	list := u.proxies.Load()
+	if list == nil {
+		return nil
+	}
+
+	proxies := list.([]proxy.Proxy)
 	if len(proxies) == 0 {
 		return nil
 	}
@@ -215,7 +252,12 @@ findLoop:
 }
 
 func (u *Upstream) hasing(key string) proxy.Proxy {
-	proxies := u.proxies.Load().([]proxy.Proxy)
+	list := u.proxies.Load()
+	if list == nil {
+		return nil
+	}
+
+	proxies := list.([]proxy.Proxy)
 	if len(proxies) == 0 {
 		return nil
 	}
@@ -276,13 +318,15 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	var err error
 
 	if len(instances) == 0 && u.discovery != nil {
-		instances, err = u.discovery.GetInstances(context.Background(), u.options.Discovery.ServiceName)
+		options := provider.GetInstanceOptions{
+			ID: u.options.Discovery.ID,
+		}
+
+		instances, err = u.discovery.GetInstances(context.Background(), options)
 		if err != nil {
 			return err
 		}
-	}
-
-	if len(instances) == 0 {
+	} else if len(instances) == 0 {
 		return fmt.Errorf("no instances found, upstream id: %s", u.options.ID)
 	}
 
@@ -486,7 +530,11 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 
 func (u *Upstream) watch() {
 	u.watchOnce.Do(func() {
-		watchCh, err := u.discovery.Watch(context.Background(), u.options.Discovery.ServiceName)
+		options := provider.GetInstanceOptions{
+			ID: u.options.Discovery.ID,
+		}
+
+		watchCh, err := u.discovery.Watch(context.Background(), options)
 		if err != nil {
 			slog.Error("fail to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
 		}

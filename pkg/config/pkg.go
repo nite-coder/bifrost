@@ -142,12 +142,13 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 	// nacos provider
 	if mainOptions.Providers.Nacos.Config.Enabled {
 
-		configOptions := nacos.Config{
+		nacosConfigOptions := nacos.Options{
 			NamespaceID: mainOptions.Providers.Nacos.Config.NamespaceID,
 			Username:    mainOptions.Providers.Nacos.Config.Username,
 			Password:    mainOptions.Providers.Nacos.Config.Password,
-			ContextPath: mainOptions.Providers.Nacos.Config.ContextPath,
+			Prefix:      mainOptions.Providers.Nacos.Config.Prefix,
 			LogDir:      mainOptions.Providers.Nacos.Config.LogDir,
+			LogLevel:    mainOptions.Providers.Nacos.Config.LogLevel,
 			CacheDir:    mainOptions.Providers.Nacos.Config.CacheDir,
 			Timeout:     mainOptions.Providers.Nacos.Config.Timeout,
 			Endpoints:   make([]string, 0),
@@ -155,20 +156,16 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 		}
 
 		if mainOptions.IsWatch() {
-			configOptions.Watch = true
+			nacosConfigOptions.Watch = true
 		}
 
-		configOptions.Endpoints = append(configOptions.Endpoints, mainOptions.Providers.Nacos.Config.Endpoints...)
+		nacosConfigOptions.Endpoints = append(nacosConfigOptions.Endpoints, mainOptions.Providers.Nacos.Config.Endpoints...)
 
 		for _, file := range mainOptions.Providers.Nacos.Config.Files {
-			configOptions.Files = append(configOptions.Files, &nacos.File{
+			nacosConfigOptions.Files = append(nacosConfigOptions.Files, &nacos.File{
 				DataID: file.DataID,
 				Group:  file.Group,
 			})
-		}
-
-		nacosConfigOptions := nacos.Options{
-			Config: configOptions,
 		}
 
 		nacosProvider, err := nacos.NewProvider(nacosConfigOptions)

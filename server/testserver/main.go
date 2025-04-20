@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"runtime"
 	"sync/atomic"
@@ -17,12 +19,16 @@ import (
 	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/websocket"
+	"github.com/nacos-group/nacos-sdk-go/v2/clients"
+	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
+	"github.com/nacos-group/nacos-sdk-go/v2/vo"
 	"github.com/nite-coder/bifrost/pkg/middleware/cors"
 )
 
 var (
 	delay = flag.Duration("delay", 0, "delay to mock business processing")
 	tail  = flag.Duration("tail", 0, "1% long tail latency")
+	nacos = flag.Bool("nacos", false, "enable nacos")
 )
 
 func WithDefaultServerHeader(disable bool) config.Option {
@@ -213,6 +219,10 @@ func main() {
 		ctx.String(200, "order1:"+name)
 	})
 
+	if *nacos {
+		go registerNacosServiceProvider()
+	}
+
 	h.Spin()
 }
 
@@ -310,4 +320,59 @@ func chunkHandler(ctx context.Context, c *app.RequestContext) {
 		c.Flush()          // nolint: errcheck
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func registerNacosServiceProvider() {
+	clientConfig := constant.ClientConfig{
+		NamespaceId:         "public",           // Default namespace if not specified
+		TimeoutMs:           5000,               // Request timeout in milliseconds
+		NotLoadCacheAtStart: true,               // Do not load cache at startup
+		LogDir:              "/tmp/nacos/log",   // Log directory
+		CacheDir:            "/tmp/nacos/cache", // Cache directory
+		LogLevel:            "debug",            // Log level
+	}
+
+	// Configure Nacos server address
+	serverConfigs := []constant.ServerConfig{
+		{
+			IpAddr:      "127.0.0.1", // Nacos server IP address
+			Port:        8848,        // Nacos server port
+			ContextPath: "/nacos",    // Nacos context path
+		},
+	}
+
+	// Initialize NamingClient
+	namingClient, err := clients.NewNamingClient(
+		vo.NacosClientParam{
+			ClientConfig:  &clientConfig,
+			ServerConfigs: serverConfigs,
+		},
+	)
+	if err != nil {
+		log.Fatalf("Failed to create Nacos naming client: %v", err)
+	}
+
+	// Service registration parameters
+	serviceName := "order_service" // Service name
+	ip := "localhost"              // Service IP address
+
+	// Register service
+	result, err := namingClient.RegisterInstance(vo.RegisterInstanceParam{
+		ServiceName: serviceName,
+		GroupName:   "DEFAULT_GROUP", // Default group name
+		Ip:          ip,
+		Port:        uint64(8000),
+		Weight:      10,                                  // Weight, default is 1
+		Enable:      true,                                // Enable status
+		Healthy:     true,                                // Health status
+		Ephemeral:   true,                                // Whether it's an ephemeral instance
+		Metadata:    map[string]string{"version": "1.0"}, // Custom metadata
+	})
+	if err != nil {
+		log.Fatalf("Failed to register service instance: %v", err)
+	}
+
+	fmt.Println("Service registered:", result)
+
+	select {}
 }

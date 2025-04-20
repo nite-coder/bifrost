@@ -18,7 +18,7 @@ func NewResolverDiscovery(upstream *Upstream) *ResolverDiscovery {
 	}
 }
 
-func (d *ResolverDiscovery) GetInstances(ctx context.Context, serviceName string) ([]provider.Instancer, error) {
+func (d *ResolverDiscovery) GetInstances(ctx context.Context, options provider.GetInstanceOptions) ([]provider.Instancer, error) {
 
 	instances := make([]provider.Instancer, 0)
 
@@ -56,6 +56,6 @@ func (d *ResolverDiscovery) GetInstances(ctx context.Context, serviceName string
 	return instances, nil
 }
 
-func (d *ResolverDiscovery) Watch(ctx context.Context, serviceName string) (<-chan []provider.Instancer, error) {
+func (d *ResolverDiscovery) Watch(ctx context.Context, options provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
 	return nil, nil
 }

@@ -50,16 +50,14 @@ func (m *MockConfigClient) CloseClient() {
 
 func TestNewProvider(t *testing.T) {
 	opts := Options{
-		Config: Config{
-			NamespaceID: "test-namespace",
-			ContextPath: "/custom-path",
-			LogDir:      "/custom-log",
-			CacheDir:    "/custom-cache",
-			Timeout:     3 * time.Second,
-			Endpoints:   []string{"http://localhost:8848"},
-			Files: []*File{
-				{DataID: "test-data-id", Group: "test-group"},
-			},
+		NamespaceID: "test-namespace",
+		Prefix:      "/custom-path",
+		LogDir:      "/custom-log",
+		CacheDir:    "/custom-cache",
+		Timeout:     3 * time.Second,
+		Endpoints:   []string{"http://localhost:8848"},
+		Files: []*File{
+			{DataID: "test-data-id", Group: "test-group"},
 		},
 	}
 
@@ -77,10 +75,8 @@ func TestConfigOpen(t *testing.T) {
 	}).Return("test-content", nil)
 
 	opts := Options{
-		Config: Config{
-			Files: []*File{
-				{DataID: "test-data-id", Group: "test-group"},
-			},
+		Files: []*File{
+			{DataID: "test-data-id", Group: "test-group"},
 		},
 	}
 
@@ -106,9 +102,7 @@ func TestSetOnChanged(t *testing.T) {
 		return nil
 	}
 
-	opts := Options{
-		Config: Config{},
-	}
+	opts := Options{}
 
 	provider := &NacosProvider{
 		options: opts,
@@ -132,11 +126,9 @@ func TestWatch(t *testing.T) {
 	})).Return(nil)
 
 	opts := Options{
-		Config: Config{
-			Watch: true,
-			Files: []*File{
-				{DataID: "test-data-id", Group: "test-group"},
-			},
+		Watch: true,
+		Files: []*File{
+			{DataID: "test-data-id", Group: "test-group"},
 		},
 	}
 

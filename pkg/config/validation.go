@@ -117,6 +117,23 @@ func validateProviders(mainOptions Options) error {
 		}
 	}
 
+	if mainOptions.Providers.Nacos.Discovery.Enabled {
+		if len(mainOptions.Providers.Nacos.Discovery.Endpoints) == 0 {
+			return errors.New("the endpoints can't be empty for the nacos discovery provider")
+		}
+
+		for _, endpoint := range mainOptions.Providers.Nacos.Discovery.Endpoints {
+			_, err := url.Parse(endpoint)
+			if err != nil {
+				return fmt.Errorf("the endpoint '%s' is invalid for nacos discovery provider, error: %w", endpoint, err)
+			}
+
+			if !(strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://")) {
+				return fmt.Errorf("the endpoint '%s' is invalid for nacos discovery provider.  It should start with http:// or https://", endpoint)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -478,6 +495,18 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 		case "dns":
 			if !mainOptions.Providers.DNS.Enabled {
 				return fmt.Errorf("dns provider is disabled. upstream id: %s", upstreamID)
+			}
+
+			if upstreamOptions.Discovery.ID == "" {
+				return fmt.Errorf("the discovery id can't be empty in the upstream '%s'", upstreamID)
+			}
+		case "nacos":
+			if !mainOptions.Providers.Nacos.Discovery.Enabled {
+				return fmt.Errorf("nacos service discovery provider is disabled. upstream id: %s", upstreamID)
+			}
+
+			if upstreamOptions.Discovery.ID == "" {
+				return fmt.Errorf("the discovery id can't be empty in the upstream '%s'", upstreamID)
 			}
 		case "":
 			if upstreamOptions.Discovery.Type == "" && len(upstreamOptions.Targets) == 0 {

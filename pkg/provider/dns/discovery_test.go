@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,7 +61,12 @@ func TestDNSServiceDiscovery_GetInstances(t *testing.T) {
 			assert.NoError(t, err)
 
 			ctx := context.Background()
-			got, err := d.GetInstances(ctx, tt.serviceName)
+
+			options := provider.GetInstanceOptions{
+				ID: tt.serviceName,
+			}
+
+			got, err := d.GetInstances(ctx, options)
 
 			if tt.wantErr {
 				if err == nil {

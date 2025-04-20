@@ -12,9 +12,15 @@ type Provider interface {
 	SetOnChanged(ChangeFunc)
 }
 
+type GetInstanceOptions struct {
+	Namespace string
+	ID        string
+	Group     string
+}
+
 type ServiceDiscovery interface {
-	GetInstances(ctx context.Context, serviceName string) ([]Instancer, error)
-	Watch(ctx context.Context, serviceName string) (<-chan []Instancer, error)
+	GetInstances(ctx context.Context, options GetInstanceOptions) ([]Instancer, error)
+	Watch(ctx context.Context, options GetInstanceOptions) (<-chan []Instancer, error)
 }
 
 type Instancer interface {
