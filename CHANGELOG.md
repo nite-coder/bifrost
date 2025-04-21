@@ -21,6 +21,7 @@
 
 - When the service encounters a `no free connections available to host` error, return HTTP status code `500` instead of `502`
 - During the upgrade process, existing connections will be gracefully closed.
+- `$http.start` and `$http.finish` need to be unix micro time when working with `ResponseTransformer` middleware
 
 ### **Refactor**
 
