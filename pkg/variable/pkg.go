@@ -101,8 +101,20 @@ func GetString(key string, c *app.RequestContext) string {
 	if !found {
 		return ""
 	}
-	result, _ := cast.ToString(val)
-	return result
+
+	switch key {
+	case HTTPStart:
+		httpStart := GetTime(HTTPStart, c)
+		val, _ := cast.ToString(httpStart.UnixMicro())
+		return val
+	case HTTPFinish:
+		httpFinish := GetTime(HTTPFinish, c)
+		val, _ := cast.ToString(httpFinish.UnixMicro())
+		return val
+	default:
+		result, _ := cast.ToString(val)
+		return result
+	}
 }
 
 func GetInt64(key string, c *app.RequestContext) int64 {

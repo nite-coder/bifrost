@@ -112,14 +112,6 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			}
 
 			replacements = append(replacements, variable.HTTPResponseStatusCode, status)
-		case variable.HTTPStart:
-			httpStart := variable.GetTime(variable.HTTPStart, c)
-			val, _ := cast.ToString(httpStart.UnixMicro())
-			replacements = append(replacements, variable.HTTPStart, val)
-		case variable.HTTPFinish:
-			httpFinish := variable.GetTime(variable.HTTPFinish, c)
-			val, _ := cast.ToString(httpFinish.UnixMicro())
-			replacements = append(replacements, variable.HTTPFinish, val)
 		default:
 			val := variable.GetString(key, c)
 			replacements = append(replacements, key, val)
