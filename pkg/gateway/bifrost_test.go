@@ -3,7 +3,6 @@ package gateway
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -148,8 +147,6 @@ func TestBifrost(t *testing.T) {
 		defer cancel()
 		_ = backendServ.Shutdown(ctx)
 	}()
-
-	fmt.Println("hello")
 
 	t.Run("get order", func(t *testing.T) {
 		client := resty.New()
