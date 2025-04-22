@@ -1,6 +1,7 @@
 package file
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
@@ -122,6 +124,20 @@ func (p *FileProvider) Watch() error {
 
 	go func(watcher *fsnotify.Watcher) {
 		defer watcher.Close()
+		if r := recover(); r != nil {
+			var err error
+			switch v := r.(type) {
+			case error:
+				err = v
+			default:
+				err = fmt.Errorf("%v", v)
+			}
+			stackTrace := runtime.StackTrace()
+			slog.Error("file watch panic recovered",
+				slog.String("error", err.Error()),
+				slog.String("stack", stackTrace),
+			)
+		}
 
 		isUpdate := false
 		refresh := 900 * time.Millisecond

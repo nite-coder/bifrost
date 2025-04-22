@@ -201,6 +201,21 @@ func Run(mainOptions config.Options) (err error) {
 	}
 
 	go func() {
+		if r := recover(); r != nil {
+			var err error
+			switch v := r.(type) {
+			case error:
+				err = v
+			default:
+				err = fmt.Errorf("%v", v)
+			}
+			stackTrace := runtime.StackTrace()
+			slog.Error("http server panic recovered",
+				slog.String("error", err.Error()),
+				slog.String("stack", stackTrace),
+			)
+		}
+
 		bifrost.Run()
 	}()
 

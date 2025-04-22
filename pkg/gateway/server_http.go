@@ -26,6 +26,7 @@ import (
 	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/pprof"
+	stackruntime "github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/unix"
@@ -102,6 +103,21 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 
 	if bifrost.options.Metrics.Prometheus.Enabled {
 		go func() {
+			if r := recover(); r != nil {
+				var err error
+				switch v := r.(type) {
+				case error:
+					err = v
+				default:
+					err = fmt.Errorf("%v", v)
+				}
+				stackTrace := stackruntime.StackTrace()
+				slog.Error("runTask panic recovered",
+					slog.String("error", err.Error()),
+					slog.String("stack", stackTrace),
+				)
+			}
+
 			ticker := time.NewTicker(time.Second * 10)
 
 			for range ticker.C {
