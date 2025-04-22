@@ -27,6 +27,7 @@ import (
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/pprof"
 	stackruntime "github.com/nite-coder/bifrost/internal/pkg/runtime"
+	"github.com/nite-coder/bifrost/internal/pkg/task"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	prom "github.com/prometheus/client_golang/prometheus"
@@ -104,34 +105,21 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 
 	if bifrost.options.Metrics.Prometheus.Enabled {
 		go func() {
-			if r := recover(); r != nil {
-				var err error
-				switch v := r.(type) {
-				case error:
-					err = v
-				default:
-					err = fmt.Errorf("%v", v)
+			task.Runner(context.Background(), func() {
+				ticker := time.NewTicker(time.Second * 10)
+
+				for range ticker.C {
+					if !httpServer.isActive.Load() {
+						break
+					}
+
+					labels := make(prom.Labels)
+					labels["server_id"] = serverOptions.ID
+					totalConn := httpServer.totalConnections.Load()
+
+					httpServerOpenConnections.With(labels).Set(float64(totalConn))
 				}
-				stackTrace := stackruntime.StackTrace()
-				slog.Error("runTask panic recovered",
-					slog.String("error", err.Error()),
-					slog.String("stack", stackTrace),
-				)
-			}
-
-			ticker := time.NewTicker(time.Second * 10)
-
-			for range ticker.C {
-				if !httpServer.isActive.Load() {
-					break
-				}
-
-				labels := make(prom.Labels)
-				labels["server_id"] = serverOptions.ID
-				totalConn := httpServer.totalConnections.Load()
-
-				httpServerOpenConnections.With(labels).Set(float64(totalConn))
-			}
+			})
 		}()
 	}
 

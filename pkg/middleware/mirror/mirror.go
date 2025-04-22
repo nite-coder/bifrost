@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/bytedance/gopkg/util/logger"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/go-viper/mapstructure/v2"
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
+	"github.com/nite-coder/bifrost/internal/pkg/task"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
@@ -64,23 +63,7 @@ func NewMiddleware(options Options) *MirrorMiddleware {
 	}
 
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				var err error
-				switch v := r.(type) {
-				case error:
-					err = v
-				default:
-					err = fmt.Errorf("%v", v)
-				}
-				stackTrace := runtime.StackTrace()
-				logger.Error("mirror panic recovered",
-					slog.String("error", err.Error()),
-					slog.String("stack", stackTrace),
-				)
-			}
-		}()
-		m.Run()
+		task.Runner(context.Background(), m.Run)
 	}()
 
 	return m

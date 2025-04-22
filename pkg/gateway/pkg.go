@@ -23,7 +23,7 @@ import (
 	cgopool "github.com/cloudwego/gopkg/concurrency/gopool"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/netpoll"
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
+	"github.com/nite-coder/bifrost/internal/pkg/task"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/connector/redis"
 	"github.com/nite-coder/bifrost/pkg/log"
@@ -33,7 +33,6 @@ import (
 
 var (
 	defaultBifrost      = &atomic.Value{}
-	runTask             func(ctx context.Context, f func())
 	spaceByte           = []byte{byte(' ')}
 	defaultTrustedCIDRs = []*net.IPNet{
 		{ // 0.0.0.0/0 (IPv4)
@@ -46,30 +45,6 @@ var (
 		},
 	}
 )
-
-func init() {
-	runTask = func(ctx context.Context, f func()) {
-		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					var err error
-					switch v := r.(type) {
-					case error:
-						err = v
-					default:
-						err = fmt.Errorf("%v", v)
-					}
-					stackTrace := runtime.StackTrace()
-					slog.Error("panic recovered",
-						slog.String("error", err.Error()),
-						slog.String("stack", stackTrace),
-					)
-				}
-			}()
-			f()
-		}()
-	}
-}
 
 // GetBifrost retrieves the current instance of Bifrost.
 // It returns a pointer to the Bifrost instance stored in the defaultBifrost atomic value.
@@ -105,50 +80,10 @@ func Run(mainOptions config.Options) (err error) {
 
 	if mainOptions.Gopool {
 		netpollConfig.Runner = cgopool.CtxGo
-		runTask = cgopool.CtxGo
+		task.Runner = cgopool.CtxGo
 	} else {
 		netpollConfig.Runner = func(ctx context.Context, f func()) {
-			go func() {
-				defer func() {
-					if r := recover(); r != nil {
-						var err error
-						switch v := r.(type) {
-						case error:
-							err = v
-						default:
-							err = fmt.Errorf("%v", v)
-						}
-						stackTrace := runtime.StackTrace()
-						slog.Error("runTask panic recovered",
-							slog.String("error", err.Error()),
-							slog.String("stack", stackTrace),
-						)
-					}
-				}()
-				f()
-			}()
-		}
-
-		runTask = func(ctx context.Context, f func()) {
-			go func() {
-				defer func() {
-					if r := recover(); r != nil {
-						var err error
-						switch v := r.(type) {
-						case error:
-							err = v
-						default:
-							err = fmt.Errorf("%v", v)
-						}
-						stackTrace := runtime.StackTrace()
-						slog.Error("runTask panic recovered",
-							slog.String("error", err.Error()),
-							slog.String("stack", stackTrace),
-						)
-					}
-				}()
-				f()
-			}()
+			task.Runner(ctx, f)
 		}
 	}
 
@@ -239,81 +174,70 @@ func Run(mainOptions config.Options) (err error) {
 	}
 
 	go func() {
-		if r := recover(); r != nil {
-			var err error
-			switch v := r.(type) {
-			case error:
-				err = v
-			default:
-				err = fmt.Errorf("%v", v)
-			}
-			stackTrace := runtime.StackTrace()
-			slog.Error("http server panic recovered",
-				slog.String("error", err.Error()),
-				slog.String("stack", stackTrace),
-			)
-		}
-
-		bifrost.Run()
+		task.Runner(context.Background(), func() {
+			bifrost.Run()
+		})
 	}()
 
 	go func() {
-		for _, httpServer := range bifrost.httpServers {
-			for {
-				conn, err := net.Dial("tcp", httpServer.Bind())
-				if err == nil {
-					conn.Close()
-					break
+		task.Runner(context.Background(), func() {
+			for _, httpServer := range bifrost.httpServers {
+				for {
+					conn, err := net.Dial("tcp", httpServer.Bind())
+					if err == nil {
+						conn.Close()
+						break
+					}
+					time.Sleep(500 * time.Millisecond)
 				}
-				time.Sleep(500 * time.Millisecond)
-			}
-		}
-
-		slog.Log(ctx, log.LevelNotice, "bifrost is started successfully",
-			"pid", os.Getpid(),
-			"routes", len(bifrost.options.Routes),
-			"services", len(bifrost.options.Services),
-			"middlewares", len(bifrost.options.Middlewares),
-			"upstreams", len(bifrost.options.Upstreams),
-		)
-
-		zeroDT := bifrost.ZeroDownTime()
-
-		if zeroDT != nil && zeroDT.IsUpgraded() {
-			// shutdown old process
-			oldPID, err := zeroDT.GetPID()
-			if err != nil {
-				return
 			}
 
-			err = zeroDT.WritePID()
-			if err != nil {
-				return
+			slog.Log(ctx, log.LevelNotice, "bifrost is started successfully",
+				"pid", os.Getpid(),
+				"routes", len(bifrost.options.Routes),
+				"services", len(bifrost.options.Services),
+				"middlewares", len(bifrost.options.Middlewares),
+				"upstreams", len(bifrost.options.Upstreams),
+			)
+
+			zeroDT := bifrost.ZeroDownTime()
+
+			if zeroDT != nil && zeroDT.IsUpgraded() {
+				// shutdown old process
+				oldPID, err := zeroDT.GetPID()
+				if err != nil {
+					return
+				}
+
+				err = zeroDT.WritePID()
+				if err != nil {
+					return
+				}
+
+				err = zeroDT.Quit(ctx, oldPID, false)
+				if err != nil {
+					return
+				}
 			}
 
-			err = zeroDT.Quit(ctx, oldPID, false)
-			if err != nil {
-				return
-			}
-		}
+			if mainOptions.IsDaemon {
+				err = zeroDT.WritePID()
+				if err != nil {
+					slog.Error("fail to write pid", "error", err)
+					return
+				}
 
-		if mainOptions.IsDaemon {
-			err = zeroDT.WritePID()
-			if err != nil {
-				slog.Error("fail to write pid", "error", err)
-				return
+				err = zeroDT.RemoveUpgradeSock()
+				if err != nil {
+					slog.Error("fail to remove upgrade sock file", "error", err)
+					return
+				}
+				if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
+					slog.Error("fail to wait for upgrade process", "error", err)
+					return
+				}
 			}
-
-			err = zeroDT.RemoveUpgradeSock()
-			if err != nil {
-				slog.Error("fail to remove upgrade sock file", "error", err)
-				return
-			}
-			if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
-				slog.Error("fail to wait for upgrade process", "error", err)
-				return
-			}
-		}
+		})
 	}()
 
 	var sigs os.Signal
@@ -472,8 +396,10 @@ func fullURI(req *protocol.Request) string {
 func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	c := make(chan struct{})
 	go func() {
-		defer close(c)
-		wg.Wait()
+		task.Runner(context.Background(), func() {
+			defer close(c)
+			wg.Wait()
+		})
 	}()
 	select {
 	case <-c:

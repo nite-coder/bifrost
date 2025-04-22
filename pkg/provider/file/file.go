@@ -1,7 +1,7 @@
 package file
 
 import (
-	"fmt"
+	"context"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
+	"github.com/nite-coder/bifrost/internal/pkg/task"
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
@@ -123,70 +123,57 @@ func (p *FileProvider) Watch() error {
 	}
 
 	go func(watcher *fsnotify.Watcher) {
-		defer watcher.Close()
-		if r := recover(); r != nil {
-			var err error
-			switch v := r.(type) {
-			case error:
-				err = v
-			default:
-				err = fmt.Errorf("%v", v)
-			}
-			stackTrace := runtime.StackTrace()
-			slog.Error("file watch panic recovered",
-				slog.String("error", err.Error()),
-				slog.String("stack", stackTrace),
-			)
-		}
+		task.Runner(context.Background(), func() {
+			defer watcher.Close()
 
-		isUpdate := false
-		refresh := 900 * time.Millisecond
-		timer := time.NewTimer(refresh)
-		defer timer.Stop()
+			isUpdate := false
+			refresh := 900 * time.Millisecond
+			timer := time.NewTimer(refresh)
+			defer timer.Stop()
 
-		for {
-			timer.Reset(refresh)
+			for {
+				timer.Reset(refresh)
 
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				switch {
-				// 1. The Write, Create, and Rename events will be fired when saving the data, depending on the text editor you are using. For example, vi uses Rename
-				// 2. When a large amount of data is being saved, the Write event will be triggered multiple times. Hence, we utilize a ticker and the 'isUpdate' parameter here.
-				case event.Op&fsnotify.Create == fsnotify.Create || event.Op&fsnotify.Write == fsnotify.Write:
-					isUpdate = true
-				case event.Op&fsnotify.Remove == fsnotify.Remove:
-					// Some editors will remove the path from the watch list when the event is triggered, so we need to re-add it
-					for _, path := range p.options.Paths {
-						err := p.addWatch(path)
+				select {
+				case event, ok := <-watcher.Events:
+					if !ok {
+						return
+					}
+					switch {
+					// 1. The Write, Create, and Rename events will be fired when saving the data, depending on the text editor you are using. For example, vi uses Rename
+					// 2. When a large amount of data is being saved, the Write event will be triggered multiple times. Hence, we utilize a ticker and the 'isUpdate' parameter here.
+					case event.Op&fsnotify.Create == fsnotify.Create || event.Op&fsnotify.Write == fsnotify.Write:
+						isUpdate = true
+					case event.Op&fsnotify.Remove == fsnotify.Remove:
+						// Some editors will remove the path from the watch list when the event is triggered, so we need to re-add it
+						for _, path := range p.options.Paths {
+							err := p.addWatch(path)
+							if err != nil {
+								slog.Error("file watcher error", "error:", err)
+							}
+						}
+						isUpdate = true
+					}
+				case err, ok := <-watcher.Errors:
+					if !ok {
+						return
+					}
+					slog.Error("file watcher error", "error:", err)
+				case <-timer.C:
+					if !isUpdate {
+						continue
+					}
+					isUpdate = false
+
+					if p.OnChanged != nil {
+						err := p.OnChanged()
 						if err != nil {
-							slog.Error("file watcher error", "error:", err)
+							slog.Error("fail to change in file provider", "error:", err)
 						}
 					}
-					isUpdate = true
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				slog.Error("file watcher error", "error:", err)
-			case <-timer.C:
-				if !isUpdate {
-					continue
-				}
-				isUpdate = false
-
-				if p.OnChanged != nil {
-					err := p.OnChanged()
-					if err != nil {
-						slog.Error("fail to change in file provider", "error:", err)
-					}
 				}
 			}
-
-		}
+		})
 	}(p.watcher)
 
 	for _, path := range p.options.Paths {
