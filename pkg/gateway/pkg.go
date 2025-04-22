@@ -23,6 +23,7 @@ import (
 	cgopool "github.com/cloudwego/gopkg/concurrency/gopool"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/netpoll"
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/internal/pkg/task"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/connector/redis"
@@ -79,10 +80,24 @@ func Run(mainOptions config.Options) (err error) {
 	}
 
 	if mainOptions.Gopool {
+		cgopool.SetPanicHandler(func(ctx context.Context, r any) {
+			if r := recover(); r != nil {
+				var err error
+				switch v := r.(type) {
+				case error:
+					err = v
+				default:
+					err = fmt.Errorf("%v", v)
+				}
+				stackTrace := runtime.StackTrace()
+				slog.Error("netpoll panic recovered",
+					slog.String("error", err.Error()),
+					slog.String("stack", stackTrace),
+				)
+			}
+		})
 		netpollConfig.Runner = cgopool.CtxGo
 		task.Runner = cgopool.CtxGo
-	} else {
-		netpollConfig.Runner = task.Runner
 	}
 
 	err = netpoll.Configure(netpollConfig)
