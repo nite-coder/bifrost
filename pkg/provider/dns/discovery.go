@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
+	"github.com/nite-coder/bifrost/internal/pkg/task"
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
@@ -107,26 +107,13 @@ func (d *DNSServiceDiscovery) Watch(ctx context.Context, options provider.GetIns
 	ch := make(chan []provider.Instancer, 1)
 
 	go func() {
-		if r := recover(); r != nil {
-			var err error
-			switch v := r.(type) {
-			case error:
-				err = v
-			default:
-				err = fmt.Errorf("%v", v)
+		task.Runner(ctx, func() {
+			if d.ticker != nil {
+				for range d.ticker.C {
+					ch <- nil
+				}
 			}
-			stackTrace := runtime.StackTrace()
-			slog.Error("dns watch panic recovered",
-				slog.String("error", err.Error()),
-				slog.String("stack", stackTrace),
-			)
-		}
-
-		if d.ticker != nil {
-			for range d.ticker.C {
-				ch <- nil
-			}
-		}
+		})
 	}()
 
 	return ch, nil

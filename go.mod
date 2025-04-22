@@ -3,7 +3,6 @@ module github.com/nite-coder/bifrost
 go 1.23.0
 
 require (
-	github.com/bytedance/gopkg v0.1.2
 	github.com/bytedance/sonic v1.13.2
 	github.com/cloudwego/gjson v0.1.0
 	github.com/cloudwego/gopkg v0.1.4
@@ -74,6 +73,7 @@ require (
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
+	github.com/bytedance/gopkg v0.1.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

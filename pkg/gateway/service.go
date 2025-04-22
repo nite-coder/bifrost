@@ -11,6 +11,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
 	"github.com/nite-coder/bifrost/internal/pkg/runtime"
+	"github.com/nite-coder/bifrost/internal/pkg/task"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
@@ -159,7 +160,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 	done := make(chan struct{})
 
-	runTask(ctx, func() {
+	go task.Runner(ctx, func() {
 		defer func() {
 			close(done)
 			if r := recover(); r != nil {

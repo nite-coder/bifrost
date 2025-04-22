@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
+	"github.com/nite-coder/bifrost/internal/pkg/task"
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
@@ -256,65 +256,50 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	slog.Info("unix socket is created", "path", z.options.GetUpgradeSock())
 
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				var err error
-				switch v := r.(type) {
-				case error:
-					err = v
-				default:
-					err = fmt.Errorf("%v", v)
-				}
-				stackTrace := runtime.StackTrace()
-				slog.Error("zero: panic recovered",
-					slog.String("error", err.Error()),
-					slog.String("stack", stackTrace),
-				)
-			}
-		}()
-
-		for {
-			conn, err := socket.Accept()
-			if err != nil {
-				if errors.Is(err, net.ErrClosed) {
-					slog.Info("unix socket is closed", "pid", os.Getpid())
-					break
-				}
-				slog.Info("failed to accept upgrade connection", "error", err)
-				continue
-			}
-			conn.Close()
-
-			files := []*os.File{}
-
-			for _, l := range z.listeners {
-				f, err := l.listener.(*net.TCPListener).File()
+		task.Runner(context.Background(), func() {
+			for {
+				conn, err := socket.Accept()
 				if err != nil {
-					slog.ErrorContext(ctx, "failed to get listener file", "error", err)
+					if errors.Is(err, net.ErrClosed) {
+						slog.Info("unix socket is closed", "pid", os.Getpid())
+						break
+					}
+					slog.Info("failed to accept upgrade connection", "error", err)
 					continue
 				}
-				files = append(files, f)
-			}
+				conn.Close()
 
-			slog.Info("listeners count", "count", len(files))
+				files := []*os.File{}
 
-			b, err := sonic.Marshal(z.listeners)
-			if err != nil {
-				slog.Error("failed to marshal listeners", "error", err)
-				break
-			}
+				for _, l := range z.listeners {
+					f, err := l.listener.(*net.TCPListener).File()
+					if err != nil {
+						slog.ErrorContext(ctx, "failed to get listener file", "error", err)
+						continue
+					}
+					files = append(files, f)
+				}
 
-			cmd := z.command.Command(os.Args[0], os.Args[1:]...)
-			cmd.Env = append(os.Environ(), "UPGRADE=1", "LISTENERS="+string(b))
-			cmd.Stdin = nil
-			cmd.Stdout = nil
-			cmd.Stderr = nil
-			cmd.ExtraFiles = files
-			if err := cmd.Start(); err != nil {
-				slog.ErrorContext(ctx, "failed to start a new process", "error", err)
-				continue
+				slog.Info("listeners count", "count", len(files))
+
+				b, err := sonic.Marshal(z.listeners)
+				if err != nil {
+					slog.Error("failed to marshal listeners", "error", err)
+					break
+				}
+
+				cmd := z.command.Command(os.Args[0], os.Args[1:]...)
+				cmd.Env = append(os.Environ(), "UPGRADE=1", "LISTENERS="+string(b))
+				cmd.Stdin = nil
+				cmd.Stdout = nil
+				cmd.Stderr = nil
+				cmd.ExtraFiles = files
+				if err := cmd.Start(); err != nil {
+					slog.ErrorContext(ctx, "failed to start a new process", "error", err)
+					continue
+				}
 			}
-		}
+		})
 	}()
 
 	<-z.stopWaitingCh
