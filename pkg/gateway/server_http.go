@@ -28,6 +28,7 @@ import (
 	"github.com/hertz-contrib/pprof"
 	stackruntime "github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/blackbear/pkg/cast"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/unix"
 )
@@ -348,6 +349,37 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 }
 
 func (s *HTTPServer) Run() {
+	defer func() {
+		if r := recover(); r != nil {
+			var err error
+			switch v := r.(type) {
+			case error:
+				err = v
+			default:
+				err = fmt.Errorf("%v", v)
+			}
+			stackTrace := stackruntime.StackTrace()
+			slog.Error("http server panic recovered",
+				slog.String("error", err.Error()),
+				slog.String("stack", stackTrace),
+				slog.String("server_id", s.options.ID),
+			)
+			panic(err)
+		}
+	}()
+
+	s.server.PanicHandler = func(ctx context.Context, c *app.RequestContext) {
+		stackTrace := stackruntime.StackTrace()
+		err := c.Errors.Last()
+		slog.Error("http request panic recovered",
+			slog.String("server_id", s.options.ID),
+			slog.String("uri", cast.B2S(c.Request.RequestURI())),
+			slog.String("method", cast.B2S(c.Request.Method())),
+			slog.String("stack", stackTrace),
+			slog.Any("error", err),
+		)
+	}
+
 	slog.Info("starting server", "id", s.options.ID, "bind", s.options.Bind, "transporter", s.server.GetTransporterName())
 	_ = s.server.Run()
 }

@@ -1,8 +1,12 @@
 package timecache
 
 import (
+	"fmt"
+	"log/slog"
 	"sync/atomic"
 	"time"
+
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 )
 
 type TimeCache struct {
@@ -40,6 +44,23 @@ func (tc *TimeCache) Now() time.Time {
 }
 
 func (tc *TimeCache) refresh() {
+	defer func() {
+		if r := recover(); r != nil {
+			var err error
+			switch v := r.(type) {
+			case error:
+				err = v
+			default:
+				err = fmt.Errorf("%v", v)
+			}
+			stackTrace := runtime.StackTrace()
+			slog.Error("timecache panic recovered",
+				slog.String("error", err.Error()),
+				slog.String("stack", stackTrace),
+			)
+		}
+	}()
+
 	ticker := time.NewTicker(tc.interval)
 	for range ticker.C {
 		tc.t.Store(time.Now())

@@ -49,7 +49,25 @@ var (
 
 func init() {
 	runTask = func(ctx context.Context, f func()) {
-		go f()
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					var err error
+					switch v := r.(type) {
+					case error:
+						err = v
+					default:
+						err = fmt.Errorf("%v", v)
+					}
+					stackTrace := runtime.StackTrace()
+					slog.Error("panic recovered",
+						slog.String("error", err.Error()),
+						slog.String("stack", stackTrace),
+					)
+				}
+			}()
+			f()
+		}()
 	}
 }
 
@@ -90,27 +108,47 @@ func Run(mainOptions config.Options) (err error) {
 		runTask = cgopool.CtxGo
 	} else {
 		netpollConfig.Runner = func(ctx context.Context, f func()) {
-			go f()
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						var err error
+						switch v := r.(type) {
+						case error:
+							err = v
+						default:
+							err = fmt.Errorf("%v", v)
+						}
+						stackTrace := runtime.StackTrace()
+						slog.Error("runTask panic recovered",
+							slog.String("error", err.Error()),
+							slog.String("stack", stackTrace),
+						)
+					}
+				}()
+				f()
+			}()
 		}
 
 		runTask = func(ctx context.Context, f func()) {
-			defer func() {
-				if r := recover(); r != nil {
-					var err error
-					switch v := r.(type) {
-					case error:
-						err = v
-					default:
-						err = fmt.Errorf("%v", v)
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						var err error
+						switch v := r.(type) {
+						case error:
+							err = v
+						default:
+							err = fmt.Errorf("%v", v)
+						}
+						stackTrace := runtime.StackTrace()
+						slog.Error("runTask panic recovered",
+							slog.String("error", err.Error()),
+							slog.String("stack", stackTrace),
+						)
 					}
-					stackTrace := runtime.StackTrace()
-					slog.Error("runTask panic recovered",
-						slog.String("error", err.Error()),
-						slog.String("stack", stackTrace),
-					)
-				}
+				}()
+				f()
 			}()
-			go f()
 		}
 	}
 
