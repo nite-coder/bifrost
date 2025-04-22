@@ -121,8 +121,8 @@ func (p *HTTPProxy) handleUpgradeResponse(ctx context.Context, clientConn networ
 	errc := make(chan error, 1)
 	spc := switchProtocolCopier{user: clientConn, backend: backendConn}
 
-	go spc.copyToBackend(errc)
-	go spc.copyFromBackend(errc)
+	go task.Runner(ctx, func() { spc.copyToBackend(errc) })
+	go task.Runner(ctx, func() { spc.copyFromBackend(errc) })
 
 	erra := <-errc
 

@@ -41,10 +41,10 @@ func (b *Bifrost) Run() {
 	for _, server := range b.httpServers {
 		if i == len(b.httpServers)-1 {
 			// last server need to blocked
-			server.Run()
+			task.Runner(context.Background(), server.Run)
 			return
 		}
-		go server.Run()
+		go task.Runner(context.Background(), server.Run)
 		i++
 	}
 }
