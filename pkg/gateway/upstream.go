@@ -540,7 +540,7 @@ func (u *Upstream) watch() {
 			slog.Error("fail to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
 		}
 
-		task.Runner(context.Background(), func() {
+		go task.Runner(context.Background(), func() {
 			for instances := range watchCh {
 				err := u.refreshProxies(instances)
 				if err != nil {
