@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
@@ -257,7 +258,18 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				fmt.Println("zero: recover from panic:", r)
+				var err error
+				switch v := r.(type) {
+				case error:
+					err = v
+				default:
+					err = fmt.Errorf("%v", v)
+				}
+				stackTrace := runtime.StackTrace()
+				slog.Error("zero: panic recovered",
+					slog.String("error", err.Error()),
+					slog.String("stack", stackTrace),
+				)
 			}
 		}()
 

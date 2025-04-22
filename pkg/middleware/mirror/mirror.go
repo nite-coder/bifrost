@@ -66,8 +66,18 @@ func NewMiddleware(options Options) *MirrorMiddleware {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
+				var err error
+				switch v := r.(type) {
+				case error:
+					err = v
+				default:
+					err = fmt.Errorf("%v", v)
+				}
 				stackTrace := runtime.StackTrace()
-				logger.Error("mirror panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
+				logger.Error("mirror panic recovered",
+					slog.String("error", err.Error()),
+					slog.String("stack", stackTrace),
+				)
 			}
 		}()
 		m.Run()

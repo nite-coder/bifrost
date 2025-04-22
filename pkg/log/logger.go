@@ -10,6 +10,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
 )
 
@@ -106,6 +107,23 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 
 		// Listen for SIGUSR1 signals to reopen the log file
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					var err error
+					switch v := r.(type) {
+					case error:
+						err = v
+					default:
+						err = fmt.Errorf("%v", v)
+					}
+					stackTrace := runtime.StackTrace()
+					slog.Error("runTask panic recovered",
+						slog.String("error", err.Error()),
+						slog.String("stack", stackTrace),
+					)
+				}
+			}()
+
 			sigChan := make(chan os.Signal, 1)
 			signal.Notify(sigChan, syscall.SIGUSR1) // Register to receive SIGUSR1 signals
 
