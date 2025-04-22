@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -121,6 +123,23 @@ func (l *BufferedLogger) Close() error {
 
 // listenForSignals listens for SIGUSR1 signals to reopen the log file.
 func (l *BufferedLogger) listenForSignals() {
+	defer func() {
+		if r := recover(); r != nil {
+			var err error
+			switch v := r.(type) {
+			case error:
+				err = v
+			default:
+				err = fmt.Errorf("%v", v)
+			}
+			stackTrace := runtime.StackTrace()
+			slog.Error("listenForSignals panic recovered",
+				slog.String("error", err.Error()),
+				slog.String("stack", stackTrace),
+			)
+		}
+	}()
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGUSR1) // Register to receive SIGUSR1 signals
 
