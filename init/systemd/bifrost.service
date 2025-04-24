@@ -4,6 +4,7 @@ After=network.target
 
 [Service]
 Type=forking
+Environment=GOTRACEBACK=crash
 WorkingDirectory=/home/my-gateway
 PIDFile=/home/my-gateway/logs/bifrost.pid
 ExecStartPre=/home/my-gateway/bifrost -t -c=conf/config.yaml
@@ -13,13 +14,8 @@ ExecStop=/home/my-gateway/bifrost -s -c=conf/config.yaml
 Restart=on-failure
 
 LimitNOFILE=1048576
-LimitMEMLOCK=infinity
-LimitCPU=infinity
-LimitAS=infinity
-ProtectSystem=full
-PrivateTmp=true
-MemoryDenyWriteExecute=true
-MemoryLock=true
+LimitCORE=infinity
+
 
 [Install]
 WantedBy=multi-user.target
