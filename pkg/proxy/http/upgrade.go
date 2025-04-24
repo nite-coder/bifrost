@@ -105,17 +105,15 @@ func (p *HTTPProxy) roundTrip(ctx context.Context, clientCtx *app.RequestContext
 
 func (p *HTTPProxy) handleUpgradeResponse(ctx context.Context, clientConn network.Conn, backendConn network.Conn) {
 	backConnCloseCh := make(chan bool)
-	go func() {
-		task.Runner(ctx, func() {
-			// Ensure that the cancellation of a request closes the backend.
-			// See issue https://golang.org/issue/35559.
-			select {
-			case <-ctx.Done():
-			case <-backConnCloseCh:
-			}
-			_ = backendConn.Close()
-		})
-	}()
+	go task.Runner(ctx, func() {
+		// Ensure that the cancellation of a request closes the backend.
+		// See issue https://golang.org/issue/35559.
+		select {
+		case <-ctx.Done():
+		case <-backConnCloseCh:
+		}
+		_ = backendConn.Close()
+	})
 	defer close(backConnCloseCh)
 
 	errc := make(chan error, 1)

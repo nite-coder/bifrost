@@ -34,20 +34,18 @@ func (m *ParallelMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContex
 	waitGroup.Add(len(m.options))
 
 	for _, option := range m.options {
-		go func() {
-			task.Runner(ctx, func() {
-				defer func() {
-					if r := recover(); r != nil {
-						// convert panic to an error
-						err := fmt.Errorf("parallel middleware panic occurred: %v", r)
-						_ = c.Error(err)
-					}
-					waitGroup.Done()
-				}()
+		go task.Runner(ctx, func() {
+			defer func() {
+				if r := recover(); r != nil {
+					// convert panic to an error
+					err := fmt.Errorf("parallel middleware panic occurred: %v", r)
+					_ = c.Error(err)
+				}
+				waitGroup.Done()
+			}()
 
-				option.Middleware(ctx, c)
-			})
-		}()
+			option.Middleware(ctx, c)
+		})
 	}
 
 	waitGroup.Wait()

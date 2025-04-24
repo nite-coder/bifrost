@@ -104,23 +104,21 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 	}
 
 	if bifrost.options.Metrics.Prometheus.Enabled {
-		go func() {
-			task.Runner(context.Background(), func() {
-				ticker := time.NewTicker(time.Second * 10)
+		go task.Runner(context.Background(), func() {
+			ticker := time.NewTicker(time.Second * 10)
 
-				for range ticker.C {
-					if !httpServer.isActive.Load() {
-						break
-					}
-
-					labels := make(prom.Labels)
-					labels["server_id"] = serverOptions.ID
-					totalConn := httpServer.totalConnections.Load()
-
-					httpServerOpenConnections.With(labels).Set(float64(totalConn))
+			for range ticker.C {
+				if !httpServer.isActive.Load() {
+					break
 				}
-			})
-		}()
+
+				labels := make(prom.Labels)
+				labels["server_id"] = serverOptions.ID
+				totalConn := httpServer.totalConnections.Load()
+
+				httpServerOpenConnections.With(labels).Set(float64(totalConn))
+			}
+		})
 	}
 
 	if !disableListener {

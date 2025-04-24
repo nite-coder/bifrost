@@ -106,15 +106,13 @@ func (d *DNSServiceDiscovery) GetInstances(ctx context.Context, options provider
 func (d *DNSServiceDiscovery) Watch(ctx context.Context, options provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
 	ch := make(chan []provider.Instancer, 1)
 
-	go func() {
-		task.Runner(ctx, func() {
-			if d.ticker != nil {
-				for range d.ticker.C {
-					ch <- nil
-				}
+	go task.Runner(ctx, func() {
+		if d.ticker != nil {
+			for range d.ticker.C {
+				ch <- nil
 			}
-		})
-	}()
+		}
+	})
 
 	return ch, nil
 }

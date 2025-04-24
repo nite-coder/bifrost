@@ -186,72 +186,68 @@ func Run(mainOptions config.Options) (err error) {
 		}
 	}
 
-	go func() {
-		task.Runner(context.Background(), func() {
-			bifrost.Run()
-		})
-	}()
+	go task.Runner(context.Background(), func() {
+		bifrost.Run()
+	})
 
-	go func() {
-		task.Runner(context.Background(), func() {
-			for _, httpServer := range bifrost.httpServers {
-				for {
-					conn, err := net.Dial("tcp", httpServer.Bind())
-					if err == nil {
-						conn.Close()
-						break
-					}
-					time.Sleep(500 * time.Millisecond)
+	go task.Runner(context.Background(), func() {
+		for _, httpServer := range bifrost.httpServers {
+			for {
+				conn, err := net.Dial("tcp", httpServer.Bind())
+				if err == nil {
+					conn.Close()
+					break
 				}
+				time.Sleep(500 * time.Millisecond)
+			}
+		}
+
+		slog.Log(ctx, log.LevelNotice, "bifrost is started successfully",
+			"pid", os.Getpid(),
+			"routes", len(bifrost.options.Routes),
+			"services", len(bifrost.options.Services),
+			"middlewares", len(bifrost.options.Middlewares),
+			"upstreams", len(bifrost.options.Upstreams),
+		)
+
+		zeroDT := bifrost.ZeroDownTime()
+
+		if zeroDT != nil && zeroDT.IsUpgraded() {
+			// shutdown old process
+			oldPID, err := zeroDT.GetPID()
+			if err != nil {
+				return
 			}
 
-			slog.Log(ctx, log.LevelNotice, "bifrost is started successfully",
-				"pid", os.Getpid(),
-				"routes", len(bifrost.options.Routes),
-				"services", len(bifrost.options.Services),
-				"middlewares", len(bifrost.options.Middlewares),
-				"upstreams", len(bifrost.options.Upstreams),
-			)
-
-			zeroDT := bifrost.ZeroDownTime()
-
-			if zeroDT != nil && zeroDT.IsUpgraded() {
-				// shutdown old process
-				oldPID, err := zeroDT.GetPID()
-				if err != nil {
-					return
-				}
-
-				err = zeroDT.WritePID()
-				if err != nil {
-					return
-				}
-
-				err = zeroDT.Quit(ctx, oldPID, false)
-				if err != nil {
-					return
-				}
+			err = zeroDT.WritePID()
+			if err != nil {
+				return
 			}
 
-			if mainOptions.IsDaemon {
-				err = zeroDT.WritePID()
-				if err != nil {
-					slog.Error("fail to write pid", "error", err)
-					return
-				}
-
-				err = zeroDT.RemoveUpgradeSock()
-				if err != nil {
-					slog.Error("fail to remove upgrade sock file", "error", err)
-					return
-				}
-				if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
-					slog.Error("fail to wait for upgrade process", "error", err)
-					return
-				}
+			err = zeroDT.Quit(ctx, oldPID, false)
+			if err != nil {
+				return
 			}
-		})
-	}()
+		}
+
+		if mainOptions.IsDaemon {
+			err = zeroDT.WritePID()
+			if err != nil {
+				slog.Error("fail to write pid", "error", err)
+				return
+			}
+
+			err = zeroDT.RemoveUpgradeSock()
+			if err != nil {
+				slog.Error("fail to remove upgrade sock file", "error", err)
+				return
+			}
+			if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
+				slog.Error("fail to wait for upgrade process", "error", err)
+				return
+			}
+		}
+	})
 
 	var sigs os.Signal
 	defer func() {
@@ -408,12 +404,10 @@ func fullURI(req *protocol.Request) string {
 // Returns true if waiting timed out.
 func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	c := make(chan struct{})
-	go func() {
-		task.Runner(context.Background(), func() {
-			defer close(c)
-			wg.Wait()
-		})
-	}()
+	go task.Runner(context.Background(), func() {
+		defer close(c)
+		wg.Wait()
+	})
 	select {
 	case <-c:
 		return false // completed normally

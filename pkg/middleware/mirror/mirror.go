@@ -62,9 +62,7 @@ func NewMiddleware(options Options) *MirrorMiddleware {
 		queue:   make(chan *mirrorContext, options.QueueSize),
 	}
 
-	go func() {
-		task.Runner(context.Background(), m.Run)
-	}()
+	go task.Runner(context.Background(), m.Run)
 
 	return m
 }
