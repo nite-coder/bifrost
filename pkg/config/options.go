@@ -155,9 +155,10 @@ type MetricsOptions struct {
 }
 
 type LoggingOtions struct {
-	Level   string `yaml:"level" json:"level"`
-	Handler string `yaml:"handler" json:"handler"`
-	Output  string `yaml:"output" json:"output"`
+	Level          string `yaml:"level" json:"level"`
+	Handler        string `yaml:"handler" json:"handler"`
+	Output         string `yaml:"output" json:"output"`
+	RedirectStdErr bool   `yaml:"redirect_stderr" json:"redirect_stderr"`
 }
 
 type PrometheusOptions struct {

@@ -106,6 +106,13 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 		fw := &fileWriter{file: file}
 		writer = fw
 
+		if opts.RedirectStdErr {
+			// Use Dup2 to redirect stderr
+			if err := syscall.Dup2(int(file.Fd()), int(os.Stderr.Fd())); err != nil {
+				return nil, fmt.Errorf("failed to redirect stderr: %w", err)
+			}
+		}
+
 		// Listen for SIGUSR1 signals to reopen the log file
 		go func() {
 			task.Runner(context.Background(), func() {
