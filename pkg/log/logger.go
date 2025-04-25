@@ -2,17 +2,20 @@ package log
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
 
 	"github.com/nite-coder/bifrost/internal/pkg/task"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"golang.org/x/sys/unix"
 )
 
 // fileWriter is a wrapper around os.File to support reopening the file on SIGUSR1.
@@ -106,9 +109,14 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 		fw := &fileWriter{file: file}
 		writer = fw
 
-		if opts.RedirectStdErr {
-			// Use Dup2 to redirect stderr
-			if err := syscall.Dup2(int(file.Fd()), int(os.Stderr.Fd())); err != nil {
+		if opts.RedirectStdErr && (opts.Output != "stderr" && opts.Output != "") {
+			if runtime.GOOS == "windows" {
+				// Windows not support dup2
+				return nil, errors.New("stderr redirection not supported on Windows")
+			}
+			// Linux and macOS support unix.Dup2
+			err := unix.Dup2(int(file.Fd()), int(os.Stderr.Fd()))
+			if err != nil {
 				return nil, fmt.Errorf("failed to redirect stderr: %w", err)
 			}
 		}

@@ -26,6 +26,7 @@
 go.work
 
 server/bifrost/logs
+server/bifrost/core
 server/bifrost/bifrost
 server/bifrost/conf
 server/bifrost/config.yaml
