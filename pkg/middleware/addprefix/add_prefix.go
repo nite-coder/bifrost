@@ -18,7 +18,7 @@ func init() {
 		}
 
 		var prefix string
-		if val, ok := params.(map[string]interface{}); ok {
+		if val, ok := params.(map[string]any); ok {
 			prefix, ok = val["prefix"].(string)
 			if !ok {
 				return nil, errors.New("prefix is not set or prefix is invalid")

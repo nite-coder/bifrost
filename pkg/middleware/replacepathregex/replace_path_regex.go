@@ -36,7 +36,10 @@ func init() {
 				return nil, errors.New("replacement field is invalid")
 			}
 
-			m := NewMiddleware(regex, replacement)
+			m, err := NewMiddleware(regex, replacement)
+			if err != nil {
+				return nil, err
+			}
 			return m.ServeHTTP, nil
 		}
 
@@ -50,14 +53,18 @@ type ReplacePathRegexMiddleware struct {
 	replacement []byte
 }
 
-func NewMiddleware(regex, replacement string) *ReplacePathRegexMiddleware {
+func NewMiddleware(regex, replacement string) (*ReplacePathRegexMiddleware, error) {
+
+	if regex == "" || replacement == "" {
+		return nil, errors.New("regex or replacement is empty")
+	}
 
 	re := regexp.MustCompile(regex)
 
 	return &ReplacePathRegexMiddleware{
 		regex:       re,
 		replacement: []byte(replacement),
-	}
+	}, nil
 }
 
 func (m *ReplacePathRegexMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {

@@ -14,7 +14,6 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/henrylee2cn/goutil v1.0.1
 	github.com/hertz-contrib/http2 v0.1.8
 	github.com/hertz-contrib/logger/slog v1.0.0
 	github.com/hertz-contrib/pprof v0.1.2
@@ -69,7 +68,6 @@ require (
 	github.com/aliyun/alibabacloud-dkms-gcs-go-sdk v0.2.2 // indirect
 	github.com/aliyun/alibabacloud-dkms-transfer-go-sdk v0.1.7 // indirect
 	github.com/aliyun/credentials-go v1.3.10 // indirect
-	github.com/andeya/goutil v1.0.1 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
