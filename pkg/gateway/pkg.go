@@ -98,8 +98,6 @@ func Run(mainOptions config.Options) (err error) {
 		})
 		netpollConfig.Runner = cgopool.CtxGo
 		task.Runner = cgopool.CtxGo
-	} else {
-		netpollConfig.Runner = task.Runner
 	}
 
 	err = netpoll.Configure(netpollConfig)
