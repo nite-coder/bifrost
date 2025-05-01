@@ -213,15 +213,6 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 
 		if proxy == nil {
-			reqMethod := cast.B2S(c.Request.Method())
-			reqPath := cast.B2S(c.Request.Path())
-			reqProtocol := c.Request.Header.GetProtocol()
-
-			logger.ErrorContext(ctx, ErrNoLiveUpstream.Error(),
-				"request_uri", reqMethod+" "+reqPath+" "+reqProtocol,
-				"upstream_uri", reqPath,
-				"host", cast.B2S(c.Request.Host()))
-
 			// no live upstream
 			c.SetStatusCode(503)
 			return
