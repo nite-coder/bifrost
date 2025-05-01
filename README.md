@@ -25,10 +25,10 @@ A low latency and high throughput API Gateway library written in Go.
 
 |                                                                                         | Bifrost | Nginx |
 | :-------------------------------------------------------------------------------------- | :-----: | :---: |
-| SDK mode support for custom your gateway                                                |   ✅    |  ❌   |
+| SDK for building your own gateway                                                       |   ✅    |  ❌   |
 | Middleware support and written in native `Go`                                           |   ✅    |  ❌   |
-| Rich `Go` middleware ecosystem                                                          |   ✅    |  ❌   |
-| Millisecond-level hot reloads for `dynamic configuration` updates                       |   ✅    |  ❌   |
+| Rich built-in middlewares                                                               |   ✅    |  ❌   |
+| Millisecond-level graceful reloads for `dynamic configuration` updates                  |   ✅    |  ❌   |
 | Blue-green deployment for services                                                      |   ✅    |  ❌   |
 | High connection pool reuse rate                                                         |   ✅    |  ❌   |
 | Easy integration with existing Go programs                                              |   ✅    |  ❌   |
