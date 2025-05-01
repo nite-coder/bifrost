@@ -25,7 +25,7 @@ func init() {
 					err = fmt.Errorf("%v", v)
 				}
 				stackTrace := debug.Stack()
-				slog.Error("safty Go panic recovered",
+				slog.Error("safety Go panic recovered",
 					slog.String("error", err.Error()),
 					slog.String("stack", cast.B2S(stackTrace)),
 				)
