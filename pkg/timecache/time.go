@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 )
 
 type TimeCache struct {
@@ -30,7 +30,7 @@ func New(interval time.Duration) *TimeCache {
 	}
 
 	tc.t.Store(time.Now())
-	go task.Runner(context.Background(), tc.refresh)
+	go safety.Go(context.Background(), tc.refresh)
 	return tc
 }
 

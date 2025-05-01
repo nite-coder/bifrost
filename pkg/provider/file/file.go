@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
@@ -123,7 +123,7 @@ func (p *FileProvider) Watch() error {
 	}
 
 	go func(watcher *fsnotify.Watcher) {
-		task.Runner(context.Background(), func() {
+		safety.Go(context.Background(), func() {
 			defer watcher.Close()
 
 			isUpdate := false

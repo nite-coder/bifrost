@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"os/user"
+	"runtime/debug"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -23,12 +24,12 @@ import (
 	cgopool "github.com/cloudwego/gopkg/concurrency/gopool"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/netpoll"
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/connector/redis"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/zero"
+	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -89,7 +90,7 @@ func Run(mainOptions config.Options) (err error) {
 				default:
 					err = fmt.Errorf("%v", v)
 				}
-				stackTrace := runtime.StackTrace()
+				stackTrace := cast.B2S(debug.Stack())
 				slog.Error("netpoll panic recovered",
 					slog.String("error", err.Error()),
 					slog.String("stack", stackTrace),
@@ -97,10 +98,10 @@ func Run(mainOptions config.Options) (err error) {
 			}
 		})
 		netpollConfig.Runner = cgopool.CtxGo
-		task.Runner = cgopool.CtxGo
+		safety.Go = cgopool.CtxGo
 	} else {
 		netpollConfig.Runner = func(ctx context.Context, f func()) {
-			go task.Runner(ctx, f)
+			go safety.Go(ctx, f)
 		}
 	}
 
@@ -190,11 +191,11 @@ func Run(mainOptions config.Options) (err error) {
 		}
 	}
 
-	go task.Runner(context.Background(), func() {
+	go safety.Go(context.Background(), func() {
 		bifrost.Run()
 	})
 
-	go task.Runner(context.Background(), func() {
+	go safety.Go(context.Background(), func() {
 		for _, httpServer := range bifrost.httpServers {
 			for {
 				conn, err := net.Dial("tcp", httpServer.Bind())
@@ -408,7 +409,7 @@ func fullURI(req *protocol.Request) string {
 // Returns true if waiting timed out.
 func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	c := make(chan struct{})
-	go task.Runner(context.Background(), func() {
+	go safety.Go(context.Background(), func() {
 		defer close(c)
 		wg.Wait()
 	})

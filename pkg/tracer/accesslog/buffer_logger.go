@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -63,7 +63,7 @@ func NewBufferedLogger(opts config.AccessLogOptions) (*BufferedLogger, error) {
 	}
 
 	// Start listening for SIGUSR1 signals to reopen the log file
-	go task.Runner(context.Background(), logger.listenForSignals)
+	go safety.Go(context.Background(), logger.listenForSignals)
 
 	return logger, nil
 }

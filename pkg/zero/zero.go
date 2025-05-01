@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
@@ -255,7 +255,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 
 	slog.Info("unix socket is created", "path", z.options.GetUpgradeSock())
 
-	go task.Runner(context.Background(), func() {
+	go safety.Go(context.Background(), func() {
 		for {
 			conn, err := socket.Accept()
 			if err != nil {

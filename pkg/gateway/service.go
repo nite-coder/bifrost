@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"runtime/debug"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
@@ -160,11 +160,11 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 	done := make(chan struct{})
 
-	go task.Runner(ctx, func() {
+	go safety.Go(ctx, func() {
 		defer func() {
 			close(done)
 			if r := recover(); r != nil {
-				stackTrace := runtime.StackTrace()
+				stackTrace := cast.B2S(debug.Stack())
 				logger.ErrorContext(ctx, "service panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
 				c.SetStatusCode(500)
 				c.Abort()

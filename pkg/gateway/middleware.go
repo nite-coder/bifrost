@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
+	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 type initMiddleware struct {
@@ -32,7 +33,7 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			stackTrace := runtime.StackTrace()
+			stackTrace := cast.B2S(debug.Stack())
 			fullURI := fullURI(&c.Request)
 			routeID := variable.GetString(variable.RouteID, c)
 

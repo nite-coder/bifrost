@@ -1,19 +1,20 @@
-package task
+package safety
 
 import (
 	"context"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
+	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 var (
-	Runner func(ctx context.Context, f func())
+	Go func(ctx context.Context, f func())
 )
 
 func init() {
-	Runner = func(ctx context.Context, f func()) {
+	Go = func(ctx context.Context, f func()) {
 		defer func() {
 			if r := recover(); r != nil {
 				var err error
@@ -23,10 +24,10 @@ func init() {
 				default:
 					err = fmt.Errorf("%v", v)
 				}
-				stackTrace := runtime.StackTrace()
-				slog.Error("runTask panic recovered",
+				stackTrace := debug.Stack()
+				slog.Error("safty Go panic recovered",
 					slog.String("error", err.Error()),
-					slog.String("stack", stackTrace),
+					slog.String("stack", cast.B2S(stackTrace)),
 				)
 			}
 		}()

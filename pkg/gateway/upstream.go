@@ -18,7 +18,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app/client"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/provider/dns"
@@ -540,7 +540,7 @@ func (u *Upstream) watch() {
 			slog.Error("fail to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
 		}
 
-		go task.Runner(context.Background(), func() {
+		go safety.Go(context.Background(), func() {
 			for instances := range watchCh {
 				err := u.refreshProxies(instances)
 				if err != nil {

@@ -13,7 +13,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"golang.org/x/sys/unix"
 )
@@ -122,7 +122,7 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 		}
 
 		// Listen for SIGUSR1 signals to reopen the log file
-		go task.Runner(context.Background(), func() {
+		go safety.Go(context.Background(), func() {
 			sigChan := make(chan os.Signal, 1)
 			signal.Notify(sigChan, syscall.SIGUSR1) // Register to receive SIGUSR1 signals
 

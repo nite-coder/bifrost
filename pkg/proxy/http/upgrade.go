@@ -15,7 +15,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol"
 	reqHelper "github.com/cloudwego/hertz/pkg/protocol/http1/req"
 	respHelper "github.com/cloudwego/hertz/pkg/protocol/http1/resp"
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"golang.org/x/net/http/httpguts"
 )
 
@@ -105,7 +105,7 @@ func (p *HTTPProxy) roundTrip(ctx context.Context, clientCtx *app.RequestContext
 
 func (p *HTTPProxy) handleUpgradeResponse(ctx context.Context, clientConn network.Conn, backendConn network.Conn) {
 	backConnCloseCh := make(chan bool)
-	go task.Runner(ctx, func() {
+	go safety.Go(ctx, func() {
 		// Ensure that the cancellation of a request closes the backend.
 		// See issue https://golang.org/issue/35559.
 		select {
@@ -119,8 +119,8 @@ func (p *HTTPProxy) handleUpgradeResponse(ctx context.Context, clientConn networ
 	errc := make(chan error, 1)
 	spc := switchProtocolCopier{user: clientConn, backend: backendConn}
 
-	go task.Runner(ctx, func() { spc.copyToBackend(errc) })
-	go task.Runner(ctx, func() { spc.copyFromBackend(errc) })
+	go safety.Go(ctx, func() { spc.copyToBackend(errc) })
+	go safety.Go(ctx, func() { spc.copyFromBackend(errc) })
 
 	erra := <-errc
 

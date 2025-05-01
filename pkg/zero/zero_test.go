@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -157,7 +157,7 @@ func TestWaitForUpgrade(t *testing.T) {
 	defer cancel()
 
 	go func() {
-		task.Runner(ctx, func() {
+		safety.Go(ctx, func() {
 			time.Sleep(500 * time.Millisecond)
 			conn, err := net.Dial("unix", opts.GetUpgradeSock())
 			if err != nil {

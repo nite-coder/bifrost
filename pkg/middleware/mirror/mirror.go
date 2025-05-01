@@ -8,7 +8,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/go-viper/mapstructure/v2"
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
@@ -62,7 +62,7 @@ func NewMiddleware(options Options) *MirrorMiddleware {
 		queue:   make(chan *mirrorContext, options.QueueSize),
 	}
 
-	go task.Runner(context.Background(), m.Run)
+	go safety.Go(context.Background(), m.Run)
 
 	return m
 }

@@ -29,6 +29,7 @@
 - move `fail_timeout` and `max_fails` from target to upstream level (passive healthcheck) in [[#17](https://github.com/nite-coder/bifrost/pull/17)]
 - change `resolver` to support multiple dns servers, order, and hostfile, timeout in [[#18](https://github.com/nite-coder/bifrost/pull/18)] [[#20](https://github.com/nite-coder/bifrost/pull/20)]
 - rename `http_status_code`, `http_content_type`, `http_response_body` to `rejected_http_status_code`, `rejected_http_content_type`, `rejected_http_response_body` for `rate_limit` middleware in [[#21](https://github.com/nite-coder/bifrost/pull/21)]
+- Use `safety.Go` to run goroutine.
 
 ### **Test**
 

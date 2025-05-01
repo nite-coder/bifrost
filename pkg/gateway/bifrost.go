@@ -11,7 +11,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/resolver"
@@ -41,10 +41,10 @@ func (b *Bifrost) Run() {
 	for _, server := range b.httpServers {
 		if i == len(b.httpServers)-1 {
 			// last server need to blocked
-			task.Runner(context.Background(), server.Run)
+			safety.Go(context.Background(), server.Run)
 			return
 		}
-		go task.Runner(context.Background(), server.Run)
+		go safety.Go(context.Background(), server.Run)
 		i++
 	}
 }
@@ -101,7 +101,7 @@ func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 		}
 
 		go func(srv *HTTPServer) {
-			task.Runner(ctx, func() {
+			safety.Go(ctx, func() {
 				defer wg.Done()
 
 				if srv.options.Timeout.Graceful > 0 {

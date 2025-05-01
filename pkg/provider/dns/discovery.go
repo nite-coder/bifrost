@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
@@ -106,7 +106,7 @@ func (d *DNSServiceDiscovery) GetInstances(ctx context.Context, options provider
 func (d *DNSServiceDiscovery) Watch(ctx context.Context, options provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
 	ch := make(chan []provider.Instancer, 1)
 
-	go task.Runner(ctx, func() {
+	go safety.Go(ctx, func() {
 		if d.ticker != nil {
 			for range d.ticker.C {
 				ch <- nil

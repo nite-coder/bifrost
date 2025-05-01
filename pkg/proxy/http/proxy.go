@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/textproto"
 	"net/url"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -19,7 +20,6 @@ import (
 	hzerrors "github.com/cloudwego/hertz/pkg/common/errors"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/google/uuid"
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/proxy"
@@ -220,7 +220,7 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			stackTrace := runtime.StackTrace()
+			stackTrace := cast.B2S(debug.Stack())
 			logger.ErrorContext(ctx, "proxy: http proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
 			c.Abort()
 		}

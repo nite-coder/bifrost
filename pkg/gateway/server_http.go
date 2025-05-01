@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -26,8 +27,7 @@ import (
 	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/pprof"
-	stackruntime "github.com/nite-coder/bifrost/internal/pkg/runtime"
-	"github.com/nite-coder/bifrost/internal/pkg/task"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	prom "github.com/prometheus/client_golang/prometheus"
@@ -104,7 +104,7 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 	}
 
 	if bifrost.options.Metrics.Prometheus.Enabled {
-		go task.Runner(context.Background(), func() {
+		go safety.Go(context.Background(), func() {
 			ticker := time.NewTicker(time.Second * 10)
 
 			for range ticker.C {
@@ -336,7 +336,7 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 
 func (s *HTTPServer) Run() {
 	s.server.PanicHandler = func(ctx context.Context, c *app.RequestContext) {
-		stackTrace := stackruntime.StackTrace()
+		stackTrace := cast.B2S(debug.Stack())
 		err := c.Errors.Last()
 		slog.Error("http request panic recovered",
 			slog.String("server_id", s.options.ID),
