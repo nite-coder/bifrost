@@ -447,7 +447,7 @@ func TestRefreshProxies(t *testing.T) {
 				ID: "test",
 				Discovery: config.DiscoveryOptions{
 					Type: "dns",
-					ID:   "test.service",
+					Name: "test.service",
 				},
 			},
 			ServiceOptions: &config.ServiceOptions{
@@ -501,7 +501,7 @@ func TestRefreshProxies(t *testing.T) {
 				ID: "test",
 				Discovery: config.DiscoveryOptions{
 					Type: "dns",
-					ID:   "test.service",
+					Name: "test.service",
 				},
 			},
 			ServiceOptions: &config.ServiceOptions{

@@ -286,7 +286,7 @@ type TargetOptions struct {
 
 type DiscoveryOptions struct {
 	Type string `yaml:"type" json:"type"`
-	ID   string `yaml:"id" json:"id"`
+	Name string `yaml:"name" json:"name"`
 }
 
 type UpstreamOptions struct {

@@ -497,7 +497,7 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 				return fmt.Errorf("dns provider is disabled. upstream id: %s", upstreamID)
 			}
 
-			if upstreamOptions.Discovery.ID == "" {
+			if upstreamOptions.Discovery.Name == "" {
 				return fmt.Errorf("the discovery id can't be empty in the upstream '%s'", upstreamID)
 			}
 		case "nacos":
@@ -505,7 +505,7 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 				return fmt.Errorf("nacos service discovery provider is disabled. upstream id: %s", upstreamID)
 			}
 
-			if upstreamOptions.Discovery.ID == "" {
+			if upstreamOptions.Discovery.Name == "" {
 				return fmt.Errorf("the discovery id can't be empty in the upstream '%s'", upstreamID)
 			}
 		case "":

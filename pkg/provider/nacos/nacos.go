@@ -43,19 +43,36 @@ type NacosProvider struct {
 func NewProvider(options Options) (*NacosProvider, error) {
 	serverConfigs := []constant.ServerConfig{}
 
+	clientOptions := []constant.ClientOption{
+		constant.WithNamespaceId(options.NamespaceID),
+		constant.WithNotLoadCacheAtStart(true),
+		constant.WithLogLevel(options.LogLevel),
+		constant.WithUsername(options.Username),
+		constant.WithPassword(options.Password),
+	}
+
+	timeout := options.Timeout.Milliseconds()
+	if timeout <= 0 {
+		clientOptions = append(clientOptions, constant.WithTimeoutMs(10000))
+	} else {
+		clientOptions = append(clientOptions, constant.WithTimeoutMs(uint64(timeout)))
+	}
+
+	configConfig := *constant.NewClientConfig(
+		clientOptions...,
+	)
+
 	contextPath := "/nacos"
 	if options.Prefix != "" {
 		contextPath = options.Prefix
 	}
 
-	logDir := ""
 	if options.LogDir != "" {
-		logDir = options.LogDir
+		clientOptions = append(clientOptions, constant.WithLogDir(options.LogDir))
 	}
 
-	cacheDir := ""
 	if options.CacheDir != "" {
-		cacheDir = options.CacheDir
+		clientOptions = append(clientOptions, constant.WithCacheDir(options.CacheDir))
 	}
 
 	for _, endpoint := range options.Endpoints {
@@ -82,23 +99,8 @@ func NewProvider(options Options) (*NacosProvider, error) {
 		))
 	}
 
-	var timeoutMS uint64
-	timeout := options.Timeout.Milliseconds()
-	if timeout <= 0 {
-		timeoutMS = 10000
-	} else {
-		timeoutMS = uint64(timeout)
-	}
-
-	configConfig := *constant.NewClientConfig(
-		constant.WithNamespaceId(options.NamespaceID),
-		constant.WithTimeoutMs(timeoutMS),
-		constant.WithNotLoadCacheAtStart(true),
-		constant.WithLogDir(logDir),
-		constant.WithCacheDir(cacheDir),
-		constant.WithLogLevel(options.LogLevel),
-		constant.WithUsername(options.Username),
-		constant.WithPassword(options.Password),
+	configConfig = *constant.NewClientConfig(
+		clientOptions...,
 	)
 
 	client, err := clients.NewConfigClient(
