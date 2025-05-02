@@ -17,6 +17,7 @@
 - Introduce `ua_restriction` middleware in [[#23](https://github.com/nite-coder/bifrost/pull/23)]
 - Introduce `tags` for routes in [[#24](https://github.com/nite-coder/bifrost/pull/24)]
 - Introduce `redirect_stderr` field for logging
+- Experiment: Introduce `chunked_transfer` option
 
 ### **Bug Fixes**
 
@@ -35,6 +36,10 @@
 ### **Test**
 
 - Improve `middlware(mirror)` package test coverage.
+
+### **Chore**
+
+- Bump Hertz package to `v0.9.7`
 
 ## 0.3.0 (2025-03-29)
 

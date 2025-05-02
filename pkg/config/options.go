@@ -32,6 +32,7 @@ type Options struct {
 	Services        map[string]ServiceOptions   `yaml:"services" json:"services"`
 	Upstreams       map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
 	Redis           []RedisOptions              `yaml:"redis" json:"redis"`
+	Experiment      ExperimentOptions           `yaml:"experiment" json:"experiment"`
 }
 
 func (o *Options) UnmarshalYAML(value *yaml.Node) error {
@@ -92,6 +93,10 @@ func (opt Options) IsWatch() bool {
 
 func (opt Options) ConfigPath() string {
 	return opt.configPath
+}
+
+type ExperimentOptions struct {
+	ChunkedTransfer bool `yaml:"chunked_transfer" json:"chunked_transfer"`
 }
 
 type ProviderOtions struct {

@@ -9,8 +9,12 @@ import (
 	"github.com/hertz-contrib/http2/factory"
 )
 
+func SetChunkedTransfer(enable bool) {
+	chunkedTransfer = enable
+}
+
 func DefaultClientOptions() []hzconfig.ClientOption {
-	return []hzconfig.ClientOption{
+	options := []hzconfig.ClientOption{
 		client.WithNoDefaultUserAgentHeader(true),
 		client.WithDisableHeaderNamesNormalizing(true),
 		client.WithDisablePathNormalizing(true),
@@ -20,8 +24,13 @@ func DefaultClientOptions() []hzconfig.ClientOption {
 		client.WithMaxIdleConnDuration(120 * time.Second),
 		client.WithKeepAlive(true),
 		client.WithMaxConnsPerHost(1024),
-		client.WithResponseBodyStream(true),
 	}
+
+	if chunkedTransfer {
+		options = append(options, client.WithResponseBodyStream(true))
+	}
+
+	return options
 }
 
 type ClientOptions struct {

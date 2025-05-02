@@ -168,7 +168,6 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 				req.Header.Set("Host", opts.HeaderHost)
 			}
 			req.SetRequestURI(cast.B2S(JoinURLPath(req, opts.Target)))
-			// req.Header.SetHostBytes(req.URI().Host())
 		},
 		client: client,
 	}

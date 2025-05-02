@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	spaceByte = []byte{byte(' ')}
-	https     = []byte("https")
+	spaceByte       = []byte{byte(' ')}
+	https           = []byte("https")
+	chunkedTransfer = false
 )
 
 // IsASCIIPrint returns whether s is ASCII and printable according to
