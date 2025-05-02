@@ -31,7 +31,7 @@
 - change `resolver` to support multiple dns servers, order, and hostfile, timeout in [[#18](https://github.com/nite-coder/bifrost/pull/18)] [[#20](https://github.com/nite-coder/bifrost/pull/20)]
 - rename `http_status_code`, `http_content_type`, `http_response_body` to `rejected_http_status_code`, `rejected_http_content_type`, `rejected_http_response_body` for `rate_limit` middleware in [[#21](https://github.com/nite-coder/bifrost/pull/21)]
 - Use `safety.Go` to run goroutine.
-- Remove to write error log when upstream is unavailable (HTTP 503).
+- Stop logging errors when the upstream is unavailable (returns HTTP 503)
 
 ### **Test**
 
