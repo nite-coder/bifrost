@@ -17,7 +17,7 @@ func TestRateLimitMiddleware(t *testing.T) {
 		"strategy":                    "local",
 		"limit":                       3,
 		"window_size":                 10 * time.Second,
-		"limit_by":                    "$client_ip",
+		"limit_by":                    "ip:$client_ip",
 		"header_limit":                "X-RateLimit-Limit",
 		"header_remaining":            "X-RateLimit-Remaining",
 		"rejected_http_status_code":   429,

@@ -182,6 +182,8 @@ func startRedisCluster(t *testing.T) func() {
 		t.Fatalf("Failed to connect redis cluster: %+v", err)
 	}
 
+	time.Sleep(2 * time.Second)
+
 	return destroyFunc
 }
 

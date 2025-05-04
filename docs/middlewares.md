@@ -139,13 +139,12 @@ routes:
   order:
     paths:
       - /orders
-    service_id: order_service
     middlewares:
       - type: rate_limit
         params:
-          strategy: local # local, redis, local-async-redis
+          strategy: local # local, redis
+          limit_by: user_id:$var.user_id  # allow to use directive
           limit: 10
-          limit_by: $var.user_id
           window_size: 2s
           header_limit: x-ratelimit-limit
           header_remaining: x-ratelimit-remaining
@@ -153,6 +152,7 @@ routes:
           rejected_http_status_code: 429 # when hit the rate limit
           rejected_http_content_type: application/json
           rejected_http_response_body: {"error": "too many requests"}
+    service_id: order_service
 ```
 
 ### ReplacePath

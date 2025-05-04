@@ -13,7 +13,6 @@ import (
 	"github.com/nite-coder/bifrost/pkg/connector/redis"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 type Limiter interface {
@@ -50,8 +49,9 @@ type Options struct {
 }
 
 type RateLimitingMiddleware struct {
-	options *Options
-	limter  Limiter
+	options    *Options
+	limiter    Limiter
+	directives []string
 }
 
 func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
@@ -64,19 +64,22 @@ func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 		return nil, errors.New("window_size must be greater than 0")
 	}
 
+	d := variable.ParseDirectives(options.LimitBy)
+
 	m := &RateLimitingMiddleware{
-		options: &options,
+		options:    &options,
+		directives: d,
 	}
 
 	switch options.Strategy {
 	case Local:
-		m.limter = NewLocalLimiter(options)
+		m.limiter = NewLocalLimiter(options)
 	case Redis:
 		client, found := redis.Get(options.RedisID)
 		if !found {
 			return nil, fmt.Errorf("redis id '%s' not found for rate_limit middleware", options.RedisID)
 		}
-		m.limter = NewRedisLimiter(client, options)
+		m.limiter = NewRedisLimiter(client, options)
 	default:
 		return nil, fmt.Errorf("strategy '%s' is invalid for rate_limit middleware", options.Strategy)
 	}
@@ -91,19 +94,15 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 		return
 	}
 
-	key := variable.GetString(m.options.LimitBy, c)
+	key := m.options.LimitBy
+	vals := buildReplacer(m.directives, c)
+	if len(vals) > 0 {
+		replacer := strings.NewReplacer(vals...)
+		key = replacer.Replace(key)
+	}
 
 	if len(key) > 0 {
-		val, _ := cast.ToString(key)
-
-		builder := strings.Builder{}
-		builder.WriteString("rate_limit:")
-		builder.WriteString(m.options.LimitBy)
-		builder.WriteString(":")
-		builder.WriteString(val)
-		key := builder.String()
-
-		result := m.limter.Allow(ctx, key)
+		result := m.limiter.Allow(ctx, key)
 
 		if result.Allow {
 			c.Next(ctx)
@@ -149,6 +148,21 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 	}
 
 	c.Next(ctx)
+}
+
+func buildReplacer(directives []string, c *app.RequestContext) []string {
+	if len(directives) == 0 {
+		return nil
+	}
+
+	replacements := make([]string, 0, len(directives)*2)
+
+	for _, key := range directives {
+		val := variable.GetString(key, c)
+		replacements = append(replacements, key, val)
+	}
+
+	return replacements
 }
 
 func init() {

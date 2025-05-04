@@ -32,6 +32,7 @@
 - rename `http_status_code`, `http_content_type`, `http_response_body` to `rejected_http_status_code`, `rejected_http_content_type`, `rejected_http_response_body` for `rate_limit` middleware in [[#21](https://github.com/nite-coder/bifrost/pull/21)]
 - Use `safety.Go` to run goroutine.
 - Stop logging errors when the upstream is unavailable (returns HTTP 503)
+- allow to use directive in `limit_by` field for `rate_limit` middleware
 
 ### **Test**
 

@@ -22,9 +22,9 @@ var (
 )
 
 type Tracer struct {
-	opts      config.AccessLogOptions
-	matchVars []string
-	writer    *BufferedLogger
+	options    config.AccessLogOptions
+	directives []string
+	writer     *BufferedLogger
 }
 
 func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
@@ -41,9 +41,9 @@ func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 	}
 
 	tracer := &Tracer{
-		opts:      opts,
-		matchVars: variable.ParseDirectives(opts.Template),
-		writer:    bufferedLogger,
+		options:    opts,
+		directives: variable.ParseDirectives(opts.Template),
+		writer:     bufferedLogger,
 	}
 
 	return tracer, nil
@@ -60,12 +60,12 @@ func (t *Tracer) Finish(ctx context.Context, c *app.RequestContext) {
 	}
 
 	replacer := strings.NewReplacer(vals...)
-	result := replacer.Replace(t.opts.Template)
+	result := replacer.Replace(t.options.Template)
 	t.writer.Write(result)
 }
 
 func (t *Tracer) Close() error {
-	if strings.EqualFold(t.opts.Output, "stderr") {
+	if strings.EqualFold(t.options.Output, "stderr") {
 		return nil
 	}
 
@@ -84,13 +84,13 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 		return nil
 	}
 
-	replacements := make([]string, 0, len(t.matchVars)*2)
+	replacements := make([]string, 0, len(t.directives)*2)
 
-	for _, key := range t.matchVars {
+	for _, key := range t.directives {
 		switch key {
 		case variable.Time:
 			timeNow := timecache.Now()
-			now := timeNow.Format(t.opts.TimeFormat)
+			now := timeNow.Format(t.options.TimeFormat)
 			replacements = append(replacements, variable.Time, now)
 		case variable.HTTPRequestBody:
 			contentType := c.Request.Header.ContentType()
@@ -100,7 +100,7 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 				continue
 			}
 
-			body := escape(cast.B2S(c.Request.Body()), t.opts.Escape)
+			body := escape(cast.B2S(c.Request.Body()), t.options.Escape)
 			replacements = append(replacements, variable.HTTPRequestBody, body)
 		case variable.HTTPResponseStatusCode:
 			status := strconv.Itoa(c.Response.StatusCode())
