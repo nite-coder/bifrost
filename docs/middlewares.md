@@ -132,7 +132,7 @@ routes:
 ### RateLimit
 
 The `RateLimit` middleware ensures that services receive a fair share of requests and allows you to define what "fair" means.
-The following example allows a user to send a maximum of 10 requests within 2 seconds.
+The following example allows a user to send a maximum of 10 requests within 2 seconds.  If redis server is crashed, the requests will be passed. (downgrade)
 
 ```yaml
 routes:

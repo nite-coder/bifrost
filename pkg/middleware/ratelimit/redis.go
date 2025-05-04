@@ -59,21 +59,28 @@ func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 	now := timecache.Now()
 	t := now.UnixNano() / int64(time.Millisecond)
 
+	var err error
+
 	tracer := otel.Tracer("bifrost")
-	var span trace.Span
 	if tracer != nil {
 		spanOptions := []trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindClient),
 		}
 
-		ctx, span = tracer.Start(ctx, "ratelimit_redis", spanOptions...)
+		_, span := tracer.Start(ctx, "ratelimit_redis", spanOptions...)
+
+		defer func() {
+			if err != nil {
+				span.SetStatus(otelcodes.Error, "")
+			}
+
+			span.End()
+		}()
 	}
 
 	result, err := l.client.Eval(ctx, luaScript, []string{key}, tokens, l.options.Limit, int(l.options.WindowSize.Seconds()), t).Result()
 	if err != nil {
 		logger.Error("ratelimit: redis eval error", "error", err)
-		span.SetStatus(otelcodes.Error, "")
-		span.End()
 		return &AllowResult{
 			Allow:     true,
 			Limit:     l.options.Limit,
@@ -81,8 +88,6 @@ func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 			ResetTime: now.Add(l.options.WindowSize),
 		}
 	}
-
-	span.End()
 
 	resultArray := result.([]any)
 
