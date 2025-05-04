@@ -10,6 +10,8 @@
 *.pid
 *.sock
 *.pcap
+*.pprof
+
 
 .DS_Store
 

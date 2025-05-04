@@ -70,7 +70,7 @@ func main() {
 3. Modify your `go.mod` by adding the following two lines.
 
 ```sh
-replace github.com/cloudwego/hertz v0.9.6 => github.com/nite-coder/hertz v0.9.6
+replace github.com/cloudwego/hertz v0.9.7 => github.com/nite-coder/hertz v0.9.7
 replace github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.1.8
 ```
 

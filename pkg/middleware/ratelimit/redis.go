@@ -16,48 +16,40 @@ import (
 type RedisLimiter struct {
 	options *Options
 	client  redis.UniversalClient
+	script  *redis.Script
 }
 
 func NewRedisLimiter(client redis.UniversalClient, options Options) *RedisLimiter {
 	return &RedisLimiter{
 		client:  client,
 		options: &options,
+		script:  redis.NewScript(luaScript),
 	}
 }
 
 const (
 	luaScript = `
     local key = KEYS[1]
-    local tokens = tonumber(ARGV[1])
-    local limit = tonumber(ARGV[2])
-    local window = tonumber(ARGV[3])
-    local now = tonumber(ARGV[4])
+	local tokens, limit, window = tonumber(ARGV[1]), tonumber(ARGV[2]), tonumber(ARGV[3])
+	local now = redis.call("TIME")[1] * 1000
 
     local current = redis.call("INCRBY", key, tokens)
-    local ttl = redis.call("TTL", key)
+    local pttl = redis.call("PTTL", key)
 
-    if ttl == -1 then
-	    redis.call("EXPIRE", key, window)
-        ttl = window
-    end
+	if pttl < 0 then
+		redis.call("PEXPIRE", key, window)
+		pttl = window
+	end
 
-    local resetTime = now + ttl * 1000  -- Convert to milliseconds
     local remaining = limit - current
-    if remaining < 0 then
-        remaining = 0
-    end
+    if remaining < 0 then remaining = 0 end
 
-    return {current, limit, remaining, resetTime}
+    return {current, limit, remaining, now + pttl}
     `
 )
 
 func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 	logger := log.FromContext(ctx)
-
-	tokens := 1
-
-	now := timecache.Now()
-	t := now.UnixNano() / int64(time.Millisecond)
 
 	var err error
 
@@ -78,9 +70,19 @@ func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 		}()
 	}
 
-	result, err := l.client.Eval(ctx, luaScript, []string{key}, tokens, l.options.Limit, int(l.options.WindowSize.Seconds()), t).Result()
+	keys := []string{key}
+	args := []any{1, l.options.Limit, int(l.options.WindowSize.Milliseconds())}
+
+	result, err := l.script.Run(
+		ctx,
+		l.client,
+		keys,
+		args,
+	).Result()
 	if err != nil {
-		logger.Error("ratelimit: redis eval error", "error", err)
+		// downgrade
+		logger.Warn("ratelimit: redis eval error", "error", err)
+		now := timecache.Now()
 		return &AllowResult{
 			Allow:     true,
 			Limit:     l.options.Limit,
@@ -93,7 +95,7 @@ func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 
 	current, _ := cast.ToUint64(resultArray[0])
 	remaining, _ := cast.ToUint64(resultArray[2])
-	resetTime := time.UnixMilli(resultArray[3].(int64) * int64(time.Millisecond))
+	resetTime := time.UnixMilli(resultArray[3].(int64))
 
 	return &AllowResult{
 		Allow:     current <= l.options.Limit,

@@ -52,25 +52,6 @@ func startRedis(t *testing.T) (string, func()) {
 	return addr, destroyFunc
 }
 
-func TestRedis(t *testing.T) {
-	addr, destroyRedis := startRedis(t)
-	defer destroyRedis()
-
-	t.Log("addr:", addr)
-	ctx := context.Background()
-	client := redis.NewClient(&redis.Options{Addr: addr})
-	_, e := client.Ping(ctx).Result()
-	assert.NoError(t, e)
-
-	options := Options{
-		Limit:      5,
-		WindowSize: time.Second,
-	}
-
-	limiter := NewRedisLimiter(client, options)
-	testLimiter(t, limiter, options)
-}
-
 func startRedisCluster(t *testing.T) func() {
 	pool, err := dockertest.NewPool("")
 	if err != nil {
@@ -187,6 +168,25 @@ func startRedisCluster(t *testing.T) func() {
 	return destroyFunc
 }
 
+func TestRedis(t *testing.T) {
+	addr, destroyRedis := startRedis(t)
+	defer destroyRedis()
+
+	t.Log("addr:", addr)
+	ctx := context.Background()
+	client := redis.NewClient(&redis.Options{Addr: addr})
+	_, e := client.Ping(ctx).Result()
+	assert.NoError(t, e)
+
+	options := Options{
+		Limit:      5,
+		WindowSize: time.Second,
+	}
+
+	limiter := NewRedisLimiter(client, options)
+	testLimiter(t, limiter, options)
+}
+
 func TestRedisCluster(t *testing.T) {
 	destroyRedis := startRedisCluster(t)
 	defer destroyRedis()
@@ -214,18 +214,18 @@ func testLimiter(t *testing.T, limiter Limiter, options Options) {
 
 	t.Run("Basic functionality", func(t *testing.T) {
 		key := "test_key"
-		now := time.Now()
 		ctx := context.Background()
 
 		for i := 1; i < 6; i++ {
+			now := time.Now()
 			result := limiter.Allow(ctx, key)
 			if !result.Allow {
 				t.Errorf("Request %d should be allowed", i+1)
 			}
-
 			assert.Equal(t, options.Limit, result.Limit)
 			assert.Equal(t, uint64(5-i), result.Remaining) // nolint
-			assert.LessOrEqual(t, float64(1), result.ResetTime.Sub(now).Seconds())
+			assert.LessOrEqual(t, result.ResetTime.Sub(now).Seconds(), float64(1.1))
+			time.Sleep(100 * time.Millisecond)
 		}
 		result := limiter.Allow(ctx, key)
 		if result.Allow {
