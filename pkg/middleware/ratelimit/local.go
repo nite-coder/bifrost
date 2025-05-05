@@ -31,9 +31,9 @@ func (l *LocalLimiter) Allow(ctx context.Context, key string) *AllowResult {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	result := &AllowResult{
-		Limit: l.options.Limit,
-	}
+	result := GetAllowResult()
+	result.Limit = l.options.Limit
+
 	itemVal, found := l.cache.Get(key)
 
 	if !found {

@@ -97,10 +97,10 @@ func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 	remaining, _ := cast.ToUint64(resultArray[2])
 	resetTime := time.UnixMilli(resultArray[3].(int64))
 
-	return &AllowResult{
-		Allow:     current <= l.options.Limit,
-		Limit:     l.options.Limit,
-		Remaining: remaining,
-		ResetTime: resetTime,
-	}
+	allowResult := GetAllowResult()
+	allowResult.Allow = current <= l.options.Limit
+	allowResult.Limit = l.options.Limit
+	allowResult.Remaining = remaining
+	allowResult.ResetTime = resetTime
+	return allowResult
 }

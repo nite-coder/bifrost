@@ -103,6 +103,7 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 
 	if len(key) > 0 {
 		result := m.limiter.Allow(ctx, key)
+		defer PutAllowResult(result)
 
 		if result.Allow {
 			c.Next(ctx)
