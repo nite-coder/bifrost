@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## next version
+## 0.4.0 (2025-05-14)
 
 ### **Features**
 
