@@ -100,7 +100,7 @@ func NewNacosServiceDiscovery(options Options) (*NacosServiceDiscovery, error) {
 
 func (d *NacosServiceDiscovery) GetInstances(ctx context.Context, options provider.GetInstanceOptions) ([]provider.Instancer, error) {
 	nacosInstances, err := d.client.SelectInstances(vo.SelectInstancesParam{
-		ServiceName: options.ID,
+		ServiceName: options.Name,
 		GroupName:   options.Group,
 		HealthyOnly: true,
 	})
@@ -109,7 +109,7 @@ func (d *NacosServiceDiscovery) GetInstances(ctx context.Context, options provid
 		if err.Error() == "instance list is empty!" {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("fail to select instances from nacos, error: %w, discovery id: %s, group: %s", err, options.ID, options.Group)
+		return nil, fmt.Errorf("fail to select instances from nacos, error: %w, discovery id: %s, group: %s", err, options.Name, options.Group)
 	}
 
 	instances := ToProviderInstance(nacosInstances)
@@ -120,7 +120,7 @@ func (d *NacosServiceDiscovery) Watch(ctx context.Context, options provider.GetI
 	ch := make(chan []provider.Instancer, 1)
 
 	err := d.client.Subscribe(&vo.SubscribeParam{
-		ServiceName: options.ID,
+		ServiceName: options.Name,
 		GroupName:   options.Group,
 		SubscribeCallback: func(nacosInstances []model.Instance, err error) {
 			if err != nil {

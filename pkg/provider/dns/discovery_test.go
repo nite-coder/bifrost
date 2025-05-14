@@ -63,7 +63,7 @@ func TestDNSServiceDiscovery_GetInstances(t *testing.T) {
 			ctx := context.Background()
 
 			options := provider.GetInstanceOptions{
-				ID: tt.serviceName,
+				Name: tt.serviceName,
 			}
 
 			got, err := d.GetInstances(ctx, options)

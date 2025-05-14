@@ -320,7 +320,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 
 	if len(instances) == 0 && u.discovery != nil {
 		options := provider.GetInstanceOptions{
-			ID: u.options.Discovery.Name,
+			Name: u.options.Discovery.Name,
 		}
 
 		instances, err = u.discovery.GetInstances(context.Background(), options)
@@ -532,7 +532,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 func (u *Upstream) watch() {
 	u.watchOnce.Do(func() {
 		options := provider.GetInstanceOptions{
-			ID: u.options.Discovery.Name,
+			Name: u.options.Discovery.Name,
 		}
 
 		watchCh, err := u.discovery.Watch(context.Background(), options)

@@ -105,7 +105,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 				}, nil)
 			},
 			options: provider.GetInstanceOptions{
-				ID:    "test-service",
+				Name:  "test-service",
 				Group: "test-group",
 			},
 			want:    2,
@@ -117,7 +117,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 				m.On("SelectInstances", mock.Anything).Return([]model.Instance{}, nil)
 			},
 			options: provider.GetInstanceOptions{
-				ID:    "test-service",
+				Name:  "test-service",
 				Group: "test-group",
 			},
 			want:    0,
@@ -129,7 +129,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 				m.On("SelectInstances", mock.Anything).Return([]model.Instance{}, fmt.Errorf("nacos error"))
 			},
 			options: provider.GetInstanceOptions{
-				ID:    "test-service",
+				Name:  "test-service",
 				Group: "test-group",
 			},
 			want:    0,
@@ -175,7 +175,7 @@ func TestNacosServiceDiscovery_Watch(t *testing.T) {
 
 			},
 			options: provider.GetInstanceOptions{
-				ID:    "test-service",
+				Name:  "test-service",
 				Group: "test-group",
 			},
 			wantErr: false,
@@ -186,7 +186,7 @@ func TestNacosServiceDiscovery_Watch(t *testing.T) {
 				m.On("Subscribe", mock.Anything).Return(fmt.Errorf("subscription error"))
 			},
 			options: provider.GetInstanceOptions{
-				ID:    "test-service",
+				Name:  "test-service",
 				Group: "test-group",
 			},
 			wantErr: true,
