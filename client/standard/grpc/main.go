@@ -31,7 +31,7 @@ func main() {
 	if err != nil {
 		st, ok := status.FromError(err)
 		if ok {
-			slog.Error("fail to say hello", "code", st.Code(), "error", st.Message())
+			slog.Error("failed to say hello", "code", st.Code(), "error", st.Message())
 			return
 		}
 	}

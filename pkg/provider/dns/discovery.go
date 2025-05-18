@@ -79,7 +79,7 @@ func (d *DNSServiceDiscovery) GetInstances(ctx context.Context, options provider
 
 	ips, err := d.Lookup(ctx, targetHost)
 	if err != nil {
-		return nil, fmt.Errorf("fail to lookup target '%s', error: %w", targetHost, err)
+		return nil, fmt.Errorf("failed to lookup target '%s', error: %w", targetHost, err)
 	}
 
 	for _, ip := range ips {
@@ -91,7 +91,7 @@ func (d *DNSServiceDiscovery) GetInstances(ctx context.Context, options provider
 
 		addr, err := net.ResolveTCPAddr("tcp", ip)
 		if err != nil {
-			return nil, fmt.Errorf("fail to resolve target '%s', error: %w", ip, err)
+			return nil, fmt.Errorf("failed to resolve target '%s', error: %w", ip, err)
 		}
 
 		instance := provider.NewInstance(addr, 1)

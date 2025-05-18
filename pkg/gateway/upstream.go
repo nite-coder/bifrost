@@ -553,7 +553,7 @@ func (u *Upstream) watch() {
 
 		watchCh, err := u.discovery.Watch(context.Background(), options)
 		if err != nil {
-			slog.Error("fail to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
+			slog.Error("failed to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
 		}
 
 		go safety.Go(context.Background(), func() {

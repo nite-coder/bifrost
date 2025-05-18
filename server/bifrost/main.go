@@ -87,7 +87,7 @@ func main() {
 			if isTestAndSkip {
 				path, err := config.TestAndSkipResovler(configPath)
 				if err != nil {
-					slog.Error("fail to load config", "error", err.Error())
+					slog.Error("failed to load config", "error", err.Error())
 					slog.Info("the configuration file test has failed")
 					return err
 				}
@@ -99,7 +99,7 @@ func main() {
 			isTest := cCtx.Bool("test")
 			mainOptions, err := config.Load(configPath)
 			if err != nil {
-				slog.Error("fail to load config", "error", err.Error())
+				slog.Error("failed to load config", "error", err.Error())
 				if isTest {
 					slog.Info("the configuration file test has failed")
 				}
@@ -134,7 +134,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		slog.Error("fail to run", "error", err.Error())
+		slog.Error("failed to run", "error", err.Error())
 		os.Exit(-1)
 	}
 }

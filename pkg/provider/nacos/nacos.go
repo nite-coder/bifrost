@@ -138,7 +138,7 @@ func (p *NacosProvider) ConfigOpen() ([]*File, error) {
 			Group:  file.Group,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("nacos: fail to get '%s' file from '%s' group in '%s' namespace_id, error: %w", file.DataID, file.Group, p.options.NamespaceID, err)
+			return nil, fmt.Errorf("nacos: failed to get '%s' file from '%s' group in '%s' namespace_id, error: %w", file.DataID, file.Group, p.options.NamespaceID, err)
 		}
 
 		newFile := &File{

@@ -121,7 +121,7 @@ var hopHeaders = []string{
 func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 	addr, err := url.Parse(opts.Target)
 	if err != nil {
-		return nil, fmt.Errorf("proxy: http proxy fail to parse target url; %w", err)
+		return nil, fmt.Errorf("proxy: http proxy failed to parse target url; %w", err)
 	}
 
 	if client == nil {
@@ -431,7 +431,7 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 
 	routeID := variable.GetString(variable.RouteID, c)
 
-	logger.ErrorContext(ctx, "fail to send request to upstream",
+	logger.ErrorContext(ctx, "failed to send request to upstream",
 		slog.String("route_id", routeID),
 		slog.String("client_ip", c.ClientIP()),
 		slog.String("error", err.Error()),
