@@ -70,13 +70,6 @@ func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*DNSServiceD
 }
 
 func (d *DNSServiceDiscovery) GetInstances(ctx context.Context, options provider.GetInstanceOptions) ([]provider.Instancer, error) {
-	if options.Namespace == "" {
-		return nil, errors.New("namespace is required")
-	}
-	if options.Name == "" {
-		return nil, errors.New("service name is required")
-	}
-
 	instances := make([]provider.Instancer, 0)
 
 	targetHost, targetPort, err := net.SplitHostPort(options.Name)

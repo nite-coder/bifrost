@@ -8,31 +8,51 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/utils/ptr"
 )
 
 func TestGetInstances(t *testing.T) {
 	tests := []struct {
 		name          string
+		endpointSlice *discoveryv1.EndpointSlice
 		pods          []corev1.Pod
 		options       provider.GetInstanceOptions
 		expectedCount int
 		wantErr       bool
 	}{
 		{
-			name: "no pods",
-			pods: []corev1.Pod{},
-			options: provider.GetInstanceOptions{
-				Name:      "test-app",
-				Namespace: "default",
+			name: "endpointslice with pod ref",
+			endpointSlice: &discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-app-abc",
+					Namespace: "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "test-app",
+					},
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{"192.168.1.1"},
+						TargetRef: &corev1.ObjectReference{
+							Kind: "Pod",
+							Name: "test-pod-1",
+						},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready: ptr.To(true),
+						},
+					},
+				},
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Port: ptr.To(int32(8080)),
+					},
+				},
 			},
-			expectedCount: 0,
-			wantErr:       false,
-		},
-		{
-			name: "one ready pod",
 			pods: []corev1.Pod{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -47,7 +67,6 @@ func TestGetInstances(t *testing.T) {
 							{
 								Ports: []corev1.ContainerPort{
 									{
-										Name:          "http",
 										ContainerPort: 8080,
 									},
 								},
@@ -74,71 +93,27 @@ func TestGetInstances(t *testing.T) {
 			wantErr:       false,
 		},
 		{
-			name: "one not ready pod",
-			pods: []corev1.Pod{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-pod-1",
-						Namespace: "default",
-						Labels: map[string]string{
-							"app": "test-app",
-						},
-					},
-					Status: corev1.PodStatus{
-						Phase: corev1.PodPending,
+			name: "endpointslice without pod ref",
+			endpointSlice: &discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-app-abc",
+					Namespace: "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "test-app",
 					},
 				},
-			},
-			options: provider.GetInstanceOptions{
-				Name:      "test-app",
-				Namespace: "default",
-			},
-			expectedCount: 0,
-			wantErr:       false,
-		},
-		{
-			name: "multiple pods with mixed states",
-			pods: []corev1.Pod{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-pod-1",
-						Namespace: "default",
-						Labels: map[string]string{
-							"app": "test-app",
-						},
-					},
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{
-								Ports: []corev1.ContainerPort{
-									{
-										ContainerPort: 8080,
-									},
-								},
-							},
-						},
-					},
-					Status: corev1.PodStatus{
-						Phase: corev1.PodRunning,
-						PodIP: "192.168.1.1",
-						Conditions: []corev1.PodCondition{
-							{
-								Type:   corev1.PodReady,
-								Status: corev1.ConditionTrue,
-							},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{"192.168.1.1"},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready: ptr.To(true),
 						},
 					},
 				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-pod-2",
-						Namespace: "default",
-						Labels: map[string]string{
-							"app": "test-app",
-						},
-					},
-					Status: corev1.PodStatus{
-						Phase: corev1.PodPending,
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Port: ptr.To(int32(8080)),
 					},
 				},
 			},
@@ -156,9 +131,20 @@ func TestGetInstances(t *testing.T) {
 			// Create fake clientset
 			client := fake.NewSimpleClientset()
 
-			// Create test pods
+			_, err := client.DiscoveryV1().EndpointSlices(tt.options.Namespace).Create(
+				context.Background(),
+				tt.endpointSlice,
+				metav1.CreateOptions{},
+			)
+			assert.NoError(t, err)
+
+			// Create test pods if any
 			for _, pod := range tt.pods {
-				_, err := client.CoreV1().Pods(tt.options.Namespace).Create(context.Background(), &pod, metav1.CreateOptions{})
+				_, err := client.CoreV1().Pods(tt.options.Namespace).Create(
+					context.Background(),
+					&pod,
+					metav1.CreateOptions{},
+				)
 				assert.NoError(t, err)
 			}
 
@@ -175,79 +161,62 @@ func TestGetInstances(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Len(t, instances, tt.expectedCount)
 
-			// Verify instances are correct for ready pods
+			// Verify instances are correct
 			for _, instance := range instances {
 				assert.NotEmpty(t, instance.Address())
 			}
 		})
 	}
 }
+
 func TestWatch(t *testing.T) {
 	tests := []struct {
-		name       string
-		pods       []corev1.Pod
-		options    provider.GetInstanceOptions
-		operations []struct {
-			op   watch.EventType
-			pod  *corev1.Pod
-			wait time.Duration
+		name          string
+		endpointSlice *discoveryv1.EndpointSlice
+		pods          []corev1.Pod
+		options       provider.GetInstanceOptions
+		operations    []struct {
+			event     watch.EventType
+			obj       any
+			expected  int
+			instance  string
+			hasWeight bool
 		}
-		expectedEvents int
 	}{
 		{
-			name: "new pod becomes ready",
-			pods: []corev1.Pod{},
-			options: provider.GetInstanceOptions{
-				Name:      "test-app",
-				Namespace: "default",
-			},
-			operations: []struct {
-				op   watch.EventType
-				pod  *corev1.Pod
-				wait time.Duration
-			}{
-				{
-					op: watch.Added,
-					pod: &corev1.Pod{
-						ObjectMeta: metav1.ObjectMeta{
+			name: "endpointslice added",
+			endpointSlice: &discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-app-abc",
+					Namespace: "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "test-app",
+					},
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{"192.168.1.1"},
+						TargetRef: &corev1.ObjectReference{
+							Kind: "Pod",
 							Name: "test-pod-1",
-							Labels: map[string]string{
-								"app": "test-app",
-							},
 						},
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Ports: []corev1.ContainerPort{
-										{
-											ContainerPort: 8080,
-										},
-									},
-								},
-							},
-						},
-						Status: corev1.PodStatus{
-							Phase: corev1.PodRunning,
-							PodIP: "192.168.1.1",
-							Conditions: []corev1.PodCondition{
-								{
-									Type:   corev1.PodReady,
-									Status: corev1.ConditionTrue,
-								},
-							},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready: ptr.To(true),
 						},
 					},
-					wait: 100 * time.Millisecond,
+				},
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Port: ptr.To(int32(8080)),
+					},
 				},
 			},
-			expectedEvents: 1,
-		},
-		{
-			name: "pod deleted",
 			pods: []corev1.Pod{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-pod-1",
+						Name:      "test-pod-1",
+						Namespace: "default",
 						Labels: map[string]string{
 							"app": "test-app",
 						},
@@ -256,9 +225,7 @@ func TestWatch(t *testing.T) {
 						Containers: []corev1.Container{
 							{
 								Ports: []corev1.ContainerPort{
-									{
-										ContainerPort: 8080,
-									},
+									{ContainerPort: 8080},
 								},
 							},
 						},
@@ -280,21 +247,46 @@ func TestWatch(t *testing.T) {
 				Namespace: "default",
 			},
 			operations: []struct {
-				op   watch.EventType
-				pod  *corev1.Pod
-				wait time.Duration
+				event     watch.EventType
+				obj       any
+				expected  int
+				instance  string
+				hasWeight bool
 			}{
 				{
-					op: watch.Deleted,
-					pod: &corev1.Pod{
+					event: watch.Added,
+					obj: &discoveryv1.EndpointSlice{
 						ObjectMeta: metav1.ObjectMeta{
-							Name: "test-pod-1",
+							Name:      "test-app-xyz",
+							Namespace: "default",
+							Labels: map[string]string{
+								discoveryv1.LabelServiceName: "test-app",
+							},
+						},
+						AddressType: discoveryv1.AddressTypeIPv4,
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{"192.168.1.2"},
+								TargetRef: &corev1.ObjectReference{
+									Kind: "Pod",
+									Name: "test-pod-2",
+								},
+								Conditions: discoveryv1.EndpointConditions{
+									Ready: ptr.To(true),
+								},
+							},
+						},
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Port: ptr.To(int32(8080)),
+							},
 						},
 					},
-					wait: 100 * time.Millisecond,
+					expected:  2,
+					instance:  "192.168.1.2:8080",
+					hasWeight: true,
 				},
 			},
-			expectedEvents: 1,
 		},
 	}
 
@@ -302,9 +294,20 @@ func TestWatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := fake.NewSimpleClientset()
 
-			// Create initial pods
+			// Create initial endpointslice and pods
+			_, err := client.DiscoveryV1().EndpointSlices(tt.options.Namespace).Create(
+				context.Background(),
+				tt.endpointSlice,
+				metav1.CreateOptions{},
+			)
+			assert.NoError(t, err)
+
 			for _, pod := range tt.pods {
-				_, err := client.CoreV1().Pods(tt.options.Namespace).Create(context.Background(), &pod, metav1.CreateOptions{})
+				_, err := client.CoreV1().Pods(tt.options.Namespace).Create(
+					context.Background(),
+					&pod,
+					metav1.CreateOptions{},
+				)
 				assert.NoError(t, err)
 			}
 
@@ -312,41 +315,41 @@ func TestWatch(t *testing.T) {
 				client: client,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
-			watchChan, err := k8sDiscovery.Watch(ctx, tt.options)
+			ch, err := k8sDiscovery.Watch(ctx, tt.options)
 			assert.NoError(t, err)
 
-			receivedEvents := 0
-			done := make(chan bool)
-
-			go func() {
-				for range watchChan {
-					receivedEvents++
-				}
-				done <- true
-			}()
-
-			// Perform operations
 			for _, op := range tt.operations {
-				switch op.op {
-				case watch.Added:
-					_, err := client.CoreV1().Pods(tt.options.Namespace).Create(ctx, op.pod, metav1.CreateOptions{})
+				switch obj := op.obj.(type) {
+				case *discoveryv1.EndpointSlice:
+					_, err := client.DiscoveryV1().EndpointSlices(tt.options.Namespace).Create(
+						context.Background(),
+						obj,
+						metav1.CreateOptions{},
+					)
 					assert.NoError(t, err)
-				case watch.Deleted:
-					err := client.CoreV1().Pods(tt.options.Namespace).Delete(ctx, op.pod.Name, metav1.DeleteOptions{})
-					assert.NoError(t, err)
+
+					select {
+					case instances := <-ch:
+						assert.Len(t, instances, op.expected)
+						found := false
+						for _, instance := range instances {
+							t.Logf("Found instance: %s", instance.Address().String())
+							if instance.Address().String() == op.instance {
+								found = true
+								if op.hasWeight {
+									assert.Equal(t, uint32(1), instance.Weight())
+								}
+							}
+						}
+						assert.True(t, found, "Expected instance %s not found", op.instance)
+					case <-time.After(5 * time.Second):
+						t.Fatal("timeout waiting for watch update")
+					}
 				}
-				time.Sleep(op.wait)
 			}
-
-			// Wait a bit for events to be processed
-			time.Sleep(200 * time.Millisecond)
-			cancel()
-			<-done
-
-			assert.Equal(t, tt.expectedEvents, receivedEvents)
 		})
 	}
 }

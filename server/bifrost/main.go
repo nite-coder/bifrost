@@ -13,6 +13,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/urfave/cli/v2"
+	_ "go.uber.org/automaxprocs"
 )
 
 var (

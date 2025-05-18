@@ -1,0 +1,17 @@
+watch: true
+
+logging:
+  handler: text
+  level: error
+  output: stderr
+  redirect_stderr: false
+
+servers:
+  apiv1:
+    bind: ":8001"
+    middlewares:
+      - type: request_termination
+        params:
+          status_code: 200
+          content_type: application/json
+          body: "hello bifrost"

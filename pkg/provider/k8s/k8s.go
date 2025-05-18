@@ -2,15 +2,16 @@ package k8s
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
+	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/provider"
-	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
@@ -19,7 +20,8 @@ import (
 )
 
 type K8sDiscovery struct {
-	client kubernetes.Interface
+	options *Options
+	client  kubernetes.Interface
 }
 
 type Options struct {
@@ -33,11 +35,11 @@ type Options struct {
 	Insecure bool
 }
 
-func NewK8sDiscovery(cfg *Options) (*K8sDiscovery, error) {
+func NewK8sDiscovery(options Options) (*K8sDiscovery, error) {
 	var config *rest.Config
 	var err error
 
-	if cfg == nil {
+	if options.APIServer == "" {
 		// Try in-cluster config first
 		config, err = rest.InClusterConfig()
 		if err != nil {
@@ -48,23 +50,23 @@ func NewK8sDiscovery(cfg *Options) (*K8sDiscovery, error) {
 			}
 		}
 	} else {
-		if cfg.KubeConfig != "" {
+		if options.KubeConfig != "" {
 			// Use provided kubeconfig file
-			config, err = clientcmd.BuildConfigFromFlags("", cfg.KubeConfig)
+			config, err = clientcmd.BuildConfigFromFlags("", options.KubeConfig)
 			if err != nil {
 				return nil, fmt.Errorf("failed to load kubeconfig file: %w", err)
 			}
 		} else {
 			// Create config from explicit API server URL
 			config = &rest.Config{
-				Host: cfg.APIServer,
+				Host: options.APIServer,
 			}
 
-			if cfg.BearerToken != "" {
-				config.BearerToken = cfg.BearerToken
+			if options.BearerToken != "" {
+				config.BearerToken = options.BearerToken
 			}
 
-			if cfg.Insecure {
+			if options.Insecure {
 				config.TLSClientConfig = rest.TLSClientConfig{
 					Insecure: true,
 				}
@@ -78,73 +80,113 @@ func NewK8sDiscovery(cfg *Options) (*K8sDiscovery, error) {
 	}
 
 	return &K8sDiscovery{
-		client: clientset,
+		options: &options,
+		client:  clientset,
 	}, nil
 }
 
 func (k *K8sDiscovery) GetInstances(ctx context.Context, options provider.GetInstanceOptions) ([]provider.Instancer, error) {
-	labelSelector := metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			"app": options.Name,
-		},
+	logger := log.FromContext(ctx)
+
+	if options.Name == "" {
+		return nil, errors.New("service name is required for k8s provider")
 	}
 
-	selector, err := metav1.LabelSelectorAsSelector(&labelSelector)
-	if err != nil {
-		return nil, fmt.Errorf("invalid label selector: %w", err)
+	if options.Namespace == "" {
+		options.Namespace = "default"
 	}
 
-	pods, err := k.client.CoreV1().Pods(options.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: selector.String(),
+	instances := make([]provider.Instancer, 0)
+
+	slices, err := k.client.DiscoveryV1().EndpointSlices(options.Namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("kubernetes.io/service-name=%s", options.Name),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list pods: %w", err)
+		return nil, fmt.Errorf("failed to get endpoint slices: %w", err)
 	}
 
-	instances := make([]provider.Instancer, 0, len(pods.Items))
-	for _, pod := range pods.Items {
-		// Check if the pod is ready
-		if isPodReady(&pod) {
-			instance := k.podToInstance(&pod)
-			instances = append(instances, instance)
+	for _, slice := range slices.Items {
+		for _, endpoint := range slice.Endpoints {
+
+			if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
+				continue
+			}
+
+			for _, address := range endpoint.Addresses {
+				for _, port := range slice.Ports {
+					if port.Port == nil {
+						continue
+					}
+
+					addr := &net.TCPAddr{
+						IP:   net.ParseIP(address),
+						Port: int(*port.Port),
+					}
+
+					instance := provider.NewInstance(addr, 1)
+
+					if endpoint.TargetRef != nil && endpoint.TargetRef.Kind == "Pod" {
+						instance.SetTag("pod-name", endpoint.TargetRef.Name)
+						instance.SetTag("namespace", options.Namespace)
+					}
+
+					instances = append(instances, instance)
+				}
+			}
 		}
 	}
 
+	logger.Info("discovered instances", "count", len(instances))
 	return instances, nil
 }
 
 func (k *K8sDiscovery) Watch(ctx context.Context, options provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
-	watcher, err := k.client.CoreV1().Pods(options.Namespace).Watch(ctx, metav1.ListOptions{
-		LabelSelector: "app=" + options.Name,
+	logger := log.FromContext(ctx)
+
+	endpointsWatcher, err := k.client.DiscoveryV1().EndpointSlices(options.Namespace).Watch(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("kubernetes.io/service-name=%s", options.Name),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to watch pods: %w", err)
+		return nil, fmt.Errorf("failed to watch endpoint slices: %w", err)
 	}
 
 	ch := make(chan []provider.Instancer)
 
 	go safety.Go(ctx, func() {
-		defer watcher.Stop()
+		defer endpointsWatcher.Stop()
 		defer close(ch)
 
 		for {
 			select {
-			case event, ok := <-watcher.ResultChan():
+			case event, ok := <-endpointsWatcher.ResultChan():
 				if !ok {
 					return
 				}
 
-				if !shouldTriggerUpdate(event) {
+				switch event.Type {
+				case watch.Added, watch.Modified:
+					endpointSlice, ok := event.Object.(*discoveryv1.EndpointSlice)
+					if !ok {
+						continue
+					}
+
+					if isEndpointSliceReady(endpointSlice) {
+						instances, err := k.GetInstances(ctx, options)
+						if err != nil {
+							logger.Warn("failed to get instances after endpoints update", "error", err.Error())
+							continue
+						}
+						ch <- instances
+					}
+				case watch.Deleted:
+					ch <- []provider.Instancer{} // service is down
+				case watch.Bookmark:
+					// Skip bookmark events
+					continue
+				case watch.Error:
+					logger.Warn("received error event from endpoints watcher")
 					continue
 				}
-
-				instances, err := k.GetInstances(ctx, options)
-				if err != nil {
-					continue
-				}
-
-				ch <- instances
-
 			case <-ctx.Done():
 				return
 			}
@@ -154,89 +196,19 @@ func (k *K8sDiscovery) Watch(ctx context.Context, options provider.GetInstanceOp
 	return ch, nil
 }
 
-func (k *K8sDiscovery) podToInstance(pod *corev1.Pod) provider.Instancer {
-	var port int
-
-	// Search through containers for a suitable port
-	for _, container := range pod.Spec.Containers {
-		// First try to find a named HTTP port
-		for _, containerPort := range container.Ports {
-			if containerPort.Name == "http" || containerPort.Name == "https" {
-				port = int(containerPort.ContainerPort)
-				break
-			}
-		}
-
-		// If no HTTP port found, use the first available port
-		if port == 0 && len(container.Ports) > 0 {
-			port = int(container.Ports[0].ContainerPort)
-			break
-		}
-	}
-
-	// Fallback to default port if none found
-	if port == 0 {
-		port = 80
-	}
-
-	addr := &net.TCPAddr{
-		IP:   net.ParseIP(pod.Status.PodIP),
-		Port: port,
-	}
-
-	weight := uint32(1)
-	if w, exists := pod.Annotations["weight"]; exists {
-		if weightVal, err := strconv.ParseUint(w, 10, 32); err == nil {
-			weight = uint32(weightVal)
-		}
-	}
-
-	instance := provider.NewInstance(addr, weight)
-
-	for k, v := range pod.Labels {
-		instance.SetTag(k, v)
-	}
-
-	// add additional tags
-	instance.SetTag("pod-name", pod.Name)
-	instance.SetTag("node-name", pod.Spec.NodeName)
-	instance.SetTag("namespace", pod.Namespace)
-
-	return instance
-}
-
-func isPodReady(pod *corev1.Pod) bool {
-	// check pod status
-	if pod.Status.Phase != corev1.PodRunning {
+func isEndpointSliceReady(endpointSlice *discoveryv1.EndpointSlice) bool {
+	if len(endpointSlice.Endpoints) == 0 {
 		return false
 	}
 
-	// ensure pod ip
-	if pod.Status.PodIP == "" {
-		return false
-	}
-
-	// make sure pod is ready
-	for _, condition := range pod.Status.Conditions {
-		if condition.Type == corev1.PodReady {
-			return condition.Status == corev1.ConditionTrue
+	for _, endpoint := range endpointSlice.Endpoints {
+		if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
+			continue
+		}
+		if len(endpoint.Addresses) == 0 {
+			return false
 		}
 	}
-	return false
-}
 
-func shouldTriggerUpdate(event watch.Event) bool {
-	pod, ok := event.Object.(*corev1.Pod)
-	if !ok {
-		return false
-	}
-
-	switch event.Type {
-	case watch.Added, watch.Modified:
-		return isPodReady(pod)
-	case watch.Deleted:
-		return true
-	default:
-		return false
-	}
+	return len(endpointSlice.Ports) != 0
 }

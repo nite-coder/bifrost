@@ -508,6 +508,14 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 			if upstreamOptions.Discovery.Name == "" {
 				return fmt.Errorf("discovery name can't be empty in the upstream '%s'", upstreamID)
 			}
+		case "k8s":
+			if !mainOptions.Providers.K8S.Enabled {
+				return fmt.Errorf("k8s service discovery provider is disabled. upstream id: %s", upstreamID)
+			}
+
+			if upstreamOptions.Discovery.Name == "" {
+				return fmt.Errorf("discovery name can't be empty in the upstream '%s'", upstreamID)
+			}
 		case "":
 			if upstreamOptions.Discovery.Type == "" && len(upstreamOptions.Targets) == 0 {
 				return fmt.Errorf("the targets can't be empty in the upstream '%s'", upstreamID)
