@@ -98,14 +98,14 @@ func (k *K8sDiscovery) GetInstances(ctx context.Context, options provider.GetIns
 
 	instances := make([]provider.Instancer, 0)
 
-	slices, err := k.client.DiscoveryV1().EndpointSlices(options.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("kubernetes.io/service-name=%s", options.Name),
+	endpointSlices, err := k.client.DiscoveryV1().EndpointSlices(options.Namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: "kubernetes.io/service-name=" + options.Name,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get endpoint slices: %w", err)
 	}
 
-	for _, slice := range slices.Items {
+	for _, slice := range endpointSlices.Items {
 		for _, endpoint := range slice.Endpoints {
 
 			if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
@@ -144,7 +144,7 @@ func (k *K8sDiscovery) Watch(ctx context.Context, options provider.GetInstanceOp
 	logger := log.FromContext(ctx)
 
 	endpointsWatcher, err := k.client.DiscoveryV1().EndpointSlices(options.Namespace).Watch(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("kubernetes.io/service-name=%s", options.Name),
+		LabelSelector: "kubernetes.io/service-name=" + options.Name,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to watch endpoint slices: %w", err)
