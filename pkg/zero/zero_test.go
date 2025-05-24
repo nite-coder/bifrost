@@ -78,7 +78,33 @@ func TestIsUpgraded(t *testing.T) {
 func TestListener(t *testing.T) {
 	t.Run("new listener creation", func(t *testing.T) {
 		z := New(Options{})
-		l, err := z.Listener(context.Background(), "tcp", "localhost:0", nil)
+
+		listenOptions := &ListenerOptions{
+			Network: "tcp",
+			Address: "localhost:0",
+		}
+
+		l, err := z.Listener(context.Background(), listenOptions)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer l.Close()
+
+		if len(z.listeners) != 1 {
+			t.Errorf("Expected 1 listener, got %d", len(z.listeners))
+		}
+	})
+
+	t.Run("listener with proxy protocol", func(t *testing.T) {
+		z := New(Options{})
+
+		listenOptions := &ListenerOptions{
+			Network:       "tcp",
+			Address:       "localhost:0",
+			ProxyProtocol: true,
+		}
+
+		l, err := z.Listener(context.Background(), listenOptions)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -107,7 +133,12 @@ func TestListener(t *testing.T) {
 			return os.NewFile(uintptr(3), ""), nil
 		}
 
-		l, err := z.Listener(context.Background(), "tcp", "localhost:1234", nil)
+		listenOptions := &ListenerOptions{
+			Network: "tcp",
+			Address: "localhost:1234",
+		}
+
+		l, err := z.Listener(context.Background(), listenOptions)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -122,7 +153,12 @@ func TestClose(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a listener
-	l, err := z.Listener(ctx, "tcp", "localhost:0", nil)
+	listenOptions := &ListenerOptions{
+		Network: "tcp",
+		Address: "localhost:0",
+	}
+
+	l, err := z.Listener(ctx, listenOptions)
 	if err != nil {
 		t.Fatalf("Listener() error = %v", err)
 	}
