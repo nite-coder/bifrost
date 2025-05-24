@@ -29,6 +29,7 @@ import (
 	"github.com/hertz-contrib/pprof"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/zero"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/unix"
@@ -154,7 +155,17 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 			},
 		}
 
-		listener, err := bifrost.zero.Listener(ctx, "tcp", serverOptions.Bind, listenerConfig)
+		listenerOptions := &zero.ListenerOptions{
+			Network: "tcp",
+			Address: serverOptions.Bind,
+			Config:  listenerConfig,
+		}
+
+		if serverOptions.ProxyProtocol {
+			listenerOptions.ProxyProtocol = true
+		}
+
+		listener, err := bifrost.zero.Listener(ctx, listenerOptions)
 		if err != nil {
 			return nil, err
 		}

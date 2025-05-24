@@ -17,6 +17,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/blackbear/pkg/cast"
+	proxyproto "github.com/pires/go-proxyproto"
 )
 
 type CommandRunner interface {
@@ -81,6 +82,13 @@ type ZeroDownTime struct {
 	envGetter     EnvGetter
 	processFinder ProcessFinder
 	fileOpener    FileOpener
+}
+
+type ListenerOptions struct {
+	Network       string
+	Address       string
+	Config        *net.ListenConfig
+	ProxyProtocol bool
 }
 
 type Options struct {
@@ -149,7 +157,7 @@ func (z *ZeroDownTime) IsUpgraded() bool {
 	return z.envGetter("UPGRADE") != ""
 }
 
-func (z *ZeroDownTime) Listener(ctx context.Context, network string, address string, cfg *net.ListenConfig) (net.Listener, error) {
+func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (net.Listener, error) {
 	var err error
 
 	z.listenerOnce.Do(func() {
@@ -188,37 +196,45 @@ func (z *ZeroDownTime) Listener(ctx context.Context, network string, address str
 
 				l.listener = fileListener
 
+				if options.ProxyProtocol {
+					l.listener = &proxyproto.Listener{Listener: fileListener}
+				}
+
 				slog.Info("file Listener is created", "addr", fileListener.Addr(), "fd", fd)
 			}
 		}
 	})
 
 	for _, l := range z.listeners {
-		if l.Key == address {
-			slog.Info("get listener from cache", "addr", address)
+		if l.Key == options.Address {
+			slog.Info("get listener from cache", "addr", options.Address)
 			return l.listener, nil
 		}
 	}
 
 	var listener net.Listener
 
-	if cfg != nil {
-		listener, err = cfg.Listen(ctx, network, address)
+	if options.Config != nil {
+		listener, err = options.Config.Listen(ctx, options.Network, options.Address)
 		if err != nil {
-			slog.Error("failed to create listener from config", "error", err, "addr", address, "network", network)
+			slog.Error("failed to create listener from config", "error", err, "addr", options.Address, "network", options.Network)
 			return nil, err
 		}
 	} else {
-		listener, err = net.Listen(network, address)
+		listener, err = net.Listen(options.Network, options.Address)
 		if err != nil {
-			slog.Error("failed to create listener", "error", err, "addr", address, "network", network)
+			slog.Error("failed to create listener", "error", err, "addr", options.Address, "network", options.Network)
 			return nil, err
 		}
 	}
 
 	info := &listenInfo{
 		listener: listener,
-		Key:      address,
+		Key:      options.Address,
+	}
+
+	if options.ProxyProtocol {
+		info.listener = &proxyproto.Listener{Listener: listener}
 	}
 
 	z.mu.Lock()

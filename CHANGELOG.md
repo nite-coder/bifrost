@@ -2,6 +2,10 @@
 
 ## next
 
+### **Features**
+
+- Introduce PROXY protocol support for the server ([#33](https://github.com/nite-coder/bifrost/pull/33))
+
 ### **Bug Fixes**
 
 - Fixed a race condition caused by the reuse of app.RequestContext, which typically occurred when one or more upstream targets were unavailable. ([#32](https://github.com/nite-coder/bifrost/pull/32))

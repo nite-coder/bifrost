@@ -131,7 +131,12 @@ func startup(ctx context.Context, zeroDT *zero.ZeroDownTime, done chan bool) err
 		return nil
 	}
 
-	listener, err := zeroDT.Listener(ctx, "tcp", ":8001", nil)
+	listenOptions := &zero.ListenerOptions{
+		Network: "tcp",
+		Address: ":8001",
+	}
+
+	listener, err := zeroDT.Listener(ctx, listenOptions)
 	if err != nil {
 		slog.Error("failed to create listener", "error", err)
 	}
