@@ -30,13 +30,16 @@ rund:
 release: build lint test
 
 k8s_apply:
-	kubectl apply -f ./config/k8s/bifrost_deployment.yaml -f ./config/k8s/bifrost_service.yaml
+	kubectl apply -f ./config/k8s/bifrost_deployment.yaml -f ./config/k8s/echo_deployment.yaml
 
-k8s_delete:
-	kubectl delete -f ./config/k8s/bifrost_deployment.yaml -f ./config/k8s/bifrost_service.yaml
+k8s_del:
+	kubectl delete -f ./config/k8s/bifrost_deployment.yaml -f ./config/k8s/echo_deployment.yaml
 
 k8s_create:
 	k3d cluster create mycluster \
 	--servers 1 \
 	--agents 0 \
 	--port 30080:30080@server:0
+
+k8s_show_logs:
+	kubectl logs -l app=bifrost --all-containers=true -f

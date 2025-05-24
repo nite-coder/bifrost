@@ -20,6 +20,8 @@ FROM alpine
 WORKDIR /app
 RUN mkdir -p /app/logs
 
+RUN apk add curl
+
 # Copy the binary to the production image from the builder stage.
 COPY --from=builder /src/script/entrypoint.sh /src/bin/bifrost /src/config/docker/config.yaml /app/
 RUN chmod +x /app/entrypoint.sh

@@ -8,6 +8,7 @@ The currently supported providers are listed below. You can also combine multipl
 
 * [DNS](#dns): DNS service discovery
 * [File](#file): Get configurations from files
+* [K8S](#k8s): Kubernetes service discovery
 * [Nacos](#nacos): Get configurations from nacos.
 
 ## DNS
@@ -54,6 +55,22 @@ providers:
 | extensions | `[]string` | `.yaml`,`.yml` | Allowed file extensions (`yaml` format is tested)                      |
 | paths      | `[]string` |                | Directories or files to be loaded.  (Skip subdirectories)              |
 | watch      | `bool`     | `true`         | if `true`, changes to `dynamic configuration` take effect immediately. |
+
+## K8S
+
+Kubernetes service discovery.  If the gateway is running in a k8s cluster, you can use upstream with k8s service discovery
+
+Example:
+
+```yaml
+providers:
+  k8s:
+    enabled: true
+```
+
+| Field      | Type       | Default        | Description                                                            |
+| ---------- | ---------- | -------------- | ---------------------------------------------------------------------- |
+| enabled    | `bool`     | `false`        | Enables the file provider                                              |
 
 ## Nacos
 

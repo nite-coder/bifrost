@@ -36,6 +36,7 @@ A low latency and high throughput API Gateway library written in Go.
 | Built-in `OpenTelemetry` tracing                                                        |   ✅    |  ❌   |
 | HTTP2 upstream support                                                                  |   ✅    |  ❌   |
 | Multiple configuration providers                                                        |   ✅    |  ❌   |
+| Built-in Kubernetes support                                                             |   ✅    |  ❌   |
 | Standardized and User-Friendly Configuration                                            |   ✅    |  ❌   |
 | High concurrency and low latency                                                        |   ✅    |  ✅   |
 | GRPC Load Balancer                                                                      |   ✅    |  ✅   |
