@@ -11,7 +11,6 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
-	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
@@ -158,83 +157,80 @@ func (svc *Service) Middlewares() []app.HandlerFunc {
 
 func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
-	done := make(chan struct{})
 
-	go safety.Go(ctx, func() {
-		defer func() {
-			close(done)
-			if r := recover(); r != nil {
-				stackTrace := cast.B2S(debug.Stack())
-				logger.ErrorContext(ctx, "service panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
-				c.SetStatusCode(500)
-				c.Abort()
-			}
-		}()
-
-		if len(svc.dynamicUpstream) > 0 {
-			upstreamName := variable.GetString(svc.dynamicUpstream, c)
-
-			if len(upstreamName) == 0 {
-				logger.Warn("upstream is empty",
-					slog.String("path", cast.B2S(c.Request.Path())),
-				)
-				c.Abort()
-				return
-			}
-
-			var found bool
-			svc.upstream, found = svc.upstreams[upstreamName]
-			if !found {
-				logger.Warn("upstream is not found",
-					slog.String("name", upstreamName),
-				)
-				c.Abort()
-				return
-			}
-			svc.upstream.watch()
+	defer func() {
+		if r := recover(); r != nil {
+			stackTrace := cast.B2S(debug.Stack())
+			logger.ErrorContext(ctx, "service panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
+			c.SetStatusCode(500)
+			c.Abort()
 		}
+	}()
 
-		var proxy proxy.Proxy
-		if svc.upstream != nil {
-			c.Set(variable.UpstreamID, svc.upstream.options.ID)
+	if len(svc.dynamicUpstream) > 0 {
+		upstreamName := variable.GetString(svc.dynamicUpstream, c)
 
-			switch svc.upstream.options.Strategy {
-			case config.RoundRobinStrategy, "":
-				proxy = svc.upstream.roundRobin()
-			case config.WeightedStrategy:
-				proxy = svc.upstream.weighted()
-			case config.RandomStrategy:
-				proxy = svc.upstream.random()
-			case config.HashingStrategy:
-				hashon := svc.upstream.options.HashOn
-				val := variable.GetString(hashon, c)
-				proxy = svc.upstream.hasing(val)
-			}
-		}
-
-		if proxy == nil {
-			// no live upstream
-			c.SetStatusCode(503)
+		if len(upstreamName) == 0 {
+			logger.Warn("upstream is empty",
+				slog.String("path", cast.B2S(c.Request.Path())),
+			)
+			c.Abort()
 			return
 		}
 
-		startTime := timecache.Now()
-		proxy.ServeHTTP(ctx, c)
-		endTime := timecache.Now()
-
-		dur := endTime.Sub(startTime)
-		c.Set(variable.UpstreamDuration, dur)
-
-		// the upstream target timeout and we need to response http status 504 back to client
-		if c.GetBool(variable.TargetTimeout) {
-			c.Response.SetStatusCode(504)
-		} else {
-			c.Set(variable.UpstreamResponoseStatusCode, c.Response.StatusCode())
+		var found bool
+		svc.upstream, found = svc.upstreams[upstreamName]
+		if !found {
+			logger.Warn("upstream is not found",
+				slog.String("name", upstreamName),
+			)
+			c.Abort()
+			return
 		}
-	})
+		svc.upstream.watch()
+	}
+
+	var proxy proxy.Proxy
+	if svc.upstream != nil {
+		c.Set(variable.UpstreamID, svc.upstream.options.ID)
+
+		switch svc.upstream.options.Strategy {
+		case config.RoundRobinStrategy, "":
+			proxy = svc.upstream.roundRobin()
+		case config.WeightedStrategy:
+			proxy = svc.upstream.weighted()
+		case config.RandomStrategy:
+			proxy = svc.upstream.random()
+		case config.HashingStrategy:
+			hashon := svc.upstream.options.HashOn
+			val := variable.GetString(hashon, c)
+			proxy = svc.upstream.hasing(val)
+		}
+	}
+
+	if proxy == nil {
+		// no live upstream
+		c.SetStatusCode(503)
+		return
+	}
+
+	startTime := timecache.Now()
+	proxy.ServeHTTP(ctx, c)
+	endTime := timecache.Now()
+
+	dur := endTime.Sub(startTime)
+	c.Set(variable.UpstreamDuration, dur)
+
+	// the upstream target timeout and we need to response http status 504 back to client
+	if c.GetBool(variable.TargetTimeout) {
+		c.Response.SetStatusCode(504)
+	} else {
+		c.Set(variable.UpstreamResponoseStatusCode, c.Response.StatusCode())
+	}
 
 	select {
 	case <-ctx.Done():
+		// the request is canceled by client
 		fullURI := fullURI(&c.Request)
 		routeID := variable.GetString(variable.RouteID, c)
 
@@ -253,7 +249,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 		// client canceled the request
 		c.Response.SetStatusCode(499)
-	case <-done:
+	default:
 	}
 }
 
