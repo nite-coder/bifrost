@@ -10,6 +10,10 @@
 
 - Fixed a race condition caused by the reuse of app.RequestContext, which typically occurred when one or more upstream targets were unavailable. ([#32](https://github.com/nite-coder/bifrost/pull/32))
 
+### **Test**
+
+- Improve `router` package test coverage.
+
 ### **Chore**
 
 - Bump Hertz package to `v0.10.0`
