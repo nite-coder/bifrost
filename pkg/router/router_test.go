@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func exactkHandler(c context.Context, ctx *app.RequestContext) {
+func exactHandler(c context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(201)
 }
 
@@ -25,11 +26,11 @@ func generalkHandler(c context.Context, ctx *app.RequestContext) {
 
 func loadStaticRouter() *Router {
 	router := NewRouter()
-	_ = router.Add("GET", "/", Prefix, exactkHandler)
-	_ = router.Add("GET", "/foo", Prefix, exactkHandler)
-	_ = router.Add("GET", "/foo/bar/baz/", Prefix, exactkHandler)
-	_ = router.Add("GET", "/foo/bar/baz/qux/quux", Prefix, exactkHandler)
-	_ = router.Add("GET", "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred", Prefix, exactkHandler)
+	_ = router.Add("GET", "/", Prefix, exactHandler)
+	_ = router.Add("GET", "/foo", Prefix, exactHandler)
+	_ = router.Add("GET", "/foo/bar/baz/", Prefix, exactHandler)
+	_ = router.Add("GET", "/foo/bar/baz/qux/quux", Prefix, exactHandler)
+	_ = router.Add("GET", "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred", Prefix, exactHandler)
 	return router
 }
 
@@ -102,7 +103,7 @@ func BenchmarkCode(b *testing.B) {
 			}
 
 			if isFound {
-				return exactkHandler
+				return exactHandler
 			}
 
 			return nil
@@ -155,7 +156,7 @@ func TestRouter(t *testing.T) {
 
 	router.Add(http.MethodGet, "/", Prefix, generalkHandler)
 	router.Add(http.MethodPost, "/orders/123", PreferentialPrefix, prefixHandler)
-	router.Add(http.MethodPut, "/foo", Exact, exactkHandler)
+	router.Add(http.MethodPut, "/foo", Exact, exactHandler)
 
 	middlewares, isDefered := router.Find(http.MethodGet, "/")
 	assert.True(t, isDefered)
@@ -168,6 +169,18 @@ func TestRouter(t *testing.T) {
 	middlewares, isDefered = router.Find(http.MethodPost, "/orders/123")
 	assert.False(t, isDefered)
 	assert.Len(t, middlewares, 1)
+}
+
+func TestDuplicatedRoutes(t *testing.T) {
+	router := NewRouter()
+
+	router.Add(http.MethodGet, "/foo", Prefix, generalkHandler)
+	router.Add(http.MethodGet, "/foo", Exact, exactHandler)
+
+	middlewares, isDefered := router.Find(http.MethodGet, "/foo")
+	assert.False(t, isDefered)
+	assert.Len(t, middlewares, 1)
+	assert.True(t, reflect.ValueOf(middlewares[0]).Pointer() == reflect.ValueOf(exactHandler).Pointer())
 }
 
 func TestIsValidHTTPMethod(t *testing.T) {

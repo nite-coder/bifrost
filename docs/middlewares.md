@@ -209,7 +209,7 @@ routes:
         params:
           status_code: 200
           content_type: application/json
-          body: []
+          body: "Hello World"
 
 ```
 
