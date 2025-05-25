@@ -152,6 +152,6 @@ require (
 )
 
 replace (
-	github.com/cloudwego/hertz v0.9.7 => github.com/nite-coder/hertz v0.9.7
+	github.com/cloudwego/hertz v0.9.7 => github.com/nite-coder/hertz v0.9.8-0.20250525014109-390db2885183
 	github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.1.8
 )

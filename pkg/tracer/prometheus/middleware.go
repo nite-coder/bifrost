@@ -29,11 +29,9 @@ func NewMetricMiddleware(path string) *PromMetricMiddleware {
 
 func (m *PromMetricMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	if bytes.Equal(c.Request.Method(), httpGET) && bytes.Equal(c.Request.Path(), m.path) {
-		httpReq, _ := adaptor.GetCompatRequest(&c.Request)
-		httpResp := adaptor.GetCompatResponseWriter(&c.Response)
-
 		h := promhttp.Handler()
-		h.ServeHTTP(httpResp, httpReq)
+		hzHandler := adaptor.HertzHandler(h)
+		hzHandler(ctx, c)
 		c.Abort()
 	}
 }

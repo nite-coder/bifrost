@@ -68,7 +68,6 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 	hzOpts := []hzconfig.Option{
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
-		server.WithSenseClientDisconnection(true),
 		server.WithTraceLevel(stats.LevelBase),
 		server.WithReadTimeout(time.Second * 60),
 		server.WithWriteTimeout(time.Second * 60),
@@ -277,6 +276,8 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 		}
 		tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
 		hzOpts = append(hzOpts, server.WithTLS(tlsConfig))
+	} else {
+		hzOpts = append(hzOpts, server.WithSenseClientDisconnection(true))
 	}
 
 	httpServer.options = &serverOptions

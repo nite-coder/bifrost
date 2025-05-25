@@ -278,8 +278,8 @@ github.com/nacos-group/nacos-sdk-go/v2 v2.2.8/go.mod h1:pIv1y5pMAjqFNU4jo9fmbuBj
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nite-coder/blackbear v0.0.0-20240930140346-76863193d6d4 h1:GiabVDOPd3C4oUEGdZwsarV2w4qyNKOj0SqCjxUa9X4=
 github.com/nite-coder/blackbear v0.0.0-20240930140346-76863193d6d4/go.mod h1:8dHV5jDE1V1EkzxXxYEh1uiFNII+7JTj0vFbCmUCsvU=
-github.com/nite-coder/hertz v0.9.7 h1:PxPJTBmxkjzckksKeqTLlc/OfZChUq2I3pKLG17qezs=
-github.com/nite-coder/hertz v0.9.7/go.mod h1:t6d7NcoQxPmETvzPMMIVPHMn5C5QzpqIiFsaavoLJYQ=
+github.com/nite-coder/hertz v0.9.8-0.20250525014109-390db2885183 h1:U9c51oJFEi3c8oVhecA1/kiulYMIcCwBokUTouP+I1M=
+github.com/nite-coder/hertz v0.9.8-0.20250525014109-390db2885183/go.mod h1:lRBohmcDkGx5TLK6QKFGdzJ6n3IXqGueHsOiXcYgXA4=
 github.com/nite-coder/http2 v0.1.8 h1:h6fsSY93E5Wd7z/cfZTiE6+dREkfNUassaUlIEANbp4=
 github.com/nite-coder/http2 v0.1.8/go.mod h1:eEgOLfrPIiiAEtTvyhkrjMQ8UHLqO59RWf5CqCuZNTw=
 github.com/nyaruka/phonenumbers v1.0.55/go.mod h1:sDaTZ/KPX5f8qyV9qN+hIm+4ZBARJrupC6LuhshJq1U=
