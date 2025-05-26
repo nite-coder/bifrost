@@ -232,6 +232,10 @@ func TestEnvDirective(t *testing.T) {
 	os.Setenv("foo", "bar")
 	val, _ := Get("$env.foo", nil)
 	assert.Equal(t, "bar", val)
+
+	os.Setenv("BOO", "boo")
+	val, _ = Get("$env.BOO", nil)
+	assert.Equal(t, "boo", val)
 }
 
 func TestParseDirectives(t *testing.T) {

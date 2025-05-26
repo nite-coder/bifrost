@@ -9,10 +9,11 @@
 ### **Bug Fixes**
 
 - Fixed a race condition caused by the reuse of app.RequestContext, which typically occurred when one or more upstream targets were unavailable. ([#32](https://github.com/nite-coder/bifrost/pull/32))
+- Fixed a case sensitive issue in `variable` package ([#35](https://github.com/nite-coder/bifrost/pull/35))
 
 ### **Test**
 
-- Improve `router` package test coverage.
+- Improve `router` package test coverage. ([#34](https://github.com/nite-coder/bifrost/pull/34))
 
 ### **Chore**
 
