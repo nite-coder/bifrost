@@ -5,6 +5,7 @@
 ### **Features**
 
 - Introduce PROXY protocol support for the server ([#33](https://github.com/nite-coder/bifrost/pull/33))
+- Introduce `Coraza` web application firewall middleware ([#36](https://github.com/nite-coder/bifrost/pull/36))
 
 ### **Bug Fixes**
 
@@ -14,6 +15,11 @@
 ### **Test**
 
 - Improve `router` package test coverage. ([#34](https://github.com/nite-coder/bifrost/pull/34))
+
+### **Documents**
+
+- Add `coraza` middleware document
+- Add `$server_id` directive 
 
 ### **Chore**
 
