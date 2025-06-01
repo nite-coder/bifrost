@@ -31,18 +31,6 @@ const (
 	unknownLabelValue = "unknown"
 )
 
-func init() {
-	bifrostWAFCoreRulesetHits = prom.NewCounterVec(
-		prom.CounterOpts{
-			Name: "bifrost_waf_core_ruleset_hits",
-			Help: "Number of WAF Core Ruleset hits",
-		},
-		[]string{"server_id", "method", "path", "rule_id", "client_ip"},
-	)
-
-	prom.MustRegister(bifrostWAFCoreRulesetHits)
-}
-
 type CorazaMiddleware struct {
 	options *Options
 	waf     coraza.WAF
@@ -158,11 +146,11 @@ func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext)
 					continue
 				}
 
-				labels := make(prom.Labels)
+				labels := make(prom.Labels, 5)
 				labels[labelServerID] = defaultValIfEmpty(serverID, unknownLabelValue)
 				labels[labelRuleID] = defaultValIfEmpty(ruleIDStr, unknownLabelValue)
 				labels[labelClientIP] = defaultValIfEmpty(clientIP, unknownLabelValue)
-				labels[labelMethod] = defaultValIfEmpty(cast.B2S(c.Request.Method()), unknownLabelValue)
+				labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
 				path := variable.GetString(variable.HTTPRoute, c)
 				if path == "" {
 					path = variable.GetString(variable.HTTPRequestPath, c)
@@ -203,6 +191,16 @@ func (m *CorazaMiddleware) processInterruption(ctx context.Context, c *app.Reque
 }
 
 func init() {
+	bifrostWAFCoreRulesetHits = prom.NewCounterVec(
+		prom.CounterOpts{
+			Name: "bifrost_waf_core_ruleset_hits",
+			Help: "Number of WAF Core Ruleset hits",
+		},
+		[]string{"server_id", "method", "path", "rule_id", "client_ip"},
+	)
+
+	prom.MustRegister(bifrostWAFCoreRulesetHits)
+
 	_ = middleware.RegisterMiddleware("coraza", func(params any) (app.HandlerFunc, error) {
 		if params == nil {
 			return nil, errors.New("coraza middleware params is empty or invalid")
