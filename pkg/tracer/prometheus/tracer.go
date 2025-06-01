@@ -29,11 +29,12 @@ func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 	serverID := variable.GetString(variable.ServerID, c)
 	routeID := variable.GetString(variable.RouteID, c)
 	serviceID := variable.GetString(variable.ServiceID, c)
+	method := variable.GetString(variable.HTTPRequestMethod, c)
 
 	labels[labelServerID] = defaultValIfEmpty(serverID, unknownLabelValue)
 	labels[labelRouteID] = defaultValIfEmpty(routeID, unknownLabelValue)
 	labels[labelServiceID] = defaultValIfEmpty(serviceID, unknownLabelValue)
-	labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue) // can't use cast.B2S othewise, metrics won't work
+	labels[labelMethod] = defaultValIfEmpty(method, unknownLabelValue) 
 	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(c.Response.Header.StatusCode()), unknownLabelValue)
 
 	path := variable.GetString(variable.HTTPRoute, c)
