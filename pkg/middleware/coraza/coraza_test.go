@@ -163,11 +163,22 @@ func TestCorazaMiddleware_SQLInjection(t *testing.T) {
 
 }
 
-func TestCorazaIPHost(t *testing.T) {
+func TestCorazaCustomRules(t *testing.T) {
 	options := Options{
 		Directives: `
 			Include @coraza.conf-recommended
 			Include @crs-setup.conf.example
+
+			SecAction \
+				"id:900200,\
+				phase:1,\
+				pass,\
+				t:none,\
+				nolog,\
+				tag:'OWASP_CRS',\
+				ver:'OWASP_CRS/4.14.0',\
+				setvar:'tx.allowed_methods=GET HEAD POST OPTIONS PUT DELETE'"
+
 			Include @owasp_crs/*.conf
 			SecRuleEngine On
 
@@ -183,6 +194,22 @@ func TestCorazaIPHost(t *testing.T) {
 		hzctx := app.NewContext(0)
 		hzctx.Request.SetRequestURI(path)
 		hzctx.Request.SetMethod("GET")
+		hzctx.Request.Header.SetProtocol("HTTP/1.1")
+		hzctx.Request.Header.Set("Host", "10.1.2.1:8001")
+		hzctx.Request.Header.Set("Content-Type", "application/json")
+		hzctx.Request.Header.Set("User-Agent", "Mozilla/5.0")
+
+		middleware.ServeHTTP(context.Background(), hzctx)
+		if code := hzctx.Response.StatusCode(); code != 200 {
+			t.Errorf("%s: got status code %d, want %d", "IP Host", code, 200)
+		}
+	})
+
+	t.Run("HTTP Delete Method", func(t *testing.T) {
+		path := "/test"
+		hzctx := app.NewContext(0)
+		hzctx.Request.SetRequestURI(path)
+		hzctx.Request.SetMethod("DELETE")
 		hzctx.Request.Header.SetProtocol("HTTP/1.1")
 		hzctx.Request.Header.Set("Host", "10.1.2.1:8001")
 		hzctx.Request.Header.Set("Content-Type", "application/json")

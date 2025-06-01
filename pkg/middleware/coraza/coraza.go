@@ -150,7 +150,12 @@ func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext)
 				labels[labelServerID] = defaultValIfEmpty(serverID, unknownLabelValue)
 				labels[labelRuleID] = defaultValIfEmpty(ruleIDStr, unknownLabelValue)
 				labels[labelClientIP] = defaultValIfEmpty(clientIP, unknownLabelValue)
-				labels[labelMethod] = defaultValIfEmpty(string(c.Request.Method()), unknownLabelValue)
+
+				method := variable.GetString(variable.HTTPRequestMethod, c)
+				if method == "" {
+					method = cast.B2S(c.Method())
+				}
+				labels[labelMethod] = defaultValIfEmpty(method, unknownLabelValue)
 
 				path := variable.GetString(variable.HTTPRoute, c)
 				if path == "" {
