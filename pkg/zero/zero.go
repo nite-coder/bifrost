@@ -287,12 +287,23 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 			files := []*os.File{}
 
 			for _, l := range z.listeners {
-				f, err := l.listener.(*net.TCPListener).File()
-				if err != nil {
-					slog.ErrorContext(ctx, "failed to get listener file", "error", err)
-					continue
+				proxylistener, ok := l.listener.(*proxyproto.Listener)
+
+				if ok {
+					f, err := proxylistener.Listener.(*net.TCPListener).File()
+					if err != nil {
+						slog.ErrorContext(ctx, "failed to get listener file", "error", err)
+						continue
+					}
+					files = append(files, f)
+				} else {
+					f, err := l.listener.(*net.TCPListener).File()
+					if err != nil {
+						slog.ErrorContext(ctx, "failed to get listener file", "error", err)
+						continue
+					}
+					files = append(files, f)
 				}
-				files = append(files, f)
 			}
 
 			slog.Info("listeners count", "count", len(files))
