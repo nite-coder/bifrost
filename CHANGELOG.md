@@ -18,8 +18,8 @@
 
 ### **Documents**
 
-- Add `coraza` middleware document
-- Add `$server_id` directive 
+- Add `coraza` middleware document ([#36](https://github.com/nite-coder/bifrost/pull/36))
+- Add `$server_id` directive
 
 ### **Chore**
 
