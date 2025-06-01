@@ -26,6 +26,7 @@ const (
 	labelServerID     = "server_id"
 	labelRuleID       = "rule_id"
 	labelClientIP     = "client_ip"
+	labelMethod       = "method"
 	labelPath         = "path"
 	unknownLabelValue = "unknown"
 )
@@ -36,7 +37,7 @@ func init() {
 			Name: "bifrost_waf_core_ruleset_hits",
 			Help: "Number of WAF Core Ruleset hits",
 		},
-		[]string{"server_id", "path", "rule_id", "client_ip"},
+		[]string{"server_id", "method", "path", "rule_id", "client_ip"},
 	)
 
 	prom.MustRegister(bifrostWAFCoreRulesetHits)
@@ -161,6 +162,7 @@ func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext)
 				labels[labelServerID] = defaultValIfEmpty(serverID, unknownLabelValue)
 				labels[labelRuleID] = defaultValIfEmpty(ruleIDStr, unknownLabelValue)
 				labels[labelClientIP] = defaultValIfEmpty(clientIP, unknownLabelValue)
+				labels[labelMethod] = defaultValIfEmpty(cast.B2S(c.Request.Method()), unknownLabelValue)
 				path := variable.GetString(variable.HTTPRoute, c)
 				if path == "" {
 					path = variable.GetString(variable.HTTPRequestPath, c)
