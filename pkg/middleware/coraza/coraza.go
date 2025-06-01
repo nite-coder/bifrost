@@ -85,8 +85,6 @@ func NewMiddleware(options Options) (*CorazaMiddleware, error) {
 func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 
-	logger.Info("coraza: processing request")
-
 	tx := m.waf.NewTransaction()
 	defer tx.Close()
 

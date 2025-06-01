@@ -162,3 +162,36 @@ func TestCorazaMiddleware_SQLInjection(t *testing.T) {
 	})
 
 }
+
+func TestCorazaIPHost(t *testing.T) {
+	options := Options{
+		Directives: `
+			Include @coraza.conf-recommended
+			Include @crs-setup.conf.example
+			Include @owasp_crs/*.conf
+			SecRuleEngine On
+
+			# Remove rule 920350
+			SecRuleRemoveById 920350
+			`,
+	}
+	middleware, err := NewMiddleware(options)
+	assert.Nil(t, err)
+
+	t.Run("IP HOST", func(t *testing.T) {
+		path := "/test"
+		hzctx := app.NewContext(0)
+		hzctx.Request.SetRequestURI(path)
+		hzctx.Request.SetMethod("GET")
+		hzctx.Request.Header.SetProtocol("HTTP/1.1")
+		hzctx.Request.Header.Set("Host", "10.1.2.1:8001")
+		hzctx.Request.Header.Set("Content-Type", "application/json")
+		hzctx.Request.Header.Set("User-Agent", "Mozilla/5.0")
+
+		middleware.ServeHTTP(context.Background(), hzctx)
+		if code := hzctx.Response.StatusCode(); code != 200 {
+			t.Errorf("%s: got status code %d, want %d", "IP Host", code, 200)
+		}
+	})
+
+}
