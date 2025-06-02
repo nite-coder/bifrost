@@ -70,7 +70,6 @@ var (
 
 func Get(key string, c *app.RequestContext) (val any, found bool) {
 	key = strings.TrimSpace(key)
-	key = strings.ToLower(key)
 
 	if key == "" || key[0] != '$' {
 		return nil, false

@@ -237,7 +237,7 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	c.Set(variable.UpstreamRequestHost, p.targetHost)
 
 	if p.director != nil {
-		p.director(&c.Request)
+		p.director(outReq)
 	}
 
 	outReq.Header.ResetConnectionClose()

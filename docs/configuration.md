@@ -269,6 +269,7 @@ servers:
 | tcp_quick_ack                    | `bool`              | `false`                       | Enables TCP quick ack; Linux only                                                            |
 | backlog                          | `int`               |                               | Limits TCP backlog count; Linux only                                                         |
 | http2                            | `bool`              | `false`                       | Enables HTTP2                                                                                |
+| proxy_protocol                   | `bool`              | `false`                       | Enables proxy protocol (support v1/v2)                                                       |
 | logging.handler                  | `string`            | `text`                        | Log format; supports `text`, `json`                                                          |
 | logging.level                    | `string`            | `info`                        | Log level; options are `debug`, `info`, `warn`, `error`. Not enabled by default              |
 | logging.output                   | `string`            |                               | Output location; supports `stderr` or file path. If empty, no log will be printed            |

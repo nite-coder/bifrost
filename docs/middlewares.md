@@ -13,6 +13,7 @@ You can also develop custom middlewares directly in native Golang.
 Currently supported middlewares are below.
 
 * [AddPrefix](#addprefix): Add a prefix to the request path.
+* [Coraza](#coraza): A Web application firewall.
 * [Cors](#cors): A Middleware for Cross-Origin Resource Sharing.
 * [IPRestriction](#iprestriction): Control client IP address that can access the service.
 * [Mirror](#mirror): Mirror the request to another service.
@@ -45,6 +46,29 @@ routes:
       - type: add_prefix
         params:
           prefix: /api/v1
+```
+
+### Coraza
+
+Coraza is an open source, enterprise-grade, high performance Web Application Firewall (WAF) ready to protect your beloved applications. It is written in Go, supports ModSecurity SecLang rulesets and is 100% compatible with the OWASP Core Rule Set v4.
+
+```yaml
+routes:
+  foo:
+    paths:
+      - /foo
+    service_id: service1
+    middlewares:
+      - type: coraza
+        params:
+          directives: |
+            Include @coraza.conf-recommended
+            Include @crs-setup.conf.example
+            Include @owasp_crs/*.conf
+            SecRuleEngine On
+          rejected_http_status_code: 403
+          rejected_http_content_type: application/json
+          rejected_http_response_body: "forbidden by waf"
 ```
 
 ### Cors
@@ -209,7 +233,7 @@ routes:
         params:
           status_code: 200
           content_type: application/json
-          body: "hello bifrost"
+          body: "Hello World"
 
 ```
 

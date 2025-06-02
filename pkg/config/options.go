@@ -228,6 +228,7 @@ type ServerOptions struct {
 	Observability      Observability        `yaml:"observability" json:"observability"`
 	TrustedCIDRS       []string             `yaml:"trusted_cidrs" json:"trusted_cidrs"`
 	RemoteIPHeaders    []string             `yaml:"remote_ip_headers" json:"remote_ip_headers"`
+	ProxyProtocol      bool                 `yaml:"proxy_protocol" json:"proxy_protocol"`
 }
 
 type ServerTimeoutOptions struct {

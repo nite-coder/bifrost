@@ -2,9 +2,28 @@
 
 ## next
 
+### **Features**
+
+- Introduce PROXY protocol support for the server ([#33](https://github.com/nite-coder/bifrost/pull/33))
+- Introduce `Coraza` web application firewall middleware ([#36](https://github.com/nite-coder/bifrost/pull/36))
+
 ### **Bug Fixes**
 
 - Fixed a race condition caused by the reuse of app.RequestContext, which typically occurred when one or more upstream targets were unavailable. ([#32](https://github.com/nite-coder/bifrost/pull/32))
+- Fixed a case sensitive issue in `variable` package ([#35](https://github.com/nite-coder/bifrost/pull/35))
+
+### **Test**
+
+- Improve `router` package test coverage. ([#34](https://github.com/nite-coder/bifrost/pull/34))
+
+### **Documents**
+
+- Add `coraza` middleware document ([#36](https://github.com/nite-coder/bifrost/pull/36))
+- Add `$server_id` directive
+
+### **Chore**
+
+- Bump Hertz package to `v0.10.0`
 
 ## 0.4.0 (2025-05-14)
 

@@ -26,7 +26,7 @@ A low latency and high throughput API Gateway library written in Go.
 |                                                                                         | Bifrost | Nginx |
 | :-------------------------------------------------------------------------------------- | :-----: | :---: |
 | SDK for building your own gateway                                                       |   ✅    |  ❌   |
-| Middleware support and written in native `Go`                                           |   ✅    |  ❌   |
+| Write your middlewares in `native Go` (not `TinyGo`)                                    |   ✅    |  ❌   |
 | Rich built-in middlewares                                                               |   ✅    |  ❌   |
 | Millisecond-level graceful reloads for `dynamic configuration` updates                  |   ✅    |  ❌   |
 | Blue-green deployment for services                                                      |   ✅    |  ❌   |
@@ -34,6 +34,7 @@ A low latency and high throughput API Gateway library written in Go.
 | Easy integration with existing Go programs                                              |   ✅    |  ❌   |
 | Built-in `Prometheus` monitoring                                                        |   ✅    |  ❌   |
 | Built-in `OpenTelemetry` tracing                                                        |   ✅    |  ❌   |
+| Built-in web application firewall and support OWASP Core Rule Set                       |   ✅    |  ❌   |
 | HTTP2 upstream support                                                                  |   ✅    |  ❌   |
 | Multiple configuration providers                                                        |   ✅    |  ❌   |
 | Built-in Kubernetes support                                                             |   ✅    |  ❌   |
