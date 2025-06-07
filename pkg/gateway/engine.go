@@ -39,7 +39,6 @@ func newEngine(bifrost *Bifrost, serverOptions config.ServerOptions) (*Engine, e
 	}
 
 	// init middlewares
-	serverOptions.Logging.RedirectStdErr = false
 	logger, err := log.NewLogger(serverOptions.Logging)
 	if err != nil {
 		return nil, err

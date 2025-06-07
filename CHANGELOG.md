@@ -13,6 +13,10 @@
 - Fixed a race condition caused by the reuse of app.RequestContext, which typically occurred when one or more upstream targets were unavailable. ([#32](https://github.com/nite-coder/bifrost/pull/32))
 - Fixed a case sensitive issue in `variable` package ([#35](https://github.com/nite-coder/bifrost/pull/35))
 
+### **Refactor**
+
+- rename `redirect_stderr` to `disable_redirect_stderr` and allow to redirect stderr by default ([#39](https://github.com/nite-coder/bifrost/pull/39))
+
 ### **Test**
 
 - Improve `router` package test coverage. ([#34](https://github.com/nite-coder/bifrost/pull/34))
