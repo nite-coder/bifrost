@@ -89,10 +89,7 @@ params:
 
 ### Cors
 
-A Middleware for Cross-Origin Resource Sharing.
-
-Original request: `/foo` \
-Forwarded path for upstream: `/api/v1/foo`
+A Middleware for Cross-Origin Resource Sharing (CORS). This middleware allows you to control how resources on your server are shared with external domains. It is particularly useful for enabling secure cross-origin requests in web applications.
 
 ```yaml
 routes:
@@ -109,6 +106,18 @@ routes:
           allow_headers: ["Origin", "Content-Length", "Content-Type"]
           max_age: 12m
 ```
+
+params:
+
+| Field             | Type       | Default | Description                                                           |
+| ----------------- | ---------- | ------- | --------------------------------------------------------------------- |
+| allow_all_origins | `bool`     | `false` | If `true`, allows requests from all origins.                          |
+| allow_origins     | `[]string` |         | A list of allowed origins. Cannot be used with `allow_all_origins`.   |
+| allow_methods     | `[]string` |         | A list of HTTP methods allowed for cross-origin requests.             |
+| allow_headers     | `[]string` |         | A list of HTTP headers allowed in cross-origin requests.              |
+| expose_headers    | `[]string` |         | A list of headers exposed to the client in the response.              |
+| allow_credentials | `bool`     | `false` | If `true`, allows credentials (cookies, authorization headers, etc.). |
+| max_age           | `Duration` |         | The maximum time a preflight request can be cached by the client.     |
 
 ### IPRestriction
 
@@ -142,7 +151,9 @@ params:
 
 ### Mirror
 
-Mirrors the request to another service.
+Mirrors the request to another service. This middleware duplicates the incoming request and sends it to a secondary service (`service2`) while continuing to process the original request with the primary service (`service1`). The mirrored request does not affect the response returned to the client.
+
+This is useful for scenarios like testing new services, logging, or analytics without impacting the primary service.
 
 ```yaml
 routes:
@@ -156,9 +167,16 @@ routes:
           service_id: service2
 ```
 
+params:
+
+| Field      | Type     | Required | Description                                                             |
+| ---------- | -------- | -------- | ----------------------------------------------------------------------- |
+| service_id | `string` | ✅       | The ID of the service to which the request will be mirrored.            |
+| queue_size | `int`    | ❌       | The maximun size of the queue. If not set, the default value is `10000` |
+
 ### Parallel
 
-Execute a group of middlewares concurrently. If errors occur in any of the middlewares, the request will be terminated.
+Executes a group of middlewares concurrently. This middleware is useful for optimizing performance by running multiple middlewares in parallel. If any middleware in the group encounters an error, the request will be terminated immediately.
 
 ```yaml
 routes:
@@ -445,7 +463,7 @@ params:
 
 ### TrafficSplitter
 
-Route requests to different services based on weights.
+Route requests to different services based on weights. This middleware allows you to split traffic between multiple services based on predefined weights. It is particularly useful for scenarios like gradual rollouts, A/B testing, or canary deployments.
 
 ```yaml
 servers:
@@ -463,10 +481,18 @@ servers:
               to: new_service
 ```
 
+params:
+
+| Field                 | Type       | Required | Description                                                                   |
+| --------------------- | ---------- | -------- | ----------------------------------------------------------------------------- |
+| `key`                 | `string`   | ✅       | The key used to determine how traffic is split. Can use dynamic variables.    |
+| `destinations`        | `[]object` | ✅       | A list of destinations with their respective weights.                         |
+| `destinations.weight` | `int`      | ✅       | The weight assigned to this destination. Higher weights receive more traffic. |
+| `destinations.to`     | `string`   | ✅       | The service ID to which the traffic will be routed.                           |
+
 ### UARestriction
 
-Control user agent that can access the service.  Either one of `allow` or `deny` attribute must be specified. They cannot be used together.
-You can use regex to match user agent.
+Controls which user agents can access the service. This middleware allows you to specify either an `allow` list or a `deny` list of user agents. You can use regular expressions to match user agents. Note that `allow` and `deny` cannot be used together.
 
 ```yaml
 routes:
@@ -475,13 +501,23 @@ routes:
       - /foo
     service_id: service1
     middlewares:
-      - type: ip_restriction
+      - type: ua_restriction
         params:
-          deny: ["bad-agent"] # allow and deny can't be used at the same time
+          allow: ["good-agent.*"] # allow and deny can't be used at the same time
           rejected_http_status_code: 403
           rejected_http_content_type: application/json
           rejected_http_response_body: "forbidden"
 ```
+
+params:
+
+| Field                         | Type       | Required | Description                                                                 |
+| ----------------------------- | ---------- | -------- | --------------------------------------------------------------------------- |
+| `allow`                       | `[]string` | ❌       | A list of allowed user agents (supports regex). Cannot be used with `deny`. |
+| `deny`                        | `[]string` | ❌       | A list of denied user agents (supports regex). Cannot be used with `allow`. |
+| `rejected_http_status_code`   | `int`      | ✅       | The HTTP status code to return for rejected requests.                       |
+| `rejected_http_content_type`  | `string`   | ✅       | The content type of the rejected response.                                  |
+| `rejected_http_response_body` | `string`   | ✅       | The body of the rejected response.                                          |
 
 ## Custom Middlewares
 
