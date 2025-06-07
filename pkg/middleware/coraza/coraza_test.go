@@ -130,9 +130,9 @@ func TestCorazaMiddleware_SQLInjection(t *testing.T) {
 	assert.Nil(t, err)
 
 	t.Run("SQL Injection Blocked", func(t *testing.T) {
-		path := "/test?input=1' UNION SELECT 1,2,3 FROM users WHERE 1=1 AND (SELECT 1 FROM users LIMIT 1) LIKE '1' OR SLEEP(5)-- " // SQLi payload
+		uri := "/test?input=1' UNION SELECT 1,2,3 FROM users WHERE 1=1 AND (SELECT 1 FROM users LIMIT 1) LIKE '1' OR SLEEP(5)-- " // SQLi payload
 		hzctx := app.NewContext(0)
-		hzctx.Request.SetRequestURI(path)
+		hzctx.Request.SetRequestURI(uri)
 		hzctx.Request.SetMethod("GET")
 		hzctx.Request.Header.SetProtocol("HTTP/1.1")
 		hzctx.Request.Header.Set("Host", "localhost")
@@ -218,6 +218,38 @@ func TestCorazaCustomRules(t *testing.T) {
 		middleware.ServeHTTP(context.Background(), hzctx)
 		if code := hzctx.Response.StatusCode(); code != 200 {
 			t.Errorf("%s: got status code %d, want %d", "IP Host", code, 200)
+		}
+	})
+
+}
+
+func TestCorazaIPAllowList(t *testing.T) {
+	options := Options{
+		Directives: `
+			Include @coraza.conf-recommended
+			Include @crs-setup.conf.example
+			Include @owasp_crs/*.conf
+			SecRuleEngine On
+			`,
+		IPAllowList: []string{"10.1.1.1"},
+	}
+	middleware, err := NewMiddleware(options)
+	assert.Nil(t, err)
+
+	t.Run("Simple SQL Injection Blocked", func(t *testing.T) {
+		path := "/test?input=1%20OR%201=1" // SQLi payload
+		hzctx := app.NewContext(0)
+		hzctx.Request.SetRequestURI(path)
+		hzctx.Request.SetMethod("POST")
+		hzctx.Request.Header.Set("X-Forwarded-For", "10.1.1.1")
+		hzctx.Request.Header.SetProtocol("HTTP/1.1")
+		hzctx.Request.Header.Set("Host", "localhost")
+		hzctx.Request.Header.Set("Content-Type", "application/json")
+		hzctx.Request.Header.Set("User-Agent", "Mozilla/5.0")
+
+		middleware.ServeHTTP(context.Background(), hzctx)
+		if code := hzctx.Response.StatusCode(); code != 200 {
+			t.Errorf("%s: got status code %d, want %d", "SQL Injection Blocked", code, 200)
 		}
 	})
 

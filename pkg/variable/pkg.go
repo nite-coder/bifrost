@@ -327,54 +327,66 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		return info.Route, true
 	case HTTPRequestScheme:
 		val, found := c.Get(RequestOrig)
-		if !found {
-			return nil, false
-		}
-		info := (val).(*RequestOriginal)
+		if found {
+			info := (val).(*RequestOriginal)
 
-		scheme := cast.B2S(info.Scheme)
+			scheme := cast.B2S(info.Scheme)
+			return scheme, true
+		}
+
+		scheme := cast.B2S(c.Request.Scheme())
 		return scheme, true
-	case HTTPRequestPath:
-		val, found := c.Get(RequestOrig)
-		if !found {
-			return nil, false
-		}
-		info := (val).(*RequestOriginal)
 
-		path := cast.B2S(info.Path)
+	case HTTPRequestPath:
+		var path string
+
+		val, found := c.Get(RequestOrig)
+		if found {
+			info := (val).(*RequestOriginal)
+			path = cast.B2S(info.Path)
+		} else {
+			path = cast.B2S(c.Request.Path())
+		}
+
 		return path, true
 	case HTTPRequestURI:
 		val, found := c.Get(RequestOrig)
-		if !found {
-			return nil, false
-		}
-		info := (val).(*RequestOriginal)
+		if found {
+			info := (val).(*RequestOriginal)
 
-		builder := strings.Builder{}
-		builder.Write(info.Path)
-		if len(info.Query) > 0 {
-			builder.Write(questionByte)
-			builder.Write(info.Query)
+			builder := strings.Builder{}
+			builder.Write(info.Path)
+			if len(info.Query) > 0 {
+				builder.Write(questionByte)
+				builder.Write(info.Query)
+			}
+
+			return builder.String(), true
 		}
 
-		return builder.String(), true
+		uri := cast.B2S(c.Request.RequestURI())
+		return uri, true
+
 	case HTTPRequestMethod:
 		val, found := c.Get(RequestOrig)
-		if !found {
-			return nil, false
+		if found {
+			info := (val).(*RequestOriginal)
+			method := cast.B2S(info.Method)
+			return method, true
 		}
-		info := (val).(*RequestOriginal)
 
-		method := cast.B2S(info.Method)
+		method := cast.B2S(c.Request.Method())
 		return method, true
 	case HTTPRequestQuery:
 		val, found := c.Get(RequestOrig)
-		if !found {
-			return nil, false
-		}
-		info := (val).(*RequestOriginal)
+		if found {
+			info := (val).(*RequestOriginal)
 
-		query := cast.B2S(info.Query)
+			query := cast.B2S(info.Query)
+			return query, true
+		}
+
+		query := cast.B2S(c.Request.QueryString())
 		return query, true
 	case HTTPRequestBody:
 		// if content type is grpc, the $request_body will be ignored
