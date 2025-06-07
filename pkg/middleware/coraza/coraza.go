@@ -37,10 +37,11 @@ type CorazaMiddleware struct {
 }
 
 type Options struct {
-	Directives               string `mapstructure:"directives"`
-	RejectedHTTPStatusCode   int    `mapstructure:"rejected_http_status_code"`
-	RejectedHTTPContentType  string `mapstructure:"rejected_http_content_type"`
-	RejectedHTTPResponseBody string `mapstructure:"rejected_http_response_body"`
+	Directives               string   `mapstructure:"directives"`
+	IPAllowList              []string `mapstructure:"ip_allow_list"`
+	RejectedHTTPStatusCode   int      `mapstructure:"rejected_http_status_code"`
+	RejectedHTTPContentType  string   `mapstructure:"rejected_http_content_type"`
+	RejectedHTTPResponseBody string   `mapstructure:"rejected_http_response_body"`
 }
 
 func NewMiddleware(options Options) (*CorazaMiddleware, error) {
@@ -74,6 +75,31 @@ func NewMiddleware(options Options) (*CorazaMiddleware, error) {
 
 func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
+	clientIP := c.ClientIP()
+
+	for _, allowIP := range m.options.IPAllowList {
+		_, ipNet, err := net.ParseCIDR(allowIP)
+		if err != nil {
+			// If not CIDR, check exact IP match
+			if clientIP == allowIP {
+				c.Next(ctx)
+				return
+			}
+			continue
+		}
+
+		// Parse client IP
+		ip := net.ParseIP(clientIP)
+		if ip == nil {
+			continue
+		}
+
+		// Check if client IP is in CIDR range
+		if ipNet.Contains(ip) {
+			c.Next(ctx)
+			return
+		}
+	}
 
 	tx := m.waf.NewTransaction()
 	defer tx.Close()
@@ -85,10 +111,10 @@ func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext)
 	tx.ProcessConnection(targetHost, port, "", 0)
 
 	// Process URI
-	method := cast.B2S(c.Method())
-	rawPath := cast.B2S(c.Request.RequestURI())
-	proto := c.Request.Header.GetProtocol()
-	tx.ProcessURI(rawPath, method, proto)
+	method := variable.GetString(variable.HTTPRequestMethod, c)
+	reqURI := variable.GetString(variable.HTTPRequestURI, c)
+	proto := variable.GetString(variable.HTTPRequestProtocol, c)
+	tx.ProcessURI(reqURI, method, proto)
 
 	// Add Request Headers
 	c.Request.Header.VisitAll(func(key, value []byte) {
@@ -121,56 +147,7 @@ func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext)
 	}
 	m.processInterruption(ctx, c, tx, it)
 
-	matchedRules := tx.MatchedRules()
-
-	if len(matchedRules) > 0 {
-		for _, rule := range tx.MatchedRules() {
-			msg := rule.Message()
-
-			if len(msg) > 0 {
-				ruleID := rule.Rule().ID()
-				ruleIDStr, _ := cast.ToString(ruleID)
-				clientIP := c.ClientIP()
-				serverID := variable.GetString(variable.ServerID, c)
-
-				logger.WarnContext(ctx, "forbidden by WAF",
-					"rule_id", ruleID,
-					"message", msg,
-					"client_ip", clientIP,
-					"full_uri", rule.URI(),
-					"data", rule.Data(),
-				)
-
-				// rule 949110 It is only used to calculate the final score, so it does not count as an attack.
-				if ruleID == 949110 {
-					continue
-				}
-
-				labels := make(prom.Labels, 5)
-				labels[labelServerID] = defaultValIfEmpty(serverID, unknownLabelValue)
-				labels[labelRuleID] = defaultValIfEmpty(ruleIDStr, unknownLabelValue)
-				labels[labelClientIP] = defaultValIfEmpty(clientIP, unknownLabelValue)
-
-				method := variable.GetString(variable.HTTPRequestMethod, c)
-				if method == "" {
-					method = cast.B2S(c.Method())
-				}
-				labels[labelMethod] = defaultValIfEmpty(method, unknownLabelValue)
-
-				path := variable.GetString(variable.HTTPRoute, c)
-				if path == "" {
-					path = variable.GetString(variable.HTTPRequestPath, c)
-					if path == "" {
-						path = cast.B2S(c.Request.Path())
-					}
-				}
-				labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
-
-				_ = counterAdd(bifrostWAFCoreRulesetHits, 1, labels)
-			}
-		}
-	}
-
+	m.log(ctx, c, tx)
 	c.Next(ctx)
 }
 
@@ -180,6 +157,7 @@ func (m *CorazaMiddleware) processInterruption(ctx context.Context, c *app.Reque
 	}
 
 	if it.Action == "deny" {
+		m.log(ctx, c, tx)
 
 		c.SetStatusCode(m.options.RejectedHTTPStatusCode)
 
@@ -193,6 +171,53 @@ func (m *CorazaMiddleware) processInterruption(ctx context.Context, c *app.Reque
 
 		c.Abort()
 		return
+	}
+}
+
+func (m *CorazaMiddleware) log(ctx context.Context, c *app.RequestContext, tx types.Transaction) {
+	logger := log.FromContext(ctx)
+	matchedRules := tx.MatchedRules()
+
+	if len(matchedRules) > 0 {
+		for _, rule := range tx.MatchedRules() {
+			msg := rule.Message()
+
+			if len(msg) > 0 {
+				ruleID := rule.Rule().ID()
+				ruleIDStr, _ := cast.ToString(ruleID)
+				serverID := variable.GetString(variable.ServerID, c)
+
+				logger.WarnContext(ctx, "forbidden by WAF",
+					"rule_id", ruleID,
+					"message", msg,
+					"client_ip", rule.ClientIPAddress(),
+					"method", variable.GetString(variable.HTTPRequestMethod, c),
+					"full_uri", rule.URI(),
+					"data", rule.Data(),
+				)
+
+				// rule 949110 It is only used to calculate the final score, so it does not count as an attack.
+				if ruleID == 949110 {
+					continue
+				}
+
+				labels := make(prom.Labels, 5)
+				labels[labelServerID] = defaultValIfEmpty(serverID, unknownLabelValue)
+				labels[labelRuleID] = defaultValIfEmpty(ruleIDStr, unknownLabelValue)
+				labels[labelClientIP] = defaultValIfEmpty(rule.ClientIPAddress(), unknownLabelValue)
+
+				method := variable.GetString(variable.HTTPRequestMethod, c)
+				labels[labelMethod] = defaultValIfEmpty(method, unknownLabelValue)
+
+				path := variable.GetString(variable.HTTPRoute, c)
+				if path == "" {
+					path = variable.GetString(variable.HTTPRequestPath, c)
+				}
+				labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
+
+				_ = counterAdd(bifrostWAFCoreRulesetHits, 1, labels)
+			}
+		}
 	}
 }
 
