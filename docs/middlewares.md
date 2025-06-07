@@ -48,6 +48,12 @@ routes:
           prefix: /api/v1
 ```
 
+params:
+
+| Field  | Type     | Default | Description                    |
+| ------ | -------- | ------- | ------------------------------ |
+| prefix | `string` |         | Add prefix to the request path |
+
 ### Coraza
 
 Coraza is an open source, enterprise-grade, high performance Web Application Firewall (WAF) ready to protect your beloved applications. It is written in Go, supports ModSecurity SecLang rulesets and is 100% compatible with the OWASP Core Rule Set v4.
@@ -70,6 +76,16 @@ routes:
           rejected_http_content_type: application/json
           rejected_http_response_body: "forbidden by waf"
 ```
+
+params:
+
+| Field                       | Type       | Default | Description                      |
+| --------------------------- | ---------- | ------- | -------------------------------- |
+| directives                  | `string`   |         | Coraza directives                |
+| ip_allow_list               | `[]string` |         | IP allow list                    |
+| rejected_http_status_code   | `int`      |         | The status code of the response  |
+| rejected_http_content_type  | `string`   |         | The content type of the response |
+| rejected_http_response_body | `string`   |         | The body of the response         |
 
 ### Cors
 
@@ -113,6 +129,16 @@ routes:
           rejected_http_content_type: application/json
           rejected_http_response_body: "forbidden"
 ```
+
+params:
+
+| Field                       | Type       | Default | Description                               |
+| --------------------------- | ---------- | ------- | ----------------------------------------- |
+| allow                       | `[]string` |         | IP allow list                             |
+| deny                        | `[]string` |         | IP deny list                              |
+| rejected_http_status_code   | `int`      |         | The status code of the rejected response  |
+| rejected_http_content_type  | `string`   |         | The content type of the rejected response |
+| rejected_http_response_body | `string`   |         | The body of the rejected response         |
 
 ### Mirror
 
@@ -179,6 +205,21 @@ routes:
     service_id: order_service
 ```
 
+params:
+
+| Field                       | Type       | Default | Description                                                                               |
+| --------------------------- | ---------- | ------- | ----------------------------------------------------------------------------------------- |
+| strategy                    | `string`   |         | The strategy of the rate limit.  The value can be `local` or `redis`                      |
+| limit_by                    | `string`   |         | The key of the rate limit                                                                 |
+| limit                       | `int`      |         | The limit of the rate limit                                                               |
+| window_size                 | `Duration` |         | The window size of the rate limit                                                         |
+| header_limit                | `string`   |         | The name of the custom header used to indicate the limit number of rate limit             |
+| header_remaining            | `string`   |         | The name of the custom header used to indicate the remaining number of allowed requests   |
+| header_reset                | `string`   |         | The name of the custom header used to indicate the timestamp of the end of the rate limit |
+| rejected_http_status_code   | `int`      |         | The status code of the rejected response                                                  |
+| rejected_http_content_type  | `string`   |         | The content type of the rejected response                                                 |
+| rejected_http_response_body | `string`   |         | The body of the rejected response                                                         |
+
 ### ReplacePath
 
 Replaces the entire original request path with a different path before forwarding upstream. If the original request includes a query string, it will also be forwarded.
@@ -198,12 +239,18 @@ routes:
           path: /hoo/user
 ```
 
+params:
+
+| Field | Type     | Default | Description                                          |
+| ----- | -------- | ------- | ---------------------------------------------------- |
+| path  | `string` |         | The path that will replace the original request path |
+
 ### ReplacePathRegex
 
-Replaces the entire original request path with a different path via regular expression before forwarding upstream. If the original request includes a query string, it will also be forwarded.
+Replaces the entire original request path using a regular expression before forwarding the request to the upstream service. If the original request includes a query string, it will be preserved.
 
 Original request: `/api/v1/user?name=john` \
-Forwarded path for upstream: `/hoo/user?name=john`
+Forwarded request: `/hoo/user?name=john`
 
 ```yaml
 routes:
@@ -218,9 +265,16 @@ routes:
           replacement: /hoo/$1
 ```
 
+params:
+
+| Field       | Type     | Default | Description                                                                        |
+| ----------- | -------- | ------- | ---------------------------------------------------------------------------------- |
+| regex       | `string` |         | Regular expression used to match and capture parts of the original request path.   |
+| replacement | `string` |         | The replacement path pattern. Supports regex capture groups from the `regex` field |
+
 ### RequestTermination
 
-Returns the content to the client and terminates the request.
+Terminates the request early and immediately returns a custom response to the client. This is useful for mocking endpoints or short-circuiting requests before they reach the upstream service.
 
 ```yaml
 routes:
@@ -237,9 +291,21 @@ routes:
 
 ```
 
+params:
+
+| Field        | Type     | Default | Description                                                              |
+| ------------ | -------- | ------- | ------------------------------------------------------------------------ |
+| status_code  | `int`    |         | The HTTP status code to return to the client (e.g., 200, 403, 500).      |
+| content_type | `string` |         | The MIME type of the response (e.g., `application/json`, `text/plain`).  |
+| body         | `string` |         | The body content to return in the response. Supports plain text or JSON. |
+
 ### RequestTransformer
 
-Apply a request transformation to the request. The `add` option means that if the value doesn't exist, the value will be added. The `set` option means that whether the value exists or not, it will be added or overwritten.
+Applies transformations to the incoming request before forwarding it to the upstream service. You can remove, add, or set headers and query strings.
+
+* `remove` - option deletes specified headers or query string parameters.
+* `add` - option adds the specified values only if they don’t already exist.
+* `set` - option adds or overwrites existing values, regardless of whether they previously existed.
 
 ```yaml
 routes:
@@ -263,9 +329,26 @@ routes:
               x-source: "web"
 ```
 
+params:
+
+| Field                | Type                | Default | Description                                                     |
+| -------------------- | ------------------- | ------- | --------------------------------------------------------------- |
+| `remove.headers`     | `[]string`          |         | A list of request header names to remove.                       |
+| `remove.querystring` | `[]string`          |         | A list of query string parameter names to remove.               |
+| `add.headers`        | `map[string]string` |         | Adds headers only if they do not already exist.                 |
+| `add.querystring`    | `map[string]string` |         | Adds query string parameters only if they do not already exist. |
+| `set.headers`        | `map[string]string` |         | Sets (adds or overwrites) request headers.                      |
+| `set.querystring`    | `map[string]string` |         | Sets (adds or overwrites) query string parameters.              |
+
 ### ResponseTransformer
 
-Apply a response transformation to the response.  The `add` option means that if the value doesn't exist, the value will be added. The `set` option means that whether the value exists or not, it will be added or overwritten.
+Applies transformations to the outgoing response before it is returned to the client. This middleware allows you to manipulate response headers using three options:
+
+* `remove` – Removes specified headers from the response.
+* `add` – Adds headers only if they do not already exist.
+* `set` – Adds headers, and overwrites existing ones if they already exist.
+
+You can also use dynamic variables (e.g., $http.start, $http.finish) in values for enhanced traceability or debugging.
 
 ```yaml
 routes:
@@ -289,9 +372,21 @@ routes:
               x-source: "web"
 ```
 
+| Field            | Type                | Default | Description                                              |
+| ---------------- | ------------------- | ------- | -------------------------------------------------------- |
+| `remove.headers` | `string[]`          |         | A list of response header names to remove.               |
+| `add.headers`    | `map[string]string` |         | Adds response headers only if they do not already exist. |
+| `set.headers`    | `map[string]string` |         | Sets (adds or overwrites) response headers.              |
+
 ### SetVars
 
-Set variables in the request context.
+Sets custom variables into the request context. These variables can be referenced later in the routing pipeline, such as in transformations, logging, or upstream requests.
+
+This middleware supports:
+
+* Static values
+* Dynamic directives (e.g., $header.x-user-id, $query.order_id)
+* Fallback defaults – if the value is missing or not resolvable, it will fall back to the default.
 
 ```yaml
 routes:
@@ -303,13 +398,28 @@ routes:
       - type: setvars
         params:
           - key: user_id
-            value: "123456" # you can use directive here
-            default: "0" # if the variable is not set, the default value will be used
+            value: "$header.x-user-id"   # Uses value from request header
+            default: "0"                 # Default if header is missing
+          - key: order_mode
+            value: "standard"            # Static value
 ```
+
+In this example:
+
+* `user_id` will be set to the value of `x-user-id` from the request header, or `"0"` if it’s missing.
+* `order_mode` is set statically to `"standard"`.
+
+| Field     | Type     | Required | Description                                                                |
+| --------- | -------- | -------- | -------------------------------------------------------------------------- |
+| `key`     | `string` | ✅       | The name of the variable to set in the request context.                    |
+| `value`   | `string` | ✅       | The value to assign. Can be a static string or a directive (e.g., `$...`). |
+| `default` | `string` | ❌       | Optional fallback value if the `value` cannot be resolved.                 |
 
 ### StripPrefix
 
-Removes a part of the original request path before forwarding upstream.
+Strips one or more matching prefixes from the original request path before forwarding the request to the upstream service.
+
+This is useful for decoupling the public API structure from the internal upstream structure. For example, if your public endpoint includes a versioned prefix like /api/v1, but your upstream only expects /payment, this middleware helps transform the path automatically.
 
 Original request: `/api/v1/payment` \
 Forwarded path for upstream: `/payment`
@@ -326,6 +436,12 @@ routes:
           prefixes:
             - /api/v1
 ```
+
+params:
+
+| Field      | Type       | Required | Description                                                                                                         |
+| ---------- | ---------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| `prefixes` | `[]string` | ✅       | A list of path prefixes to strip from the beginning of the request path. Only the first matching prefix is removed. |
 
 ### TrafficSplitter
 
