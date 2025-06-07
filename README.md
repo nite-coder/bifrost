@@ -34,6 +34,7 @@ A low latency and high throughput API Gateway library written in Go.
 | Easy integration with existing Go programs                                              |   ✅    |  ❌   |
 | Built-in `Prometheus` monitoring                                                        |   ✅    |  ❌   |
 | Built-in `OpenTelemetry` tracing                                                        |   ✅    |  ❌   |
+| Native `k8s` service discovery                                                          |   ✅    |  ❌   |
 | Built-in web application firewall and support OWASP Core Rule Set                       |   ✅    |  ❌   |
 | HTTP2 upstream support                                                                  |   ✅    |  ❌   |
 | Multiple configuration providers                                                        |   ✅    |  ❌   |

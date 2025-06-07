@@ -6,6 +6,7 @@
 
 - Introduce PROXY protocol support for the server ([#33](https://github.com/nite-coder/bifrost/pull/33))
 - Introduce `Coraza` web application firewall middleware ([#36](https://github.com/nite-coder/bifrost/pull/36))
+- Introduce `k8s`service discovery provider ([#37](https://github.com/nite-coder/bifrost/pull/37))
 
 ### **Bug Fixes**
 
