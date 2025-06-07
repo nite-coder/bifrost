@@ -29,6 +29,7 @@ import (
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/zero"
+	proxyproto "github.com/pires/go-proxyproto"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/unix"
 )
@@ -168,10 +169,21 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 		}
 
 		if serverOptions.Backlog > 0 && runtime.GOOS == "linux" {
-			tl, ok := listener.(*net.TCPListener)
-			if !ok {
-				return nil, fmt.Errorf("only tcp listener supported, called with %#v", listener)
+			var tl *net.TCPListener
+			proxylistener, ok := listener.(*proxyproto.Listener)
+
+			if ok {
+				tl, ok = proxylistener.Listener.(*net.TCPListener)
+				if !ok {
+					return nil, fmt.Errorf("only tcp listener supported, called with %#v", listener)
+				}
+			} else {
+				tl, ok = listener.(*net.TCPListener)
+				if !ok {
+					return nil, fmt.Errorf("only tcp listener supported, called with %#v", listener)
+				}
 			}
+
 			file, err := tl.File()
 			if err != nil {
 				return nil, err
