@@ -113,12 +113,12 @@ logging:
   output: stderr
 ```
 
-| Field           | Type     | Default | Description                                                                      |
-| --------------- | -------- | ------- | -------------------------------------------------------------------------------- |
-| handler         | `string` | `text`  | Log format; supports `text` and `json`                                           |
-| level           | `string` | `info`  | Log level; options are  `debug`, `info`, `warn`, `error`. Not enabled by default |
-| output          | `string` |         | Log output location, currently supports `stderr` or file path                    |
-| redirect_stderr | `bool`   | `false` | Redirect `os.stderr` to the log file                                             |
+| Field                   | Type     | Default | Description                                                                      |
+| ----------------------- | -------- | ------- | -------------------------------------------------------------------------------- |
+| handler                 | `string` | `text`  | Log format; supports `text` and `json`                                           |
+| level                   | `string` | `info`  | Log level; options are  `debug`, `info`, `warn`, `error`. Not enabled by default |
+| output                  | `string` |         | Log output location, currently supports `stderr` or file path                    |
+| disable_redirect_stderr | `bool`   | `false` | Disable redirection of os.stderr to the log file                                 |
 
 ## metrics
 
