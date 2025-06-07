@@ -168,7 +168,7 @@ func (p *FileProvider) Watch() error {
 					if p.OnChanged != nil {
 						err := p.OnChanged()
 						if err != nil {
-							slog.Error("fail to change in file provider", "error:", err)
+							slog.Error("failed to change in file provider", "error:", err)
 						}
 					}
 				}

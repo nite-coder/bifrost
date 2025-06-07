@@ -1,0 +1,6 @@
+bin/
+docs/
+examples/
+init/
+client/
+server/bifrost/logs

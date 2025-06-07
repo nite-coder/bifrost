@@ -61,7 +61,7 @@ type GRPCProxy struct {
 func New(options Options) (*GRPCProxy, error) {
 	addr, err := url.Parse(options.Target)
 	if err != nil {
-		return nil, fmt.Errorf("proxy: grpc proxy fail to parse target url; %w", err)
+		return nil, fmt.Errorf("proxy: grpc proxy failed to parse target url; %w", err)
 	}
 
 	if options.Weight == 0 {
@@ -83,7 +83,7 @@ func New(options Options) (*GRPCProxy, error) {
 
 	client, err := grpc.NewClient(addr.Host, grpcOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("fail to dial backend: %w", err)
+		return nil, fmt.Errorf("failed to dial backend: %w", err)
 	}
 
 	return &GRPCProxy{
@@ -312,7 +312,7 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 
 	c.Set(variable.GRPCStatusCode, uint32(st.Code()))
 
-	logger.Error("fail to invoke grpc server",
+	logger.Error("failed to invoke grpc server",
 		slog.String("error", err.Error()),
 		slog.String("original_path", originalPath),
 		slog.String("upstream", p.targetHost+string(c.Request.Path())),

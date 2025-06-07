@@ -1,0 +1,147 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bifrost-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: bifrost-role
+rules:
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: bifrost-role-binding
+subjects:
+  - kind: ServiceAccount
+    name: bifrost-sa
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: bifrost-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bifrost-config
+data:
+  config.yaml: |
+    watch: true
+
+    providers:
+      k8s:
+        enabled: true
+
+    logging:
+      handler: text
+      level: debug
+      output: stderr
+      redirect_stderr: false
+
+    access_logs:
+      my_access_log:
+        output: stderr
+        buffering_size: 64000
+        flush: 1s
+        escape: json
+        template: >
+          {"time":"$time",
+          "remote_addr":"$network.peer.address",
+          "request":"$http.request",
+          "req_body":"$http.request.body",
+          "client_ip": "$client_ip",
+          "x_forwarded_for":"$http.request.header.x-forwarded-for",
+          "upstream_addr":"$upstream.request.host",
+          "upstream_request":"$upstream.request",
+          "upstream_duration":"$upstream.duration",
+          "upstream_status":"$upstream.response.status_code",
+          "status":"$http.response.status_code",
+          "user_id": $var.user_id,
+          "duration":"$http.request.duration",
+          "conn_acquisition_time":"$upstream.conn_acquisition_time"}
+
+    servers:
+      apiv1:
+        bind: ":8001"
+        logging:
+          level: debug
+          handler: json
+          output: stderr
+        access_log_id: my_access_log
+
+    routes:
+      default:
+        paths:
+          - /
+        service_id: echo
+
+    services:
+      echo:
+        tls_verify: false
+        protocol: http
+        url: http://echoServer:80
+
+    upstreams:
+      echoServer:
+        discovery:
+          type: "k8s"
+          name: "echo"
+          namespace: "default"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bifrost-deployment
+  labels:
+    app: bifrost
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: bifrost
+  template:
+    metadata:
+      labels:
+        app: bifrost
+    spec:
+      serviceAccountName: bifrost-sa
+      containers:
+        - name: bifrost
+          image: jasonsoft/bifrost:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8001
+          volumeMounts:
+            - name: config-volume
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+            - name: logs-volume
+              mountPath: /logs
+      volumes:
+        - name: config-volume
+          configMap:
+            name: bifrost-config
+        - name: logs-volume
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bifrost
+  namespace: default
+spec:
+  ports:
+    - name: 80-80
+      nodePort: 30080
+      port: 8001
+      protocol: TCP
+      targetPort: 8001
+  selector:
+    app: bifrost
+  type: NodePort

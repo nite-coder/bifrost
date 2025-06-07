@@ -429,11 +429,11 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 				if dnsResolver != nil && !mainOptions.SkipResolver {
 					ips, err := dnsResolver.Lookup(context.Background(), hostname)
 					if err != nil {
-						return fmt.Errorf("fail to lookup host '%s' in the service '%s', error: %w", hostname, serviceID, err)
+						return fmt.Errorf("failed to lookup host '%s' in the service '%s', error: %w", hostname, serviceID, err)
 					}
 
 					if len(ips) == 0 {
-						return fmt.Errorf("fail to lookup host '%s' in the service '%s', error: no ip found", hostname, serviceID)
+						return fmt.Errorf("failed to lookup host '%s' in the service '%s', error: no ip found", hostname, serviceID)
 					}
 				} else {
 					ip := net.ParseIP(hostname)
@@ -508,6 +508,14 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 			if upstreamOptions.Discovery.Name == "" {
 				return fmt.Errorf("discovery name can't be empty in the upstream '%s'", upstreamID)
 			}
+		case "k8s":
+			if !mainOptions.Providers.K8S.Enabled {
+				return fmt.Errorf("k8s service discovery provider is disabled. upstream id: %s", upstreamID)
+			}
+
+			if upstreamOptions.Discovery.Name == "" {
+				return fmt.Errorf("discovery name can't be empty in the upstream '%s'", upstreamID)
+			}
 		case "":
 			if upstreamOptions.Discovery.Type == "" && len(upstreamOptions.Targets) == 0 {
 				return fmt.Errorf("the targets can't be empty in the upstream '%s'", upstreamID)
@@ -524,11 +532,11 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 				if dnsResolver != nil && !mainOptions.SkipResolver {
 					ips, err := dnsResolver.Lookup(context.Background(), addr)
 					if err != nil {
-						return fmt.Errorf("fail to lookup host '%s' in the upstream '%s', error: %w", addr, upstreamID, err)
+						return fmt.Errorf("failed to lookup host '%s' in the upstream '%s', error: %w", addr, upstreamID, err)
 					}
 
 					if len(ips) == 0 {
-						return fmt.Errorf("fail to lookup host '%s' in the upstream '%s', error: no ip found", addr, upstreamID)
+						return fmt.Errorf("failed to lookup host '%s' in the upstream '%s', error: no ip found", addr, upstreamID)
 					}
 				}
 			}

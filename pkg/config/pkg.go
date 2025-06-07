@@ -68,7 +68,7 @@ func load(path string, skipResolver bool) (Options, error) {
 
 	dps, mainOpts, err := loadDynamic(mainOpts)
 	if err != nil {
-		return mainOpts, fmt.Errorf("fail to load dynamic config: %w", err)
+		return mainOpts, fmt.Errorf("failed to load dynamic config: %w", err)
 	}
 
 	if skipResolver {

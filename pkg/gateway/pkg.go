@@ -120,7 +120,7 @@ func Run(mainOptions config.Options) (err error) {
 
 	bifrost, err := NewBifrost(mainOptions, false)
 	if err != nil {
-		slog.Error("fail to start bifrost", "error", err)
+		slog.Error("failed to start bifrost", "error", err)
 		return err
 	}
 	SetBifrost(bifrost)
@@ -133,7 +133,7 @@ func Run(mainOptions config.Options) (err error) {
 		if mainOptions.ConfigPath() != "" {
 			newMainOptions, err := config.Load(mainOptions.ConfigPath())
 			if err != nil {
-				slog.Error("fail to load config", "error", err)
+				slog.Error("failed to load config", "error", err)
 				return err
 			}
 			mainOptions = newMainOptions
@@ -241,17 +241,17 @@ func Run(mainOptions config.Options) (err error) {
 		if mainOptions.IsDaemon {
 			err = zeroDT.WritePID()
 			if err != nil {
-				slog.Error("fail to write pid", "error", err)
+				slog.Error("failed to write pid", "error", err)
 				return
 			}
 
 			err = zeroDT.RemoveUpgradeSock()
 			if err != nil {
-				slog.Error("fail to remove upgrade sock file", "error", err)
+				slog.Error("failed to remove upgrade sock file", "error", err)
 				return
 			}
 			if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
-				slog.Error("fail to wait for upgrade process", "error", err)
+				slog.Error("failed to wait for upgrade process", "error", err)
 				return
 			}
 		}
@@ -323,7 +323,7 @@ func RunAsDaemon(mainOptions config.Options) error {
 
 	err := cmd.Start()
 	if err != nil {
-		slog.Error("fail to run as daemon", "error", err)
+		slog.Error("failed to run as daemon", "error", err)
 		return err
 	}
 
@@ -351,7 +351,7 @@ func StopDaemon(mainOptions config.Options) error {
 	}
 	err = zeroDT.Quit(ctx, oldPID, true)
 	if err != nil {
-		slog.Error("fail to stop", "error", err)
+		slog.Error("failed to stop", "error", err)
 		return err
 	}
 	return nil
@@ -370,7 +370,7 @@ func Upgrade(mainOptions config.Options) error {
 	zeroDT := zero.New(zeroOpts)
 
 	if err := zeroDT.Upgrade(); err != nil {
-		slog.Error("fail to upgrade", "error", err)
+		slog.Error("failed to upgrade", "error", err)
 		return err
 	}
 

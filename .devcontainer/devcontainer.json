@@ -97,6 +97,8 @@
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode",
 	"features": {
+		"ghcr.io/rio/features/k3d:1": {},
+		"ghcr.io/devcontainers-extra/features/kubectl-asdf:2": {},
 		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
 			"moby": true,
 			"installDockerBuildx": true,

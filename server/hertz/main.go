@@ -76,7 +76,7 @@ func main() {
 
 			oldPID, err := zeroDT.GetPID()
 			if err != nil {
-				slog.Error("fail to upgrade", "error", err)
+				slog.Error("failed to upgrade", "error", err)
 				return
 			}
 
@@ -94,7 +94,7 @@ func main() {
 					return
 				}
 				if err := zeroDT.WaitForUpgrade(ctx); err != nil {
-					slog.Error("fail to upgrade process", "error", err)
+					slog.Error("failed to upgrade process", "error", err)
 					return
 				}
 			}

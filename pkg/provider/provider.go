@@ -14,7 +14,7 @@ type Provider interface {
 
 type GetInstanceOptions struct {
 	Namespace string
-	ID        string
+	Name      string
 	Group     string
 }
 

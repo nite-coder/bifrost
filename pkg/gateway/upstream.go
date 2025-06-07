@@ -22,6 +22,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/provider/dns"
+	"github.com/nite-coder/bifrost/pkg/provider/k8s"
 	"github.com/nite-coder/bifrost/pkg/provider/nacos"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
@@ -100,6 +101,20 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 		}
 
 		discovery, err := nacos.NewNacosServiceDiscovery(options)
+		if err != nil {
+			return nil, err
+		}
+		upstream.discovery = discovery
+	case "k8s":
+		if !bifrost.options.Providers.K8S.Enabled {
+			return nil, fmt.Errorf("k8s provider is disabled. upstream id: %s", upstreamOptions.ID)
+		}
+
+		option := k8s.Options{
+			APIServer: bifrost.options.Providers.K8S.APIServer,
+		}
+
+		discovery, err := k8s.NewK8sDiscovery(option)
 		if err != nil {
 			return nil, err
 		}
@@ -320,7 +335,8 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 
 	if len(instances) == 0 && u.discovery != nil {
 		options := provider.GetInstanceOptions{
-			ID: u.options.Discovery.Name,
+			Namespace: u.options.Discovery.Namespace,
+			Name:      u.options.Discovery.Name,
 		}
 
 		instances, err = u.discovery.GetInstances(context.Background(), options)
@@ -532,12 +548,12 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 func (u *Upstream) watch() {
 	u.watchOnce.Do(func() {
 		options := provider.GetInstanceOptions{
-			ID: u.options.Discovery.Name,
+			Name: u.options.Discovery.Name,
 		}
 
 		watchCh, err := u.discovery.Watch(context.Background(), options)
 		if err != nil {
-			slog.Error("fail to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
+			slog.Error("failed to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
 		}
 
 		go safety.Go(context.Background(), func() {

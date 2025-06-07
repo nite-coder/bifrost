@@ -55,7 +55,7 @@ func main() {
 
 			mainOptions, err := config.Load(configPath)
 			if err != nil {
-				slog.Error("fail to load config", "error", err.Error())
+				slog.Error("failed to load config", "error", err.Error())
 				if isTest {
 					slog.Info("the configuration file test has failed")
 				}

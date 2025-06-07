@@ -103,6 +103,7 @@ type ProviderOtions struct {
 	File  FileProviderOptions  `yaml:"file" json:"file"`
 	Nacos NacosProviderOptions `yaml:"nacos" json:"nacos"`
 	DNS   DNSProviderOptions   `yaml:"dns" json:"dns"`
+	K8S   K8SProviderOptions   `yaml:"k8s" json:"k8s"`
 }
 
 type FileProviderOptions struct {
@@ -153,6 +154,11 @@ type DNSProviderOptions struct {
 	Enabled bool          `yaml:"enabled" json:"enabled"`
 	Servers []string      `yaml:"servers" json:"servers"`
 	Valid   time.Duration `yaml:"valid" json:"valid"`
+}
+
+type K8SProviderOptions struct {
+	Enabled   bool   `yaml:"enabled" json:"enabled"`
+	APIServer string `yaml:"api_server" json:"api_server"`
 }
 
 type MetricsOptions struct {
@@ -291,8 +297,9 @@ type TargetOptions struct {
 }
 
 type DiscoveryOptions struct {
-	Type string `yaml:"type" json:"type"`
-	Name string `yaml:"name" json:"name"`
+	Type      string `yaml:"type" json:"type"`
+	Namespace string `yaml:"namespace" json:"namespace"`
+	Name      string `yaml:"name" json:"name"`
 }
 
 type UpstreamOptions struct {
