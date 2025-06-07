@@ -166,10 +166,10 @@ type MetricsOptions struct {
 }
 
 type LoggingOtions struct {
-	Level          string `yaml:"level" json:"level"`
-	Handler        string `yaml:"handler" json:"handler"`
-	Output         string `yaml:"output" json:"output"`
-	RedirectStdErr bool   `yaml:"redirect_stderr" json:"redirect_stderr"`
+	Level                 string `yaml:"level" json:"level"`
+	Handler               string `yaml:"handler" json:"handler"`
+	Output                string `yaml:"output" json:"output"`
+	DisableRedirectStdErr bool   `yaml:"disable_redirect_stderr" json:"disable_redirect_stderr"`
 }
 
 type PrometheusOptions struct {

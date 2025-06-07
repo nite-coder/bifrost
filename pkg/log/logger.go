@@ -109,7 +109,7 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 		fw := &fileWriter{file: file}
 		writer = fw
 
-		if opts.RedirectStdErr && (opts.Output != "stderr" && opts.Output != "") {
+		if !opts.DisableRedirectStdErr && (opts.Output != "stderr" && opts.Output != "") {
 			if runtime.GOOS == "windows" {
 				// Windows not support dup2
 				return nil, errors.New("stderr redirection not supported on Windows")
