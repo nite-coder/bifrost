@@ -4,7 +4,7 @@ type RequestOriginal struct {
 	ServerID string
 	Scheme   []byte
 	Host     []byte
-	Method   []byte
+	Method   string
 	Path     []byte
 	Query    []byte
 	Protocol string

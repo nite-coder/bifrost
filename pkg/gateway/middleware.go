@@ -64,9 +64,6 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	path := make([]byte, len(c.Request.Path()))
 	copy(path, c.Request.Path())
 
-	method := make([]byte, len(c.Request.Method()))
-	copy(method, c.Request.Method())
-
 	schema := make([]byte, len(c.Request.Scheme()))
 	copy(schema, c.Request.Scheme())
 
@@ -81,7 +78,7 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		Host:     host,
 		Path:     path,
 		Protocol: c.Request.Header.GetProtocol(),
-		Method:   method,
+		Method:   variable.MethodToString(c.Request.Method()),
 		Query:    querystring,
 	}
 
