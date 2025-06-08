@@ -16,6 +16,7 @@
 ### **Refactor**
 
 - rename `redirect_stderr` to `disable_redirect_stderr` and allow to redirect stderr by default ([#39](https://github.com/nite-coder/bifrost/pull/39))
+- improve `variable.HTTPRequestMethod` performance ([#41](https://github.com/nite-coder/bifrost/pull/41))
 
 ### **Test**
 
