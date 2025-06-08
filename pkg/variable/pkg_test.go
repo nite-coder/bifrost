@@ -47,7 +47,7 @@ func TestGetDirective(t *testing.T) {
 		Host:     hzCtx.Request.Host(),
 		Path:     hzCtx.Request.Path(),
 		Protocol: hzCtx.Request.Header.GetProtocol(),
-		Method:   hzCtx.Request.Method(),
+		Method:   MethodToString(hzCtx.Request.Method()),
 		Query:    hzCtx.Request.QueryString(),
 		Scheme:   hzCtx.Request.Scheme(),
 	}

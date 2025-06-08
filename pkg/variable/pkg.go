@@ -14,6 +14,7 @@ import (
 	"github.com/cloudwego/gjson"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
@@ -307,7 +308,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		info := (val).(*RequestOriginal)
 
 		builder := strings.Builder{}
-		builder.Write(info.Method)
+		builder.WriteString(info.Method)
 		builder.Write(spaceByte)
 		builder.Write(info.Path)
 		if len(info.Query) > 0 {
@@ -371,11 +372,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		val, found := c.Get(RequestOrig)
 		if found {
 			info := (val).(*RequestOriginal)
-			method := cast.B2S(info.Method)
-			return method, true
+			return info.Method, true
 		}
 
-		method := cast.B2S(c.Request.Method())
+		method := MethodToString(c.Request.Method())
 		return method, true
 	case HTTPRequestQuery:
 		val, found := c.Get(RequestOrig)
@@ -605,4 +605,37 @@ func (s byLengthAndContent) Less(i, j int) bool {
 
 func sortBifrostVariables(slice []string) {
 	sort.Sort(byLengthAndContent(slice))
+}
+
+// MethodToString tries to return consts without allocation
+func MethodToString(m []byte) string {
+	if len(m) == 0 {
+		return "GET"
+	}
+	switch m[0] {
+	case 'G':
+		if string(m) == consts.MethodGet {
+			return consts.MethodGet
+		}
+	case 'P':
+		switch string(m) {
+		case consts.MethodPost:
+			return consts.MethodPost
+
+		case consts.MethodPut:
+			return consts.MethodPut
+
+		case consts.MethodPatch:
+			return consts.MethodPatch
+		}
+	case 'H':
+		if string(m) == consts.MethodHead {
+			return consts.MethodHead
+		}
+	case 'D':
+		if string(m) == consts.MethodDelete {
+			return consts.MethodDelete
+		}
+	}
+	return string(m)
 }
