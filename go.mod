@@ -3,10 +3,10 @@ module github.com/nite-coder/bifrost
 go 1.23.0
 
 require (
-	github.com/bytedance/sonic v1.13.2
+	github.com/bytedance/sonic v1.13.3
 	github.com/cloudwego/gjson v0.1.0
 	github.com/cloudwego/gopkg v0.1.4
-	github.com/cloudwego/hertz v0.9.7
+	github.com/cloudwego/hertz v0.10.0
 	github.com/cloudwego/netpoll v0.7.0
 	github.com/corazawaf/coraza-coreruleset/v4 v4.14.0
 	github.com/corazawaf/coraza/v3 v3.3.3
@@ -187,6 +187,6 @@ require (
 )
 
 replace (
-	github.com/cloudwego/hertz v0.9.7 => github.com/nite-coder/hertz v0.9.8-0.20250525014109-390db2885183
+	github.com/cloudwego/hertz v0.10.0 => github.com/nite-coder/hertz v0.10.0
 	github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.1.8
 )

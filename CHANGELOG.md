@@ -32,7 +32,7 @@
 ### **Chore**
 
 - Bump OpenTelemetry package to `v1.36.0` ([#43](https://github.com/nite-coder/bifrost/pull/43))
-- Bump Hertz package to `v0.10.0`
+- Bump Hertz package to `v0.10.0` ([#44](https://github.com/nite-coder/bifrost/pull/44))
 
 ## 0.4.0 (2025-05-14)
 
