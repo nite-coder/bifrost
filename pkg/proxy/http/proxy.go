@@ -5,16 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
-	"net"
-	"net/http"
-	"net/textproto"
-	"net/url"
-	"runtime/debug"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	hzerrors "github.com/cloudwego/hertz/pkg/common/errors"
@@ -33,6 +23,15 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.opentelemetry.io/otel/trace"
+	"log/slog"
+	"net"
+	"net/http"
+	"net/textproto"
+	"net/url"
+	"runtime/debug"
+	"strings"
+	"sync"
+	"time"
 )
 
 // TrailerPrefix is a magic prefix for [ResponseWriter.Header] map keys
@@ -51,48 +50,40 @@ import (
 const TrailerPrefix = "Trailer:"
 
 type HTTPProxy struct {
-	mu      sync.RWMutex
-	id      string
-	options *Options
-
-	client *client.Client
-
-	// target is set as a reverse proxy address
-	target string
-
-	// transferTrailer is whether to forward Trailer-related header
-	transferTrailer bool
-
+	failExpireAt time.Time
+	options      *Options
+	client       *client.Client
 	// director must be a function which modifies the request
 	// into a new request. Its response is then redirected
 	// back to the original client unmodified.
 	// director must not access the provided Request
 	// after returning.
 	director func(*protocol.Request)
-
 	// errorHandler is an optional function that handles errors
 	// reaching the backend or errors from modifyResponse.
 	//
 	// If nil, the default is to log the provided error and return
 	// a 502 Status Bad Gateway response.
 	errorHandler func(*app.RequestContext, error)
-
-	targetHost string
-
-	weight       uint32
-	failedCount  uint
-	failExpireAt time.Time
+	id           string
+	// target is set as a reverse proxy address
+	target      string
+	targetHost  string
+	failedCount uint
+	mu          sync.RWMutex
+	weight      uint32
+	// transferTrailer is whether to forward Trailer-related header
+	transferTrailer bool
 }
-
 type Options struct {
 	Target           string
 	Protocol         config.Protocol
-	Weight           uint32
+	HeaderHost       string
+	ServiceID        string
 	MaxFails         uint
 	FailTimeout      time.Duration
-	HeaderHost       string
+	Weight           uint32
 	IsTracingEnabled bool
-	ServiceID        string
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -123,7 +114,6 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 	if err != nil {
 		return nil, fmt.Errorf("proxy: http proxy failed to parse target url; %w", err)
 	}
-
 	if client == nil {
 		clientOptions := ClientOptions{
 			IsHTTP2:   false,
@@ -134,11 +124,9 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 			return nil, err
 		}
 	}
-
 	if opts.Weight == 0 {
 		opts.Weight = 1
 	}
-
 	r := &HTTPProxy{
 		id:              uuid.New().String(),
 		transferTrailer: true,
@@ -147,7 +135,6 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 		targetHost:      addr.Host,
 		weight:          opts.Weight,
 		director: func(req *protocol.Request) {
-
 			switch opts.Protocol {
 			case config.ProtocolHTTP2:
 				req.Header.SetProtocol("HTTP/2.0")
@@ -155,7 +142,6 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 				req.Header.SetProtocol("HTTP/1.1")
 			default:
 			}
-
 			switch addr.Scheme {
 			case "http":
 				req.SetIsTLS(false)
@@ -163,7 +149,6 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 				req.SetIsTLS(true)
 			default:
 			}
-
 			if opts.HeaderHost != "" {
 				req.Header.Set("Host", opts.HeaderHost)
 			}
@@ -171,34 +156,26 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 		},
 		client: client,
 	}
-
 	return r, nil
 }
-
 func (p *HTTPProxy) IsAvailable() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-
 	if p.options.MaxFails == 0 {
 		return true
 	}
-
 	now := timecache.Now()
 	if now.After(p.failExpireAt) {
 		return true
 	}
-
 	if p.failedCount < p.options.MaxFails {
 		return true
 	}
-
 	return false
 }
-
 func (p *HTTPProxy) AddFailedCount(count uint) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-
 	now := timecache.Now()
 	if now.After(p.failExpireAt) {
 		p.failExpireAt = now.Add(p.options.FailTimeout)
@@ -206,53 +183,41 @@ func (p *HTTPProxy) AddFailedCount(count uint) error {
 	} else {
 		p.failedCount += count
 	}
-
 	if p.options.MaxFails > 0 && p.failedCount >= p.options.MaxFails {
 		return proxy.ErrMaxFailedCount
 	}
-
 	return nil
 }
-
 func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
-
 	defer func() {
 		if r := recover(); r != nil {
 			stackTrace := cast.B2S(debug.Stack())
 			logger.ErrorContext(ctx, "proxy: http proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
 			c.Abort()
 		}
-
 		// check upstream health
 		if c.Response.StatusCode() >= 500 {
 			_ = p.AddFailedCount(1)
 		}
 	}()
-
 	outReq := &c.Request
 	outResp := &c.Response
-
 	var err error
 	c.Set(variable.UpstreamRequestHost, p.targetHost)
-
 	if p.director != nil {
 		p.director(outReq)
 	}
-
 	outReq.Header.ResetConnectionClose()
-
 	hasTeTrailer := false
 	if p.transferTrailer {
 		hasTeTrailer = checkTeHeader(&outReq.Header)
 	}
-
 	reqUpType := upgradeReqType(&outReq.Header)
 	if !IsASCIIPrint(reqUpType) { // We know reqUpType is ASCII, it's checked by the caller.
 		p.handleError(ctx, c, fmt.Errorf("backend tried to switch to invalid protocol %q", reqUpType))
 		return
 	}
-
 	removeRequestConnHeaders(c)
 	// Remove hop-by-hop headers to the backend. Especially
 	// important is "Connection" because we want a persistent
@@ -263,20 +228,16 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 		outReq.Header.DelBytes(cast.S2B(h))
 	}
-
 	// Check if 'trailers' exists in te header, If exists, add an additional Te header
 	if p.transferTrailer && hasTeTrailer {
 		outReq.Header.Set("Te", "trailers")
 	}
-
 	// prepare request(replace headers and some URL host)
 	if ip, _, err := net.SplitHostPort(c.RemoteAddr().String()); err == nil {
 		tmp := outReq.Header.Peek("X-Forwarded-For")
-
 		if len(tmp) > 0 {
 			buf := bytebufferpool.Get()
 			defer bytebufferpool.Put(buf)
-
 			_, _ = buf.Write(tmp)
 			_, _ = buf.WriteString(", ")
 			_, _ = buf.WriteString(ip)
@@ -286,18 +247,14 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			outReq.Header.Set("X-Forwarded-For", ip)
 		}
 	}
-
 	// After stripping all the hop-by-hop connection headers above, add back any
 	// necessary for protocol upgrades, such as for websockets.
 	if reqUpType != "" {
 		outCtx := c.Copy()
-
 		outReq = &outCtx.Request
 		outResp = &outCtx.Response
-
 		outReq.Header.Set("Connection", "Upgrade")
 		outReq.Header.Set("Upgrade", reqUpType)
-
 		err = p.roundTrip(ctx, c, outReq, outResp)
 		if err != nil {
 			p.handleError(ctx, c, err)
@@ -305,75 +262,58 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 		return
 	}
-
 	if p.options.IsTracingEnabled {
 		tracer := otel.Tracer("bifrost")
 		if tracer != nil {
 			var span trace.Span
-
 			spanOptions := []trace.SpanStartOption{
 				trace.WithSpanKind(trace.SpanKindClient),
 			}
-
 			reqMethod := cast.B2S(outReq.Method())
 			urlFull := cast.B2S(outReq.URI().FullURI())
-
 			ctx, span = tracer.Start(ctx, reqMethod+" "+p.options.ServiceID, spanOptions...)
 			tracing.Inject(ctx, &outReq.Header)
-
 			defer func() {
 				labels := []attribute.KeyValue{
 					semconv.HTTPRequestMethodKey.String(reqMethod),
 					semconv.ServerAddress(p.target),
 					semconv.URLFull(urlFull),
 				}
-
 				if c.Response.StatusCode() > 0 {
 					labels = append(labels, semconv.HTTPResponseStatusCode(c.Response.StatusCode()))
 				}
-
 				if c.Response.StatusCode() >= 400 {
 					span.SetStatus(codes.Error, "")
 				}
-
 				if c.GetBool(variable.TargetTimeout) {
 					span.SetStatus(codes.Error, "timeout")
 				}
-
 				span.SetAttributes(labels...)
 				span.End()
 			}()
 		}
 	}
-
 ProxyPassLoop:
-
 	err = p.client.Do(ctx, outReq, outResp)
 	c.Set(variable.UpstreamConnAcquisitionTime, outReq.ConnAcquisitionTime())
 	if err != nil {
 		if errors.Is(err, hzerrors.ErrBadPoolConn) {
 			goto ProxyPassLoop
 		}
-
 		p.handleError(ctx, c, err)
 		return
 	}
-
 	announcedTrailers := outResp.Header.Peek("Trailer")
-
 	removeResponseConnHeaders(c)
-
 	for _, h := range hopHeaders {
 		if p.transferTrailer && h == "Trailer" {
 			continue
 		}
 		outResp.Header.DelBytes(cast.S2B(h))
 	}
-
 	if len(announcedTrailers) > 0 {
 		outResp.Header.Add("Trailer", string(announcedTrailers))
 	}
-
 }
 
 // ID return proxy's ID
@@ -395,42 +335,31 @@ func (p *HTTPProxy) SetClient(client *client.Client) {
 func (p *HTTPProxy) SetErrorHandler(eh func(c *app.RequestContext, err error)) {
 	p.errorHandler = eh
 }
-
 func (r *HTTPProxy) SetTransferTrailer(b bool) {
 	r.transferTrailer = b
 }
-
 func (p *HTTPProxy) Weight() uint32 {
 	return p.weight
 }
-
 func (p *HTTPProxy) Target() string {
 	return p.target
 }
-
 func (p *HTTPProxy) Close() error {
 	if p.client != nil {
 		p.client.CloseIdleConnections()
 		p.client = nil
 	}
-
 	return nil
 }
-
 func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err error) {
 	if err == nil {
 		return
 	}
-
 	logger := log.FromContext(ctx)
-
 	fullURI := fullURI(&c.Request)
-
 	val, _ := variable.Get(variable.HTTPRequestPath, c)
 	originalPath, _ := cast.ToString(val)
-
 	routeID := variable.GetString(variable.RouteID, c)
-
 	logger.ErrorContext(ctx, "failed to send request to upstream",
 		slog.String("route_id", routeID),
 		slog.String("client_ip", c.ClientIP()),
@@ -438,16 +367,13 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 		slog.String("original_path", originalPath),
 		slog.String("upstream", fullURI),
 	)
-
 	if errors.Is(err, hzerrors.ErrTimeout) {
 		c.Set(variable.TargetTimeout, true)
 	}
-
 	if errors.Is(err, hzerrors.ErrNoFreeConns) {
 		c.Response.Header.SetStatusCode(http.StatusInternalServerError)
 		return
 	}
-
 	c.Response.Header.SetStatusCode(http.StatusBadGateway)
 }
 

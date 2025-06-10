@@ -10,7 +10,6 @@ var defaultBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5,
 type Option interface {
 	apply(cfg *promConfig)
 }
-
 type option func(cfg *promConfig)
 
 func (fn option) apply(cfg *promConfig) {
@@ -19,8 +18,8 @@ func (fn option) apply(cfg *promConfig) {
 
 type promConfig struct {
 	buckets            []float64
-	enableGoCollector  bool
 	runtimeMetricRules []collectors.GoRuntimeMetricsRule
+	enableGoCollector  bool
 	disableServer      bool
 }
 

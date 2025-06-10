@@ -15,9 +15,9 @@ type RequestTerminationMiddleware struct {
 }
 
 type Options struct {
-	StatusCode  int    `mapstructure:"status_code"`
 	ContentType string `mapstructure:"content_type"`
 	Body        string `mapstructure:"body"`
+	StatusCode  int    `mapstructure:"status_code"`
 }
 
 func NewMiddleware(options Options) *RequestTerminationMiddleware {

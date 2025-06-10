@@ -2,11 +2,10 @@ package router
 
 import (
 	"fmt"
+	"github.com/cloudwego/hertz/pkg/app"
 	"net/http"
 	"sort"
 	"strings"
-
-	"github.com/cloudwego/hertz/pkg/app"
 )
 
 var (
@@ -17,7 +16,6 @@ var (
 type methodHandler struct {
 	handlers map[string][]app.HandlerFunc // Associates HTTP methods with handler functions
 }
-
 type NodeType int32
 
 const (
@@ -28,8 +26,8 @@ const (
 )
 
 type Children struct {
-	Path string
 	Node *node
+	Path string
 }
 
 // node represents a node in the Trie
@@ -60,20 +58,16 @@ func (n *node) addChild(child *node, nodeType NodeType) {
 			Path: child.path,
 			Node: child,
 		}
-
 		for _, cc := range n.prefixChildren {
 			if cc.Path == child.path {
 				cc.Node = child
 				return
 			}
 		}
-
 		n.prefixChildren = append(n.prefixChildren, c)
-
 		sort.Slice(n.prefixChildren, func(i, j int) bool {
 			return len(n.prefixChildren[i].Path) > len(n.prefixChildren[j].Path)
 		})
-
 	case Exact:
 		n.children[child.path] = child
 	case Prefix:
@@ -81,20 +75,16 @@ func (n *node) addChild(child *node, nodeType NodeType) {
 			Path: child.path,
 			Node: child,
 		}
-
 		for _, cc := range n.generalChildren {
 			if cc.Path == child.path {
 				cc.Node = child
 				return
 			}
 		}
-
 		n.generalChildren = append(n.generalChildren, c)
-
 		sort.Slice(n.generalChildren, func(i, j int) bool {
 			return len(n.generalChildren[i].Path) > len(n.generalChildren[j].Path)
 		})
-
 	default:
 	}
 }
@@ -121,10 +111,8 @@ func (n *node) findChildByName(name string, nodeType NodeType) *node {
 	default:
 		return nil
 	}
-
 	return nil
 }
-
 func (n *node) matchChildByName(name string, nodeType NodeType) *node {
 	switch nodeType {
 	case Exact:
@@ -146,7 +134,6 @@ func (n *node) matchChildByName(name string, nodeType NodeType) *node {
 	default:
 		return nil
 	}
-
 	return nil
 }
 
@@ -176,7 +163,6 @@ func NewRouter() *Router {
 	r := &Router{
 		tree: newNode("/"),
 	}
-
 	return r
 }
 
@@ -185,10 +171,8 @@ func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.H
 	if len(path) == 0 || path[0] != '/' {
 		return fmt.Errorf("router: '%s' is invalid path.  Path needs to begin with '/'", path)
 	}
-
 	originalPath := path
 	currentNode := r.tree
-
 	// If the path is the root path, add handler functions directly
 	if path == "/" {
 		if nodeType == PreferentialPrefix || nodeType == Prefix {
@@ -197,24 +181,19 @@ func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.H
 				childNode = newNode("/")
 				currentNode.addChild(childNode, nodeType)
 			}
-
 			currentNode = childNode
 		}
-
 		handlers := currentNode.findHandler(method)
 		if len(handlers) > 0 {
 			return fmt.Errorf("router: duplicate route method:'%s', path:'%s' %w", method, originalPath, ErrAlreadyExists)
 		}
-
 		currentNode.addHandler(method, middleware)
 		return nil
 	}
-
 	// Remove leading slash
 	if len(path) > 1 {
 		path = path[1:]
 	}
-
 	// Split the path and traverse the nodes
 	parts := strings.Split(path, "/")
 	for idx, part := range parts {
@@ -222,7 +201,6 @@ func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.H
 		if idx == len(parts)-1 {
 			isLast = true
 		}
-
 		// Find if the current node's children contain a node with the same name
 		var childNode *node
 		if isLast && (nodeType == PreferentialPrefix || nodeType == Prefix) {
@@ -230,7 +208,6 @@ func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.H
 		} else {
 			childNode = currentNode.findChildByName(part, Exact)
 		}
-
 		// If not found, create a new node
 		if childNode == nil {
 			if isLast && (nodeType == PreferentialPrefix || nodeType == Prefix) {
@@ -241,16 +218,12 @@ func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.H
 				currentNode.addChild(childNode, Exact)
 			}
 		}
-
 		currentNode = childNode
-
 	}
-
 	handlers := currentNode.findHandler(method)
 	if len(handlers) > 0 {
 		return fmt.Errorf("router: duplicate route method:'%s', path:'%s' %w", method, originalPath, ErrAlreadyExists)
 	}
-
 	// Add handler functions to the final node
 	currentNode.addHandler(method, middleware)
 	return nil
@@ -261,17 +234,14 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 	if path == "" || path[0] != '/' {
 		path = "/"
 	}
-
 	currentNode := r.tree
 	var prefixHandlers, generalHandlers []app.HandlerFunc
-
 	// If the path is the root path, return the handler functions directly
 	if path == "/" {
 		h := currentNode.findHandler(method)
 		if len(h) > 0 {
 			return h, false
 		}
-
 		prefixChildNode := currentNode.matchChildByName("/", PreferentialPrefix)
 		if prefixChildNode != nil {
 			h := prefixChildNode.findHandler(method)
@@ -279,7 +249,6 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 				return h, false
 			}
 		}
-
 		generalChildNode := currentNode.matchChildByName("/", Prefix)
 		if generalChildNode != nil {
 			h := generalChildNode.findHandler(method)
@@ -287,15 +256,12 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 				return h, true
 			}
 		}
-
 		return nil, false
 	}
-
 	// Remove leading slash
 	if len(path) > 1 {
 		path = path[1:]
 	}
-
 	// Traverse the path segments
 	for {
 		// Find the next segment up to the next '/'
@@ -308,7 +274,6 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 			segment = path[:slashIndex]
 			path = path[slashIndex+1:]
 		}
-
 		// Skip empty segments (which can happen if there are consecutive slashes)
 		if segment == "" {
 			if path == "" {
@@ -316,10 +281,8 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 			}
 			continue
 		}
-
 		// Find if the current node's children contain a node with the same name
 		childNode := currentNode.matchChildByName(segment, Exact)
-
 		prefixChildNode := currentNode.matchChildByName(segment, PreferentialPrefix)
 		if prefixChildNode != nil {
 			h := prefixChildNode.findHandler(method)
@@ -327,7 +290,6 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 				prefixHandlers = h
 			}
 		}
-
 		generalChildNode := currentNode.matchChildByName(segment, Prefix)
 		if generalChildNode != nil {
 			h := generalChildNode.findHandler(method)
@@ -335,21 +297,17 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 				generalHandlers = h
 			}
 		}
-
 		if childNode == nil {
 			currentNode = nil
 			break
 		}
-
 		// Move to the child node
 		currentNode = childNode
-
 		// If there are no more segments, break
 		if path == "" {
 			break
 		}
 	}
-
 	// Return handler functions of the final node
 	if currentNode != nil {
 		h := currentNode.findHandler(method)
@@ -357,18 +315,14 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 			return h, false
 		}
 	}
-
 	if len(prefixHandlers) > 0 {
 		return prefixHandlers, false
 	}
-
 	if len(generalHandlers) > 0 {
 		return generalHandlers, true
 	}
-
 	return nil, false
 }
-
 func IsValidHTTPMethod(method string) bool {
 	switch method {
 	case http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch, http.MethodHead, http.MethodOptions, http.MethodTrace, http.MethodConnect:
