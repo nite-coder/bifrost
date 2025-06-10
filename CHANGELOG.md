@@ -31,6 +31,7 @@
 
 ### **Chore**
 
+- Bump OpenTelemetry package to `v1.36.0`
 - Bump Hertz package to `v0.10.0`
 
 ## 0.4.0 (2025-05-14)
