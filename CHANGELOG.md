@@ -17,7 +17,7 @@
 
 - rename `redirect_stderr` to `disable_redirect_stderr` and allow to redirect stderr by default ([#39](https://github.com/nite-coder/bifrost/pull/39))
 - improve `variable.HTTPRequestMethod` performance ([#41](https://github.com/nite-coder/bifrost/pull/41))
-- struct alignment ([#42](https://github.com/nite-coder/bifrost/pull/42))
+- struct alignment for better performance and lower memory usage ([#42](https://github.com/nite-coder/bifrost/pull/42))
 
 ### **Test**
 
@@ -31,6 +31,7 @@
 
 ### **Chore**
 
+- Bump OpenTelemetry package to `v1.36.0` ([#43](https://github.com/nite-coder/bifrost/pull/43))
 - Bump Hertz package to `v0.10.0`
 
 ## 0.4.0 (2025-05-14)
