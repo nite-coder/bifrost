@@ -36,13 +36,13 @@ import (
 )
 
 type cors struct {
-	allowAllOrigins  bool
-	allowCredentials bool
 	allowOriginFunc  func(string) bool
-	allowOrigins     []string
 	normalHeaders    map[string]string
 	preflightHeaders map[string]string
+	allowOrigins     []string
 	wildcardOrigins  [][]string
+	allowAllOrigins  bool
+	allowCredentials bool
 }
 
 var (

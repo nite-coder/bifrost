@@ -12,8 +12,8 @@ type Options struct {
 }
 
 type Destination struct {
-	Weight int64
 	To     string
+	Weight int64
 }
 
 type TrafficSplitterMiddleware struct {

@@ -1,9 +1,9 @@
 package config
 
 type ErrInvalidConfig struct {
-	Structure []string
 	Value     any
 	Message   string
+	Structure []string
 }
 
 func newInvalidConfig(structure []string, value any, message string) ErrInvalidConfig {
@@ -13,7 +13,6 @@ func newInvalidConfig(structure []string, value any, message string) ErrInvalidC
 		Message:   message,
 	}
 }
-
 func (e ErrInvalidConfig) Error() string {
 	return e.Message
 }

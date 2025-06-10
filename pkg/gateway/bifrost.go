@@ -23,7 +23,6 @@ import (
 )
 
 type Bifrost struct {
-	state          uint32
 	tracerProvider *sdktrace.TracerProvider
 	options        *config.Options
 	resolver       *resolver.Resolver
@@ -31,6 +30,7 @@ type Bifrost struct {
 	middlewares    map[string]app.HandlerFunc
 	services       map[string]*Service
 	httpServers    map[string]*HTTPServer
+	state          uint32
 }
 
 // Run starts all HTTP servers in the Bifrost instance. The last server is started
@@ -48,7 +48,6 @@ func (b *Bifrost) Run() {
 		i++
 	}
 }
-
 func (b *Bifrost) ZeroDownTime() *zero.ZeroDownTime {
 	return b.zero
 }
@@ -59,7 +58,6 @@ func (b *Bifrost) ZeroDownTime() *zero.ZeroDownTime {
 func (b *Bifrost) Shutdown(ctx context.Context) error {
 	return b.shutdown(ctx, false)
 }
-
 func (b *Bifrost) ShutdownNow(ctx context.Context) error {
 	return b.shutdown(ctx, true)
 }
@@ -86,24 +84,18 @@ func (b *Bifrost) SetActive(value bool) {
 		atomic.StoreUint32(&b.state, 0)
 	}
 }
-
 func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 	b.SetActive(false)
-
 	wg := &sync.WaitGroup{}
 	maxTimeout := 10 * time.Second
-
 	for _, server := range b.httpServers {
 		wg.Add(1)
-
 		if server.options.Timeout.Graceful > 0 && server.options.Timeout.Graceful > maxTimeout {
 			maxTimeout = server.options.Timeout.Graceful
 		}
-
 		go func(srv *HTTPServer) {
 			safety.Go(ctx, func() {
 				defer wg.Done()
-
 				if srv.options.Timeout.Graceful > 0 {
 					ctx, cancel := context.WithTimeout(ctx, server.options.Timeout.Graceful)
 					defer cancel()
@@ -138,34 +130,28 @@ func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	tCache := timecache.New(mainOptions.TimerResolution)
 	timecache.Set(tCache)
-
 	// system logger
 	logger, err := log.NewLogger(mainOptions.Logging)
 	if err != nil {
 		return nil, err
 	}
 	slog.SetDefault(logger)
-
 	zeroOptions := zero.Options{
 		UpgradeSock: mainOptions.UpgradeSock,
 		PIDFile:     mainOptions.PIDFile,
 	}
-
 	resolveOptions := resolver.Options{
 		Servers:  mainOptions.Resolver.Servers,
 		SkipTest: mainOptions.SkipResolver,
 	}
-
 	dnsResolver, err := resolver.NewResolver(resolveOptions)
 	if err != nil {
 		return nil, err
 	}
-
 	middlewares, err := loadMiddlewares(mainOptions.Middlewares)
 	if err != nil {
 		return nil, err
 	}
-
 	bifrost := &Bifrost{
 		options:     &mainOptions,
 		middlewares: middlewares,
@@ -173,44 +159,35 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 		httpServers: make(map[string]*HTTPServer),
 		zero:        zero.New(zeroOptions),
 	}
-
 	// services
 	services, err := loadServices(bifrost)
 	if err != nil {
 		return nil, err
 	}
 	bifrost.services = services
-
 	tracers := []tracer.Tracer{}
-
 	// prometheus
 	if mainOptions.Metrics.Prometheus.Enabled && !isReload {
 		promOpts := []prometheus.Option{}
-
 		if len(mainOptions.Metrics.Prometheus.Buckets) > 0 {
 			promOpts = append(promOpts, prometheus.WithHistogramBuckets(mainOptions.Metrics.Prometheus.Buckets))
 		}
-
 		promTracer := prometheus.NewTracer(promOpts...)
 		tracers = append(tracers, promTracer)
 	}
-
 	// access log
 	accessLogTracers := map[string]*accesslog.Tracer{}
 	if len(mainOptions.AccessLogs) > 0 && !isReload {
-
 		for id, accessLogOptions := range mainOptions.AccessLogs {
 			accessLogTracer, err := accesslog.NewTracer(accessLogOptions)
 			if err != nil {
 				return nil, err
 			}
-
 			if accessLogTracer != nil {
 				accessLogTracers[id] = accessLogTracer
 			}
 		}
 	}
-
 	if mainOptions.Tracing.Enabled {
 		// otel tracing
 		tp, err := initTracerProvider(mainOptions.Tracing)
@@ -219,47 +196,37 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 		}
 		bifrost.tracerProvider = tp
 	}
-
 	for id, server := range mainOptions.Servers {
 		if id == "" {
 			return nil, errors.New("http server id can't be empty")
 		}
-
 		server.ID = id
-
 		if server.Bind == "" {
 			return nil, errors.New("http server bind can't be empty")
 		}
-
 		_, found := bifrost.httpServers[id]
 		if found {
 			return nil, fmt.Errorf("http server '%s' already exists", id)
 		}
-
 		// deep copy; each server has only one access logger tracer
 		myTracers := make([]tracer.Tracer, len(tracers))
 		copy(myTracers, tracers)
-
 		if len(server.AccessLogID) > 0 {
 			_, found := mainOptions.AccessLogs[server.AccessLogID]
 			if !found {
 				return nil, fmt.Errorf("access log '%s' was not found in server '%s'", server.AccessLogID, server.ID)
 			}
-
 			accessLogTracer, found := accessLogTracers[server.AccessLogID]
 			if found {
 				myTracers = append(myTracers, accessLogTracer)
 			}
 		}
-
 		httpServer, err := newHTTPServer(bifrost, server, myTracers, isReload)
 		if err != nil {
 			return nil, err
 		}
-
 		bifrost.httpServers[id] = httpServer
 	}
-
 	bifrost.SetActive(true)
 	return bifrost, nil
 }

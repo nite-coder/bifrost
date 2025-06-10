@@ -31,58 +31,46 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-	"time"
-
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
+	"strings"
+	"time"
 )
 
 // Config represents all available options for the middleware.
 type Config struct {
-	AllowAllOrigins bool `mapstructure:"allow_all_origins"`
-
-	// AllowOrigins is a list of origins a cross-domain request can be executed from.
-	// If the special "*" value is present in the list, all origins will be allowed.
-	// Default value is []
-	AllowOrigins []string `mapstructure:"allow_origins"`
-
 	// AllowOriginFunc is a custom function to validate the origin. It takes the origin
 	// as argument and returns true if allowed or false otherwise.
 	// AllowOrigins have a higher AllowOrigins have a higher priority than AllowOriginFunc
 	// It is recommended to use AllowOriginFunc without setting AllowOrigins.
 	AllowOriginFunc func(origin string) bool
-
+	// AllowOrigins is a list of origins a cross-domain request can be executed from.
+	// If the special "*" value is present in the list, all origins will be allowed.
+	// Default value is []
+	AllowOrigins []string `mapstructure:"allow_origins"`
 	// AllowMethods is a list of methods the client is allowed to use with
 	// cross-domain requests. Default value is simple methods (GET and POST)
 	AllowMethods []string `mapstructure:"allow_methods"`
-
 	// AllowHeaders is list of non simple headers the client is allowed to use with
 	// cross-domain requests.
 	AllowHeaders []string `mapstructure:"allow_headers"`
-
-	// AllowCredentials indicates whether the request can include user credentials like
-	// cookies, HTTP authentication or client side SSL certificates.
-	AllowCredentials bool `mapstructure:"allow_credentials"`
-
 	// ExposedHeaders indicates which headers are safe to expose to the API of a CORS
 	// API specification
 	ExposeHeaders []string `mapstructure:"expose_headers"`
-
 	// MaxAge indicates how long (in seconds) the results of a preflight request
 	// can be cached
-	MaxAge time.Duration `mapstructure:"max_age"`
-
+	MaxAge          time.Duration `mapstructure:"max_age"`
+	AllowAllOrigins bool          `mapstructure:"allow_all_origins"`
+	// AllowCredentials indicates whether the request can include user credentials like
+	// cookies, HTTP authentication or client side SSL certificates.
+	AllowCredentials bool `mapstructure:"allow_credentials"`
 	// Allows to add origins like http://some-domain/*, https://api.* or http://some.*.subdomain.com
 	AllowWildcard bool `mapstructure:"allow_wildcard"`
-
 	// Allows usage of popular browser extensions schemas
 	AllowBrowserExtensions bool
-
 	// Allows usage of WebSocket protocol
 	AllowWebSockets bool
-
 	// Allows usage of file:// schema (dangerous!) use it only when you 100% sure it's needed
 	AllowFiles bool
 }
@@ -101,7 +89,6 @@ func (c *Config) AddAllowHeaders(headers ...string) {
 func (c *Config) AddExposeHeaders(headers ...string) {
 	c.ExposeHeaders = append(c.ExposeHeaders, headers...)
 }
-
 func (c Config) getAllowedSchemas() []string {
 	allowedSchemas := DefaultSchemas
 	if c.AllowBrowserExtensions {
@@ -115,7 +102,6 @@ func (c Config) getAllowedSchemas() []string {
 	}
 	return allowedSchemas
 }
-
 func (c Config) validateAllowedSchemas(origin string) bool {
 	allowedSchemas := c.getAllowedSchemas()
 	for _, schema := range allowedSchemas {
@@ -141,23 +127,18 @@ func (c Config) Validate() error {
 	}
 	return nil
 }
-
 func (c Config) parseWildcardRules() [][]string {
 	var wRules [][]string
-
 	if !c.AllowWildcard {
 		return wRules
 	}
-
 	for _, o := range c.AllowOrigins {
 		if !strings.Contains(o, "*") {
 			continue
 		}
-
 		if c := strings.Count(o, "*"); c > 1 {
 			panic(errors.New("only one * is allowed").Error())
 		}
-
 		i := strings.Index(o, "*")
 		if i == 0 {
 			wRules = append(wRules, []string{"*", o[1:]})
@@ -167,10 +148,8 @@ func (c Config) parseWildcardRules() [][]string {
 			wRules = append(wRules, []string{o[:i-1], "*"})
 			continue
 		}
-
 		wRules = append(wRules, []string{o[:i], o[i+1:]})
 	}
-
 	return wRules
 }
 
@@ -198,12 +177,9 @@ func NewMiddleware(config Config) app.HandlerFunc {
 		cors.applyCors(c)
 	}
 }
-
 func init() {
 	_ = middleware.RegisterMiddleware("cors", func(params any) (app.HandlerFunc, error) {
-
 		cfg := Config{}
-
 		if params == nil {
 			cfg = DefaultConfig()
 			cfg.AllowAllOrigins = true
@@ -213,25 +189,20 @@ func init() {
 				WeaklyTypedInput: true,
 				Result:           &cfg,
 			})
-
 			err := decoder.Decode(params)
 			if err != nil {
 				return nil, fmt.Errorf("cors middleware params is invalid: %w", err)
 			}
-
 			if len(cfg.AllowMethods) == 0 {
 				cfg.AllowMethods = DefaultConfig().AllowMethods
 			}
-
 			if len(cfg.AllowHeaders) == 0 {
 				cfg.AllowHeaders = DefaultConfig().AllowHeaders
 			}
-
 			if cfg.MaxAge == 0 {
 				cfg.MaxAge = DefaultConfig().MaxAge
 			}
 		}
-
 		m := NewMiddleware(cfg)
 		return m, nil
 	})
