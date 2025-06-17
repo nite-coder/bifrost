@@ -42,6 +42,19 @@ func testServer() *server.Hertz {
 	return h
 }
 
+func TestClientCancelRequest(t *testing.T) {
+	service := Service{}
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	cancel()
+
+	hzCtx := app.NewContext(0)
+	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/test")
+	service.ServeHTTP(ctx, hzCtx)
+	assert.Equal(t, int(499), hzCtx.Response.StatusCode())
+}
+
 func TestServices(t *testing.T) {
 	h := testServer()
 	defer func() {

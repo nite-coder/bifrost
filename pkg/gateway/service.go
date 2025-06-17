@@ -158,6 +158,31 @@ func (svc *Service) Middlewares() []app.HandlerFunc {
 func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 
+	if err := ctx.Err(); err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			// the request is canceled by client
+			fullURI := fullURI(&c.Request)
+			routeID := variable.GetString(variable.RouteID, c)
+
+			httpStart, _ := variable.Get(variable.HTTPStart, c)
+			var duration time.Duration
+			if httpStart != nil {
+				duration = time.Since(httpStart.(time.Time))
+			}
+
+			logger.InfoContext(ctx, "client cancel the request",
+				slog.String("route_id", routeID),
+				slog.String("client_ip", c.ClientIP()),
+				slog.String("full_uri", fullURI),
+				slog.Duration("duration", duration),
+			)
+
+			// client canceled the request
+			c.Response.SetStatusCode(499)
+			return
+		}
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			stackTrace := cast.B2S(debug.Stack())
@@ -226,30 +251,6 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		c.Response.SetStatusCode(504)
 	} else {
 		c.Set(variable.UpstreamResponoseStatusCode, c.Response.StatusCode())
-	}
-
-	select {
-	case <-ctx.Done():
-		// the request is canceled by client
-		fullURI := fullURI(&c.Request)
-		routeID := variable.GetString(variable.RouteID, c)
-
-		httpStart, _ := variable.Get(variable.HTTPStart, c)
-		var duration time.Duration
-		if httpStart != nil {
-			duration = time.Since(httpStart.(time.Time))
-		}
-
-		logger.InfoContext(ctx, "client cancel the request",
-			slog.String("route_id", routeID),
-			slog.String("client_ip", c.ClientIP()),
-			slog.String("full_uri", fullURI),
-			slog.Duration("duration", duration),
-		)
-
-		// client canceled the request
-		c.Response.SetStatusCode(499)
-	default:
 	}
 }
 

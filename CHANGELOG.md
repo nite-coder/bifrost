@@ -18,6 +18,7 @@
 - rename `redirect_stderr` to `disable_redirect_stderr` and allow to redirect stderr by default ([#39](https://github.com/nite-coder/bifrost/pull/39))
 - improve `variable.HTTPRequestMethod` performance ([#41](https://github.com/nite-coder/bifrost/pull/41))
 - struct alignment for better performance and lower memory usage ([#42](https://github.com/nite-coder/bifrost/pull/42))
+- improve client cancel request when context is Canceled ([#45](https://github.com/nite-coder/bifrost/pull/45))
 
 ### **Test**
 
