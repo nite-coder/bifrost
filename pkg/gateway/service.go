@@ -158,6 +158,15 @@ func (svc *Service) Middlewares() []app.HandlerFunc {
 func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 
+	defer func() {
+		if r := recover(); r != nil {
+			stackTrace := cast.B2S(debug.Stack())
+			logger.ErrorContext(ctx, "service panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
+			c.SetStatusCode(500)
+			c.Abort()
+		}
+	}()
+
 	if err := ctx.Err(); err != nil {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			// the request is canceled by client
@@ -182,15 +191,6 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			return
 		}
 	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			stackTrace := cast.B2S(debug.Stack())
-			logger.ErrorContext(ctx, "service panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
-			c.SetStatusCode(500)
-			c.Abort()
-		}
-	}()
 
 	if len(svc.dynamicUpstream) > 0 {
 		upstreamName := variable.GetString(svc.dynamicUpstream, c)
