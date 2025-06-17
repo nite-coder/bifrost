@@ -5,6 +5,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"net"
+	"net/http"
+	"net/textproto"
+	"net/url"
+	"runtime/debug"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	hzerrors "github.com/cloudwego/hertz/pkg/common/errors"
@@ -23,15 +33,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.opentelemetry.io/otel/trace"
-	"log/slog"
-	"net"
-	"net/http"
-	"net/textproto"
-	"net/url"
-	"runtime/debug"
-	"strings"
-	"sync"
-	"time"
 )
 
 // TrailerPrefix is a magic prefix for [ResponseWriter.Header] map keys
@@ -355,6 +356,7 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 	if err == nil {
 		return
 	}
+
 	logger := log.FromContext(ctx)
 	fullURI := fullURI(&c.Request)
 	val, _ := variable.Get(variable.HTTPRequestPath, c)
@@ -372,6 +374,11 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 	}
 	if errors.Is(err, hzerrors.ErrNoFreeConns) {
 		c.Response.Header.SetStatusCode(http.StatusInternalServerError)
+		return
+	}
+	if errors.Is(err, context.Canceled) {
+		// client canceled the request
+		c.Response.SetStatusCode(499)
 		return
 	}
 	c.Response.Header.SetStatusCode(http.StatusBadGateway)

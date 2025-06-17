@@ -168,7 +168,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}()
 
 	if err := ctx.Err(); err != nil {
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		if errors.Is(err, context.Canceled) {
 			// the request is canceled by client
 			fullURI := fullURI(&c.Request)
 			routeID := variable.GetString(variable.RouteID, c)
