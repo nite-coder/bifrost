@@ -20,6 +20,7 @@
 - improve `variable.HTTPRequestMethod` performance ([#41](https://github.com/nite-coder/bifrost/pull/41))
 - struct alignment for better performance and lower memory usage ([#42](https://github.com/nite-coder/bifrost/pull/42))
 - improve client cancel request when context is Canceled ([#45](https://github.com/nite-coder/bifrost/pull/45))
+- keep original `host` header value when forwading a request to upstream ([#47](https://github.com/nite-coder/bifrost/pull/47))
 
 ### **Test**
 
