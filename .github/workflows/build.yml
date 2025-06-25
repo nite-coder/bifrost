@@ -4,11 +4,14 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        go-version: ["1.23", "1.24"]
     steps:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: ${{ matrix.go-version }}
         id: go
 
       - name: Check out code
@@ -32,6 +35,9 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        go-version: ["1.23", "1.24"]
     services:
       dind:
         image: docker:23.0-rc-dind-rootless
@@ -41,7 +47,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: ${{ matrix.go-version }}
 
       - name: Check out code
         uses: actions/checkout@v4
