@@ -29,7 +29,6 @@ var (
 		Time:                        {},
 		ClientIP:                    {},
 		NetworkPeerAddress:          {},
-		HTTPRequestHost:             {},
 		ServerID:                    {},
 		RouteID:                     {},
 		Hostname:                    {},
@@ -43,6 +42,7 @@ var (
 		HTTPFinish:                  {},
 		HTTPRoute:                   {},
 		HTTPRequest:                 {},
+		HTTPRequestHost:             {},
 		HTTPRequestScheme:           {},
 		HTTPRequestMethod:           {},
 		HTTPRequestPath:             {},
@@ -522,6 +522,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		grpcMessage := c.GetString(GRPCMessage)
 		return grpcMessage, true
 	default:
+
 		if strings.HasPrefix(key, "$http.request.header.") {
 			headerKey := key[len("$http.request.header."):]
 
@@ -553,6 +554,17 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 			val := c.Query(queryKey)
 			return val, true
+		}
+
+		if strings.HasPrefix(key, "$http.request.cookie.") {
+			cookieKey := key[len("$http.request.cookie."):]
+
+			if len(cookieKey) == 0 {
+				return "", false
+			}
+
+			val := c.Cookie(cookieKey)
+			return cast.B2S(val), true
 		}
 
 		if strings.HasPrefix(key, "$http.request.body.json.") {

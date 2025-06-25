@@ -28,8 +28,9 @@ The currently supports the following directives:
 | `$http.request.protocol`          | HTTP request protocol                                                                                                   | `HTTP/1.1`                              |
 | `$http.request.body`              | HTTP request body                                                                                                       | `{"userId": 12345, "action": "update"}` |
 | `$http.request.body.json.<key>`   | Get values from a json document in request body [GJSON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md)  | `$http.request.body.json.name`          |
-| `$http.request.header.<key>`      | HTTP request headers, `<key>` being the normalized HTTP Header name (lowercase), the value being the header values      | `$http.request.header.x-forwarded-for`  |
-| `$http.request.query.<key>`       | HTTP request query, `<key>` being the normalized HTTP query name (lowercase), the value being the querystring values    | `$http.request.header.order_id`         |
+| `$http.request.header.<key>`      | HTTP request headers, `<key>` being the normalized HTTP Header name (lowercase), the value being the header value       | `$http.request.header.x-forwarded-for`  |
+| `$http.request.query.<key>`       | HTTP request query, `<key>` being the normalized HTTP query name (lowercase), the value being the querystring value     | `$http.request.query.order_id`          |
+| `$http.request.cookie.<key>`      | HTTP request cookie, `<key>` being the normalized HTTP query name (lowercase), the value being the cookie value         | `$http.request.cookie.name`             |
 | `$http.response.size`             | The total size of the response in bytes. This should be the total number of bytes sent over the wire (unit:byte)        | `832000`                                |
 | `$http.response.header.<key>`     | HTTP response headers, `<key>` being the normalized HTTP Header name (lowercase), the value being the header values     | `ab123456-7890-1234-5678-90abcdef1234`  |
 | `$http.response.status_code`      | HTTP response status code                                                                                               | `200`                                   |

@@ -41,6 +41,7 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Request.SetRequestURI("http://abc.com/foo?bar=baz")
 	hzCtx.Request.SetBody([]byte("hello world"))
 	hzCtx.Response.Header.Set("x-trace-id", "1234")
+	hzCtx.Request.SetCookie("hello", "world")
 
 	reqInfo := &RequestOriginal{
 		ServerID: "serverA",
@@ -201,6 +202,8 @@ func TestGetDirective(t *testing.T) {
 	aaa := GetString(HTTPRequestTags, hzCtx)
 	fmt.Println("aaa", aaa)
 
+	cookie := GetString("$http.request.cookie.hello", hzCtx)
+	assert.Equal(t, "world", cookie)
 }
 
 func TestGetVariable(t *testing.T) {
