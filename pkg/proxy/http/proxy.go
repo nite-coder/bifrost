@@ -150,10 +150,16 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 				req.SetIsTLS(true)
 			default:
 			}
+
+			host := req.Header.Get("host")
+			req.SetRequestURI(cast.B2S(JoinURLPath(req, opts.Target)))
+
 			if opts.HeaderHost != "" {
 				req.Header.Set("Host", opts.HeaderHost)
+			} else {
+				req.Header.Set("Host", host)
 			}
-			req.SetRequestURI(cast.B2S(JoinURLPath(req, opts.Target)))
+
 		},
 		client: client,
 	}

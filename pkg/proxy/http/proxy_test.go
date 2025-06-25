@@ -61,7 +61,7 @@ func TestReverseProxy(t *testing.T) {
 			t.Errorf("handler got Proxy-Connection header value %q", c)
 		}
 
-		if c := ctx.Request.Header.Get("Host"); c != "127.0.0.1" {
+		if c := ctx.Request.Header.Get("Host"); c != "abc.com" {
 			t.Errorf("handler got Host header value %q", c)
 		}
 
@@ -86,7 +86,6 @@ func TestReverseProxy(t *testing.T) {
 		Target:           "http://127.0.0.1:9990/proxy",
 		Protocol:         config.ProtocolHTTP,
 		Weight:           1,
-		HeaderHost:       "127.0.0.1",
 		IsTracingEnabled: true,
 	}
 
@@ -115,8 +114,9 @@ func TestReverseProxy(t *testing.T) {
 	req.Header.Set("Proxy-Connection", "should be deleted")
 	req.Header.Set("Upgrade", "foo")
 	req.SetConnectionClose()
-	req.SetHost("some-name")
 	req.SetRequestURI("http://localhost:9990/backend")
+	req.Header.Set("Host", "abc.com")
+
 	_ = cli.Do(context.Background(), req, res)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
