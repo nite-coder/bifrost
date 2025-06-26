@@ -386,7 +386,6 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				Weight:           instance.Weight(),
 				MaxFails:         maxFails,
 				FailTimeout:      failTimeout,
-				HeaderHost:       serverName, // when client uses ip address to connect to server, client need to set the host to the domain name you want to use
 				IsTracingEnabled: u.bifrost.options.Tracing.Enabled,
 				ServiceID:        u.ServiceOptions.ID,
 			}

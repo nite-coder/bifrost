@@ -79,7 +79,6 @@ type HTTPProxy struct {
 type Options struct {
 	Target           string
 	Protocol         config.Protocol
-	HeaderHost       string
 	ServiceID        string
 	MaxFails         uint
 	FailTimeout      time.Duration
@@ -154,9 +153,7 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 			host := req.Header.Get("host")
 			req.SetRequestURI(cast.B2S(JoinURLPath(req, opts.Target)))
 
-			if opts.HeaderHost != "" {
-				req.Header.Set("Host", opts.HeaderHost)
-			} else {
+			if len(host) > 0 {
 				req.Header.Set("Host", host)
 			}
 
