@@ -22,6 +22,7 @@
 - struct alignment for better performance and lower memory usage ([#42](https://github.com/nite-coder/bifrost/pull/42))
 - improve client cancel request when context is Canceled ([#45](https://github.com/nite-coder/bifrost/pull/45))
 - allow to forward client `host` header to upstream ([#47](https://github.com/nite-coder/bifrost/pull/47))
+- rename `num_loops` to `event_loops` ([#50](https://github.com/nite-coder/bifrost/pull/50))
 
 ### **Test**
 

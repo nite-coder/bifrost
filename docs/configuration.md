@@ -9,7 +9,7 @@ This configuration file is divided into two primary types: `static configuration
 
 * [watch](#watch)
 * [timer_resolution](#timer_resolution)
-* [num_loops](#num_loops)
+* [event_loops](#event_loops)
 * [gopool](#gopool)
 * [user_group](#user_group)
 * [resolver](#resolver)
@@ -42,12 +42,12 @@ Sets the precision of the gateway's time cache settings. The default is 1 second
 timer_resolution: 1ms
 ```
 
-## num_loops
+## event_loops
 
 This represents the number of epoll created by bifrost, which has been automatically adjusted according to the number of P (runtime.GOMAXPROCS(0)) by default, and users generally don't need to care.
 
 ```yaml
-num_loops: 4
+event_loops: 4
 ```
 
 ## gopool
