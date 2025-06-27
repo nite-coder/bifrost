@@ -27,7 +27,7 @@ type Options struct {
 	Resolver        ResolverOptions             `yaml:"resolver" json:"resolver"`
 	Tracing         TracingOptions              `yaml:"tracing" json:"tracing"`
 	Default         DefaultOptions              `yaml:"default" json:"default"`
-	NumLoops        int                         `yaml:"num_loops" json:"num_loops"`
+	EventLoops      int                         `yaml:"event_loops" json:"event_loops"`
 	TimerResolution time.Duration               `yaml:"timer_resolution" json:"timer_resolution"`
 	IsDaemon        bool                        `yaml:"-" json:"-"`
 	SkipResolver    bool                        `yaml:"-" json:"-"`

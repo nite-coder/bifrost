@@ -77,8 +77,8 @@ func Run(mainOptions config.Options) (err error) {
 
 	netpollConfig := netpoll.Config{}
 
-	if mainOptions.NumLoops > 0 {
-		netpollConfig.PollerNum = mainOptions.NumLoops
+	if mainOptions.EventLoops > 0 {
+		netpollConfig.PollerNum = mainOptions.EventLoops
 	}
 
 	if mainOptions.Gopool {
