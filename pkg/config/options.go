@@ -1,8 +1,9 @@
 package config
 
 import (
-	"gopkg.in/yaml.v3"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Options struct {
@@ -299,7 +300,16 @@ type ServiceOptions struct {
 	Middlewares     []MiddlwareOptions    `yaml:"middlewares" json:"middlewares"`
 	Timeout         ServiceTimeoutOptions `yaml:"timeout" json:"timeout"`
 	TLSVerify       bool                  `yaml:"tls_verify" json:"tls_verify"`
+	PassHostHeader  *bool                 `yaml:"pass_host_header" json:"pass_host_header"`
 }
+
+func (options ServiceOptions) IsPassHostHeader() bool {
+	if options.PassHostHeader == nil || *options.PassHostHeader {
+		return true
+	}
+	return false
+}
+
 type ServiceTimeoutOptions struct {
 	Read        time.Duration `yaml:"read" json:"read"`
 	Write       time.Duration `yaml:"write" json:"write"`

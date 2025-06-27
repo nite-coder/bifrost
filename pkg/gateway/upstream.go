@@ -5,6 +5,17 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"hash"
+	"hash/fnv"
+	"log/slog"
+	"math"
+	"net"
+	"net/url"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/cloudwego/hertz/pkg/app/client"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
@@ -17,16 +28,6 @@ import (
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 	prom "github.com/prometheus/client_golang/prometheus"
-	"hash"
-	"hash/fnv"
-	"log/slog"
-	"math"
-	"net"
-	"net/url"
-	"strings"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 var (
@@ -388,6 +389,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				FailTimeout:      failTimeout,
 				IsTracingEnabled: u.bifrost.options.Tracing.Enabled,
 				ServiceID:        u.ServiceOptions.ID,
+				PassHostHeader:   u.ServiceOptions.IsPassHostHeader(),
 			}
 			proxy, err := httpproxy.New(proxyOptions, client)
 			if err != nil {

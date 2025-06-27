@@ -84,6 +84,7 @@ type Options struct {
 	FailTimeout      time.Duration
 	Weight           uint32
 	IsTracingEnabled bool
+	PassHostHeader   bool
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -153,10 +154,9 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 			host := req.Header.Get("host")
 			req.SetRequestURI(cast.B2S(JoinURLPath(req, opts.Target)))
 
-			if len(host) > 0 {
+			if opts.PassHostHeader && len(host) > 0 {
 				req.Header.Set("Host", host)
 			}
-
 		},
 		client: client,
 	}

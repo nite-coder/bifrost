@@ -342,6 +342,7 @@ services:
 | timeout.grpc       | `time.Duration` | `0`     | `grpc` request timeout                                                                  |
 | max_conns_per_host | `int64`         | `1024`  | Maximum connections per host                                                            |
 | tls_verify         | `bool`          | `false` | Validates server certificate                                                            |
+| pass_host_header   | `bool`          | `true`  | Allows to forward client Host header to upstream target                                 |
 | protocol           | `string`        | `http`  | Protocol for upstream, `http`, `http2`, `grpc` are supported                            |
 | url                | `string`        |         | Upstream URL                                                                            |
 | middlewares        | `string`        |         | middleware of the service. Details are available in the [middlewares](./middlewares.md) |
