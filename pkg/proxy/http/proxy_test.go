@@ -87,6 +87,7 @@ func TestReverseProxy(t *testing.T) {
 		Protocol:         config.ProtocolHTTP,
 		Weight:           1,
 		IsTracingEnabled: true,
+		PassHostHeader:   true,
 	}
 
 	proxy, err := New(proxyOptions, nil)

@@ -8,6 +8,7 @@
 - Introduce `Coraza` web application firewall middleware ([#36](https://github.com/nite-coder/bifrost/pull/36))
 - Introduce `k8s`service discovery provider ([#37](https://github.com/nite-coder/bifrost/pull/37))
 - Introduce `$http.request.cookie.<key>` directive ([#46](https://github.com/nite-coder/bifrost/pull/46))
+- Introduce `pass_host_header` service optoins (default: `true`). Allow to forward client `host` header to upstream
 
 ### **Bug Fixes**
 
@@ -20,7 +21,7 @@
 - improve `variable.HTTPRequestMethod` performance ([#41](https://github.com/nite-coder/bifrost/pull/41))
 - struct alignment for better performance and lower memory usage ([#42](https://github.com/nite-coder/bifrost/pull/42))
 - improve client cancel request when context is Canceled ([#45](https://github.com/nite-coder/bifrost/pull/45))
-- keep original `host` header value when forwading a request to upstream ([#47](https://github.com/nite-coder/bifrost/pull/47))
+- allow to forward client `host` header to upstream ([#47](https://github.com/nite-coder/bifrost/pull/47))
 
 ### **Test**
 
