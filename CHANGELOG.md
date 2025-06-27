@@ -8,7 +8,7 @@
 - Introduce `Coraza` web application firewall middleware ([#36](https://github.com/nite-coder/bifrost/pull/36))
 - Introduce `k8s`service discovery provider ([#37](https://github.com/nite-coder/bifrost/pull/37))
 - Introduce `$http.request.cookie.<key>` directive ([#46](https://github.com/nite-coder/bifrost/pull/46))
-- Introduce `pass_host_header` service optoins (default: `true`). Allow to forward client `host` header to upstream
+- Introduce `pass_host_header` service optoins (default: `true`). Allow to forward client `host` header to upstream ([#48](https://github.com/nite-coder/bifrost/pull/48))
 
 ### **Bug Fixes**
 
