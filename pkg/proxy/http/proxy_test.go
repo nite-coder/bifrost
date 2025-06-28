@@ -328,13 +328,20 @@ func TestXForwardedFor(t *testing.T) {
 		if !strings.Contains(ctx.Request.Header.Get("X-Forwarded-For"), prevForwardedFor) {
 			t.Errorf("X-Forwarded-For didn't contain prior data")
 		}
+
+		if c := ctx.Request.Header.Get("Host"); c != "abc.com" {
+			t.Errorf("handler got Host header value %q", c)
+		}
+
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
 	})
 
 	proxyOptions := Options{
-		Target:   "http://127.0.0.1:9993/proxy",
-		Protocol: config.ProtocolHTTP,
-		Weight:   1,
+		Target:           "http://127.0.0.1:9993/proxy",
+		Protocol:         config.ProtocolHTTP,
+		TargetHostHeader: "abc.com",
+		PassHostHeader:   false,
+		Weight:           1,
 	}
 	proxy, err := New(proxyOptions, nil)
 

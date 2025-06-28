@@ -389,6 +389,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				FailTimeout:      failTimeout,
 				IsTracingEnabled: u.bifrost.options.Tracing.Enabled,
 				ServiceID:        u.ServiceOptions.ID,
+				TargetHostHeader: serverName,
 				PassHostHeader:   u.ServiceOptions.IsPassHostHeader(),
 			}
 			proxy, err := httpproxy.New(proxyOptions, client)

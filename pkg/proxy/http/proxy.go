@@ -78,8 +78,9 @@ type HTTPProxy struct {
 }
 type Options struct {
 	Target           string
-	Protocol         config.Protocol
+	TargetHostHeader string
 	ServiceID        string
+	Protocol         config.Protocol
 	MaxFails         uint
 	FailTimeout      time.Duration
 	Weight           uint32
@@ -143,6 +144,7 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 				req.Header.SetProtocol("HTTP/1.1")
 			default:
 			}
+
 			switch addr.Scheme {
 			case "http":
 				req.SetIsTLS(false)
@@ -151,11 +153,17 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 			default:
 			}
 
-			host := req.Header.Get("host")
+			var host string
+			if opts.PassHostHeader {
+				host = req.Header.Get("host")
+			}
+
 			req.SetRequestURI(cast.B2S(JoinURLPath(req, opts.Target)))
 
-			if opts.PassHostHeader && len(host) > 0 {
+			if len(host) > 0 {
 				req.Header.Set("Host", host)
+			} else if len(opts.TargetHostHeader) > 0 {
+				req.Header.Set("Host", opts.TargetHostHeader)
 			}
 		},
 		client: client,
