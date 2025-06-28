@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## next
+
+### **Refactor**
+
+- use target host header when `pass_host_header` is false ([#51](https://github.com/nite-coder/bifrost/pull/51))
+
 ## 0.5.0 (2025-06-28)
 
 ### **Features**
