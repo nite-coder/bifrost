@@ -1,49 +1,49 @@
 # CHANGELOG
 
-## next
+All notable changes to this project will be documented in this file.
 
-### **Refactor**
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-- use target host header when `pass_host_header` is false by [**@0x5487**](https://github.com/0x5487) in ([#51](https://github.com/nite-coder/bifrost/pull/51))
+## [Unreleased]
 
-## 0.5.0 (2025-06-28)
+### Added
 
-### **Features**
+- Add `Compression` middleware to compress the response body using gzip ([#52](https://github.com/nite-coder/bifrost/pull/52) by [0x5487](https://github.com/0x5487))
 
-- Introduce PROXY protocol support for the server by [**@0x5487**](https://github.com/0x5487) in ([#33](https://github.com/nite-coder/bifrost/pull/33))
-- Introduce `Coraza` web application firewall middleware by [**@0x5487**](https://github.com/0x5487) in ([#36](https://github.com/nite-coder/bifrost/pull/36))
-- Introduce `k8s`service discovery provider by [**@0x5487**](https://github.com/0x5487) in ([#37](https://github.com/nite-coder/bifrost/pull/37))
-- Introduce `$http.request.cookie.<key>` directive by [**@0x5487**](https://github.com/0x5487) in ([#46](https://github.com/nite-coder/bifrost/pull/46))
-- Introduce `pass_host_header` service optoins (default: `true`). Allow to forward client `host` header to upstream by [**@0x5487**](https://github.com/0x5487) in ([#48](https://github.com/nite-coder/bifrost/pull/48))
+### Changed
 
-### **Bug Fixes**
+- use target host header when `pass_host_header` is false ([#51](https://github.com/nite-coder/bifrost/pull/51) by [0x5487](https://github.com/0x5487))
 
-- Fixed a race condition caused by the reuse of app.RequestContext, which typically occurred when one or more upstream targets were unavailable. by [**@0x5487**](https://github.com/0x5487) in ([#32](https://github.com/nite-coder/bifrost/pull/32))
-- Fixed a case sensitive issue in `variable` package by [**@0x5487**](https://github.com/0x5487) in ([#35](https://github.com/nite-coder/bifrost/pull/35))
+## [0.5.0] (2025-06-28)
 
-### **Refactor**
+### Added
 
-- rename `redirect_stderr` to `disable_redirect_stderr` and allow to redirect stderr by default by [**@0x5487**](https://github.com/0x5487) in ([#39](https://github.com/nite-coder/bifrost/pull/39))
-- improve `variable.HTTPRequestMethod` performance by [**@0x5487**](https://github.com/0x5487) in ([#41](https://github.com/nite-coder/bifrost/pull/41))
-- struct alignment for better performance and lower memory usage by [**@0x5487**](https://github.com/0x5487) in ([#42](https://github.com/nite-coder/bifrost/pull/42))
-- improve client cancel request when context is Canceled by [**@0x5487**](https://github.com/0x5487) in ([#45](https://github.com/nite-coder/bifrost/pull/45))
-- allow to forward client `host` header to upstream by [**@0x5487**](https://github.com/0x5487) in ([#47](https://github.com/nite-coder/bifrost/pull/47))
-- rename `num_loops` to `event_loops` by [**@0x5487**](https://github.com/0x5487) in ([#50](https://github.com/nite-coder/bifrost/pull/50))
+- Introduce PROXY protocol support for the server ([#33](https://github.com/nite-coder/bifrost/pull/33) by [0x5487](https://github.com/0x5487))
+- Introduce `Coraza` web application firewall middleware ([#36](https://github.com/nite-coder/bifrost/pull/36) by [0x5487](https://github.com/0x5487))
+- Introduce `k8s`service discovery provider ([#37](https://github.com/nite-coder/bifrost/pull/37) by [0x5487](https://github.com/0x5487))
+- Introduce `$http.request.cookie.<key>` directive ([#46](https://github.com/nite-coder/bifrost/pull/46) by [0x5487](https://github.com/0x5487))
+- Introduce `pass_host_header` service optoins (default: `true`). Allow to forward client `host` header to upstream ([#48](https://github.com/nite-coder/bifrost/pull/48) by [0x5487](https://github.com/0x5487))
 
-### **Test**
+### Fixed
 
-- Improve `router` package test coverage. by [**@0x5487**](https://github.com/0x5487) in ([#34](https://github.com/nite-coder/bifrost/pull/34))
+- Fixed a race condition caused by the reuse of app.RequestContext, which typically occurred when one or more upstream targets were unavailable ([#32](https://github.com/nite-coder/bifrost/pull/32) by [0x5487](https://github.com/0x5487))
+- Fixed a case sensitive issue in `variable` package ([#35](https://github.com/nite-coder/bifrost/pull/35) by [0x5487](https://github.com/0x5487))
 
-### **Documents**
+### Changed
 
-- Add `coraza` middleware document by [**@0x5487**](https://github.com/0x5487) in ([#36](https://github.com/nite-coder/bifrost/pull/36))
-- Add description for middleware document by [**@0x5487**](https://github.com/0x5487) in ([#40](https://github.com/nite-coder/bifrost/pull/40))
-- Add `$server_id` directive by [**@0x5487**](https://github.com/0x5487)
-
-### **Chore**
-
-- Bump OpenTelemetry package to `v1.36.0` by [**@0x5487**](https://github.com/0x5487) in ([#43](https://github.com/nite-coder/bifrost/pull/43))
-- Bump Hertz package to `v0.10.0` by [**@0x5487**](https://github.com/0x5487) in ([#44](https://github.com/nite-coder/bifrost/pull/44))
+- rename `redirect_stderr` to `disable_redirect_stderr` and allow to redirect stderr by default ([#39](https://github.com/nite-coder/bifrost/pull/39) by [0x5487](https://github.com/0x5487))
+- improve `variable.HTTPRequestMethod` performance ([#41](https://github.com/nite-coder/bifrost/pull/41) by [0x5487](https://github.com/0x5487))
+- struct alignment for better performance and lower memory usage ([#42](https://github.com/nite-coder/bifrost/pull/42) by [0x5487](https://github.com/0x5487))
+- improve client cancel request when context is Canceled ([#45](https://github.com/nite-coder/bifrost/pull/45) by [0x5487](https://github.com/0x5487))
+- allow to forward client `host` header to upstream ([#47](https://github.com/nite-coder/bifrost/pull/47) by [0x5487](https://github.com/0x5487))
+- rename `num_loops` to `event_loops` ([#50](https://github.com/nite-coder/bifrost/pull/50) by [0x5487](https://github.com/0x5487))
+- Improve `router` package test coverage. ([#34](https://github.com/nite-coder/bifrost/pull/34) by [0x5487](https://github.com/0x5487))
+- Add `coraza` middleware document ([#36](https://github.com/nite-coder/bifrost/pull/36) by [0x5487](https://github.com/0x5487))
+- Add description for middleware document ([#40](https://github.com/nite-coder/bifrost/pull/40) by [0x5487](https://github.com/0x5487))
+- Add `$server_id` directive
+- Bump OpenTelemetry package to `v1.36.0` ([#43](https://github.com/nite-coder/bifrost/pull/43) by [0x5487](https://github.com/0x5487))
+- Bump Hertz package to `v0.10.0` ([#44](https://github.com/nite-coder/bifrost/pull/44) by [0x5487](https://github.com/0x5487))
 
 ## 0.4.0 (2025-05-14)
 
