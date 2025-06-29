@@ -13,6 +13,7 @@ You can also develop custom middlewares directly in native Golang.
 Currently supported middlewares are below.
 
 * [AddPrefix](#addprefix): Add a prefix to the request path.
+* [Compression](#compression): Compress the response body using gzip.
 * [Coraza](#coraza): A Web application firewall.
 * [Cors](#cors): A Middleware for Cross-Origin Resource Sharing.
 * [IPRestriction](#iprestriction): Control client IP address that can access the service.
@@ -53,6 +54,30 @@ params:
 | Field  | Type     | Default | Description                    |
 | ------ | -------- | ------- | ------------------------------ |
 | prefix | `string` |         | Add prefix to the request path |
+
+### Compression
+
+Compresses the response body using gzip. This middleware is useful for reducing the size of the response payload, improving load times, and saving bandwidth.
+
+```yaml
+routes:
+  foo:
+    paths:
+      - /foo
+    service_id: service1
+    middlewares:
+      - type: compression
+        params:
+          level: 6
+          excluded_paths: ["/excluded"]
+```
+
+params:
+
+| Field          | Type       | Default | Description                                                |
+| -------------- | ---------- | ------- | ---------------------------------------------------------- |
+| level          | `int`      | 6       | Compression level from 1 (fastest) to 9 (best compression) |
+| excluded_paths | `[]string` |         | Paths that should not be compressed                        |
 
 ### Coraza
 
