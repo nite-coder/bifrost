@@ -69,7 +69,7 @@ func TestValidateRoutes(t *testing.T) {
 		options := NewOptions()
 
 		options.Services["aa"] = ServiceOptions{
-			Url: "http://test1/hello",
+			URL: "http://test1/hello",
 		}
 
 		route1 := RouteOptions{
@@ -142,7 +142,7 @@ func TestValidateRoutes(t *testing.T) {
 		options := NewOptions()
 
 		options.Services["aa"] = ServiceOptions{
-			Url: "http://test1/hello",
+			URL: "http://test1/hello",
 		}
 
 		options.Servers["apiv1"] = ServerOptions{}
@@ -172,7 +172,7 @@ func TestValidateRoutes(t *testing.T) {
 		options.Servers["apiv1"] = ServerOptions{}
 
 		options.Services["aa"] = ServiceOptions{
-			Url: "http://test1/hello",
+			URL: "http://test1/hello",
 		}
 
 		test1 := &RouteOptions{
@@ -202,7 +202,7 @@ func TestValidateRoutes(t *testing.T) {
 		options.Servers["apiv2"] = ServerOptions{}
 
 		options.Services["aa"] = ServiceOptions{
-			Url: "http://test1/hello",
+			URL: "http://test1/hello",
 		}
 
 		route1 := RouteOptions{
@@ -247,7 +247,7 @@ func TestValidateRoutes(t *testing.T) {
 
 		service := ServiceOptions{
 			ID:  "test1",
-			Url: "http://localhost:8888",
+			URL: "http://localhost:8888",
 		}
 
 		corsMiddleware := MiddlwareOptions{
@@ -425,7 +425,7 @@ func TestValidateService(t *testing.T) {
 		options.Routes = append(options.Routes, route1)
 
 		options.Services["test1"] = ServiceOptions{
-			Url: "http://10.1.2.16:8088",
+			URL: "http://10.1.2.16:8088",
 		}
 
 		err := validateServices(options, true)
@@ -446,7 +446,7 @@ func TestValidateService(t *testing.T) {
 		options.Routes = append(options.Routes, route1)
 
 		options.Services["test1"] = ServiceOptions{
-			Url: "http://google.com",
+			URL: "http://google.com",
 		}
 
 		err := validateServices(options, true)
@@ -467,7 +467,7 @@ func TestValidateService(t *testing.T) {
 		options.Routes = append(options.Routes, route1)
 
 		options.Services["test1"] = ServiceOptions{
-			Url: "http://localhost:8888",
+			URL: "http://localhost:8888",
 		}
 
 		err := validateServices(options, true)
@@ -482,7 +482,7 @@ func TestValidateService(t *testing.T) {
 		options := NewOptions()
 
 		options.Services["service1"] = ServiceOptions{
-			Url: "http://test1/hello",
+			URL: "http://test1/hello",
 		}
 
 		err := validateServices(options, true)
@@ -504,7 +504,7 @@ func TestValidateService(t *testing.T) {
 
 		service := ServiceOptions{
 			ID:  "test1",
-			Url: "http://localhost:8888",
+			URL: "http://localhost:8888",
 		}
 
 		corsMiddleware := MiddlwareOptions{
@@ -689,7 +689,7 @@ func TestConfigDNS(t *testing.T) {
 	}
 
 	options.Services["hello"] = ServiceOptions{
-		Url: "http://www.google.com:8001",
+		URL: "http://www.google.com:8001",
 	}
 
 	options.Upstreams["test"] = UpstreamOptions{

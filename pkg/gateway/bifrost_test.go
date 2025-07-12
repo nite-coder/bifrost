@@ -61,7 +61,7 @@ func TestBifrost(t *testing.T) {
 
 	// setup service
 	options.Services["orders"] = config.ServiceOptions{
-		Url: "http://backend:8000",
+		URL: "http://backend:8000",
 	}
 
 	// setup route

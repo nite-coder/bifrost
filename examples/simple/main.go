@@ -26,7 +26,7 @@ func main() {
 
 	// setup service
 	options.Services["test_service"] = config.ServiceOptions{
-		Url: "http://test_upstream:8000",
+		URL: "http://test_upstream:8000",
 	}
 
 	// setup route

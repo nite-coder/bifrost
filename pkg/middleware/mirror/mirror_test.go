@@ -17,7 +17,7 @@ func TestMirror(t *testing.T) {
 
 	// setup service
 	options.Services["mirror_svc1"] = config.ServiceOptions{
-		Url: "http://127.0.0.1:8000",
+		URL: "http://127.0.0.1:8000",
 	}
 
 	bifrost, err := gateway.NewBifrost(options, false)

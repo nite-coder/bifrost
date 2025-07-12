@@ -416,7 +416,7 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 			continue
 		}
 
-		addr, err := url.Parse(service.Url)
+		addr, err := url.Parse(service.URL)
 		if err != nil {
 			return err
 		}

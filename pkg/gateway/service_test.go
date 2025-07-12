@@ -71,7 +71,7 @@ func TestServices(t *testing.T) {
 		options: &config.Options{
 			Services: map[string]config.ServiceOptions{
 				"testService": {
-					Url: "http://127.0.0.1:8088",
+					URL: "http://127.0.0.1:8088",
 				},
 			},
 			Upstreams: map[string]config.UpstreamOptions{
@@ -108,7 +108,7 @@ func TestServices(t *testing.T) {
 
 	// exist upstream
 	serviceOpts := bifrost.options.Services["testService"]
-	serviceOpts.Url = "http://testUpstream"
+	serviceOpts.URL = "http://testUpstream"
 	service, err = newService(bifrost, serviceOpts)
 	assert.NoError(t, err)
 
@@ -117,7 +117,7 @@ func TestServices(t *testing.T) {
 	service.ServeHTTP(ctx, hzCtx)
 	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
 
-	serviceOpts.Url = "http://test_upstream_no_port:8088"
+	serviceOpts.URL = "http://test_upstream_no_port:8088"
 	service, err = newService(bifrost, serviceOpts)
 	assert.NoError(t, err)
 	hzCtx = app.NewContext(0)
@@ -127,7 +127,7 @@ func TestServices(t *testing.T) {
 
 	// dynamic upstream
 	serviceOpts = bifrost.options.Services["testService"]
-	serviceOpts.Url = "http://$var.test"
+	serviceOpts.URL = "http://$var.test"
 	service, err = newService(bifrost, serviceOpts)
 	assert.NoError(t, err)
 
@@ -154,7 +154,7 @@ func TestDynamicService(t *testing.T) {
 		options: &config.Options{
 			Services: map[string]config.ServiceOptions{
 				"testService": {
-					Url: "http://127.0.0.1:8088",
+					URL: "http://127.0.0.1:8088",
 				},
 			},
 			Upstreams: map[string]config.UpstreamOptions{
@@ -201,7 +201,7 @@ func TestDynamicServiceMiddleware(t *testing.T) {
 		options: &config.Options{
 			Services: map[string]config.ServiceOptions{
 				"testService": {
-					Url: "http://127.0.0.1:8088",
+					URL: "http://127.0.0.1:8088",
 					Middlewares: []config.MiddlwareOptions{
 						{
 							Use: "testMiddleware",

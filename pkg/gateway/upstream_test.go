@@ -393,7 +393,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 
 	testService := config.ServiceOptions{
 		Protocol: config.ProtocolHTTP,
-		Url:      "http://test",
+		URL:      "http://test",
 	}
 
 	upstreamMap, err := loadUpstreams(bifrost, config.ServiceOptions{})
@@ -417,7 +417,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 		bifrost,
 		config.ServiceOptions{
 			Protocol: config.ProtocolGRPC,
-			Url:      "http://test",
+			URL:      "http://test",
 		},
 		config.UpstreamOptions{
 			ID:       "test",
@@ -452,7 +452,7 @@ func TestRefreshProxies(t *testing.T) {
 			},
 			ServiceOptions: &config.ServiceOptions{
 				Protocol: config.ProtocolHTTP,
-				Url:      "http://test.service",
+				URL:      "http://test.service",
 			},
 		}
 
@@ -506,7 +506,7 @@ func TestRefreshProxies(t *testing.T) {
 			},
 			ServiceOptions: &config.ServiceOptions{
 				Protocol: config.ProtocolHTTP,
-				Url:      "http://test.service",
+				URL:      "http://test.service",
 			},
 		}
 

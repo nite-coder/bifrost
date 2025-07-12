@@ -296,7 +296,7 @@ type ServiceOptions struct {
 	MaxConnsPerHost *int                  `yaml:"max_conns_per_host" json:"max_conns_per_host"`
 	ID              string                `yaml:"-" json:"-"`
 	Protocol        Protocol              `yaml:"protocol" json:"protocol"`
-	Url             string                `yaml:"url" json:"url"`
+	URL             string                `yaml:"url" json:"url"`
 	Middlewares     []MiddlwareOptions    `yaml:"middlewares" json:"middlewares"`
 	Timeout         ServiceTimeoutOptions `yaml:"timeout" json:"timeout"`
 	TLSVerify       bool                  `yaml:"tls_verify" json:"tls_verify"`
