@@ -125,6 +125,19 @@ func TestValidateRoutes(t *testing.T) {
 		assert.ErrorContains(t, err, "the service 'test1' can't be found in the route 'route1'")
 	})
 
+	t.Run("ignore service", func(t *testing.T) {
+		options := NewOptions()
+		route1 := RouteOptions{
+			ID:        "route1",
+			Paths:     []string{"/hello"},
+			ServiceID: "_",
+		}
+		options.Routes = append(options.Routes, &route1)
+
+		err := validateRoutes(options, true)
+		assert.NoError(t, err)
+	})
+
 	t.Run("duplicate routes1", func(t *testing.T) {
 		options := NewOptions()
 

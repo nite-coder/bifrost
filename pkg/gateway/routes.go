@@ -37,6 +37,7 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 			return nil, fmt.Errorf("paths can't be empty in route: '%s'", routeOptions.ID)
 		}
 
+		routeOptions.ServiceID = strings.TrimSpace(routeOptions.ServiceID)
 		if len(routeOptions.ServiceID) == 0 {
 			return nil, fmt.Errorf("service_id can't be empty in route: '%s'", routeOptions.ID)
 		}
@@ -81,11 +82,14 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 			routeMiddlewares = append(routeMiddlewares, appHandler)
 		}
 
-		if routeOptions.ServiceID[0] == '$' {
+		switch {
+		case routeOptions.ServiceID == "_":
+			routeMiddlewares = append(routeMiddlewares, abortMiiddleware.ServeHTTP)
+		case len(routeOptions.ServiceID) > 0 && routeOptions.ServiceID[0] == '$':
 			// dynamic service
 			dynamicService := newDynamicService(routeOptions.ServiceID, services)
 			routeMiddlewares = append(routeMiddlewares, dynamicService.ServeHTTP)
-		} else {
+		default:
 			service, found := services[routeOptions.ServiceID]
 			if !found {
 				return nil, fmt.Errorf("service_id '%s' was not found in route: %s", routeOptions.ServiceID, routeOptions.ID)

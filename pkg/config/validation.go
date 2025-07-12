@@ -332,6 +332,8 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 	}
 
 	for _, route := range mainOptions.Routes {
+		route.ServiceID = strings.TrimSpace(route.ServiceID)
+
 		if route.ServiceID == "" {
 			msg := fmt.Sprintf("the 'service_id' can't be empty in the route '%s'", route.ID)
 			structure := []string{"routes", route.ID, "service_id"}
@@ -349,6 +351,10 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 		}
 
 		if route.ServiceID[0] != '$' {
+			if route.ServiceID == "_" {
+				break
+			}
+
 			if _, found := mainOptions.Services[route.ServiceID]; !found {
 				msg := fmt.Sprintf("the service '%s' can't be found in the route '%s'", route.ServiceID, route.ID)
 				structure := []string{"routes", route.ID, "service_id"}

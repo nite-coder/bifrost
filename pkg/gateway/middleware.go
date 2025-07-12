@@ -15,6 +15,10 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
+var (
+	abortMiiddleware = &AbortMiddleware{}
+)
+
 type initMiddleware struct {
 	logger   *slog.Logger
 	serverID string
@@ -131,4 +135,10 @@ func loadMiddlewares(middlewareOptions map[string]config.MiddlwareOptions) (map[
 	}
 
 	return middlewares, nil
+}
+
+type AbortMiddleware struct{}
+
+func (m *AbortMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+	c.Abort()
 }
