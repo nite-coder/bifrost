@@ -302,9 +302,9 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			fmt.Println(instance.Address().String())
 			targetHost = instance.Address().String()
 		}
-		addr, err := url.Parse(u.ServiceOptions.Url)
+		addr, err := url.Parse(u.ServiceOptions.URL)
 		if err != nil {
-			return fmt.Errorf("failed to parse service URL '%s': %w", u.ServiceOptions.Url, err)
+			return fmt.Errorf("failed to parse service URL '%s': %w", u.ServiceOptions.URL, err)
 		}
 		port := ""
 		if len(addr.Port()) > 0 {

@@ -46,7 +46,7 @@ func TestMiddlewarePipeline(t *testing.T) {
 
 			Services: map[string]config.ServiceOptions{
 				"testService": {
-					Url: "http://127.0.0.1:8088",
+					URL: "http://127.0.0.1:8088",
 					Middlewares: []config.MiddlwareOptions{
 						{
 							Use: "testMiddleware3",

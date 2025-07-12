@@ -102,7 +102,7 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 		svc.middlewares = append(svc.middlewares, appHandler)
 	}
 
-	addr, err := url.Parse(serviceOptions.Url)
+	addr, err := url.Parse(serviceOptions.URL)
 	if err != nil {
 		return nil, err
 	}
