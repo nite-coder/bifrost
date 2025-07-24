@@ -48,7 +48,7 @@ func main() {
 		Action: func(cCtx *cli.Context) error {
 			var err error
 
-			_ = initialize.Middleware()
+				_ = initialize.Bifrost()
 
 			configPath := cCtx.String("config")
 			isTest := cCtx.Bool("test")

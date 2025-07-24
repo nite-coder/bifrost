@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
+	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
@@ -216,24 +217,32 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}
 
 	var proxy proxy.Proxy
+	var err error
 	if svc.upstream != nil {
 		c.Set(variable.UpstreamID, svc.upstream.options.ID)
 
-		switch svc.upstream.options.Strategy {
-		case config.RoundRobinStrategy, "":
-			proxy = svc.upstream.roundRobin()
-		case config.WeightedStrategy:
-			proxy = svc.upstream.weighted()
-		case config.RandomStrategy:
-			proxy = svc.upstream.random()
-		case config.HashingStrategy:
-			hashon := svc.upstream.options.HashOn
-			val := variable.GetString(hashon, c)
-			proxy = svc.upstream.hasing(val)
+		balaner := svc.upstream.Balancer()
+		if balaner == nil {
+			return
 		}
+
+		proxy, err = balaner.Select(ctx, c)
+
+		// switch svc.upstream.options.Strategy {
+		// case config.RoundRobinStrategy, "":
+		// 	proxy = svc.upstream.roundRobin()
+		// case config.WeightedStrategy:
+		// 	proxy = svc.upstream.weighted()
+		// case config.RandomStrategy:
+		// 	proxy = svc.upstream.random()
+		// case config.HashingStrategy:
+		// 	hashon := svc.upstream.options.HashOn
+		// 	val := variable.GetString(hashon, c)
+		// 	proxy = svc.upstream.hasing(val)
+		// }
 	}
 
-	if proxy == nil {
+	if proxy == nil || errors.Is(err, balancer.ErrNoAvailable) {
 		// no live upstream
 		c.SetStatusCode(503)
 		return

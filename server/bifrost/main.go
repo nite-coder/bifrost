@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"runtime/debug"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -12,6 +13,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/initialize"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
+	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/urfave/cli/v2"
 	_ "go.uber.org/automaxprocs"
 )
@@ -67,14 +69,26 @@ func main() {
 		},
 		Action: func(cCtx *cli.Context) error {
 			defer func() {
-				if err := recover(); err != nil {
-					slog.Error("unknown error", "error", err)
+				if r := recover(); r != nil {
+					var err error
+					switch v := r.(type) {
+					case error:
+						err = v
+					default:
+						err = fmt.Errorf("%v", v)
+					}
+
+					stackTrace := debug.Stack()
+					slog.Error("unknown error",
+						slog.String("error", err.Error()),
+						slog.String("stack", cast.B2S(stackTrace)),
+					)
 				}
 			}()
 
 			var err error
 
-			_ = initialize.Middleware()
+			_ = initialize.Bifrost()
 
 			err = registerMiddlewares()
 			if err != nil {

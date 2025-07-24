@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInitMiddleware(t *testing.T) {
-	err := Middleware()
+func TestInit(t *testing.T) {
+	err := Bifrost()
 	assert.NoError(t, err)
 }
