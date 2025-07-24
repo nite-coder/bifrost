@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	_ = balancer.Register("hashing", func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
+	_ = balancer.Register([]string{"hashing"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
 		hashon, err := cast.ToString(params)
 		if err != nil {
 			return nil, err

@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	_ = balancer.Register("random", func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
+	_ = balancer.Register([]string{"random"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
 		b := NewBalancer(proxies)
 		return b, nil
 	})

@@ -21,12 +21,19 @@ type Balancer interface {
 	Select(ctx context.Context, hzCtx *app.RequestContext) (proxy.Proxy, error)
 }
 
-func Register(name string, h CreateBalancerHandler) error {
-	if _, found := balancers[name]; found {
-		return fmt.Errorf("balancer '%s' already exists", name)
+func Register(names []string, h CreateBalancerHandler) error {
+	if len(names) == 0 {
+		return errors.New("names can't be empty")
 	}
 
-	balancers[name] = h
+	for _, name := range names {
+		if _, found := balancers[name]; found {
+			return fmt.Errorf("balancer '%s' already exists", name)
+		}
+
+		balancers[name] = h
+	}
+
 	return nil
 }
 

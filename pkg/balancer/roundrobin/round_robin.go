@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	_ = balancer.Register("round_robin", func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
+	_ = balancer.Register([]string{"round_robin"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
 		b := NewBalancer(proxies)
 		return b, nil
 	})
