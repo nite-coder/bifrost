@@ -218,7 +218,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		}
 		url := ""
 		switch u.serviceOptions.Protocol {
-		case config.ProtocolHTTP, config.ProtocolHTTP2:
+		case "", config.ProtocolHTTP, config.ProtocolHTTP2:
 			url = fmt.Sprintf("%s://%s%s", addr.Scheme, targetHost, addr.Path)
 			if port != "" {
 				url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)

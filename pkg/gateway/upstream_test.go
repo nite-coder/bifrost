@@ -30,7 +30,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 
 	upstreamOptions := config.UpstreamOptions{
 		ID:       "test",
-		Strategy: config.RoundRobinStrategy,
+		Strategy: "round_robin",
 		Targets:  targetOptions,
 	}
 
@@ -61,7 +61,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 		testService,
 		config.UpstreamOptions{
 			ID:       "test",
-			Strategy: config.RoundRobinStrategy,
+			Strategy: "round_robin",
 			Targets:  targetOptions,
 		},
 	)
@@ -77,7 +77,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 		},
 		config.UpstreamOptions{
 			ID:       "test",
-			Strategy: config.RoundRobinStrategy,
+			Strategy: "round_robin",
 			Targets:  targetOptions,
 		},
 	)

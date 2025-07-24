@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 )
 
@@ -15,7 +14,7 @@ var (
 	balancers      map[string]CreateBalancerHandler = make(map[string]CreateBalancerHandler)
 )
 
-type CreateBalancerHandler func(proxies []proxy.Proxy, option *config.UpstreamOptions) (Balancer, error)
+type CreateBalancerHandler func(proxies []proxy.Proxy, params any) (Balancer, error)
 
 type Balancer interface {
 	Proxies() []proxy.Proxy
@@ -32,5 +31,9 @@ func Register(name string, h CreateBalancerHandler) error {
 }
 
 func Factory(name string) CreateBalancerHandler {
+	if name == "" {
+		name = "round_robin"
+	}
+
 	return balancers[name]
 }

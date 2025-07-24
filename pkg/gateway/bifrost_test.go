@@ -51,7 +51,7 @@ func TestBifrost(t *testing.T) {
 	}
 
 	options.Upstreams["backend"] = config.UpstreamOptions{
-		Strategy: config.RoundRobinStrategy,
+		Strategy: "round_robin",
 		Targets: []config.TargetOptions{
 			{
 				Target: "127.0.0.1",

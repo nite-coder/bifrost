@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/resolver"
 	"github.com/nite-coder/bifrost/pkg/router"
@@ -483,18 +484,12 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 			return newInvalidConfig(structure, "", msg)
 		}
 
-		switch upstreamOptions.Strategy {
-		case WeightedStrategy, RandomStrategy, HashingStrategy, RoundRobinStrategy, "":
-		default:
+		factory := balancer.Factory(upstreamOptions.Strategy)
+		if factory == nil && upstreamOptions.Strategy == "" {
+		} else if factory == nil {
 			msg := fmt.Sprintf("the strategy '%s' for the upstream '%s' is not supported", upstreamOptions.Strategy, upstreamID)
 			structure := []string{"upstreams", upstreamID, "strategy"}
 			return newInvalidConfig(structure, upstreamOptions.Strategy, msg)
-		}
-
-		if upstreamOptions.Strategy == HashingStrategy && upstreamOptions.HashOn == "" {
-			msg := fmt.Sprintf("the hash_on can't be empty in the upstream '%s'", upstreamID)
-			structure := []string{"upstreams", upstreamID, "hash_on"}
-			return newInvalidConfig(structure, "", msg)
 		}
 
 		switch upstreamOptions.Discovery.Type {

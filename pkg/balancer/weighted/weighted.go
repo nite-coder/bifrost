@@ -8,12 +8,11 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/balancer"
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 )
 
 func init() {
-	_ = balancer.Register("weighted", func(proxies []proxy.Proxy, option *config.UpstreamOptions) (balancer.Balancer, error) {
+	_ = balancer.Register("weighted", func(proxies []proxy.Proxy, param any) (balancer.Balancer, error) {
 		return NewBalancer(proxies)
 	})
 }

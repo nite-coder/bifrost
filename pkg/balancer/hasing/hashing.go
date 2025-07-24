@@ -7,14 +7,18 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/balancer"
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/variable"
+	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 func init() {
-	_ = balancer.Register("hashing", func(proxies []proxy.Proxy, option *config.UpstreamOptions) (balancer.Balancer, error) {
-		b := NewBalancer(proxies, option.HashOn)
+	_ = balancer.Register("hashing", func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
+		hashon, err := cast.ToString(params)
+		if err != nil {
+			return nil, err
+		}
+		b := NewBalancer(proxies, hashon)
 		return b, nil
 	})
 }

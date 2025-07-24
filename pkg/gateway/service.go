@@ -133,7 +133,7 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	// direct proxy
 	upstreamOptions := config.UpstreamOptions{
 		ID:       uuid.NewString(),
-		Strategy: config.RoundRobinStrategy,
+		Strategy: "round_robin",
 		Targets: []config.TargetOptions{
 			{
 				Target: hostname,
@@ -227,19 +227,6 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 
 		proxy, err = balaner.Select(ctx, c)
-
-		// switch svc.upstream.options.Strategy {
-		// case config.RoundRobinStrategy, "":
-		// 	proxy = svc.upstream.roundRobin()
-		// case config.WeightedStrategy:
-		// 	proxy = svc.upstream.weighted()
-		// case config.RandomStrategy:
-		// 	proxy = svc.upstream.random()
-		// case config.HashingStrategy:
-		// 	hashon := svc.upstream.options.HashOn
-		// 	val := variable.GetString(hashon, c)
-		// 	proxy = svc.upstream.hasing(val)
-		// }
 	}
 
 	if proxy == nil || errors.Is(err, balancer.ErrNoAvailable) {
