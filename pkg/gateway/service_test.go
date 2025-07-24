@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
+	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
 	"github.com/stretchr/testify/assert"
 )
 

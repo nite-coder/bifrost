@@ -2,12 +2,10 @@ package gateway
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/big"
 	"net"
 	"os"
 	"os/exec"
@@ -422,12 +420,4 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	case <-time.After(timeout):
 		return true // timed out
 	}
-}
-
-func getRandomNumber(max int64) (int64, error) {
-	n, err := rand.Int(rand.Reader, big.NewInt(max))
-	if err != nil {
-		return 0, err
-	}
-	return n.Int64(), nil
 }

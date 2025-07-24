@@ -363,6 +363,11 @@ func (p *HTTPProxy) Close() error {
 	}
 	return nil
 }
+
+func (p *HTTPProxy) Tag(key string) (value string, exist bool) {
+	return "", false
+}
+
 func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err error) {
 	if err == nil {
 		return

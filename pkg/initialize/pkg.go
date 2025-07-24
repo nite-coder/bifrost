@@ -1,6 +1,7 @@
 package initialize
 
 import (
+	// register middleware
 	_ "github.com/nite-coder/bifrost/pkg/middleware/addprefix"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/compression"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/coraza"
@@ -17,8 +18,15 @@ import (
 	_ "github.com/nite-coder/bifrost/pkg/middleware/stripprefix"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/trafficsplitter"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/uarestriction"
+
+	// register balance
+	_ "github.com/nite-coder/bifrost/pkg/balancer/hasing"
+	_ "github.com/nite-coder/bifrost/pkg/balancer/random"
+	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
+	_ "github.com/nite-coder/bifrost/pkg/balancer/weighted"
 )
 
-func Middleware() error {
+
+func Bifrost() error {
 	return nil
 }

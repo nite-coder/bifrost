@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	_ = initialize.Middleware()
+	_ = initialize.Bifrost()
 
 	options, err := config.Load("./config.yaml")
 	if err != nil {

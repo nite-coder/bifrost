@@ -5,10 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"hash"
-	"hash/fnv"
 	"log/slog"
-	"math"
 	"net"
 	"net/url"
 	"strings"
@@ -19,6 +16,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/client"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
+	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/provider/dns"
@@ -46,15 +44,12 @@ func init() {
 }
 
 type Upstream struct {
+	balancer       atomic.Value
 	discovery      provider.ServiceDiscovery
-	proxies        atomic.Value
-	hasher         hash.Hash32
 	bifrost        *Bifrost
 	options        *config.UpstreamOptions
-	ServiceOptions *config.ServiceOptions
-	counter        atomic.Uint64
+	serviceOptions *config.ServiceOptions
 	watchOnce      sync.Once
-	totalWeight    uint32
 }
 
 func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstreamOptions config.UpstreamOptions) (*Upstream, error) {
@@ -64,11 +59,11 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 	if upstreamOptions.Discovery.Type == "" && len(upstreamOptions.Targets) == 0 {
 		return nil, fmt.Errorf("targets can't be empty. upstream id: %s", upstreamOptions.ID)
 	}
+
 	upstream := &Upstream{
 		bifrost:        bifrost,
 		options:        &upstreamOptions,
-		ServiceOptions: &serviceOptions,
-		hasher:         fnv.New32a(),
+		serviceOptions: &serviceOptions,
 	}
 	switch strings.ToLower(upstreamOptions.Discovery.Type) {
 	case "dns":
@@ -121,161 +116,19 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 	}
 	return upstream, nil
 }
-func (u *Upstream) roundRobin() proxy.Proxy {
-	list := u.proxies.Load()
-	if list == nil {
+
+func (u *Upstream) Balancer() balancer.Balancer {
+	val := u.balancer.Load()
+	if val == nil {
 		return nil
 	}
-	proxies := list.([]proxy.Proxy)
-	if len(proxies) == 0 {
+	b, ok := val.(balancer.Balancer)
+	if !ok {
 		return nil
 	}
-	if len(proxies) == 1 {
-		proxy := proxies[0]
-		if proxy.IsAvailable() {
-			return proxy
-		}
-		return nil
-	}
-	failedReconds := map[string]bool{}
-findLoop:
-	u.counter.Add(1)
-	if u.counter.Load() >= uint64(math.MaxUint64) {
-		u.counter.Store(1)
-	}
-	// By subtracting 1 from the counter value, the code is effectively making the counter 0-indexed,
-	// so that the first element in the u.proxies list is selected when the counter is at 1.
-	index := (u.counter.Load() - 1) % uint64(len(proxies))
-	proxy := proxies[index]
-	if proxy.IsAvailable() {
-		return proxy
-	}
-	// no live upstream
-	if len(failedReconds) == len(proxies) {
-		return nil
-	}
-	failedReconds[proxy.ID()] = true
-	goto findLoop
+	return b
 }
-func (u *Upstream) weighted() proxy.Proxy {
-	list := u.proxies.Load()
-	if list == nil {
-		return nil
-	}
-	proxies := list.([]proxy.Proxy)
-	if len(proxies) == 0 {
-		return nil
-	}
-	if len(proxies) == 1 {
-		proxy := proxies[0]
-		if proxy.IsAvailable() {
-			return proxy
-		}
-		return nil
-	}
-	failedReconds := map[string]bool{}
-findLoop:
-	if u.totalWeight > math.MaxInt32 {
-		u.totalWeight = math.MaxInt32
-	}
-	val := int64(u.totalWeight)
-	randomWeight, _ := getRandomNumber(val)
-	for _, proxy := range proxies {
-		randomWeight -= int64(proxy.Weight())
-		if randomWeight < 0 {
-			if proxy.IsAvailable() {
-				return proxy
-			}
-			// no live upstream
-			if len(failedReconds) == len(proxies) {
-				return nil
-			}
-			failedReconds[proxy.ID()] = true
-			goto findLoop
-		}
-	}
-	return nil
-}
-func (u *Upstream) random() proxy.Proxy {
-	list := u.proxies.Load()
-	if list == nil {
-		return nil
-	}
-	proxies := list.([]proxy.Proxy)
-	if len(proxies) == 0 {
-		return nil
-	}
-	if len(proxies) == 1 {
-		proxy := proxies[0]
-		if proxy.IsAvailable() {
-			return proxy
-		}
-		return nil
-	}
-	failedReconds := map[string]bool{}
-findLoop:
-	selectedIndex, _ := getRandomNumber(int64(len(proxies)))
-	proxy := proxies[selectedIndex]
-	if proxy.IsAvailable() {
-		return proxy
-	}
-	// no live upstream
-	if len(failedReconds) == len(proxies) {
-		return nil
-	}
-	failedReconds[proxy.ID()] = true
-	goto findLoop
-}
-func (u *Upstream) hasing(key string) proxy.Proxy {
-	list := u.proxies.Load()
-	if list == nil {
-		return nil
-	}
-	proxies := list.([]proxy.Proxy)
-	if len(proxies) == 0 {
-		return nil
-	}
-	if len(proxies) == 1 {
-		proxy := proxies[0]
-		if proxy.IsAvailable() {
-			return proxy
-		}
-		return nil
-	}
-	u.hasher.Write([]byte(key))
-	hashValue := u.hasher.Sum32()
-	failedReconds := map[string]bool{}
-findLoop:
-	var allProxies []proxy.Proxy
-	if len(failedReconds) > 0 {
-		allProxies = make([]proxy.Proxy, len(proxies))
-		copy(allProxies, proxies)
-		for failedProxyID := range failedReconds {
-			for idx, proxy := range allProxies {
-				if proxy.ID() == failedProxyID {
-					allProxies = append(allProxies[:idx], allProxies[idx+1:]...)
-					break
-				}
-			}
-		}
-	} else {
-		allProxies = proxies
-	}
-	if len(allProxies) == 0 {
-		return nil
-	}
-	selectedIndex := int(hashValue) % len(allProxies)
-	proxy := allProxies[selectedIndex]
-	if proxy.IsAvailable() {
-		return proxy
-	}
-	// no live upstream
-	if len(failedReconds) == len(proxies) {
-		return nil
-	}
-	failedReconds[proxy.ID()] = true
-	goto findLoop
-}
+
 func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	var err error
 	if len(instances) == 0 && u.discovery != nil {
@@ -291,20 +144,17 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		return fmt.Errorf("no instances found, upstream id: %s", u.options.ID)
 	}
 	newProxies := make([]proxy.Proxy, 0)
-	u.totalWeight = 0
+
 	for _, instance := range instances {
-		if u.options.Strategy == config.WeightedStrategy && instance.Weight() == 0 {
-			return fmt.Errorf("weight can't be 0. upstream id: %s, target: %s", u.options.ID, instance.Address())
-		}
-		u.totalWeight += instance.Weight()
+
 		targetHost, targetPort, err := net.SplitHostPort(instance.Address().String())
 		if err != nil {
 			fmt.Println(instance.Address().String())
 			targetHost = instance.Address().String()
 		}
-		addr, err := url.Parse(u.ServiceOptions.URL)
+		addr, err := url.Parse(u.serviceOptions.URL)
 		if err != nil {
-			return fmt.Errorf("failed to parse service URL '%s': %w", u.ServiceOptions.URL, err)
+			return fmt.Errorf("failed to parse service URL '%s': %w", u.serviceOptions.URL, err)
 		}
 		port := ""
 		if len(addr.Port()) > 0 {
@@ -314,28 +164,28 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		}
 		serverName, _ := instance.Tag("server_name")
 		clientOpts := httpproxy.DefaultClientOptions()
-		if u.ServiceOptions.Timeout.Dail > 0 {
-			clientOpts = append(clientOpts, client.WithDialTimeout(u.ServiceOptions.Timeout.Dail))
+		if u.serviceOptions.Timeout.Dail > 0 {
+			clientOpts = append(clientOpts, client.WithDialTimeout(u.serviceOptions.Timeout.Dail))
 		} else if u.bifrost.options.Default.Service.Timeout.Dail > 0 {
 			clientOpts = append(clientOpts, client.WithDialTimeout(u.bifrost.options.Default.Service.Timeout.Dail))
 		}
-		if u.ServiceOptions.Timeout.Read > 0 {
-			clientOpts = append(clientOpts, client.WithClientReadTimeout(u.ServiceOptions.Timeout.Read))
+		if u.serviceOptions.Timeout.Read > 0 {
+			clientOpts = append(clientOpts, client.WithClientReadTimeout(u.serviceOptions.Timeout.Read))
 		} else if u.bifrost.options.Default.Service.Timeout.Read > 0 {
 			clientOpts = append(clientOpts, client.WithDialTimeout(u.bifrost.options.Default.Service.Timeout.Read))
 		}
-		if u.ServiceOptions.Timeout.Write > 0 {
-			clientOpts = append(clientOpts, client.WithWriteTimeout(u.ServiceOptions.Timeout.Write))
+		if u.serviceOptions.Timeout.Write > 0 {
+			clientOpts = append(clientOpts, client.WithWriteTimeout(u.serviceOptions.Timeout.Write))
 		} else if u.bifrost.options.Default.Service.Timeout.Write > 0 {
 			clientOpts = append(clientOpts, client.WithDialTimeout(u.bifrost.options.Default.Service.Timeout.Write))
 		}
-		if u.ServiceOptions.Timeout.MaxConnWait > 0 {
-			clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(u.ServiceOptions.Timeout.MaxConnWait))
+		if u.serviceOptions.Timeout.MaxConnWait > 0 {
+			clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(u.serviceOptions.Timeout.MaxConnWait))
 		} else if u.bifrost.options.Default.Service.Timeout.MaxConnWait > 0 {
 			clientOpts = append(clientOpts, client.WithDialTimeout(u.bifrost.options.Default.Service.Timeout.MaxConnWait))
 		}
-		if u.ServiceOptions.MaxConnsPerHost != nil {
-			clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*u.ServiceOptions.MaxConnsPerHost))
+		if u.serviceOptions.MaxConnsPerHost != nil {
+			clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*u.serviceOptions.MaxConnsPerHost))
 		} else if u.bifrost.options.Default.Service.MaxConnsPerHost != nil {
 			clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*u.bifrost.options.Default.Service.MaxConnsPerHost))
 		}
@@ -343,13 +193,13 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{ // nolint
 				// when client uses ip address to connect to server, client need to set the ServerName to the domain name you want to use
 				ServerName:         serverName,
-				InsecureSkipVerify: !u.ServiceOptions.TLSVerify, //nolint:gosec
+				InsecureSkipVerify: !u.serviceOptions.TLSVerify, //nolint:gosec
 			}))
 		}
 		if u.bifrost.options.Metrics.Prometheus.Enabled {
 			clientOpts = append(clientOpts, client.WithConnStateObserve(func(hcs hzconfig.HostClientState) {
 				labels := make(prom.Labels)
-				labels["service_id"] = u.ServiceOptions.ID
+				labels["service_id"] = u.serviceOptions.ID
 				labels["target"] = hcs.ConnPoolState().Addr
 				httpServiceOpenConnections.With(labels).Set(float64(hcs.ConnPoolState().TotalConnNum))
 			}))
@@ -367,14 +217,14 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			failTimeout = u.bifrost.options.Default.Upstream.FailTimeout
 		}
 		url := ""
-		switch u.ServiceOptions.Protocol {
-		case config.ProtocolHTTP, config.ProtocolHTTP2:
+		switch u.serviceOptions.Protocol {
+		case "", config.ProtocolHTTP, config.ProtocolHTTP2:
 			url = fmt.Sprintf("%s://%s%s", addr.Scheme, targetHost, addr.Path)
 			if port != "" {
 				url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
 			}
 			clientOptions := httpproxy.ClientOptions{
-				IsHTTP2:   u.ServiceOptions.Protocol == config.ProtocolHTTP2,
+				IsHTTP2:   u.serviceOptions.Protocol == config.ProtocolHTTP2,
 				HZOptions: clientOpts,
 			}
 			client, err := httpproxy.NewClient(clientOptions)
@@ -383,14 +233,14 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			}
 			proxyOptions := httpproxy.Options{
 				Target:           url,
-				Protocol:         u.ServiceOptions.Protocol,
+				Protocol:         u.serviceOptions.Protocol,
 				Weight:           instance.Weight(),
 				MaxFails:         maxFails,
 				FailTimeout:      failTimeout,
 				IsTracingEnabled: u.bifrost.options.Tracing.Enabled,
-				ServiceID:        u.ServiceOptions.ID,
+				ServiceID:        u.serviceOptions.ID,
 				TargetHostHeader: serverName,
-				PassHostHeader:   u.ServiceOptions.IsPassHostHeader(),
+				PassHostHeader:   u.serviceOptions.IsPassHostHeader(),
 			}
 			proxy, err := httpproxy.New(proxyOptions, client)
 			if err != nil {
@@ -404,11 +254,11 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			}
 			grpcOptions := grpcproxy.Options{
 				Target:      url,
-				TLSVerify:   u.ServiceOptions.TLSVerify,
+				TLSVerify:   u.serviceOptions.TLSVerify,
 				Weight:      1,
 				MaxFails:    maxFails,
 				FailTimeout: failTimeout,
-				Timeout:     u.ServiceOptions.Timeout.GRPC,
+				Timeout:     u.serviceOptions.Timeout.GRPC,
 			}
 			grpcProxy, err := grpcproxy.New(grpcOptions)
 			if err != nil {
@@ -420,10 +270,14 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	var updatedProxies []proxy.Proxy
 	// remove old proxy if not exist in new proxies list
 	oldProxies := make([]proxy.Proxy, 0)
-	proxies := u.proxies.Load()
-	if proxies != nil {
-		oldProxies = proxies.([]proxy.Proxy)
+
+	if u.Balancer() != nil && u.Balancer().Proxies() != nil {
+		proxies := u.Balancer().Proxies()
+		if proxies != nil {
+			oldProxies = proxies
+		}
 	}
+
 	for _, oldProxy := range oldProxies {
 		isFound := false
 		for _, newProxy := range newProxies {
@@ -451,8 +305,15 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	}
 	if len(updatedProxies) > 0 {
 		slog.Debug("upstream refresh success", "upstream_id", u.options.ID, "proxy_id", updatedProxies[0].ID(), "len", len(updatedProxies))
-		u.proxies.Store(updatedProxies)
 	}
+
+	factory := balancer.Factory(string(u.options.Strategy))
+	balancer, err := factory(updatedProxies, u.options)
+	if err != nil {
+		return err
+	}
+
+	u.balancer.Store(balancer)
 	return nil
 }
 func (u *Upstream) watch() {

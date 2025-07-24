@@ -232,15 +232,6 @@ type MiddlwareOptions struct {
 	Params any    `yaml:"params" json:"params"`
 	Use    string `yaml:"use" json:"use"`
 }
-type UpstreamStrategy string
-
-const (
-	RandomStrategy     UpstreamStrategy = "random"
-	RoundRobinStrategy UpstreamStrategy = "round_robin"
-	WeightedStrategy   UpstreamStrategy = "weighted"
-	HashingStrategy    UpstreamStrategy = "hashing"
-)
-
 type PassiveHealthOptions struct {
 	MaxFails    *uint         `yaml:"max_fails" json:"max_fails"`
 	FailTimeout time.Duration `yaml:"fail_timeout" json:"fail_timeout"`
@@ -268,7 +259,7 @@ type DiscoveryOptions struct {
 }
 type UpstreamOptions struct {
 	ID          string             `yaml:"-" json:"-"`
-	Strategy    UpstreamStrategy   `yaml:"strategy" json:"strategy"`
+	Strategy    string             `yaml:"strategy" json:"strategy"`
 	HashOn      string             `yaml:"hash_on" json:"hash_on"`
 	Discovery   DiscoveryOptions   `yaml:"discovery" json:"discovery"`
 	Targets     []TargetOptions    `yaml:"targets" json:"targets"`

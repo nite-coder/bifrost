@@ -7,13 +7,13 @@ import (
 )
 
 func main() {
-	_ = initialize.Middleware()
+	_ = initialize.Bifrost()
 
 	options := config.NewOptions()
 
 	// setup upstream
 	options.Upstreams["test_upstream"] = config.UpstreamOptions{
-		Strategy: config.RoundRobinStrategy,
+		Strategy: "round_robin",
 		Targets: []config.TargetOptions{
 			{
 				Target: "127.0.0.1:8000",

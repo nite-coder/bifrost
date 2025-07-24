@@ -6,6 +6,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
+	"math"
+	"net/url"
+	"runtime/debug"
+	"sync"
+	"time"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
 	"github.com/nite-coder/bifrost/pkg/log"
@@ -23,13 +31,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	"io"
-	"log/slog"
-	"math"
-	"net/url"
-	"runtime/debug"
-	"sync"
-	"time"
 )
 
 type Options struct {
@@ -138,6 +139,10 @@ func (p *GRPCProxy) Close() error {
 	}
 	p = nil
 	return nil
+}
+
+func (p *GRPCProxy) Tag(key string) (value string, exist bool) {
+	return "", false
 }
 
 // ServeHTTP implements the http.Handler interface

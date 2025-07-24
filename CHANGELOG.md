@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add `Compression` middleware to compress the response body using gzip ([#52](https://github.com/nite-coder/bifrost/pull/52) by [0x5487](https://github.com/0x5487))
 - Enables you to skip defining a service when it’s unnecessary — just set the route’s service_id to `_` ([#53](https://github.com/nite-coder/bifrost/pull/53) by [0x5487](https://github.com/0x5487))
+- Introducing a **balancer** that empowers you to design your own balancing algorithms ([#54](https://github.com/nite-coder/bifrost/pull/54) by [0x5487](https://github.com/0x5487))
 
 ### Changed
 

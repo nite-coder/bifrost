@@ -22,7 +22,7 @@ func registerMiddlewares() error {
 }
 
 func main() {
-	_ = initialize.Middleware()
+	_ = initialize.Bifrost()
 
 	err := registerMiddlewares()
 	if err != nil {
