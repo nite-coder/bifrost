@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - use target host header when `pass_host_header` is false ([#51](https://github.com/nite-coder/bifrost/pull/51) by [0x5487](https://github.com/0x5487))
+- rename  `strategy` to `balancer` field in upstreams ([#55](https://github.com/nite-coder/bifrost/pull/55) by [0x5487](https://github.com/0x5487))
 
 ## [0.5.0] (2025-06-28)
 
