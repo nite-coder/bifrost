@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
@@ -47,6 +48,15 @@ func (d *ResolverDiscovery) GetInstances(ctx context.Context, options provider.G
 			}
 
 			instance := provider.NewInstance(addr, targetOptions.Weight)
+
+			if len(targetOptions.Tags) > 0 {
+				for key, val := range targetOptions.Tags {
+					key = strings.TrimSpace(key)
+					val = strings.TrimSpace(val)
+					instance.SetTag(key, val)
+				}
+			}
+
 			instance.SetTag("server_name", targetHost)
 
 			instances = append(instances, instance)

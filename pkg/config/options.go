@@ -249,8 +249,9 @@ type HealthCheckOptions struct {
 	Active  ActiveHealthOptions  `yaml:"active" json:"active"`
 }
 type TargetOptions struct {
-	Target string `yaml:"target" json:"target"`
-	Weight uint32 `yaml:"weight" json:"weight"`
+	Target string            `yaml:"target" json:"target"`
+	Weight uint32            `yaml:"weight" json:"weight"`
+	Tags   map[string]string `yaml:"tags" json:"tags"`
 }
 type DiscoveryOptions struct {
 	Type      string `yaml:"type" json:"type"`

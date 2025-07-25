@@ -75,6 +75,7 @@ type HTTPProxy struct {
 	weight      uint32
 	// transferTrailer is whether to forward Trailer-related header
 	transferTrailer bool
+	tags            map[string]string
 }
 type Options struct {
 	Target           string
@@ -86,6 +87,7 @@ type Options struct {
 	Weight           uint32
 	IsTracingEnabled bool
 	PassHostHeader   bool
+	Tags             map[string]string
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -167,6 +169,7 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 			}
 		},
 		client: client,
+		tags:   opts.Tags,
 	}
 	return r, nil
 }
@@ -365,7 +368,12 @@ func (p *HTTPProxy) Close() error {
 }
 
 func (p *HTTPProxy) Tag(key string) (value string, exist bool) {
-	return "", false
+	if len(p.tags) == 0 {
+		return "", false
+	}
+
+	val, found := p.tags[key]
+	return val, found
 }
 
 func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err error) {

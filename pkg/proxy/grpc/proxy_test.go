@@ -170,3 +170,21 @@ func TestGRPCProxy(t *testing.T) {
 		assert.Equal(t, codes.DeadlineExceeded, st.Code())
 	})
 }
+
+func TestProxyTags(t *testing.T) {
+	proxyOptions := Options{
+		Target:    "grpc://127.0.0.1:8500",
+		TLSVerify: false,
+		Timeout:   1 * time.Second,
+		Weight:    1,
+		Tags: map[string]string{
+			"id": "123",
+		},
+	}
+	proxy, err := New(proxyOptions)
+	assert.NoError(t, err)
+
+	val, found := proxy.Tag("id")
+	assert.True(t, found)
+	assert.Equal(t, "123", val)
+}

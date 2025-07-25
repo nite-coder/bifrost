@@ -41,6 +41,7 @@ type Options struct {
 	Timeout     time.Duration
 	FailTimeout time.Duration
 	TLSVerify   bool
+	Tags        map[string]string
 }
 type GRPCProxy struct {
 	failExpireAt time.Time
@@ -54,6 +55,7 @@ type GRPCProxy struct {
 	failedCount uint
 	mu          sync.RWMutex
 	weight      uint32
+	tags        map[string]string
 }
 
 func New(options Options) (*GRPCProxy, error) {
@@ -85,6 +87,7 @@ func New(options Options) (*GRPCProxy, error) {
 		options:    &options,
 		client:     client,
 		tracer:     otel.Tracer("bifrost"),
+		tags:       options.Tags,
 	}, nil
 }
 func (p *GRPCProxy) IsAvailable() bool {
@@ -142,7 +145,12 @@ func (p *GRPCProxy) Close() error {
 }
 
 func (p *GRPCProxy) Tag(key string) (value string, exist bool) {
-	return "", false
+	if len(p.tags) == 0 {
+		return "", false
+	}
+
+	val, found := p.tags[key]
+	return val, found
 }
 
 // ServeHTTP implements the http.Handler interface

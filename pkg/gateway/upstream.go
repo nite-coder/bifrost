@@ -241,6 +241,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				ServiceID:        u.serviceOptions.ID,
 				TargetHostHeader: serverName,
 				PassHostHeader:   u.serviceOptions.IsPassHostHeader(),
+				Tags:             instance.Tags(),
 			}
 			proxy, err := httpproxy.New(proxyOptions, client)
 			if err != nil {

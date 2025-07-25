@@ -534,3 +534,23 @@ func TestReverseProxyWebSocket(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", string(message))
 }
+
+func TestProxyTags(t *testing.T) {
+	proxyOptions := Options{
+		Target:           "http://127.0.0.1:9990/proxy",
+		Protocol:         config.ProtocolHTTP,
+		Weight:           1,
+		IsTracingEnabled: true,
+		PassHostHeader:   true,
+		Tags: map[string]string{
+			"id": "123",
+		},
+	}
+
+	proxy, err := New(proxyOptions, nil)
+	assert.NoError(t, err)
+
+	val, found := proxy.Tag("id")
+	assert.True(t, found)
+	assert.Equal(t, "123", val)
+}
