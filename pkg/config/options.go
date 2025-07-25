@@ -259,7 +259,7 @@ type DiscoveryOptions struct {
 }
 type UpstreamOptions struct {
 	ID          string             `yaml:"-" json:"-"`
-	Strategy    string             `yaml:"strategy" json:"strategy"`
+	Balancer    string             `yaml:"balancer" json:"balancer"`
 	HashOn      string             `yaml:"hash_on" json:"hash_on"`
 	Discovery   DiscoveryOptions   `yaml:"discovery" json:"discovery"`
 	Targets     []TargetOptions    `yaml:"targets" json:"targets"`

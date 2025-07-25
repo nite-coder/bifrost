@@ -484,12 +484,12 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 			return newInvalidConfig(structure, "", msg)
 		}
 
-		factory := balancer.Factory(upstreamOptions.Strategy)
-		if factory == nil && upstreamOptions.Strategy == "" {
+		factory := balancer.Factory(upstreamOptions.Balancer)
+		if factory == nil && upstreamOptions.Balancer == "" {
 		} else if factory == nil {
-			msg := fmt.Sprintf("the strategy '%s' for the upstream '%s' is not supported", upstreamOptions.Strategy, upstreamID)
+			msg := fmt.Sprintf("the strategy '%s' for the upstream '%s' is not supported", upstreamOptions.Balancer, upstreamID)
 			structure := []string{"upstreams", upstreamID, "strategy"}
-			return newInvalidConfig(structure, upstreamOptions.Strategy, msg)
+			return newInvalidConfig(structure, upstreamOptions.Balancer, msg)
 		}
 
 		switch upstreamOptions.Discovery.Type {

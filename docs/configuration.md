@@ -354,7 +354,7 @@ The upstream configuration defines load balancing rules for backend servers. The
 ```yaml
 upstreams:
   test-server: # Unique upstream name
-    strategy: "round_robin"
+    balancer: "round_robin"
     hash_on: ""
     health_check:
       passive:
@@ -367,8 +367,12 @@ upstreams:
 
 | Field                             | Type            | Default       | Description                                                                          |
 | --------------------------------- | --------------- | ------------- | ------------------------------------------------------------------------------------ |
-| strategy                          | `string`        | `round_robin` | Load balancing algorithm; supports `round_robin`、`random`、`weighted`、`hashing`    |
+| balancer                          | `string`        | `round_robin` | Load balancing algorithm; supports `round_robin`、`random`、`weighted`、`hashing`    |
 | hash_on                           | `string`        |               | Variable used for hash-based load balancing, effective only if strategy is `hashing` |
+| discovery.type                    | `string`        |               | discovery type.  Please refer to [Provider](./providers.md)                          |
+| discovery.name                    | `string`        |               | discovery name                                                                       |
+| discovery.namespace               | `string`        |               | discovery namespace                                                                  |
+| health_check.passive.fail_timeout | `time.Duration` | `0`           | Time window for tracking failure counts                                              |
 | health_check.passive.max_fails    | `int32`         | `0`           | Maximum failure count; `0` - indicates no limit                                      |
 | health_check.passive.fail_timeout | `time.Duration` | `0`           | Time window for tracking failure counts                                              |
 | targets.target                    | `string`        |               | Target address                                                                       |

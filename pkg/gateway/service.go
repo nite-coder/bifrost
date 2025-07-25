@@ -133,7 +133,7 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	// direct proxy
 	upstreamOptions := config.UpstreamOptions{
 		ID:       uuid.NewString(),
-		Strategy: "round_robin",
+		Balancer: "round_robin",
 		Targets: []config.TargetOptions{
 			{
 				Target: hostname,
