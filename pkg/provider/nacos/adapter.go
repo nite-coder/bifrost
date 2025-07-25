@@ -2,6 +2,7 @@ package nacos
 
 import (
 	"net"
+	"strings"
 
 	"github.com/nacos-group/nacos-sdk-go/v2/model"
 	"github.com/nite-coder/bifrost/pkg/provider"
@@ -30,6 +31,15 @@ func ToProviderInstance(nacosInstances []model.Instance) []provider.Instancer {
 		}
 
 		instance := provider.NewInstance(addr, weight)
+
+		if len(nacosInstance.Metadata) > 0 {
+			for key, val := range nacosInstance.Metadata {
+				key = strings.TrimSpace(key)
+				val = strings.TrimSpace(val)
+				instance.SetTag(key, val)
+			}
+		}
+
 		instances = append(instances, instance)
 	}
 

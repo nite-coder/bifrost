@@ -82,11 +82,12 @@ func (m *MockNamingClient) CloseClient() {
 
 func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 	tests := []struct {
-		name      string
-		mockSetup func(*MockNamingClient)
-		options   provider.GetInstanceOptions
-		want      int
-		wantErr   bool
+		name          string
+		mockSetup     func(*MockNamingClient)
+		options       provider.GetInstanceOptions
+		want          int
+		wantErr       bool
+		metadataCount int
 	}{
 		{
 			name: "successful get instances",
@@ -96,6 +97,10 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 						Ip:     "127.0.0.1",
 						Port:   8080,
 						Weight: 1,
+						Metadata: map[string]string{
+							"id":   "123",
+							"name": "angela",
+						},
 					},
 					{
 						Ip:     "127.0.0.2",
@@ -108,8 +113,9 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 				Name:  "test-service",
 				Group: "test-group",
 			},
-			want:    2,
-			wantErr: false,
+			want:          2,
+			wantErr:       false,
+			metadataCount: 2,
 		},
 		{
 			name: "empty instance list",
@@ -120,8 +126,9 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 				Name:  "test-service",
 				Group: "test-group",
 			},
-			want:    0,
-			wantErr: false,
+			want:          0,
+			wantErr:       false,
+			metadataCount: 0,
 		},
 		{
 			name: "nacos error",
@@ -132,8 +139,9 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 				Name:  "test-service",
 				Group: "test-group",
 			},
-			want:    0,
-			wantErr: true,
+			want:          0,
+			wantErr:       true,
+			metadataCount: 0,
 		},
 	}
 
@@ -153,6 +161,12 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetInstances() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			}
+
+			if tt.metadataCount > 0 {
+				id, found := got[0].Tag("id")
+				assert.True(t, found)
+				assert.Equal(t, "123", id)
 			}
 
 			assert.Equal(t, tt.want, len(got))

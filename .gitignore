@@ -39,3 +39,4 @@ obj
 server/standard/standard
 server/hertz/hertz
 
+pkg/provider/nacos/log/nacos-sdk.log

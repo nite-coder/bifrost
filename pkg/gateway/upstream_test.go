@@ -17,6 +17,9 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 		{
 			Target: "127.0.0.1:1234",
 			Weight: 1,
+			Tags: map[string]string{
+				"id": "123",
+			},
 		},
 		{
 			Target: "127.0.0.2:1235",
@@ -67,7 +70,12 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 	)
 
 	assert.NoError(t, err)
-	assert.Len(t, upstream.Balancer().Proxies(), 3)
+	proxiies := upstream.Balancer().Proxies()
+	assert.Len(t, proxiies, 3)
+
+	id, found := proxiies[0].Tag("id")
+	assert.True(t, found)
+	assert.Equal(t, "123", id)
 
 	upstream, err = newUpstream(
 		bifrost,
@@ -82,7 +90,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 		},
 	)
 	assert.NoError(t, err)
-	proxiies := upstream.Balancer().Proxies()
+	proxiies = upstream.Balancer().Proxies()
 	assert.Len(t, proxiies, 3)
 }
 

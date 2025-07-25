@@ -23,6 +23,7 @@ type Instancer interface {
 	Address() net.Addr
 	Weight() uint32
 	Tag(key string) (value string, exist bool)
+	Tags() map[string]string
 }
 type Instance struct {
 	addr     net.Addr
@@ -34,7 +35,7 @@ func NewInstance(addr net.Addr, weight uint32) *Instance {
 	return &Instance{
 		addr:     addr,
 		weight:   weight,
-		metadata: map[string]string{},
+		metadata: make(map[string]string),
 	}
 }
 func (i *Instance) Address() net.Addr {
@@ -52,4 +53,8 @@ func (i *Instance) Tag(key string) (value string, exist bool) {
 }
 func (i *Instance) SetTag(key string, value string) {
 	i.metadata[key] = value
+}
+
+func (i *Instance) Tags() map[string]string {
+	return i.metadata
 }

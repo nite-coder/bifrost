@@ -23,26 +23,26 @@ A low latency and high throughput API Gateway library written in Go.
 
 ## Comparative Analysis
 
-|                                                                                         | Bifrost | Nginx |
-| :-------------------------------------------------------------------------------------- | :-----: | :---: |
-| SDK for building your own gateway                                                       |   ✅    |  ❌   |
-| Write your middlewares in `native Go` (not `TinyGo`)                                    |   ✅    |  ❌   |
-| Rich built-in middlewares                                                               |   ✅    |  ❌   |
-| Millisecond-level graceful reloads for `dynamic configuration` updates                  |   ✅    |  ❌   |
-| Blue-green deployment for services                                                      |   ✅    |  ❌   |
-| High connection pool reuse rate                                                         |   ✅    |  ❌   |
-| Easy integration with existing Go programs                                              |   ✅    |  ❌   |
-| Built-in `Prometheus` monitoring                                                        |   ✅    |  ❌   |
-| Built-in `OpenTelemetry` tracing                                                        |   ✅    |  ❌   |
-| Native `k8s` service discovery                                                          |   ✅    |  ❌   |
-| Built-in web application firewall and support OWASP Core Rule Set                       |   ✅    |  ❌   |
-| HTTP2 upstream support                                                                  |   ✅    |  ❌   |
-| Multiple configuration providers                                                        |   ✅    |  ❌   |
-| Standardized and User-Friendly Configuration                                            |   ✅    |  ❌   |
-| High concurrency and low latency                                                        |   ✅    |  ✅   |
-| GRPC Load Balancer                                                                      |   ✅    |  ✅   |
-| Multiple strategies for load balancing (`round_robin`, `random`, `weighted`, `hashing`) |   ✅    |  ✅   |
-| Background task support                                                                 |   ✅    |  ✅   |
+|                                                                        | Bifrost | Nginx |
+| :--------------------------------------------------------------------- | :-----: | :---: |
+| SDK for building your own gateway                                      |   ✅    |  ❌   |
+| Write your middlewares in `native Go` (not `TinyGo`)                   |   ✅    |  ❌   |
+| Rich built-in middlewares                                              |   ✅    |  ❌   |
+| Millisecond-level graceful reloads for `dynamic configuration` updates |   ✅    |  ❌   |
+| Blue-green deployment for services                                     |   ✅    |  ❌   |
+| High connection pool reuse rate                                        |   ✅    |  ❌   |
+| Easy integration with existing Go programs                             |   ✅    |  ❌   |
+| Built-in `Prometheus` monitoring                                       |   ✅    |  ❌   |
+| Built-in `OpenTelemetry` tracing                                       |   ✅    |  ❌   |
+| Native `k8s` service discovery                                         |   ✅    |  ❌   |
+| Built-in web application firewall and support OWASP Core Rule Set      |   ✅    |  ❌   |
+| HTTP2 upstream support                                                 |   ✅    |  ❌   |
+| Multiple configuration providers                                       |   ✅    |  ❌   |
+| Standardized and User-Friendly Configuration                           |   ✅    |  ❌   |
+| Multiple built-in balancer algorithm and allow to build your own       |   ✅    |  ❌   |
+| High concurrency and low latency                                       |   ✅    |  ✅   |
+| GRPC Load Balancer                                                     |   ✅    |  ✅   |
+| Background task support                                                |   ✅    |  ✅   |
 
 ## Overview
 
