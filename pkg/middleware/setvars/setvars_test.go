@@ -11,7 +11,7 @@ import (
 )
 
 func TestSetVarsMiddleware(t *testing.T) {
-	h := middleware.FindHandlerByType("setvars")
+	h := middleware.Factory("setvars")
 
 	params := []any{
 		map[string]any{
@@ -33,7 +33,7 @@ func TestSetVarsMiddleware(t *testing.T) {
 }
 
 func TestSetVarsWithDirectivesMiddleware(t *testing.T) {
-	h := middleware.FindHandlerByType("setvars")
+	h := middleware.Factory("setvars")
 
 	params := []any{
 		map[string]any{

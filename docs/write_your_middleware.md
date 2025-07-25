@@ -61,7 +61,7 @@ import (
 )
 
 func registerMiddlewares() error {
- err := middleware.RegisterMiddleware("timing", func(param any) (app.HandlerFunc, error) {
+ err := middleware.RegisterMiddleware([]string{}"timing"}, func(param any) (app.HandlerFunc, error) {
   m := TimingMiddleware{}
   return m.ServeHTTP, nil
  })

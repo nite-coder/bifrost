@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
-	"net"
 )
 
 type Options struct {
@@ -108,7 +109,7 @@ func (m *IPRestriction) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}
 }
 func init() {
-	_ = middleware.RegisterMiddleware("ip_restriction", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"ip_restriction"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
 			return nil, errors.New("ip_restriction middleware params is empty or invalid")
 		}

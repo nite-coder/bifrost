@@ -10,7 +10,7 @@ import (
 )
 
 func TestAddPrefixMiddleware(t *testing.T) {
-	h := middleware.FindHandlerByType("add_prefix")
+	h := middleware.Factory("add_prefix")
 
 	params := map[string]any{
 		"prefix": "/api/v1",
@@ -30,7 +30,7 @@ func TestAddPrefixMiddleware(t *testing.T) {
 }
 
 func TestAddPrefixMoreSlash(t *testing.T) {
-	h := middleware.FindHandlerByType("add_prefix")
+	h := middleware.Factory("add_prefix")
 
 	params := map[string]any{
 		"prefix": "/api/v1/",
@@ -49,9 +49,8 @@ func TestAddPrefixMoreSlash(t *testing.T) {
 	assert.Equal(t, "/api/v1/foo", string(hzCtx.Request.Path()))
 }
 
-
 func TestAddPrefixWithDirective(t *testing.T) {
-	h := middleware.FindHandlerByType("add_prefix")
+	h := middleware.Factory("add_prefix")
 
 	params := map[string]any{
 		"prefix": "/api/v1/$var.name",

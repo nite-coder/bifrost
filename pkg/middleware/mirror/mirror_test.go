@@ -25,7 +25,7 @@ func TestMirror(t *testing.T) {
 	assert.NoError(t, err)
 	gateway.SetBifrost(bifrost)
 
-	h := middleware.FindHandlerByType("mirror")
+	h := middleware.Factory("mirror")
 
 	params := map[string]any{
 		"service_id": "mirror_svc1",

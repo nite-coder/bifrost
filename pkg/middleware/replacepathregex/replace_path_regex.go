@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	_ = middleware.RegisterMiddleware("replace_path_regex", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"replace_path_regex"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
 			return nil, errors.New("replace_path_regex middleware params is not set or invalid")
 		}

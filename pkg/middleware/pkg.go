@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -12,16 +13,22 @@ var (
 
 type CreateMiddlewareHandler func(param any) (app.HandlerFunc, error)
 
-func RegisterMiddleware(kind string, handler CreateMiddlewareHandler) error {
-
-	if _, found := handlers[kind]; found {
-		return fmt.Errorf("middleware handler '%s' already exists", kind)
+func Register(names []string, handler CreateMiddlewareHandler) error {
+	if len(names) == 0 {
+		return errors.New("middleware names can't be empty")
 	}
 
-	handlers[kind] = handler
+	for _, name := range names {
+		if _, found := handlers[name]; found {
+			return fmt.Errorf("middleware handler '%s' already exists", name)
+		}
+
+		handlers[name] = handler
+	}
+
 	return nil
 }
 
-func FindHandlerByType(kind string) CreateMiddlewareHandler {
+func Factory(kind string) CreateMiddlewareHandler {
 	return handlers[kind]
 }

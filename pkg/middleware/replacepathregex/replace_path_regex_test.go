@@ -45,7 +45,7 @@ func TestReplacePathRegexMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := middleware.FindHandlerByType("replace_path_regex")
+			h := middleware.Factory("replace_path_regex")
 
 			params := map[string]any{
 				"regex":       tt.regex,

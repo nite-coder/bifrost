@@ -90,7 +90,7 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 			return nil, fmt.Errorf("middleware kind can't be empty in service: '%s'", serviceOptions.ID)
 		}
 
-		handler := middleware.FindHandlerByType(middlewareOpts.Type)
+		handler := middleware.Factory(middlewareOpts.Type)
 		if handler == nil {
 			return nil, fmt.Errorf("middleware handler '%s' was not found in service: '%s'", middlewareOpts.Type, serviceOptions.ID)
 		}
@@ -229,7 +229,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		proxy, err = balaner.Select(ctx, c)
 	}
 
-	if proxy == nil || errors.Is(err, balancer.ErrNoAvailable) {
+	if proxy == nil || errors.Is(err, balancer.ErrNotAvailable) {
 		// no live upstream
 		c.SetStatusCode(503)
 		return

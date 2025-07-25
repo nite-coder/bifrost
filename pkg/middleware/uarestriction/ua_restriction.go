@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/blackbear/pkg/cast"
-	"regexp"
 )
 
 type Options struct {
@@ -94,7 +95,7 @@ func (m *UARestriction) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}
 }
 func init() {
-	_ = middleware.RegisterMiddleware("ua_restriction", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"ua_restriction"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
 			return nil, errors.New("ua_restriction middleware params is empty or invalid")
 		}

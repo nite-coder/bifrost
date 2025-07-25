@@ -10,7 +10,7 @@ import (
 )
 
 func TestReplacePath(t *testing.T) {
-	h := middleware.FindHandlerByType("replace_path")
+	h := middleware.Factory("replace_path")
 
 	params := map[string]any{
 		"path": "/api/v1/hello",
@@ -30,7 +30,7 @@ func TestReplacePath(t *testing.T) {
 }
 
 func TestReplacePathWithDirective(t *testing.T) {
-	h := middleware.FindHandlerByType("replace_path")
+	h := middleware.Factory("replace_path")
 
 	params := map[string]any{
 		"path": "/api/v1/hello/$var.name",

@@ -13,7 +13,7 @@ import (
 )
 
 func TestParallelMiddleware(t *testing.T) {
-	h := middleware.FindHandlerByType("parallel")
+	h := middleware.Factory("parallel")
 
 	params := []any{
 		config.MiddlwareOptions{

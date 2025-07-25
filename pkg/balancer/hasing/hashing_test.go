@@ -92,7 +92,7 @@ func TestHashing(t *testing.T) {
 			hzctx := app.NewContext(0)
 			hzctx.Set("uid", key)
 			proxy, err := b.Select(context.Background(), hzctx)
-			assert.ErrorIs(t, err, balancer.ErrNoAvailable)
+			assert.ErrorIs(t, err, balancer.ErrNotAvailable)
 			assert.Nil(t, proxy)
 		}
 	})

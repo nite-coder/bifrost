@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	_ = middleware.RegisterMiddleware("strip_prefix", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"strip_prefix"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
 			return nil, errors.New("strip_prefix middleware params is empty or invalid")
 		}

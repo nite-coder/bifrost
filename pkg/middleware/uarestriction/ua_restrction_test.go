@@ -112,7 +112,7 @@ func TestUARestriction(t *testing.T) {
 }
 
 func TestNewMiddleware(t *testing.T) {
-	h := middleware.FindHandlerByType("ua_restriction")
+	h := middleware.Factory("ua_restriction")
 
 	params := map[string]any{
 		"bypass_missing":              true,

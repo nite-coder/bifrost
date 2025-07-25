@@ -20,7 +20,7 @@ func getRandomNumber(max int64) (int64, error) {
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("traffic_splitter", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"traffic_splitter"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
 			return nil, errors.New("traffic_splitter middleware params is empty or invalid")
 		}

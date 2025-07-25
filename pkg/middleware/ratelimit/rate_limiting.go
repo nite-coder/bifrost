@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/connector/redis"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type Limiter interface {
@@ -138,7 +139,7 @@ func buildReplacer(directives []string, c *app.RequestContext) []string {
 	return replacements
 }
 func init() {
-	_ = middleware.RegisterMiddleware("rate_limit", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"rate_limit"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
 			return nil, errors.New("rate_limit middleware params is empty or invalid")
 		}

@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	_ = middleware.RegisterMiddleware("setvars", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"setvars"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
 			return nil, errors.New("setvars middleware params is empty or invalid")
 		}

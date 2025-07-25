@@ -46,7 +46,7 @@ func (b *WeightedBalancer) Proxies() []proxy.Proxy {
 
 func (b *WeightedBalancer) Select(ctx context.Context, hzCtx *app.RequestContext) (proxy.Proxy, error) {
 	if b.proxies == nil {
-		return nil, balancer.ErrNoAvailable
+		return nil, balancer.ErrNotAvailable
 	}
 
 	if len(b.proxies) == 1 {
@@ -54,7 +54,7 @@ func (b *WeightedBalancer) Select(ctx context.Context, hzCtx *app.RequestContext
 		if proxy.IsAvailable() {
 			return proxy, nil
 		}
-		return nil, balancer.ErrNoAvailable
+		return nil, balancer.ErrNotAvailable
 	}
 
 	failedReconds := map[string]bool{}
@@ -73,13 +73,13 @@ findLoop:
 			}
 			// no live upstream
 			if len(failedReconds) == len(b.proxies) {
-				return nil, balancer.ErrNoAvailable
+				return nil, balancer.ErrNotAvailable
 			}
 			failedReconds[proxy.ID()] = true
 			goto findLoop
 		}
 	}
-	return nil, balancer.ErrNoAvailable
+	return nil, balancer.ErrNotAvailable
 }
 
 func getRandomNumber(max int64) (int64, error) {
