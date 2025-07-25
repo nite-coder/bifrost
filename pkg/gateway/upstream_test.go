@@ -81,7 +81,6 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 			Targets:  targetOptions,
 		},
 	)
-
 	assert.NoError(t, err)
 	proxiies := upstream.Balancer().Proxies()
 	assert.Len(t, proxiies, 3)
