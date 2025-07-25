@@ -151,7 +151,7 @@ func TestIPRestriction(t *testing.T) {
 }
 
 func TestNewMiddleware(t *testing.T) {
-	h := middleware.FindHandlerByType("ip_restriction")
+	h := middleware.Factory("ip_restriction")
 
 	params := map[string]any{
 		"deny":                        []string{"192.16.8.0/24", "192.168.1.1"},

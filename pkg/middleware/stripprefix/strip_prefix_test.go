@@ -10,7 +10,7 @@ import (
 )
 
 func TestStripMiddleware(t *testing.T) {
-	h := middleware.FindHandlerByType("strip_prefix")
+	h := middleware.Factory("strip_prefix")
 
 	params := map[string]any{
 		"prefixes": []string{"/api/v1"},
@@ -30,7 +30,7 @@ func TestStripMiddleware(t *testing.T) {
 }
 
 func TestStripSlash(t *testing.T) {
-	h := middleware.FindHandlerByType("strip_prefix")
+	h := middleware.Factory("strip_prefix")
 
 	params := map[string]any{
 		"prefixes": []any{"/api/v1/"},

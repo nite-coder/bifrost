@@ -10,7 +10,7 @@ import (
 )
 
 func TestRequestTermination(t *testing.T) {
-	h := middleware.FindHandlerByType("request_termination")
+	h := middleware.Factory("request_termination")
 
 	params := map[string]any{
 		"status_code":  200,

@@ -11,7 +11,7 @@ import (
 )
 
 func TestRateLimitMiddleware(t *testing.T) {
-	h := middleware.FindHandlerByType("rate_limit")
+	h := middleware.Factory("rate_limit")
 
 	params := map[string]any{
 		"strategy":                    "local",

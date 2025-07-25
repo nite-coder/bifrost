@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	_ = middleware.RegisterMiddleware("mirror", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"mirror"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
 			return nil, errors.New("mirror middleware params is empty or invalid")
 		}

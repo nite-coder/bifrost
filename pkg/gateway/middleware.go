@@ -120,7 +120,7 @@ func loadMiddlewares(middlewareOptions map[string]config.MiddlwareOptions) (map[
 			return nil, fmt.Errorf("middleware type can't be empty in middleware id: '%s'", middlewareOpts.ID)
 		}
 
-		handler := middleware.FindHandlerByType(middlewareOpts.Type)
+		handler := middleware.Factory(middlewareOpts.Type)
 
 		if handler == nil {
 			return nil, fmt.Errorf("middleware type '%s' was not found in middleware id: '%s'", middlewareOpts.Type, middlewareOpts.ID)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
@@ -69,7 +70,7 @@ func (m *ResponseTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.
 	}
 }
 func init() {
-	_ = middleware.RegisterMiddleware("response_transformer", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"response_transformer"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
 			return nil, errors.New("response_transformer middleware params is empty or invalid")
 		}

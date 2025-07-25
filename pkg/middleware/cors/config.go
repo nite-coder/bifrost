@@ -31,11 +31,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
-	"strings"
-	"time"
 )
 
 // Config represents all available options for the middleware.
@@ -178,7 +179,7 @@ func NewMiddleware(config Config) app.HandlerFunc {
 	}
 }
 func init() {
-	_ = middleware.RegisterMiddleware("cors", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"cors"}, func(params any) (app.HandlerFunc, error) {
 		cfg := Config{}
 		if params == nil {
 			cfg = DefaultConfig()

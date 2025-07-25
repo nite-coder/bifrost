@@ -78,7 +78,7 @@ func (m *CompressionMiddleware) shouldCompress(req *protocol.Request) bool {
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("compression", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"compression"}, func(params any) (app.HandlerFunc, error) {
 		opts := &Options{}
 
 		if params == nil {

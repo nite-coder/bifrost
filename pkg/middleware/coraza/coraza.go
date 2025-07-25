@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
 	"github.com/corazawaf/coraza/v3"
@@ -14,7 +16,6 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	prom "github.com/prometheus/client_golang/prometheus"
-	"net"
 )
 
 var (
@@ -195,7 +196,7 @@ func init() {
 		[]string{"server_id", "method", "path", "rule_id", "client_ip"},
 	)
 	prom.MustRegister(bifrostWAFCoreRulesetHits)
-	_ = middleware.RegisterMiddleware("coraza", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"coraza"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
 			return nil, errors.New("coraza middleware params is empty or invalid")
 		}

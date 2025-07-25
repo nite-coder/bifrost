@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	ErrNoAvailable                                  = errors.New("no available upstream at the moment")
-	balancers      map[string]CreateBalancerHandler = make(map[string]CreateBalancerHandler)
+	ErrNotAvailable                                  = errors.New("no available upstream at the moment")
+	balancers       map[string]CreateBalancerHandler = make(map[string]CreateBalancerHandler)
 )
 
 type CreateBalancerHandler func(proxies []proxy.Proxy, params any) (Balancer, error)
@@ -23,7 +23,7 @@ type Balancer interface {
 
 func Register(names []string, h CreateBalancerHandler) error {
 	if len(names) == 0 {
-		return errors.New("names can't be empty")
+		return errors.New("balancer names can't be empty")
 	}
 
 	for _, name := range names {

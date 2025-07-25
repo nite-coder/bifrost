@@ -88,7 +88,7 @@ func TestRandom(t *testing.T) {
 
 		for i := 0; i < 10000; i++ {
 			proxy, err := b.Select(context.Background(), nil)
-			assert.ErrorIs(t, err, balancer.ErrNoAvailable)
+			assert.ErrorIs(t, err, balancer.ErrNotAvailable)
 			assert.Nil(t, proxy)
 		}
 	})

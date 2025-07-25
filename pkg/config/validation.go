@@ -238,7 +238,7 @@ func validateMiddlewares(mainOptions Options, isFullMode bool) error {
 
 		if isFullMode {
 			if len(middlewareOptions.Type) > 0 {
-				hander := middleware.FindHandlerByType(middlewareOptions.Type)
+				hander := middleware.Factory(middlewareOptions.Type)
 				if hander == nil {
 					return fmt.Errorf("the middleware '%s' can't be found for the middleware id '%s'", middlewareOptions.Type, middlewareID)
 				}
@@ -312,7 +312,7 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 				}
 
 				if len(m.Type) > 0 {
-					hander := middleware.FindHandlerByType(m.Type)
+					hander := middleware.Factory(m.Type)
 					if hander == nil {
 						return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Type, serverID)
 					}
@@ -381,7 +381,7 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 			}
 
 			if len(m.Type) > 0 {
-				hander := middleware.FindHandlerByType(m.Type)
+				hander := middleware.Factory(m.Type)
 				if hander == nil {
 					return fmt.Errorf("the middleware '%s' can't be found in the route '%s'", m.Type, route.ID)
 				}
@@ -459,7 +459,7 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 			}
 
 			if len(m.Type) > 0 {
-				hander := middleware.FindHandlerByType(m.Type)
+				hander := middleware.Factory(m.Type)
 				if hander == nil {
 					return fmt.Errorf("the middleware '%s' can't be found in the service '%s'", m.Type, serviceID)
 				}

@@ -3,15 +3,16 @@ package addprefix
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/nite-coder/blackbear/pkg/cast"
-	"strings"
 )
 
 func init() {
-	_ = middleware.RegisterMiddleware("add_prefix", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"add_prefix"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
 			return nil, errors.New("prefix is not set or prefix is invalid")
 		}

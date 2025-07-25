@@ -44,7 +44,7 @@ func (m *RequestTerminationMiddleware) ServeHTTP(ctx context.Context, c *app.Req
 }
 
 func init() {
-	_ = middleware.RegisterMiddleware("request_termination", func(params any) (app.HandlerFunc, error) {
+	_ = middleware.Register([]string{"request_termination"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
 			return nil, errors.New("requesttermination middleware params is empty or invalid")
 		}

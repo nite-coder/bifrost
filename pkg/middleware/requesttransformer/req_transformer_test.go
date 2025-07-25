@@ -10,7 +10,7 @@ import (
 )
 
 func TestRemove(t *testing.T) {
-	h := middleware.FindHandlerByType("request_transformer")
+	h := middleware.Factory("request_transformer")
 
 	params := map[string]any{
 		"remove": map[string]any{
@@ -37,7 +37,7 @@ func TestRemove(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	h := middleware.FindHandlerByType("request_transformer")
+	h := middleware.Factory("request_transformer")
 
 	params := map[string]any{
 		"add": map[string]any{
@@ -68,15 +68,14 @@ func TestAdd(t *testing.T) {
 	assert.Equal(t, "web", hzCtx.Request.Header.Get("x-source"))
 	assert.Equal(t, "12345678", hzCtx.Request.Header.Get("x-http-start"))
 	assert.Equal(t, "world", hzCtx.Request.Header.Get("x-existing-value")) // can't overwrite
-	assert.Equal(t, "foo1", hzCtx.Query("foo")) // can't overwrite
+	assert.Equal(t, "foo1", hzCtx.Query("foo"))                            // can't overwrite
 
 	mode := hzCtx.Query("mode")
 	assert.Equal(t, "1", mode)
 }
 
-
 func TestSet(t *testing.T) {
-	h := middleware.FindHandlerByType("request_transformer")
+	h := middleware.Factory("request_transformer")
 
 	params := map[string]any{
 		"set": map[string]any{
@@ -84,7 +83,7 @@ func TestSet(t *testing.T) {
 				"x-existing-value": "hello",
 			},
 			"querystring": map[string]string{
-				"foo":  "bar",
+				"foo": "bar",
 			},
 		},
 	}
@@ -100,6 +99,6 @@ func TestSet(t *testing.T) {
 	hzCtx.Request.URI().QueryArgs().Add("foo", "foo1")
 	m(ctx, hzCtx)
 
-	assert.Equal(t, "hello", hzCtx.Request.Header.Get("x-existing-value")) 
-	assert.Equal(t, "bar", hzCtx.Query("foo")) 
+	assert.Equal(t, "hello", hzCtx.Request.Header.Get("x-existing-value"))
+	assert.Equal(t, "bar", hzCtx.Query("foo"))
 }

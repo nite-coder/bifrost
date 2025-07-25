@@ -69,7 +69,7 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 				return nil, fmt.Errorf("middleware type can't be empty in route: '%s'", routeOptions.Paths)
 			}
 
-			handler := middleware.FindHandlerByType(m.Type)
+			handler := middleware.Factory(m.Type)
 			if handler == nil {
 				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", m.Type, routeOptions.Paths)
 			}

@@ -43,7 +43,7 @@ func (b *HashingBalancer) Proxies() []proxy.Proxy {
 
 func (b *HashingBalancer) Select(ctx context.Context, c *app.RequestContext) (proxy.Proxy, error) {
 	if b.proxies == nil {
-		return nil, balancer.ErrNoAvailable
+		return nil, balancer.ErrNotAvailable
 	}
 
 	if len(b.proxies) == 1 {
@@ -51,7 +51,7 @@ func (b *HashingBalancer) Select(ctx context.Context, c *app.RequestContext) (pr
 		if proxy.IsAvailable() {
 			return proxy, nil
 		}
-		return nil, balancer.ErrNoAvailable
+		return nil, balancer.ErrNotAvailable
 	}
 
 	val := variable.GetString(b.hashon, c)
@@ -76,7 +76,7 @@ findLoop:
 		allProxies = b.proxies
 	}
 	if len(allProxies) == 0 {
-		return nil, balancer.ErrNoAvailable
+		return nil, balancer.ErrNotAvailable
 	}
 	selectedIndex := int(hashValue) % len(allProxies)
 	proxy := allProxies[selectedIndex]
@@ -85,7 +85,7 @@ findLoop:
 	}
 	// no live upstream
 	if len(failedReconds) == len(b.proxies) {
-		return nil, balancer.ErrNoAvailable
+		return nil, balancer.ErrNotAvailable
 	}
 	failedReconds[proxy.ID()] = true
 	goto findLoop

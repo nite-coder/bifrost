@@ -35,7 +35,7 @@ func (b *RoundRobinBalancer) Proxies() []proxy.Proxy {
 
 func (b *RoundRobinBalancer) Select(ctx context.Context, hzCtx *app.RequestContext) (proxy.Proxy, error) {
 	if b.proxies == nil {
-		return nil, balancer.ErrNoAvailable
+		return nil, balancer.ErrNotAvailable
 	}
 
 	if len(b.proxies) == 1 {
@@ -43,7 +43,7 @@ func (b *RoundRobinBalancer) Select(ctx context.Context, hzCtx *app.RequestConte
 		if proxy.IsAvailable() {
 			return proxy, nil
 		}
-		return nil, balancer.ErrNoAvailable
+		return nil, balancer.ErrNotAvailable
 	}
 
 	failedReconds := map[string]bool{}
@@ -62,7 +62,7 @@ findLoop:
 	}
 	// no live upstream
 	if len(failedReconds) == len(b.proxies) {
-		return nil, balancer.ErrNoAvailable
+		return nil, balancer.ErrNotAvailable
 	}
 	failedReconds[proxy.ID()] = true
 	goto findLoop
