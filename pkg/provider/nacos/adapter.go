@@ -17,7 +17,7 @@ func ToProviderInstance(nacosInstances []model.Instance) []provider.Instancer {
 			weight = 1
 		}
 
-		ip := ""
+		ip := nacosInstance.Ip
 		if nacosInstance.Port > 0 {
 			port, _ := cast.ToString(nacosInstance.Port)
 			ip = net.JoinHostPort(ip, port)
