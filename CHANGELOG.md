@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - rename  `strategy` to `balancer` field in upstreams ([#55](https://github.com/nite-coder/bifrost/pull/55) by [0x5487](https://github.com/0x5487))
 - refactor middleware interface to allow multiple name per middleware ([#56](https://github.com/nite-coder/bifrost/pull/56) by [0x5487](https://github.com/0x5487))
 - Fixing the empty instance IP issue in Nacos service discovery ([#58](https://github.com/nite-coder/bifrost/pull/58) by [0x5487](https://github.com/0x5487))
+- Enhancing OpenTelemetry gRPC Semantic Conventions ([#60](https://github.com/nite-coder/bifrost/pull/60) by [0x5487](https://github.com/0x5487))
 
 ## [0.5.0] (2025-06-28)
 
