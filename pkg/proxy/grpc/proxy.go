@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"math"
+	"net/http"
 	"net/url"
 	"runtime/debug"
 	"sync"
@@ -34,14 +35,16 @@ import (
 )
 
 type Options struct {
-	Target      string
-	DailOptions []grpc.DialOption
-	Weight      uint
-	MaxFails    uint
-	Timeout     time.Duration
-	FailTimeout time.Duration
-	TLSVerify   bool
-	Tags        map[string]string
+	Target           string
+	DailOptions      []grpc.DialOption
+	Weight           uint32
+	MaxFails         uint
+	Timeout          time.Duration
+	FailTimeout      time.Duration
+	TLSVerify        bool
+	Tags             map[string]string
+	IsTracingEnabled bool
+	ServiceID        string
 }
 type GRPCProxy struct {
 	failExpireAt time.Time
@@ -200,18 +203,28 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		ctx = ctxTimeout
 		defer cancel()
 	}
-	spanOptions := []trace.SpanStartOption{
-		trace.WithSpanKind(trace.SpanKindClient),
+
+	if p.options.IsTracingEnabled {
+		var span trace.Span
+		spanOptions := []trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindClient),
+		}
+		ctx, span = p.tracer.Start(ctx, fullMethodName, spanOptions...)
+		defer func() {
+			labels := []attribute.KeyValue{
+				attribute.String("http.method", http.MethodPost),
+				attribute.String("http.scheme", string(c.Request.Scheme())),
+				attribute.String("http.path", fullMethodName),
+				attribute.String("http.host", p.targetHost),
+				attribute.String("protocol", "grpc"),
+			}
+
+			span.SetAttributes(labels...)
+			span.SetStatus(otelcodes.Ok, "")
+			span.End()
+		}()
 	}
-	ctx, span := p.tracer.Start(ctx, fullMethodName, spanOptions...)
-	labels := []attribute.KeyValue{
-		attribute.String("http.method", "POST"),
-		attribute.String("http.scheme", string(c.Request.Scheme())),
-		attribute.String("http.path", fullMethodName),
-		attribute.String("http.host", p.targetHost),
-		attribute.String("protocol", "grpc"),
-	}
-	span.SetAttributes(labels...)
+
 	// Call the grpc client with the request
 	err := p.client.Invoke(ctx, fullMethodName, payload, &respBody, grpc.Header(&header), grpc.Trailer(&trailer))
 	if err != nil {
@@ -219,8 +232,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		p.handleGRPCError(ctx, c, err)
 		return
 	}
-	span.SetStatus(otelcodes.Ok, "")
-	span.End()
+
 	// If there is no trailer, set the grpc-status header to 0
 	if trailer.Len() == 0 {
 		_ = c.Response.Header.Trailer().Set("grpc-status", "0")

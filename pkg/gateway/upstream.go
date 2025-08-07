@@ -256,10 +256,11 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			grpcOptions := grpcproxy.Options{
 				Target:      url,
 				TLSVerify:   u.serviceOptions.TLSVerify,
-				Weight:      1,
+				Weight:      instance.Weight(),
 				MaxFails:    maxFails,
 				FailTimeout: failTimeout,
 				Timeout:     u.serviceOptions.Timeout.GRPC,
+				Tags:        instance.Tags(),
 			}
 			grpcProxy, err := grpcproxy.New(grpcOptions)
 			if err != nil {
