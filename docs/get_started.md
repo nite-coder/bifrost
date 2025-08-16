@@ -18,7 +18,6 @@ Forward all HTTP requests to the backend upstream services. With two upstream se
 1. Create a configuration file config.yaml (currently only the yaml format is supported).
 
   ```yaml
-  version: 1
   watch: true
 
   servers:
@@ -53,7 +52,7 @@ import (
 )
 
 func main() {
- _ = initialize.Middleware()
+ _ = initialize.Bifrost()
 
  options, err := config.Load("./config.yaml")
  if err != nil {
@@ -70,7 +69,7 @@ func main() {
 3. Modify your `go.mod` by adding the following two lines.
 
 ```sh
-replace github.com/cloudwego/hertz v0.9.7 => github.com/nite-coder/hertz v0.9.7
+replace github.com/cloudwego/hertz v0.10.1 => github.com/nite-coder/hertz v0.10.1
 replace github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.1.8
 ```
 
