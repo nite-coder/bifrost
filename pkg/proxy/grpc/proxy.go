@@ -14,6 +14,9 @@ import (
 	"sync"
 	"time"
 
+	"strconv"
+	"strings"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
 	"github.com/nite-coder/bifrost/pkg/log"
@@ -24,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	otelcodes "go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -34,14 +38,16 @@ import (
 )
 
 type Options struct {
-	Target      string
-	DailOptions []grpc.DialOption
-	Weight      uint
-	MaxFails    uint
-	Timeout     time.Duration
-	FailTimeout time.Duration
-	TLSVerify   bool
-	Tags        map[string]string
+	Target           string
+	DailOptions      []grpc.DialOption
+	Weight           uint32
+	MaxFails         uint
+	Timeout          time.Duration
+	FailTimeout      time.Duration
+	TLSVerify        bool
+	Tags             map[string]string
+	IsTracingEnabled bool
+	ServiceID        string
 }
 type GRPCProxy struct {
 	failExpireAt time.Time
@@ -200,18 +206,49 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		ctx = ctxTimeout
 		defer cancel()
 	}
-	spanOptions := []trace.SpanStartOption{
-		trace.WithSpanKind(trace.SpanKindClient),
+
+	if p.options.IsTracingEnabled {
+		var span trace.Span
+		spanOptions := []trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindClient),
+		}
+		ctx, span = p.tracer.Start(ctx, fullMethodName, spanOptions...)
+		defer func() {
+			// Extract service and method names from fullMethodName
+			// fullMethodName format: /<service-name>/<method-name>
+			serviceName := ""
+			methodName := ""
+			if idx := strings.LastIndex(fullMethodName, "/"); idx != -1 {
+				methodName = fullMethodName[idx+1:]
+				serviceName = fullMethodName[1:idx]
+			}
+
+			labels := []attribute.KeyValue{
+				semconv.RPCSystemGRPC,
+				semconv.RPCService(serviceName),
+				semconv.RPCMethod(methodName),
+				semconv.ServerAddress(p.targetHost),
+			}
+
+			grpcStatusCode, ok := c.Get(variable.GRPCStatusCode)
+			if ok {
+				code := grpcStatusCode.(uint32)
+				if code != uint32(codes.OK) {
+					span.SetStatus(otelcodes.Error, c.GetString(variable.GRPCMessage))
+					labels = append(labels, attribute.Int64("rpc.grpc.status_code", int64(code)))
+					labels = append(labels, attribute.String("rpc.grpc.message", c.GetString(variable.GRPCMessage)))
+				} else {
+					span.SetStatus(otelcodes.Ok, "")
+				}
+			} else {
+				span.SetStatus(otelcodes.Ok, "")
+			}
+
+			span.SetAttributes(labels...)
+			span.End()
+		}()
 	}
-	ctx, span := p.tracer.Start(ctx, fullMethodName, spanOptions...)
-	labels := []attribute.KeyValue{
-		attribute.String("http.method", "POST"),
-		attribute.String("http.scheme", string(c.Request.Scheme())),
-		attribute.String("http.path", fullMethodName),
-		attribute.String("http.host", p.targetHost),
-		attribute.String("protocol", "grpc"),
-	}
-	span.SetAttributes(labels...)
+
 	// Call the grpc client with the request
 	err := p.client.Invoke(ctx, fullMethodName, payload, &respBody, grpc.Header(&header), grpc.Trailer(&trailer))
 	if err != nil {
@@ -219,8 +256,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		p.handleGRPCError(ctx, c, err)
 		return
 	}
-	span.SetStatus(otelcodes.Ok, "")
-	span.End()
+
 	// If there is no trailer, set the grpc-status header to 0
 	if trailer.Len() == 0 {
 		_ = c.Response.Header.Trailer().Set("grpc-status", "0")
@@ -270,6 +306,7 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 		st = status.New(codes.Internal, err.Error())
 	}
 	c.Set(variable.GRPCStatusCode, uint32(st.Code()))
+	c.Set(variable.GRPCMessage, st.Message())
 	logger.Error("failed to invoke grpc server",
 		slog.String("error", err.Error()),
 		slog.String("original_path", originalPath),
@@ -278,22 +315,12 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 		slog.String("grpc_message", st.Message()),
 	)
 	// Set gspecific response headers
-	code := fmt.Sprintf("%d", st.Code())
+	code := strconv.Itoa(int(st.Code()))
 	_ = c.Response.Header.Trailer().Set("grpc-status", code)
 	_ = c.Response.Header.Trailer().Set("grpc-message", st.Message())
 	c.Response.Header.SetContentType("application/grpc")
 	c.Response.Header.Set("grpc-status", code)
 	c.Response.Header.Set("grpc-message", st.Message())
-	span := trace.SpanFromContext(ctx)
-	span.SetStatus(otelcodes.Error, st.Message())
-	labels := []attribute.KeyValue{
-		attribute.String("grpc.status", st.Code().String()),
-		attribute.String("grpc.message", st.Message()),
-		attribute.String("original_path", originalPath),
-		attribute.String("error", err.Error()),
-	}
-	span.SetAttributes(labels...)
-	span.End()
 	switch st.Code() {
 	case codes.Unavailable, codes.Unknown, codes.Unimplemented:
 		err := p.AddFailedCount(1)
