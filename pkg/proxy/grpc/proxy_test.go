@@ -88,10 +88,11 @@ func TestGRPCProxy(t *testing.T) {
 	ctx := context.Background()
 
 	proxyOptions := Options{
-		Target:    "grpc://127.0.0.1:8500",
-		TLSVerify: false,
-		Timeout:   1 * time.Second,
-		Weight:    1,
+		Target:           "grpc://127.0.0.1:8500",
+		TLSVerify:        false,
+		Timeout:          1 * time.Second,
+		IsTracingEnabled: true,
+		Weight:           1,
 	}
 	proxy, err := New(proxyOptions)
 	assert.NoError(t, err)
@@ -173,10 +174,11 @@ func TestGRPCProxy(t *testing.T) {
 
 func TestProxyTags(t *testing.T) {
 	proxyOptions := Options{
-		Target:    "grpc://127.0.0.1:8500",
-		TLSVerify: false,
-		Timeout:   1 * time.Second,
-		Weight:    1,
+		Target:           "grpc://127.0.0.1:8500",
+		TLSVerify:        false,
+		Timeout:          1 * time.Second,
+		IsTracingEnabled: true,
+		Weight:           1,
 		Tags: map[string]string{
 			"id": "123",
 		},
