@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -26,9 +28,10 @@ import (
 )
 
 var (
-	delay = flag.Duration("delay", 0, "delay to mock business processing")
-	tail  = flag.Duration("tail", 0, "1% long tail latency")
-	nacos = flag.Bool("nacos", false, "enable nacos")
+	delay    = flag.Duration("delay", 0, "delay to mock business processing")
+	tail     = flag.Duration("tail", 0, "1% long tail latency")
+	respSize = flag.Int("resp_size", 512, "response size in bytes")
+	nacos    = flag.Bool("nacos", false, "enable nacos")
 )
 
 func WithDefaultServerHeader(disable bool) config.Option {
@@ -49,107 +52,16 @@ const (
 		"price": "65000",
 		"tif": "fok",
 	  }`
-
-	orderbook = `{
-		"current": 1711255163345,
-		"update": 1711255163342,
-		"asks": [
-			[
-				"63837.9",
-				"0.25997"
-			],
-			[
-				"63839.4",
-				"0.14"
-			],
-			[
-				"63839.5",
-				"0.18"
-			],
-			[
-				"63844.6",
-				"0.00812"
-			],
-			[
-				"63845.7",
-				"0.01256"
-			],
-			[
-				"63846.3",
-				"0.02726"
-			],
-			[
-				"63847.8",
-				"0.12405"
-			],
-			[
-				"63847.9",
-				"0.20674"
-			],
-			[
-				"63850.3",
-				"0.14139"
-			],
-			[
-				"63850.4",
-				"0.23563"
-			]
-		],
-		"bids": [
-			[
-				"63837.8",
-				"0.96189"
-			],
-			[
-				"63837.6",
-				"0.00583"
-			],
-			[
-				"63835.5",
-				"0.47803"
-			],
-			[
-				"63833.7",
-				"0.06774"
-			],
-			[
-				"63833",
-				"0.25504"
-			],
-			[
-				"63832.7",
-				"0.02192"
-			],
-			[
-				"63829.3",
-				"0.05346"
-			],
-			[
-				"63827",
-				"0.10805"
-			],
-			[
-				"63826.9",
-				"0.05348"
-			],
-			[
-				"63826.6",
-				"0.18"
-			]
-		]
-	}`
 )
 
 var (
-	orderResp     []byte
-	orderbookResp []byte
+	orderResp []byte
 )
 
 func main() {
 	flag.Parse()
 
-	orderResp = []byte(order)
-	orderbookResp = []byte(orderbook)
+	orderResp, _ = GenerateRandomBytes(*respSize)
 
 	opts := []config.Option{
 		server.WithHostPorts(bind),
@@ -178,7 +90,6 @@ func main() {
 	h.Any("/api/v1/spot/orders", placeOrderHandler)
 	h.POST("/futures/usdt/orders", placeOrderHandler)
 	h.POST("/options/orders", placeOrderHandler)
-	h.GET("/order_book", orderBookHandler)
 	h.DELETE("cancel_order", cancelOrderHandler)
 	h.POST("/long", longHandler)
 	h.GET("/dynamic_upstream", findUpstreamHandler)
@@ -210,7 +121,7 @@ func echoHandler(c context.Context, ctx *app.RequestContext) {
 
 var placeOrderCounter atomic.Uint64
 
-func placeOrderHandler(c context.Context, ctx *app.RequestContext) {
+func placeOrderHandler(ctx context.Context, c *app.RequestContext) {
 
 	if (placeOrderCounter.Load() % 99) == 0 {
 		if *tail > 0 {
@@ -228,15 +139,9 @@ func placeOrderHandler(c context.Context, ctx *app.RequestContext) {
 
 	placeOrderCounter.Add(1)
 
-	ctx.SetContentType("application/json; charset=utf8")
-	ctx.Response.SetStatusCode(200)
-	ctx.Response.SetBody(orderResp)
-}
-
-func orderBookHandler(c context.Context, ctx *app.RequestContext) {
-	ctx.SetContentType("application/json; charset=utf8")
-	ctx.Response.SetStatusCode(200)
-	ctx.Response.SetBody(orderbookResp)
+	c.SetContentType("application/json; charset=utf8")
+	c.Response.SetStatusCode(200)
+	c.Response.SetBody(orderResp)
 }
 
 func cancelOrderHandler(c context.Context, ctx *app.RequestContext) {
@@ -351,4 +256,23 @@ func registerNacosServiceProvider() {
 	fmt.Println("Service registered:", result)
 
 	select {}
+}
+
+func GenerateRandomBytes(size int) ([]byte, error) {
+	if size < 0 {
+		return nil, errors.New("payload size cannot be negative")
+	}
+	if size == 0 {
+		return []byte{}, nil
+	}
+
+	buf := make([]byte, size)
+	n, err := rand.Read(buf) // use crypto/rand.Read fill slice
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate random bytes: %w", err)
+	}
+	if n != size {
+		return nil, fmt.Errorf("short read: expected %d bytes, got %d", size, n)
+	}
+	return buf, nil
 }
