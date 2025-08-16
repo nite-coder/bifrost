@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enables you to skip defining a service when it’s unnecessary — just set the route’s service_id to `_` ([#53](https://github.com/nite-coder/bifrost/pull/53) by [0x5487](https://github.com/0x5487))
 - Introducing a **balancer** that empowers you to design your own balancing algorithms ([#54](https://github.com/nite-coder/bifrost/pull/54) by [0x5487](https://github.com/0x5487))
 - Upstream targets now feature tags, allowing you to build your own balancer ([#57](https://github.com/nite-coder/bifrost/pull/57) by [0x5487](https://github.com/0x5487))
+- Go 1.25 is officially supported. Support for Go 1.23 will be discontinued with the next release. ([#62](https://github.com/nite-coder/bifrost/pull/62) by [0x5487](https://github.com/0x5487))
 
 ### Changed
 
@@ -21,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - refactor middleware interface to allow multiple name per middleware ([#56](https://github.com/nite-coder/bifrost/pull/56) by [0x5487](https://github.com/0x5487))
 - Fixing the empty instance IP issue in Nacos service discovery ([#58](https://github.com/nite-coder/bifrost/pull/58) by [0x5487](https://github.com/0x5487))
 - Enhancing OpenTelemetry gRPC Semantic Conventions ([#60](https://github.com/nite-coder/bifrost/pull/60) by [0x5487](https://github.com/0x5487))
+- Bump `hertz` to v0.10.1 ([#62](https://github.com/nite-coder/bifrost/pull/62) by [0x5487](https://github.com/0x5487))
+- Bump `prometheus` to v1.23.0 ([#62](https://github.com/nite-coder/bifrost/pull/62) by [0x5487](https://github.com/0x5487))
 
 ## [0.5.0] (2025-06-28)
 
