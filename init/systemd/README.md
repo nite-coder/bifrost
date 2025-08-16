@@ -1,5 +1,6 @@
-1. put your service file into `/etc/systemd/system/`
+# Bifrost Systemd Service Setup
 
-sudo systemctl daemon-reload
-sudo systemctl enable bifrost
-sudo systemctl start bifrost
+1. put your service file into `/etc/systemd/system/`
+1. sudo systemctl daemon-reload
+1. sudo systemctl enable bifrost
+1. sudo systemctl start bifrost
