@@ -11,23 +11,23 @@ require (
 	github.com/corazawaf/coraza-coreruleset/v4 v4.14.0
 	github.com/corazawaf/coraza/v3 v3.3.3
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/go-resty/resty/v2 v2.15.3
-	github.com/go-viper/mapstructure/v2 v2.3.0
+	github.com/go-resty/resty/v2 v2.16.5
+	github.com/go-viper/mapstructure/v2 v2.4.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/hertz-contrib/http2 v0.1.8
 	github.com/hertz-contrib/logger/slog v1.0.0
 	github.com/hertz-contrib/pprof v0.1.2
 	github.com/hertz-contrib/websocket v0.2.0
-	github.com/miekg/dns v1.1.66
-	github.com/nacos-group/nacos-sdk-go/v2 v2.2.8
+	github.com/miekg/dns v1.1.68
+	github.com/nacos-group/nacos-sdk-go/v2 v2.3.2
 	github.com/nite-coder/blackbear v0.0.0-20240930140346-76863193d6d4
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/pires/go-proxyproto v0.8.0
 	github.com/prometheus/client_golang v1.23.0
-	github.com/redis/go-redis/v9 v9.7.3
+	github.com/redis/go-redis/v9 v9.12.1
 	github.com/stretchr/testify v1.10.0
-	github.com/urfave/cli/v2 v2.27.5
+	github.com/urfave/cli/v2 v2.27.7
 	github.com/valyala/bytebufferpool v1.0.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.36.0
 	go.opentelemetry.io/contrib/propagators/jaeger v1.36.0
@@ -71,9 +71,10 @@ require (
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.7 // indirect
 	github.com/alibabacloud-go/tea-xml v1.1.3 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1800 // indirect
-	github.com/aliyun/alibabacloud-dkms-gcs-go-sdk v0.2.2 // indirect
-	github.com/aliyun/alibabacloud-dkms-transfer-go-sdk v0.1.7 // indirect
-	github.com/aliyun/credentials-go v1.3.10 // indirect
+	github.com/aliyun/alibabacloud-dkms-gcs-go-sdk v0.5.1 // indirect
+	github.com/aliyun/alibabacloud-dkms-transfer-go-sdk v0.1.8 // indirect
+	github.com/aliyun/aliyun-secretsmanager-client-go v1.1.5 // indirect
+	github.com/aliyun/credentials-go v1.4.3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytedance/gopkg v0.1.2 // indirect
@@ -85,8 +86,9 @@ require (
 	github.com/cloudwego/base64x v0.1.5 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/corazawaf/libinjection-go v0.2.2 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/docker/cli v28.3.3+incompatible // indirect
 	github.com/docker/docker v28.3.3+incompatible // indirect
@@ -125,6 +127,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opencontainers/runc v1.2.3 // indirect
+	github.com/orcaman/concurrent-map v0.0.0-20210501183033-44dafcb38ecc // indirect
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
@@ -161,7 +164,7 @@ require (
 	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
-	golang.org/x/tools v0.32.0 // indirect
+	golang.org/x/tools v0.33.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250528174236-200df99c418a // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
