@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- use target host header when `pass_host_header` is false ([#51](https://github.com/nite-coder/bifrost/pull/51) by [0x5487](https://github.com/0x5487))
+- Use target host header when `pass_host_header` is false ([#51](https://github.com/nite-coder/bifrost/pull/51) by [0x5487](https://github.com/0x5487))
 - Add `Compression` middleware to compress the response body using gzip ([#52](https://github.com/nite-coder/bifrost/pull/52) by [0x5487](https://github.com/0x5487))
 - Enables you to skip defining a service when it’s unnecessary — just set the route’s service_id to `_` ([#53](https://github.com/nite-coder/bifrost/pull/53) by [0x5487](https://github.com/0x5487))
 - Introducing a **balancer** that empowers you to design your own balancing algorithms ([#54](https://github.com/nite-coder/bifrost/pull/54) by [0x5487](https://github.com/0x5487))
@@ -22,9 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- rename  `strategy` to `balancer` field in upstreams ([#55](https://github.com/nite-coder/bifrost/pull/55) by [0x5487](https://github.com/0x5487))
-- refactor middleware interface to allow multiple name per middleware ([#56](https://github.com/nite-coder/bifrost/pull/56) by [0x5487](https://github.com/0x5487))
+- Rename  `strategy` to `balancer` field in upstreams ([#55](https://github.com/nite-coder/bifrost/pull/55) by [0x5487](https://github.com/0x5487))
+- Refactor middleware interface to allow multiple name per middleware ([#56](https://github.com/nite-coder/bifrost/pull/56) by [0x5487](https://github.com/0x5487))
 - Enhancing OpenTelemetry gRPC Semantic Conventions ([#60](https://github.com/nite-coder/bifrost/pull/60) by [0x5487](https://github.com/0x5487))
+- Update Get Stared document ([#63](https://github.com/nite-coder/bifrost/pull/63) by [0x5487](https://github.com/0x5487))
 - Bump `hertz` to v0.10.1 ([#62](https://github.com/nite-coder/bifrost/pull/62) by [0x5487](https://github.com/0x5487))
 - Bump `prometheus` to v1.23.0 ([#62](https://github.com/nite-coder/bifrost/pull/62) by [0x5487](https://github.com/0x5487))
 
