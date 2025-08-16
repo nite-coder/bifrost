@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactor middleware interface to allow multiple name per middleware ([#56](https://github.com/nite-coder/bifrost/pull/56) by [0x5487](https://github.com/0x5487))
 - Enhancing OpenTelemetry gRPC Semantic Conventions ([#60](https://github.com/nite-coder/bifrost/pull/60) by [0x5487](https://github.com/0x5487))
 - Update Get Started document ([#63](https://github.com/nite-coder/bifrost/pull/63) by [0x5487](https://github.com/0x5487))
+- Allowing users to set the response size in bytes for the test server ([#64](https://github.com/nite-coder/bifrost/pull/64) by [0x5487](https://github.com/0x5487))
 - Bump `hertz` to v0.10.1 ([#62](https://github.com/nite-coder/bifrost/pull/62) by [0x5487](https://github.com/0x5487))
 - Bump `prometheus` to v1.23.0 ([#62](https://github.com/nite-coder/bifrost/pull/62) by [0x5487](https://github.com/0x5487))
 
