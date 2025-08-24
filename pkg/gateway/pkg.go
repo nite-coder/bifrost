@@ -199,7 +199,8 @@ func Run(mainOptions config.Options) (err error) {
 	go safety.Go(context.Background(), func() {
 		for _, httpServer := range bifrost.httpServers {
 			for {
-				conn, err := net.Dial("tcp", httpServer.Bind())
+				dialer := &net.Dialer{}
+				conn, err := dialer.DialContext(ctx, "tcp", httpServer.Bind())
 				if err == nil {
 					conn.Close()
 					break
@@ -282,7 +283,7 @@ func RunAsDaemon(mainOptions config.Options) error {
 		return errors.New("must be run as root to execute in daemon mode")
 	}
 
-	cmd := exec.Command(os.Args[0], os.Args[1:]...)
+	cmd := exec.CommandContext(context.TODO(), os.Args[0], os.Args[1:]...)
 	cmd.Stdin = nil
 	cmd.Stdout = nil
 	cmd.Stderr = nil

@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Allowing users to set the response size in bytes for the test server ([#64](https://github.com/nite-coder/bifrost/pull/64) by [0x5487](https://github.com/0x5487))
 - Bump `hertz` to v0.10.1 ([#62](https://github.com/nite-coder/bifrost/pull/62) by [0x5487](https://github.com/0x5487))
 - Bump `prometheus` to v1.23.0 ([#62](https://github.com/nite-coder/bifrost/pull/62) by [0x5487](https://github.com/0x5487))
+- Bump `golang-lint` to v2.4.0 ([#65](https://github.com/nite-coder/bifrost/pull/65) by [0x5487](https://github.com/0x5487))
 
 ## [0.5.0] (2025-06-28)
 
