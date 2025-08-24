@@ -15,7 +15,7 @@ jobs:
         id: go
 
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build
         run: go build ./...
@@ -24,11 +24,11 @@ jobs:
     name: lint
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: v1.64.8
+          version: v2.4
           args: --timeout=10m
           working-directory: ./pkg
 
@@ -50,7 +50,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Test Go code
         run: go test -race -coverprofile=cover.out -covermode=atomic ./pkg/...
