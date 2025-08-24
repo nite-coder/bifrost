@@ -1,6 +1,6 @@
 # Bifrost [![GoDoc][doc-img]][doc] [![Build][ci-img]][ci] [![GoReport][report-img]][report] [![Security][security-img]][security] [![Coverage Status][cov-img]][cov]
 
-A low latency and high throughput API Gateway library written in Go.
+A low-latency and high-throughput API gateway library in Go
 
 ## Reasons to use Bifrost
 
