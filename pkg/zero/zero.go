@@ -4,10 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/bytedance/sonic"
-	"github.com/nite-coder/bifrost/internal/pkg/safety"
-	"github.com/nite-coder/blackbear/pkg/cast"
-	proxyproto "github.com/pires/go-proxyproto"
 	"log/slog"
 	"net"
 	"os"
@@ -17,6 +13,11 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/bytedance/sonic"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
+	"github.com/nite-coder/blackbear/pkg/cast"
+	proxyproto "github.com/pires/go-proxyproto"
 )
 
 type CommandRunner interface {
@@ -36,7 +37,7 @@ type FileOpener func(name string) (*os.File, error)
 type defaultCommandRunner struct{}
 
 func (d *defaultCommandRunner) Command(name string, arg ...string) *exec.Cmd {
-	return exec.Command(name, arg...)
+	return exec.CommandContext(context.TODO(), name, arg...)
 }
 
 var defaultEnvGetter = os.Getenv
@@ -128,7 +129,8 @@ func (z *ZeroDownTime) Close(ctx context.Context) error {
 	return nil
 }
 func (z *ZeroDownTime) Upgrade() error {
-	conn, err := net.Dial("unix", z.options.GetUpgradeSock())
+	dialer := &net.Dialer{}
+	conn, err := dialer.DialContext(context.Background(), "unix", z.options.GetUpgradeSock())
 	if err != nil {
 		return fmt.Errorf("failed to connect to upgrade socket: %w", err)
 	}
@@ -190,7 +192,8 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 			return nil, err
 		}
 	} else {
-		listener, err = net.Listen(options.Network, options.Address)
+		config := &net.ListenConfig{}
+		listener, err = config.Listen(ctx, options.Network, options.Address)
 		if err != nil {
 			slog.Error("failed to create listener", "error", err, "addr", options.Address, "network", options.Network)
 			return nil, err
@@ -222,7 +225,8 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
-	socket, err := net.Listen("unix", z.options.GetUpgradeSock())
+	config := &net.ListenConfig{}
+	socket, err := config.Listen(ctx, "unix", z.options.GetUpgradeSock())
 	if err != nil {
 		return fmt.Errorf("failed to open upgrade socket: %w", err)
 	}
