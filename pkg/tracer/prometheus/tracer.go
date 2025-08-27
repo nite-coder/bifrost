@@ -13,17 +13,18 @@ import (
 )
 
 const (
-	labelServerID     = "server_id"
-	labelMethod       = "method"
-	labelPath         = "path"
-	labelRouteID      = "route_id"
-	labelServiceID    = "service_id"
-	labelStatusCode   = "status_code"
-	unknownLabelValue = "unknown"
+	labelServerID       = "server_id"
+	labelMethod         = "method"
+	labelPath           = "path"
+	labelRouteID        = "route_id"
+	labelServiceID      = "service_id"
+	labelStatusCode     = "status_code"
+	labelGRPCStatusCode = "grpc_status_code"
+	unknownLabelValue   = "unknown"
 )
 
 // genRequestDurationLabels make labels values.
-func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
+func genRequestDurationLabels(c *app.RequestContext, isGRPC bool) prom.Labels {
 	labels := make(prom.Labels)
 
 	serverID := variable.GetString(variable.ServerID, c)
@@ -49,6 +50,17 @@ func genRequestDurationLabels(c *app.RequestContext) prom.Labels {
 		}
 	}
 	labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
+
+	if isGRPC {
+		grpcStatusCode := ""
+		val, found := variable.Get(variable.GRPCStatusCode, c)
+
+		if found {
+			grpcStatusCode, _ = cast.ToString(val)
+		}
+
+		labels[labelGRPCStatusCode] = grpcStatusCode
+	}
 
 	return labels
 }
@@ -86,13 +98,13 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	s.httpServerActiveRequests.Dec()
 
 	reqDuration := httpFinish.Time().Sub(httpStart.Time())
-	_ = counterAdd(s.httpServerRequests, 1, genRequestDurationLabels(c))
-	_ = histogramObserve(s.httpServerRequestDuration, reqDuration, genRequestDurationLabels(c))
+	_ = counterAdd(s.httpServerRequests, 1, genRequestDurationLabels(c, true))
+	_ = histogramObserve(s.httpServerRequestDuration, reqDuration, genRequestDurationLabels(c, false))
 
 	upstreamDuration := c.GetDuration(variable.UpstreamDuration)
 
 	bifrostDuration := reqDuration - upstreamDuration
-	_ = histogramObserve(s.httpBifrostRequestDuration, bifrostDuration, genRequestDurationLabels(c))
+	_ = histogramObserve(s.httpBifrostRequestDuration, bifrostDuration, genRequestDurationLabels(c, false))
 
 	serverLabel := make(prom.Labels)
 	serverLabel[labelServerID] = serverID
@@ -135,7 +147,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 			Name: "http_server_requests",
 			Help: "Total number of HTTPs completed by the server, regardless of success or failure",
 		},
-		[]string{labelMethod, labelPath, labelStatusCode, labelServerID, labelRouteID, labelServiceID},
+		[]string{labelMethod, labelPath, labelStatusCode, labelGRPCStatusCode, labelServerID, labelRouteID, labelServiceID},
 	)
 	prom.MustRegister(httpServerRequests)
 

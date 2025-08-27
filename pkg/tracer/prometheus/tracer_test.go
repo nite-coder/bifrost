@@ -10,7 +10,9 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc/codes"
 )
 
 func TestPromethusTracer(t *testing.T) {
@@ -31,8 +33,9 @@ func TestPromethusTracer(t *testing.T) {
 		ctx.String(200, "hello get")
 	})
 
-	h.POST("/test_post", func(c context.Context, ctx *app.RequestContext) {
-		ctx.String(200, "hello post")
+	h.POST("/test_post", func(ctx context.Context, c *app.RequestContext) {
+		c.Set(variable.GRPCStatusCode, codes.OK)
+		c.String(200, "hello post")
 	})
 
 	go h.Spin()
@@ -64,10 +67,10 @@ func TestPromethusTracer(t *testing.T) {
 
 	metricsResStr := string(metricsResBytes)
 
-	//t.Log(metricsResStr)
+	// t.Log(metricsResStr)
 
-	assert.True(t, strings.Contains(metricsResStr, `http_server_requests{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`))
-	assert.True(t, strings.Contains(metricsResStr, `http_server_requests{method="POST",path="/test_post",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`))
+	assert.True(t, strings.Contains(metricsResStr, `http_server_requests{grpc_status_code="",method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`))
+	assert.True(t, strings.Contains(metricsResStr, `http_server_requests{grpc_status_code="OK",method="POST",path="/test_post",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`))
 	assert.True(t, strings.Contains(metricsResStr, `http_bifrost_request_duration_bucket{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200",le="0.005"} 10`))
 	assert.True(t, strings.Contains(metricsResStr, `http_bifrost_request_duration_bucket{method="POST",path="/test_post",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200",le="0.05"} 10`))
 	assert.True(t, strings.Contains(metricsResStr, `http_bifrost_request_duration_count{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`))

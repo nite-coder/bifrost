@@ -516,8 +516,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
 		return duration, true
 	case GRPCStatusCode:
-		status := c.GetString(GRPCStatusCode)
-		return status, true
+		return c.Get(GRPCStatusCode)
 	case GRPCMessage:
 		grpcMessage := c.GetString(GRPCMessage)
 		return grpcMessage, true

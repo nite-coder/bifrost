@@ -257,6 +257,8 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	c.Set(variable.GRPCStatusCode, codes.OK)
+
 	// If there is no trailer, set the grpc-status header to 0
 	if trailer.Len() == 0 {
 		_ = c.Response.Header.Trailer().Set("grpc-status", "0")
