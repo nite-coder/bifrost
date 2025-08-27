@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Introducing a **balancer** that empowers you to design your own balancing algorithms ([#54](https://github.com/nite-coder/bifrost/pull/54) by [0x5487](https://github.com/0x5487))
 - Upstream targets now feature tags, allowing you to build your own balancer ([#57](https://github.com/nite-coder/bifrost/pull/57) by [0x5487](https://github.com/0x5487))
 - Go 1.25 is officially supported. Support for Go 1.23 will be discontinued with the next release. ([#62](https://github.com/nite-coder/bifrost/pull/62) by [0x5487](https://github.com/0x5487))
-- Add `grpc_status_code` to `http_server_requests` metrics ([#66](https://github.com/nite-coder/bifrost/pull/66) by [0x5487](https://github.com/0x5487))
+- Add the `grpc_status_code` to the `http_server_requests` metrics ([#66](https://github.com/nite-coder/bifrost/pull/66) by [0x5487](https://github.com/0x5487))
+- Adding tracing support for gRPC services ([#67](https://github.com/nite-coder/bifrost/pull/67) by [0x5487](https://github.com/0x5487))
 
 ### Fixed
 

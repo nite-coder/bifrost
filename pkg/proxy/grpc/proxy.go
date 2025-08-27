@@ -22,6 +22,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/timecache"
+	"github.com/nite-coder/bifrost/pkg/tracing"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"go.opentelemetry.io/otel"
@@ -213,6 +214,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			trace.WithSpanKind(trace.SpanKindClient),
 		}
 		ctx, span = p.tracer.Start(ctx, fullMethodName, spanOptions...)
+		tracing.InjectGRPCMetadata(ctx, md)
 		defer func() {
 			// Extract service and method names from fullMethodName
 			// fullMethodName format: /<service-name>/<method-name>
