@@ -202,7 +202,7 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 		trace.WithSpanKind(trace.SpanKindServer),
 	}
 
-	ctx = tracing.Extract(ctx, &c.Request.Header)
+	ctx = tracing.ExtractHTTPHeader(ctx, &c.Request.Header)
 	ctx, span := m.tracer.Start(ctx, "", spanOptions...)
 
 	reqScheme := variable.GetString(variable.HTTPRequestScheme, c)

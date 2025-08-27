@@ -287,7 +287,7 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			reqMethod := cast.B2S(outReq.Method())
 			urlFull := cast.B2S(outReq.URI().FullURI())
 			ctx, span = tracer.Start(ctx, reqMethod+" "+p.options.ServiceID, spanOptions...)
-			tracing.Inject(ctx, &outReq.Header)
+			tracing.InjectHTTPHeader(ctx, &outReq.Header)
 			defer func() {
 				labels := []attribute.KeyValue{
 					semconv.HTTPRequestMethodKey.String(reqMethod),
