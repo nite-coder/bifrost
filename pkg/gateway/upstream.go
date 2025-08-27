@@ -254,13 +254,14 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				url = fmt.Sprintf("grpc://%s:%s%s", targetHost, port, addr.Path)
 			}
 			grpcOptions := grpcproxy.Options{
-				Target:      url,
-				TLSVerify:   u.serviceOptions.TLSVerify,
-				Weight:      instance.Weight(),
-				MaxFails:    maxFails,
-				FailTimeout: failTimeout,
-				Timeout:     u.serviceOptions.Timeout.GRPC,
-				Tags:        instance.Tags(),
+				Target:           url,
+				TLSVerify:        u.serviceOptions.TLSVerify,
+				Weight:           instance.Weight(),
+				MaxFails:         maxFails,
+				FailTimeout:      failTimeout,
+				IsTracingEnabled: u.bifrost.options.Tracing.Enabled,
+				Timeout:          u.serviceOptions.Timeout.GRPC,
+				Tags:             instance.Tags(),
 			}
 			grpcProxy, err := grpcproxy.New(grpcOptions)
 			if err != nil {
