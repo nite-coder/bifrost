@@ -53,7 +53,6 @@ type Options struct {
 type GRPCProxy struct {
 	failExpireAt time.Time
 	client       grpc.ClientConnInterface
-	tracer       trace.Tracer
 	options      *Options
 	id           string
 	// target is set as a reverse proxy address
@@ -93,7 +92,6 @@ func New(options Options) (*GRPCProxy, error) {
 		targetHost: addr.Host,
 		options:    &options,
 		client:     client,
-		tracer:     otel.Tracer("bifrost"),
 		tags:       options.Tags,
 	}, nil
 }
@@ -209,46 +207,49 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}
 
 	if p.options.IsTracingEnabled {
-		var span trace.Span
-		spanOptions := []trace.SpanStartOption{
-			trace.WithSpanKind(trace.SpanKindClient),
-		}
-		ctx, span = p.tracer.Start(ctx, fullMethodName, spanOptions...)
-		tracing.InjectGRPCMetadata(ctx, md)
-		defer func() {
-			// Extract service and method names from fullMethodName
-			// fullMethodName format: /<service-name>/<method-name>
-			serviceName := ""
-			methodName := ""
-			if idx := strings.LastIndex(fullMethodName, "/"); idx != -1 {
-				methodName = fullMethodName[idx+1:]
-				serviceName = fullMethodName[1:idx]
+		tracer := otel.Tracer("bifrost")
+		if tracer != nil {
+			var span trace.Span
+			spanOptions := []trace.SpanStartOption{
+				trace.WithSpanKind(trace.SpanKindClient),
 			}
+			ctx, span = tracer.Start(ctx, fullMethodName, spanOptions...)
+			tracing.InjectGRPCMetadata(ctx, md)
+			defer func() {
+				// Extract service and method names from fullMethodName
+				// fullMethodName format: /<service-name>/<method-name>
+				serviceName := ""
+				methodName := ""
+				if idx := strings.LastIndex(fullMethodName, "/"); idx != -1 {
+					methodName = fullMethodName[idx+1:]
+					serviceName = fullMethodName[1:idx]
+				}
 
-			labels := []attribute.KeyValue{
-				semconv.RPCSystemGRPC,
-				semconv.RPCService(serviceName),
-				semconv.RPCMethod(methodName),
-				semconv.ServerAddress(p.targetHost),
-			}
+				labels := []attribute.KeyValue{
+					semconv.RPCSystemGRPC,
+					semconv.RPCService(serviceName),
+					semconv.RPCMethod(methodName),
+					semconv.ServerAddress(p.targetHost),
+				}
 
-			grpcStatusCode, ok := c.Get(variable.GRPCStatusCode)
-			if ok {
-				code := grpcStatusCode.(uint32)
-				if code != uint32(codes.OK) {
-					span.SetStatus(otelcodes.Error, c.GetString(variable.GRPCMessage))
-					labels = append(labels, attribute.Int64("rpc.grpc.status_code", int64(code)))
-					labels = append(labels, attribute.String("rpc.grpc.message", c.GetString(variable.GRPCMessage)))
+				grpcStatusCode, ok := c.Get(variable.GRPCStatusCode)
+				if ok {
+					code := grpcStatusCode.(codes.Code)
+					if code != codes.OK {
+						span.SetStatus(otelcodes.Error, c.GetString(variable.GRPCMessage))
+						labels = append(labels, attribute.Int64("rpc.grpc.status_code", int64(code)))
+						labels = append(labels, attribute.String("rpc.grpc.message", c.GetString(variable.GRPCMessage)))
+					} else {
+						span.SetStatus(otelcodes.Ok, "")
+					}
 				} else {
 					span.SetStatus(otelcodes.Ok, "")
 				}
-			} else {
-				span.SetStatus(otelcodes.Ok, "")
-			}
 
-			span.SetAttributes(labels...)
-			span.End()
-		}()
+				span.SetAttributes(labels...)
+				span.End()
+			}()
+		}
 	}
 
 	// Call the grpc client with the request
