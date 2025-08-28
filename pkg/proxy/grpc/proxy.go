@@ -232,18 +232,18 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 					semconv.ServerAddress(p.targetHost),
 				}
 
-				grpcStatusCode, ok := c.Get(variable.GRPCStatusCode)
-				if ok {
-					code := grpcStatusCode.(codes.Code)
-					if code != codes.OK {
-						span.SetStatus(otelcodes.Error, c.GetString(variable.GRPCMessage))
-						labels = append(labels, attribute.Int64("rpc.grpc.status_code", int64(code)))
-						labels = append(labels, attribute.String("rpc.grpc.message", c.GetString(variable.GRPCMessage)))
-					} else {
-						span.SetStatus(otelcodes.Ok, "")
+				grpcStatusCode, found := c.Get(variable.GRPCStatusCode)
+				if found {
+					code, ok := grpcStatusCode.(codes.Code)
+					if ok {
+						if code != codes.OK {
+							span.SetStatus(otelcodes.Error, c.GetString(variable.GRPCMessage))
+							labels = append(labels, attribute.Int64("rpc.grpc.status_code", int64(code)))
+							labels = append(labels, attribute.String("rpc.grpc.message", c.GetString(variable.GRPCMessage)))
+						} else {
+							span.SetStatus(otelcodes.Ok, "")
+						}
 					}
-				} else {
-					span.SetStatus(otelcodes.Ok, "")
 				}
 
 				span.SetAttributes(labels...)
@@ -310,7 +310,7 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 		// If it's not a gRPC status error, create an internal error
 		st = status.New(codes.Internal, err.Error())
 	}
-	c.Set(variable.GRPCStatusCode, uint32(st.Code()))
+	c.Set(variable.GRPCStatusCode, st.Code())
 	c.Set(variable.GRPCMessage, st.Message())
 	logger.Error("failed to invoke grpc server",
 		slog.String("error", err.Error()),
