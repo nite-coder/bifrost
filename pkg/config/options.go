@@ -261,7 +261,7 @@ type DiscoveryOptions struct {
 
 type BalancerOptions struct {
 	Type   string `yaml:"type" json:"type"`
-	Params any    `yaml:"any" json:"any"`
+	Params any    `yaml:"params" json:"params"`
 }
 
 type UpstreamOptions struct {
