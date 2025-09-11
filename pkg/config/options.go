@@ -258,9 +258,15 @@ type DiscoveryOptions struct {
 	Namespace string `yaml:"namespace" json:"namespace"`
 	Name      string `yaml:"name" json:"name"`
 }
+
+type BalancerOptions struct {
+	Type   string `yaml:"type" json:"type"`
+	Params any    `yaml:"any" json:"any"`
+}
+
 type UpstreamOptions struct {
 	ID          string             `yaml:"-" json:"-"`
-	Balancer    string             `yaml:"balancer" json:"balancer"`
+	Balancer    BalancerOptions    `yaml:"balancer" json:"balancer"`
 	HashOn      string             `yaml:"hash_on" json:"hash_on"`
 	Discovery   DiscoveryOptions   `yaml:"discovery" json:"discovery"`
 	Targets     []TargetOptions    `yaml:"targets" json:"targets"`

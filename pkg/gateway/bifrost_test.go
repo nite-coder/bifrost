@@ -51,7 +51,9 @@ func TestBifrost(t *testing.T) {
 	}
 
 	options.Upstreams["backend"] = config.UpstreamOptions{
-		Balancer: "round_robin",
+		Balancer: config.BalancerOptions{
+			Type: "round_robin",
+		},
 		Targets: []config.TargetOptions{
 			{
 				Target: "127.0.0.1",

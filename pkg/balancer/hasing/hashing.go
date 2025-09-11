@@ -2,6 +2,7 @@ package hasing
 
 import (
 	"context"
+	"errors"
 	"hash"
 	"hash/fnv"
 
@@ -9,18 +10,28 @@ import (
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 func init() {
-	_ = balancer.Register([]string{"hashing"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
-		hashon, err := cast.ToString(params)
-		if err != nil {
-			return nil, err
+	_ = balancer.Register([]string{"hashing", "chash"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
+		if params == nil {
+			return nil, errors.New("params can't be empty")
 		}
+		var hashon string
+		if val, ok := params.(map[string]any); ok {
+			hashon, ok = val["hash_on"].(string)
+			if !ok {
+				return nil, errors.New("hash_on is not set or hash_on is invalid")
+			}
+		}
+
 		b := NewBalancer(proxies, hashon)
 		return b, nil
 	})
+}
+
+type Options struct {
+	HashOn int `mapstructure:"hash_on"`
 }
 
 type HashingBalancer struct {

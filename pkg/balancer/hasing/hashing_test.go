@@ -53,7 +53,15 @@ func TestHashing(t *testing.T) {
 		}
 
 		for _, key := range keys {
-			b := NewBalancer(proxies, "$var.uid")
+			factory := balancer.Factory("hashing")
+
+			params := map[string]any{
+				"hash_on": "$var.uid",
+			}
+
+			b, err := factory(proxies, params)
+			assert.NoError(t, err)
+
 			hzctx := app.NewContext(0)
 			hzctx.Set("uid", key)
 			proxy, err := b.Select(context.Background(), hzctx)

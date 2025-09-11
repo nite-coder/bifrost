@@ -310,8 +310,8 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		slog.Debug("upstream refresh success", "upstream_id", u.options.ID, "proxy_id", updatedProxies[0].ID(), "len", len(updatedProxies))
 	}
 
-	factory := balancer.Factory(string(u.options.Balancer))
-	balancer, err := factory(updatedProxies, u.options)
+	factory := balancer.Factory(string(u.options.Balancer.Type))
+	balancer, err := factory(updatedProxies, u.options.Balancer.Params)
 	if err != nil {
 		return err
 	}

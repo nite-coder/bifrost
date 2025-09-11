@@ -32,9 +32,11 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 	}
 
 	upstreamOptions := config.UpstreamOptions{
-		ID:       "test",
-		Balancer: "round_robin",
-		Targets:  targetOptions,
+		ID: "test",
+		Balancer: config.BalancerOptions{
+			Type: "round_robin",
+		},
+		Targets: targetOptions,
 	}
 
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
@@ -63,9 +65,11 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 		bifrost,
 		testService,
 		config.UpstreamOptions{
-			ID:       "test",
-			Balancer: "round_robin",
-			Targets:  targetOptions,
+			ID: "test",
+			Balancer: config.BalancerOptions{
+				Type: "round_robin",
+			},
+			Targets: targetOptions,
 		},
 	)
 
@@ -84,9 +88,11 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 			URL:      "http://test",
 		},
 		config.UpstreamOptions{
-			ID:       "test",
-			Balancer: "round_robin",
-			Targets:  targetOptions,
+			ID: "test",
+			Balancer: config.BalancerOptions{
+				Type: "round_robin",
+			},
+			Targets: targetOptions,
 		},
 	)
 	assert.NoError(t, err)

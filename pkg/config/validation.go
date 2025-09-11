@@ -108,7 +108,7 @@ func validateProviders(mainOptions Options) error {
 				return fmt.Errorf("the endpoint '%s' is invalid for nacos config provider, error: %w", endpoint, err)
 			}
 
-			if (!strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://")) {
+			if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
 				return fmt.Errorf("the endpoint '%s' is invalid for nacos config provider.  It should start with http:// or https://", endpoint)
 			}
 		}
@@ -129,7 +129,7 @@ func validateProviders(mainOptions Options) error {
 				return fmt.Errorf("the endpoint '%s' is invalid for nacos discovery provider, error: %w", endpoint, err)
 			}
 
-			if (!strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://")) {
+			if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
 				return fmt.Errorf("the endpoint '%s' is invalid for nacos discovery provider.  It should start with http:// or https://", endpoint)
 			}
 		}
@@ -444,7 +444,7 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 					}
 				} else {
 					ip := net.ParseIP(hostname)
-					if (!IsValidDomain(hostname) && ip == nil) {
+					if !IsValidDomain(hostname) && ip == nil {
 						return fmt.Errorf("the upstream '%s' can't be found in the service '%s'", hostname, serviceID)
 					}
 				}
@@ -484,8 +484,8 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 			return newInvalidConfig(structure, "", msg)
 		}
 
-		factory := balancer.Factory(upstreamOptions.Balancer)
-		if factory == nil && upstreamOptions.Balancer == "" {
+		factory := balancer.Factory(upstreamOptions.Balancer.Type)
+		if factory == nil && upstreamOptions.Balancer.Type == "" {
 		} else if factory == nil {
 			msg := fmt.Sprintf("the strategy '%s' for the upstream '%s' is not supported", upstreamOptions.Balancer, upstreamID)
 			structure := []string{"upstreams", upstreamID, "strategy"}
