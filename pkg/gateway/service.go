@@ -132,8 +132,10 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 
 	// direct proxy
 	upstreamOptions := config.UpstreamOptions{
-		ID:       uuid.NewString(),
-		Balancer: "round_robin",
+		ID: uuid.NewString(),
+		Balancer: config.BalancerOptions{
+			Type: "round_robin",
+		},
 		Targets: []config.TargetOptions{
 			{
 				Target: hostname,
@@ -150,6 +152,10 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	upstream.watch()
 
 	return svc, nil
+}
+
+func (svc *Service) Upstream() *Upstream {
+	return svc.upstream
 }
 
 func (svc *Service) Middlewares() []app.HandlerFunc {
@@ -229,10 +235,14 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		proxy, err = balaner.Select(ctx, c)
 	}
 
-	if proxy == nil || errors.Is(err, balancer.ErrNotAvailable) {
+	if proxy == nil || err != nil {
 		// no live upstream
 		c.SetStatusCode(503)
-		return
+
+		if !errors.Is(err, balancer.ErrNotAvailable) {
+			_ = c.Error(err)
+			return
+		}
 	}
 
 	startTime := timecache.Now()

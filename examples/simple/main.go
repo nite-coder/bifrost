@@ -13,7 +13,9 @@ func main() {
 
 	// setup upstream
 	options.Upstreams["test_upstream"] = config.UpstreamOptions{
-		Balancer: "round_robin",
+		Balancer: config.BalancerOptions{
+			Type: "round_robin",
+		},
 		Targets: []config.TargetOptions{
 			{
 				Target: "127.0.0.1:8000",

@@ -8,7 +8,7 @@
 			// Update the VARIANT arg to pick a version of Go: 1, 1.19, 1.18
 			// Append -bullseye or -buster to pin to an OS version.
 			// Use -bullseye variants on local arm64/Apple Silicon.
-			"VARIANT": "1.24-bookworm",
+			"VARIANT": "1.25-bookworm",
 			// Options
 			"NODE_VERSION": "none"
 		}
@@ -81,7 +81,7 @@
 				"IBM.output-colorizer", // Colorize your output/test logs
 				"mohsen1.prettify-json", // Prettify JSON data
 				"zxh404.vscode-proto3", // Supports Proto syntax
-				//"codeium.codeium",
+				"rooveterinaryinc.roo-cline",
 				"takumii.markdowntable"
 				// "jrebocho.vscode-random", // Generates random values
 				// "alefragnani.Bookmarks", // Manage bookmarks
