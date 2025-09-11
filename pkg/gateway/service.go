@@ -240,7 +240,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		c.SetStatusCode(503)
 
 		if !errors.Is(err, balancer.ErrNotAvailable) {
-			c.Error(err)
+			_ = c.Error(err)
 			return
 		}
 	}
