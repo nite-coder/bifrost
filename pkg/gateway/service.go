@@ -154,6 +154,10 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	return svc, nil
 }
 
+func (svc *Service) Upstream() *Upstream {
+	return svc.upstream
+}
+
 func (svc *Service) Middlewares() []app.HandlerFunc {
 	return svc.middlewares
 }
@@ -231,10 +235,14 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		proxy, err = balaner.Select(ctx, c)
 	}
 
-	if proxy == nil || errors.Is(err, balancer.ErrNotAvailable) {
+	if proxy == nil || err != nil {
 		// no live upstream
 		c.SetStatusCode(503)
-		return
+
+		if !errors.Is(err, balancer.ErrNotAvailable) {
+			c.Error(err)
+			return
+		}
 	}
 
 	startTime := timecache.Now()
