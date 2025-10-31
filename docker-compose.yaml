@@ -25,31 +25,36 @@ services:
     - "9849:9849"
 
   redis-node-0:
-    image: bitnami/redis-cluster:latest
+    image: redis:7-alpine
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes.conf --port 6379 --appendonly yes --requirepass bitnami
     ports:
       - '7000:6379'
-    environment:
-      - REDIS_PASSWORD=bitnami
-      - REDISCLI_AUTH=bitnami
-      - REDIS_NODES=redis-node-0 redis-node-1 redis-node-2
-      - REDIS_CLUSTER_REPLICAS=0
-      - REDIS_CLUSTER_CREATOR=yes
+    networks:
+      - redis-cluster-network
 
   redis-node-1:
-    image: bitnami/redis-cluster:latest
+    image: redis:7-alpine
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes.conf --port 6379 --appendonly yes --requirepass bitnami
     ports:
       - '7001:6379'
-    environment:
-      - REDIS_PASSWORD=bitnami
-      - REDIS_NODES=redis-node-0 redis-node-1 redis-node-2
-      - REDIS_CLUSTER_REPLICAS=0
+    networks:
+      - redis-cluster-network
 
   redis-node-2:
-    image: bitnami/redis-cluster:latest
+    image: redis:7-alpine
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes.conf --port 6379 --appendonly yes --requirepass bitnami
     ports:
       - '7002:6379'
-    environment:
-      - REDIS_PASSWORD=bitnami
-      - REDIS_NODES=redis-node-0 redis-node-1 redis-node-2
-      - REDIS_CLUSTER_REPLICAS=0
+    networks:
+      - redis-cluster-network
+
+  redis-cluster-init:
+    image: redis:7-alpine
+    command: redis-cli -a bitnami --cluster create redis-node-0:6379 redis-node-1:6379 redis-node-2:6379 --cluster-replicas 0 --cluster-yes
+    depends_on:
+      - redis-node-0
+      - redis-node-1
+      - redis-node-2
+    networks:
+      - redis-cluster-network
 
