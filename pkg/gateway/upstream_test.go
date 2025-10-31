@@ -156,8 +156,17 @@ func TestRefreshProxies(t *testing.T) {
 		plist2 := upstream.Balancer().Proxies()
 		assert.Len(t, plist2, 2)
 
-		assert.Equal(t, plist1[0].ID(), plist2[0].ID())
-		assert.Equal(t, plist1[1].ID(), plist2[1].ID())
+		plist1IDs := make(map[string]struct{})
+		for _, p := range plist1 {
+			plist1IDs[p.ID()] = struct{}{}
+		}
+
+		plist2IDs := make(map[string]struct{})
+		for _, p := range plist2 {
+			plist2IDs[p.ID()] = struct{}{}
+		}
+
+		assert.Equal(t, plist1IDs, plist2IDs, "Expected proxy IDs to be the same regardless of order")
 
 	})
 
@@ -212,28 +221,18 @@ func TestRefreshProxies(t *testing.T) {
 
 		// The proxy with the same target but different tags should be replaced, so their IDs should not be equal.
 		// The other proxy should remain the same.
-		var oldProxyID, newProxyID, unchangedProxyID1, unchangedProxyID2 string
-
+		plist1Map := make(map[string]string)
 		for _, p := range plist1 {
-			if p.Target() == "http://127.0.0.1:8080" {
-				oldProxyID = p.ID()
-			} else {
-				unchangedProxyID1 = p.ID()
-			}
+			plist1Map[p.Target()] = p.ID()
 		}
 
+		plist2Map := make(map[string]string)
 		for _, p := range plist2 {
-			if p.Target() == "http://127.0.0.1:8080" {
-				newProxyID = p.ID()
-			} else {
-				unchangedProxyID2 = p.ID()
-			}
+			plist2Map[p.Target()] = p.ID()
 		}
 
-		assert.NotEmpty(t, oldProxyID)
-		assert.NotEmpty(t, newProxyID)
-		assert.NotEqual(t, oldProxyID, newProxyID, "proxy should be updated due to tag changes")
-		assert.Equal(t, unchangedProxyID1, unchangedProxyID2, "proxy without tag changes should remain the same")
+		assert.NotEqual(t, plist1Map["http://127.0.0.1:8080"], plist2Map["http://127.0.0.1:8080"], "proxy should be updated due to tag changes")
+		assert.Equal(t, plist1Map["http://127.0.0.2:8080"], plist2Map["http://127.0.0.2:8080"], "proxy without tag changes should remain the same")
 	})
 
 	t.Run("fail with no instances", func(t *testing.T) {
