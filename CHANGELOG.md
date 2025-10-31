@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Change balancer in upstream options and allow to pass params ([#68](https://github.com/nite-coder/bifrost/pull/68) by [0x5487](https://github.com/0x5487))
 - Improve proxy update detection by hashing both target and tags ([#69](https://github.com/nite-coder/bifrost/pull/69) by [0x5487](https://github.com/0x5487))
 - Drop Go v1.23 support ([#70](https://github.com/nite-coder/bifrost/pull/70) by [0x5487](https://github.com/0x5487))
-- Replace bitnami redis cluster to offical redis docker image ([#70](https://github.com/nite-coder/bifrost/pull/71) by [0x5487](https://github.com/0x5487))
+- Replace bitnami redis cluster to offical redis docker image ([#71](https://github.com/nite-coder/bifrost/pull/71) by [0x5487](https://github.com/0x5487))
 
 ## [0.6.0] (2025-08-30)
 
