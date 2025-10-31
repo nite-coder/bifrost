@@ -76,7 +76,6 @@ func startRedisCluster(t *testing.T) func() {
 	node0, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "redis-node-0",
 		Repository: "public.ecr.aws/bitnami/redis-cluster:latest",
-		Tag:        "latest",
 		Env: []string{
 			"REDIS_PASSWORD=bitnami",
 			"REDISCLI_AUTH=bitnami",
@@ -96,7 +95,6 @@ func startRedisCluster(t *testing.T) func() {
 	node1, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "redis-node-1",
 		Repository: "public.ecr.aws/bitnami/redis-cluster:latest",
-		Tag:        "latest",
 		Env: []string{
 			"REDIS_PASSWORD=bitnami",
 			"REDIS_NODES=redis-node-0 redis-node-1 redis-node-2",
@@ -115,7 +113,6 @@ func startRedisCluster(t *testing.T) func() {
 	node2, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "redis-node-2",
 		Repository: "public.ecr.aws/bitnami/redis-cluster:latest",
-		Tag:        "latest",
 		Env: []string{
 			"REDIS_PASSWORD=bitnami",
 			"REDIS_NODES=redis-node-0 redis-node-1 redis-node-2",
