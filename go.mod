@@ -1,6 +1,6 @@
 module github.com/nite-coder/bifrost
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/bytedance/sonic v1.14.0
