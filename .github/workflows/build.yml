@@ -40,7 +40,7 @@ jobs:
         go-version: ["1.24", "1.25"]
     services:
       dind:
-        image: docker:29.0-rc-dind-rootless
+        image: docker:29-rc-dind-rootless
         ports:
           - 2375:2375
     steps:
