@@ -376,6 +376,10 @@ func (p *HTTPProxy) Tag(key string) (value string, exist bool) {
 	return val, found
 }
 
+func (p *HTTPProxy) Tags() map[string]string {
+	return p.tags
+}
+
 func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err error) {
 	if err == nil {
 		return

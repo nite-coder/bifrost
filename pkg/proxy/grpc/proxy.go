@@ -158,6 +158,10 @@ func (p *GRPCProxy) Tag(key string) (value string, exist bool) {
 	return val, found
 }
 
+func (p *GRPCProxy) Tags() map[string]string {
+	return p.tags
+}
+
 // ServeHTTP implements the http.Handler interface
 func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)

@@ -19,4 +19,5 @@ type Proxy interface {
 	AddFailedCount(count uint) error
 	ServeHTTP(c context.Context, ctx *app.RequestContext)
 	Tag(key string) (value string, exist bool)
+	Tags() map[string]string
 }

@@ -153,6 +153,81 @@ func TestRefreshProxies(t *testing.T) {
 
 	})
 
+	t.Run("success with updated tags", func(t *testing.T) {
+		dnsResolver, err := resolver.NewResolver(resolver.Options{})
+		assert.NoError(t, err)
+
+		upstream := &Upstream{
+			bifrost: &Bifrost{
+				options: &config.Options{
+					SkipResolver: true,
+				},
+				resolver: dnsResolver,
+			},
+			options: &config.UpstreamOptions{
+				ID: "test",
+				Discovery: config.DiscoveryOptions{
+					Type: "dns",
+					Name: "test.service",
+				},
+			},
+			serviceOptions: &config.ServiceOptions{
+				Protocol: config.ProtocolHTTP,
+				URL:      "http://test.service",
+			},
+		}
+
+		addr1, err := net.ResolveTCPAddr("tcp", "127.0.0.1:8080")
+		assert.NoError(t, err)
+		ins1 := provider.NewInstance(addr1, 2)
+		ins1.SetTag("version", "v1")
+
+		addr2, err := net.ResolveTCPAddr("tcp", "127.0.0.2:8080")
+		assert.NoError(t, err)
+		ins2 := provider.NewInstance(addr2, 3)
+
+		// first refresh
+		instances1 := []provider.Instancer{ins1, ins2}
+		err = upstream.refreshProxies(instances1)
+		assert.NoError(t, err)
+		plist1 := upstream.Balancer().Proxies()
+		assert.Len(t, plist1, 2)
+
+		// second refresh with updated tags
+		ins1WithNewTags := provider.NewInstance(addr1, 2)
+		ins1WithNewTags.SetTag("version", "v2")
+		instances2 := []provider.Instancer{ins1WithNewTags, ins2}
+		err = upstream.refreshProxies(instances2)
+		assert.NoError(t, err)
+		plist2 := upstream.Balancer().Proxies()
+		assert.Len(t, plist2, 2)
+
+		// The proxy with the same target but different tags should be replaced, so their IDs should not be equal.
+		// The other proxy should remain the same.
+		var oldProxyID, newProxyID, unchangedProxyID1, unchangedProxyID2 string
+
+		for _, p := range plist1 {
+			if p.Target() == "http://127.0.0.1:8080" {
+				oldProxyID = p.ID()
+			} else {
+				unchangedProxyID1 = p.ID()
+			}
+		}
+
+		for _, p := range plist2 {
+			if p.Target() == "http://127.0.0.1:8080" {
+				newProxyID = p.ID()
+			} else {
+				unchangedProxyID2 = p.ID()
+			}
+		}
+
+		assert.NotEmpty(t, oldProxyID)
+		assert.NotEmpty(t, newProxyID)
+		assert.NotEqual(t, oldProxyID, newProxyID, "proxy should be updated due to tag changes")
+		assert.Equal(t, unchangedProxyID1, unchangedProxyID2, "proxy without tag changes should remain the same")
+	})
+
 	t.Run("fail with no instances", func(t *testing.T) {
 		dnsResolver, err := resolver.NewResolver(resolver.Options{})
 		assert.NoError(t, err)
