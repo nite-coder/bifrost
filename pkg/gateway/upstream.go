@@ -2,12 +2,15 @@ package gateway
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"net/url"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -127,6 +130,29 @@ func (u *Upstream) Balancer() balancer.Balancer {
 		return nil
 	}
 	return b
+}
+
+// generateProxyHash generates a unique hash for a proxy based on its target and tags.
+func generateProxyHash(p proxy.Proxy) string {
+	tags := p.Tags()
+	keys := make([]string, 0, len(tags))
+	for k := range tags {
+		keys = append(keys, k)
+	}
+	// Sort keys for consistent hash generation
+	sort.Strings(keys)
+
+	var builder strings.Builder
+	builder.WriteString(p.Target())
+	for _, k := range keys {
+		builder.WriteString(";")
+		builder.WriteString(k)
+		builder.WriteString("=")
+		builder.WriteString(tags[k])
+	}
+
+	hash := sha256.Sum256([]byte(builder.String()))
+	return hex.EncodeToString(hash[:])
 }
 
 func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
@@ -281,31 +307,32 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		}
 	}
 
+	newProxyHashes := make(map[string]proxy.Proxy)
+	for _, newProxy := range newProxies {
+		hash := generateProxyHash(newProxy)
+		newProxyHashes[hash] = newProxy
+	}
+
+	oldProxyHashes := make(map[string]proxy.Proxy)
 	for _, oldProxy := range oldProxies {
-		isFound := false
-		for _, newProxy := range newProxies {
-			if oldProxy.Target() == newProxy.Target() {
-				isFound = true
-				break
-			}
-		}
-		if isFound {
+		hash := generateProxyHash(oldProxy)
+		oldProxyHashes[hash] = oldProxy
+	}
+
+	// find the unchanged proxies (exist in both old and new)
+	for hash, oldProxy := range oldProxyHashes {
+		if _, found := newProxyHashes[hash]; found {
 			updatedProxies = append(updatedProxies, oldProxy)
 		}
 	}
-	// add new proxy if not exist in updatedProxies
-	for _, newProxy := range newProxies {
-		isFound := false
-		for _, proxy := range updatedProxies {
-			if proxy.Target() == newProxy.Target() {
-				isFound = true
-				break
-			}
-		}
-		if !isFound {
+
+	// find the new proxies (only exist in new)
+	for hash, newProxy := range newProxyHashes {
+		if _, found := oldProxyHashes[hash]; !found {
 			updatedProxies = append(updatedProxies, newProxy)
 		}
 	}
+
 	if len(updatedProxies) > 0 {
 		slog.Debug("upstream refresh success", "upstream_id", u.options.ID, "proxy_id", updatedProxies[0].ID(), "len", len(updatedProxies))
 	}
