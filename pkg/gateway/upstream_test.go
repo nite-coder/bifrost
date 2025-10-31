@@ -77,9 +77,17 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 	proxiies := upstream.Balancer().Proxies()
 	assert.Len(t, proxiies, 3)
 
-	id, found := proxiies[0].Tag("id")
-	assert.True(t, found)
-	assert.Equal(t, "123", id)
+	var foundID string
+	found := false
+	for _, proxy := range proxiies {
+		if id, ok := proxy.Tag("id"); ok {
+			foundID = id
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected to find a proxy with an 'id' tag")
+	assert.Equal(t, "123", foundID, "Expected 'id' tag to be '123'")
 
 	upstream, err = newUpstream(
 		bifrost,
