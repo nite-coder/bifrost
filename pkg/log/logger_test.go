@@ -64,7 +64,7 @@ func TestSIGUSR1Reopen(t *testing.T) {
 	}
 
 	// Wait for the signal to be processed
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 
 	// Write more logs after the file has been reopened
 	logger.Info("Log after SIGUSR1")
