@@ -7,10 +7,12 @@ import (
 	"log/slog"
 	"net/url"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
@@ -31,7 +33,10 @@ type Service struct {
 }
 
 func loadServices(bifrost *Bifrost) (map[string]*Service, error) {
-	services := map[string]*Service{}
+	services := make(map[string]*Service)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	errCh := make(chan error, len(bifrost.options.Services))
 
 	for id, serviceOptions := range bifrost.options.Services {
 		if len(id) == 0 {
@@ -39,17 +44,37 @@ func loadServices(bifrost *Bifrost) (map[string]*Service, error) {
 		}
 
 		serviceOptions.ID = id
+		currentServiceOptions := serviceOptions // Create a new variable for the goroutine
+		currentID := id                         // Create a new variable for the goroutine
 
-		_, found := services[serviceOptions.ID]
-		if found {
-			return nil, fmt.Errorf("service '%s' already exists", serviceOptions.ID)
-		}
+		wg.Add(1)
+		safety.Go(context.Background(), func() {
+			defer wg.Done()
 
-		service, err := newService(bifrost, serviceOptions)
+			service, err := newService(bifrost, currentServiceOptions)
+			if err != nil {
+				errCh <- err
+				return
+			}
+
+			mu.Lock()
+			if _, found := services[currentServiceOptions.ID]; found {
+				errCh <- fmt.Errorf("service '%s' already exists", currentServiceOptions.ID)
+				mu.Unlock()
+				return
+			}
+			services[currentID] = service
+			mu.Unlock()
+		})
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
 		if err != nil {
-			return nil, err
+			return nil, err // Return the first error encountered
 		}
-		services[serviceOptions.ID] = service
 	}
 
 	return services, nil

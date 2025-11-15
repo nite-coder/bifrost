@@ -366,14 +366,40 @@ func (u *Upstream) watch() {
 	})
 }
 func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[string]*Upstream, error) {
-	upstreams := map[string]*Upstream{}
-	for id, upstreamOpts := range bifrost.options.Upstreams {
-		upstreamOpts.ID = id
-		upstream, err := newUpstream(bifrost, serviceOpts, upstreamOpts)
-		if err != nil {
-			return nil, err
-		}
-		upstreams[id] = upstream
+	upstreams := make(map[string]*Upstream)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	errCh := make(chan error, len(bifrost.options.Upstreams))
+
+	for id, upstreamOptions := range bifrost.options.Upstreams {
+		wg.Add(1)
+		upstreamOptions.ID = id
+		currentUpstreamOpts := upstreamOptions // Create a new variable for the goroutine
+		currentID := id                        // Create a new variable for the goroutine
+
+		safety.Go(context.Background(), func() {
+			defer wg.Done()
+
+			upstream, err := newUpstream(bifrost, serviceOpts, currentUpstreamOpts)
+			if err != nil {
+				errCh <- err
+				return
+			}
+
+			mu.Lock()
+			upstreams[currentID] = upstream
+			mu.Unlock()
+		})
 	}
+
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		if err != nil {
+			return nil, err // Return the first error encountered
+		}
+	}
+
 	return upstreams, nil
 }
