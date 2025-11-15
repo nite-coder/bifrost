@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replace bitnami redis cluster to offical redis docker image ([#71](https://github.com/nite-coder/bifrost/pull/71) by [0x5487](https://github.com/0x5487))
 - Bump OpenTelemetry package to `v1.38.0` ([#72](https://github.com/nite-coder/bifrost/pull/72) by [0x5487](https://github.com/0x5487))
 - Add `k8s` provider usage details to documentation  ([#74](https://github.com/nite-coder/bifrost/pull/74) by [0x5487](https://github.com/0x5487))
+- Bump `k8s client sdk` to v0.33.6 ([#75](https://github.com/nite-coder/bifrost/pull/75) by [0x5487](https://github.com/0x5487))
 
 ## [0.6.0] (2025-08-30)
 
