@@ -72,6 +72,76 @@ providers:
 | ---------- | ---------- | -------------- | ---------------------------------------------------------------------- |
 | enabled    | `bool`     | `false`        | Enables the file provider                                              |
 
+In upstream, you need use `k8s` as discovery type
+
+```yaml
+upstreams:
+  discovery:
+    type: k8s
+    name: your-service-name
+    namespace: service-namespace
+```
+
+### Prerequisites for Kubernetes Service Discovery
+
+To enable Kubernetes service discovery for Bifrost, ensure the following Kubernetes resources are properly configured:
+
+1. **ServiceAccount**: A `ServiceAccount` must be created for the Bifrost deployment. This provides an identity for the Bifrost Pods to interact with the Kubernetes API.
+    * Example:
+
+        ```yaml
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: bifrost-sa
+        ```
+
+2. **ClusterRole**: A `ClusterRole` is required to grant permissions to access `EndpointSlice` resources. This role should allow `get`, `list`, and `watch` verbs on `endpointslices` within the `discovery.k8s.io` API group.
+    * Example:
+
+        ```yaml
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        metadata:
+          name: bifrost-role
+        rules:
+          - apiGroups: ["discovery.k8s.io"]
+            resources: ["endpointslices"]
+            verbs: ["get", "list", "watch"]
+        ```
+
+3. **ClusterRoleBinding**: A `ClusterRoleBinding` must be created to associate the `ServiceAccount` with the `ClusterRole`, thereby granting the necessary permissions.
+    * Example:
+
+        ```yaml
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRoleBinding
+        metadata:
+          name: bifrost-role-binding
+        subjects:
+          - kind: ServiceAccount
+            name: bifrost-sa
+            namespace: default # Ensure this matches your ServiceAccount's namespace
+        roleRef:
+          kind: ClusterRole
+          name: bifrost-role
+          apiGroup: rbac.authorization.k8s.io
+        ```
+
+4. **Deployment Configuration**: The Bifrost `Deployment` must specify the `serviceAccountName` to use the created `ServiceAccount`.
+    * Example:
+
+        ```yaml
+        spec:
+          serviceAccountName: bifrost-sa # Reference the created ServiceAccount
+          containers:
+            - name: bifrost
+              image: jasonsoft/bifrost:latest
+              # ... other container configurations
+        ```
+
+These configurations ensure that your Bifrost gateway has the necessary permissions to discover and monitor upstream services within your Kubernetes cluster.
+
 ## Nacos
 
 Get gateway configurations from from nacos configuration center. (http protocol only)
