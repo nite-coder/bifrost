@@ -7,14 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Add `k8s` provider usage details to documentation  ([#74](https://github.com/nite-coder/bifrost/pull/74) by [0x5487](https://github.com/0x5487))
+
 ### Changed
 
+- Enhance startup speed by concurrently loading services and upstreams. ([#76](https://github.com/nite-coder/bifrost/pull/76) by [0x5487](https://github.com/0x5487))
 - Change balancer in upstream options and allow to pass params ([#68](https://github.com/nite-coder/bifrost/pull/68) by [0x5487](https://github.com/0x5487))
 - Improve proxy update detection by hashing both target and tags ([#69](https://github.com/nite-coder/bifrost/pull/69) by [0x5487](https://github.com/0x5487))
 - Drop Go v1.23 support ([#70](https://github.com/nite-coder/bifrost/pull/70) by [0x5487](https://github.com/0x5487))
 - Replace bitnami redis cluster to offical redis docker image ([#71](https://github.com/nite-coder/bifrost/pull/71) by [0x5487](https://github.com/0x5487))
 - Bump OpenTelemetry package to `v1.38.0` ([#72](https://github.com/nite-coder/bifrost/pull/72) by [0x5487](https://github.com/0x5487))
-- Add `k8s` provider usage details to documentation  ([#74](https://github.com/nite-coder/bifrost/pull/74) by [0x5487](https://github.com/0x5487))
 - Bump `k8s client sdk` to v0.33.6 ([#75](https://github.com/nite-coder/bifrost/pull/75) by [0x5487](https://github.com/0x5487))
 
 ## [0.6.0] (2025-08-30)
