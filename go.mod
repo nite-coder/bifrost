@@ -8,7 +8,7 @@ require (
 	github.com/cloudwego/gopkg v0.1.5
 	github.com/cloudwego/hertz v0.10.1
 	github.com/cloudwego/netpoll v0.7.1
-	github.com/corazawaf/coraza-coreruleset/v4 v4.14.0
+	github.com/corazawaf/coraza-coreruleset/v4 v4.20.0
 	github.com/corazawaf/coraza/v3 v3.3.3
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-resty/resty/v2 v2.16.5
