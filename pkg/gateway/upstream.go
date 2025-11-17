@@ -377,7 +377,7 @@ func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[str
 		currentUpstreamOpts := upstreamOptions // Create a new variable for the goroutine
 		currentID := id                        // Create a new variable for the goroutine
 
-		safety.Go(context.Background(), func() {
+		go safety.Go(context.Background(), func() {
 			defer wg.Done()
 
 			upstream, err := newUpstream(bifrost, serviceOpts, currentUpstreamOpts)

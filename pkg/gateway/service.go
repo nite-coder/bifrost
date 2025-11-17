@@ -48,7 +48,7 @@ func loadServices(bifrost *Bifrost) (map[string]*Service, error) {
 		currentID := id                         // Create a new variable for the goroutine
 
 		wg.Add(1)
-		safety.Go(context.Background(), func() {
+		go safety.Go(context.Background(), func() {
 			defer wg.Done()
 
 			service, err := newService(bifrost, currentServiceOptions)
