@@ -254,6 +254,11 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 		balaner := svc.upstream.Balancer()
 		if balaner == nil {
+			logger.Warn("balancer is nil, upstream may not be initialized",
+				"upstream_id", svc.upstream.options.ID,
+				"service_id", svc.options.ID,
+			)
+			c.SetStatusCode(503)
 			return
 		}
 
@@ -266,8 +271,8 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 		if !errors.Is(err, balancer.ErrNotAvailable) {
 			_ = c.Error(err)
-			return
 		}
+		return
 	}
 
 	startTime := timecache.Now()
