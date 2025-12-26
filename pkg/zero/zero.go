@@ -566,7 +566,7 @@ func (z *ZeroDownTime) WritePIDWithLock() (*os.File, error) {
 
 	// Atomic write PID file
 	if err := z.writePID(); err != nil {
-		syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+		_ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
 		f.Close()
 		return nil, err
 	}

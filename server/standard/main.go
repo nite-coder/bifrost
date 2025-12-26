@@ -114,7 +114,7 @@ func main() {
 					slog.Error("failed to write PID with lock", "error", err)
 					return
 				}
-				defer zeroDT.ReleasePIDLock(lockFile)
+				defer func() { _ = zeroDT.ReleasePIDLock(lockFile) }()
 				slog.Debug("PID file updated successfully", "newPID", os.Getpid())
 
 				slog.Info("upgrade completed successfully",
@@ -147,7 +147,7 @@ func main() {
 					slog.Error("failed to write PID with lock", "error", err)
 					return
 				}
-				defer zeroDT.ReleasePIDLock(lockFile)
+				defer func() { _ = zeroDT.ReleasePIDLock(lockFile) }()
 				slog.Debug("daemon PID file created", "pid", os.Getpid())
 
 				slog.Info("daemon mode ready, waiting for upgrade signals", "pid", os.Getpid())

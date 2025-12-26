@@ -284,7 +284,11 @@ func Run(mainOptions config.Options) (err error) {
 				slog.Error("failed to write PID with lock", "error", err)
 				return
 			}
-			defer zeroDT.ReleasePIDLock(lockFile)
+			defer func() {
+				if err := zeroDT.ReleasePIDLock(lockFile); err != nil {
+					slog.Error("failed to release PID lock", "error", err)
+				}
+			}()
 			slog.Debug("PID file updated successfully",
 				"newPID", os.Getpid(),
 			)
@@ -326,7 +330,11 @@ func Run(mainOptions config.Options) (err error) {
 				slog.Error("failed to write PID with lock", "error", err)
 				return
 			}
-			defer zeroDT.ReleasePIDLock(lockFile)
+			defer func() {
+				if err := zeroDT.ReleasePIDLock(lockFile); err != nil {
+					slog.Error("failed to release PID lock", "error", err)
+				}
+			}()
 			slog.Debug("daemon PID file created", "pid", os.Getpid())
 
 			err = zeroDT.RemoveUpgradeSock()
