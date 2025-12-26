@@ -197,58 +197,157 @@ func Run(mainOptions config.Options) (err error) {
 	})
 
 	go safety.Go(context.Background(), func() {
-		for _, httpServer := range bifrost.httpServers {
-			for {
-				dialer := &net.Dialer{}
+		// Readiness check: verify all HTTP servers are accepting connections
+		readinessTimeout := 30 * time.Second
+		readinessStart := time.Now()
+		readinessDeadline := readinessStart.Add(readinessTimeout)
+
+		slog.Debug("starting readiness check for HTTP servers", "timeout", readinessTimeout, "serverCount", len(bifrost.httpServers))
+
+		for serverID, httpServer := range bifrost.httpServers {
+			serverReady := false
+			attempts := 0
+
+			for time.Now().Before(readinessDeadline) {
+				attempts++
+				dialer := &net.Dialer{
+					Timeout: 2 * time.Second,
+				}
 				conn, err := dialer.DialContext(ctx, "tcp", httpServer.Bind())
 				if err == nil {
 					conn.Close()
+					serverReady = true
+					slog.Debug("HTTP server is ready",
+						"serverID", serverID,
+						"bind", httpServer.Bind(),
+						"attempts", attempts,
+						"elapsed", time.Since(readinessStart).Round(time.Millisecond),
+					)
 					break
 				}
 				time.Sleep(500 * time.Millisecond)
 			}
+
+			if !serverReady {
+				slog.Error("HTTP server failed readiness check",
+					"serverID", serverID,
+					"bind", httpServer.Bind(),
+					"attempts", attempts,
+					"timeout", readinessTimeout,
+				)
+				return
+			}
 		}
 
+		readinessElapsed := time.Since(readinessStart).Round(time.Millisecond)
 		slog.Log(ctx, log.LevelNotice, "bifrost is started successfully",
 			"pid", os.Getpid(),
 			"routes", len(bifrost.options.Routes),
 			"services", len(bifrost.options.Services),
 			"middlewares", len(bifrost.options.Middlewares),
 			"upstreams", len(bifrost.options.Upstreams),
+			"readinessCheckDuration", readinessElapsed,
 		)
 
 		zeroDT := bifrost.ZeroDownTime()
 
 		if zeroDT != nil && zeroDT.IsUpgraded() {
-			// shutdown old process
-			oldPID, err := zeroDT.GetPID()
+			upgradeStart := time.Now()
+			slog.Info("upgrade process started",
+				"newPID", os.Getpid(),
+			)
+
+			// Validate old process is running before trying to quit it
+			slog.Debug("validating PID file for old process")
+			isRunning, oldPID, err := zeroDT.ValidatePIDFile()
 			if err != nil {
+				slog.Error("failed to validate PID file", "error", err)
 				return
 			}
 
-			err = zeroDT.WritePID()
-			if err != nil {
-				return
+			if !isRunning {
+				slog.Warn("old process is not running, skipping quit",
+					"pid", oldPID,
+					"reason", "process not found or already terminated",
+				)
+			} else {
+				slog.Debug("old process validated",
+					"oldPID", oldPID,
+					"isRunning", isRunning,
+				)
 			}
 
-			err = zeroDT.Quit(ctx, oldPID, false)
+			// Use WritePIDWithLock for atomic PID file handling
+			slog.Debug("acquiring PID file lock and writing new PID")
+			lockFile, err := zeroDT.WritePIDWithLock()
 			if err != nil {
+				slog.Error("failed to write PID with lock", "error", err)
 				return
 			}
+			defer func() {
+				if err := zeroDT.ReleasePIDLock(lockFile); err != nil {
+					slog.Error("failed to release PID lock", "error", err)
+				}
+			}()
+			slog.Debug("PID file updated successfully",
+				"newPID", os.Getpid(),
+			)
+
+			// Only quit old process if it was running
+			if isRunning && oldPID > 0 {
+				slog.Info("sending termination signal to old process",
+					"oldPID", oldPID,
+				)
+				quitStart := time.Now()
+				err = zeroDT.Quit(ctx, oldPID, false)
+				if err != nil {
+					slog.Error("failed to quit old process",
+						"error", err,
+						"oldPID", oldPID,
+						"elapsed", time.Since(quitStart).Round(time.Millisecond),
+					)
+					return
+				}
+				slog.Info("old process terminated successfully",
+					"oldPID", oldPID,
+					"quitDuration", time.Since(quitStart).Round(time.Millisecond),
+				)
+			}
+
+			slog.Log(ctx, log.LevelNotice, "upgrade completed successfully",
+				"oldPID", oldPID,
+				"newPID", os.Getpid(),
+				"upgradeDuration", time.Since(upgradeStart).Round(time.Millisecond),
+			)
 		}
 
 		if mainOptions.IsDaemon {
-			err = zeroDT.WritePID()
+			slog.Debug("initializing daemon mode")
+
+			// Use WritePIDWithLock for daemon mode as well
+			lockFile, err := zeroDT.WritePIDWithLock()
 			if err != nil {
-				slog.Error("failed to write pid", "error", err)
+				slog.Error("failed to write PID with lock", "error", err)
 				return
 			}
+			defer func() {
+				if err := zeroDT.ReleasePIDLock(lockFile); err != nil {
+					slog.Error("failed to release PID lock", "error", err)
+				}
+			}()
+			slog.Debug("daemon PID file created", "pid", os.Getpid())
 
 			err = zeroDT.RemoveUpgradeSock()
 			if err != nil {
 				slog.Error("failed to remove upgrade sock file", "error", err)
 				return
 			}
+			slog.Debug("upgrade socket cleaned up")
+
+			slog.Info("daemon mode ready, waiting for upgrade signals",
+				"pid", os.Getpid(),
+				"upgradeSock", mainOptions.UpgradeSock,
+			)
 			if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
 				slog.Error("failed to wait for upgrade process", "error", err)
 				return

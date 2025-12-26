@@ -71,27 +71,61 @@ func main() {
 		go func() {
 			<-done
 
-			oldPID, err := zeroDT.GetPID()
+			upgradeStart := time.Now()
+			slog.Info("upgrade process started", "newPID", os.Getpid())
+
+			// Validate old process is running before trying to quit it
+			isRunning, oldPID, err := zeroDT.ValidatePIDFile()
 			if err != nil {
-				slog.Error("failed to upgrade", "error", err)
+				slog.Error("failed to validate PID file", "error", err)
 				return
 			}
 
-			err = zeroDT.Quit(ctx, oldPID, false)
-			if err != nil {
-				return
-			}
+			if !isRunning {
+				slog.Warn("old process is not running, skipping quit",
+					"pid", oldPID,
+					"reason", "process not found or already terminated",
+				)
+			} else {
+				slog.Debug("old process validated", "oldPID", oldPID, "isRunning", isRunning)
 
-			time.Sleep(5 * time.Second)
-
-			if *daemon {
-				err = zeroDT.WritePID()
+				// Only quit old process if it was running
+				slog.Info("sending termination signal to old process", "oldPID", oldPID)
+				quitStart := time.Now()
+				err = zeroDT.Quit(ctx, oldPID, false)
 				if err != nil {
-					slog.Error("Upgrade process error", "error", err)
+					slog.Error("failed to quit old process",
+						"error", err,
+						"oldPID", oldPID,
+						"elapsed", time.Since(quitStart).Round(time.Millisecond),
+					)
 					return
 				}
+				slog.Info("old process terminated successfully",
+					"oldPID", oldPID,
+					"quitDuration", time.Since(quitStart).Round(time.Millisecond),
+				)
+			}
+
+			if *daemon {
+				// Use WritePIDWithLock for atomic PID file handling
+				lockFile, err := zeroDT.WritePIDWithLock()
+				if err != nil {
+					slog.Error("failed to write PID with lock", "error", err)
+					return
+				}
+				defer func() { _ = zeroDT.ReleasePIDLock(lockFile) }()
+				slog.Debug("PID file updated successfully", "newPID", os.Getpid())
+
+				slog.Info("upgrade completed successfully",
+					"oldPID", oldPID,
+					"newPID", os.Getpid(),
+					"upgradeDuration", time.Since(upgradeStart).Round(time.Millisecond),
+				)
+
+				slog.Info("daemon mode ready, waiting for upgrade signals", "pid", os.Getpid())
 				if err := zeroDT.WaitForUpgrade(ctx); err != nil {
-					slog.Error("Upgrade process error", "error", err)
+					slog.Error("failed to upgrade process", "error", err)
 					return
 				}
 			}
@@ -107,8 +141,18 @@ func main() {
 			<-done
 
 			if *daemon {
+				// Use WritePIDWithLock for initial daemon startup
+				lockFile, err := zeroDT.WritePIDWithLock()
+				if err != nil {
+					slog.Error("failed to write PID with lock", "error", err)
+					return
+				}
+				defer func() { _ = zeroDT.ReleasePIDLock(lockFile) }()
+				slog.Debug("daemon PID file created", "pid", os.Getpid())
+
+				slog.Info("daemon mode ready, waiting for upgrade signals", "pid", os.Getpid())
 				if err := zeroDT.WaitForUpgrade(ctx); err != nil {
-					slog.Error("Upgrade process", "error", err)
+					slog.Error("failed to upgrade process", "error", err)
 					return
 				}
 			}
