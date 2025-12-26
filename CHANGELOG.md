@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [unreleased]
+
+### Changed
+
+- Enhance hot upgrade reliability and PID file safety with atomic writes, file locking, readiness verification, and improved process lifecycle management. ([#79](https://github.com/nite-coder/bifrost/pull/79) by [0x5487](https://github.com/0x5487))
+
+
 ## [0.7.0] (2025-12-25)
 
 ### Added

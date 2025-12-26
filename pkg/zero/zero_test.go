@@ -218,7 +218,7 @@ func TestPIDOperations(t *testing.T) {
 	z := New(Options{PIDFile: tempFile.Name()})
 
 	t.Run("write pid", func(t *testing.T) {
-		err := z.WritePID()
+		err := z.writePID()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -308,5 +308,229 @@ func TestQuitProcess(t *testing.T) {
 
 		err := z.Quit(context.Background(), 123, false)
 		assert.ErrorIs(t, err, ErrKillTimeout)
+	})
+}
+
+func TestWritePIDAtomicity(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "zero_test_atomic")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	pidFile := tmpDir + "/test.pid"
+	z := New(Options{PIDFile: pidFile})
+
+	t.Run("atomic write creates temp file then renames", func(t *testing.T) {
+		err := z.writePID()
+		assert.NoError(t, err)
+
+		// Verify PID file exists
+		_, err = os.Stat(pidFile)
+		assert.NoError(t, err)
+
+		// Verify temp file is cleaned up
+		_, err = os.Stat(pidFile + ".tmp")
+		assert.True(t, os.IsNotExist(err))
+
+		// Verify content
+		pid, err := z.GetPID()
+		assert.NoError(t, err)
+		assert.Equal(t, os.Getpid(), pid)
+	})
+
+	t.Run("atomic write overwrites existing file", func(t *testing.T) {
+		// Write a different PID
+		err := os.WriteFile(pidFile, []byte("99999"), 0600)
+		assert.NoError(t, err)
+
+		// Overwrite with current PID
+		err = z.writePID()
+		assert.NoError(t, err)
+
+		pid, err := z.GetPID()
+		assert.NoError(t, err)
+		assert.Equal(t, os.Getpid(), pid)
+	})
+}
+
+func TestValidatePIDFile(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "zero_test_validate")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	pidFile := tmpDir + "/test.pid"
+
+	t.Run("no PID file exists", func(t *testing.T) {
+		z := New(Options{PIDFile: pidFile})
+
+		isRunning, pid, err := z.ValidatePIDFile()
+		assert.NoError(t, err)
+		assert.False(t, isRunning)
+		assert.Equal(t, 0, pid)
+	})
+
+	t.Run("PID file with running process", func(t *testing.T) {
+		z := New(Options{PIDFile: pidFile})
+		mp := &mockProcess{pid: os.Getpid()}
+		z.processFinder = &mockProcessFinder{proc: mp}
+
+		// Write current PID
+		err := z.writePID()
+		assert.NoError(t, err)
+
+		isRunning, pid, err := z.ValidatePIDFile()
+		assert.NoError(t, err)
+		assert.True(t, isRunning)
+		assert.Equal(t, os.Getpid(), pid)
+	})
+
+	t.Run("PID file with dead process", func(t *testing.T) {
+		z := New(Options{PIDFile: pidFile})
+		mp := &mockProcess{pid: 99999, killed: true}
+		z.processFinder = &mockProcessFinder{proc: mp}
+
+		// Write a fake PID
+		err := os.WriteFile(pidFile, []byte("99999"), 0600)
+		assert.NoError(t, err)
+
+		isRunning, pid, err := z.ValidatePIDFile()
+		assert.NoError(t, err)
+		assert.False(t, isRunning)
+		assert.Equal(t, 99999, pid)
+	})
+}
+
+func TestWritePIDWithLock(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "zero_test_lock")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	pidFile := tmpDir + "/test.pid"
+
+	t.Run("successful lock and write", func(t *testing.T) {
+		z := New(Options{PIDFile: pidFile})
+
+		lockFile, err := z.WritePIDWithLock()
+		assert.NoError(t, err)
+		assert.NotNil(t, lockFile)
+
+		// Verify PID file was written
+		pid, err := z.GetPID()
+		assert.NoError(t, err)
+		assert.Equal(t, os.Getpid(), pid)
+
+		// Release lock
+		err = z.ReleasePIDLock(lockFile)
+		assert.NoError(t, err)
+	})
+
+	t.Run("lock prevents concurrent access", func(t *testing.T) {
+		z1 := New(Options{PIDFile: pidFile})
+		z2 := New(Options{PIDFile: pidFile})
+
+		// First process acquires lock
+		lockFile1, err := z1.WritePIDWithLock()
+		assert.NoError(t, err)
+		assert.NotNil(t, lockFile1)
+
+		// Second process should fail to acquire lock
+		lockFile2, err := z2.WritePIDWithLock()
+		assert.Error(t, err)
+		assert.Nil(t, lockFile2)
+		assert.Contains(t, err.Error(), "failed to acquire lock")
+
+		// Release first lock
+		err = z1.ReleasePIDLock(lockFile1)
+		assert.NoError(t, err)
+
+		// Now second process should succeed
+		lockFile2, err = z2.WritePIDWithLock()
+		assert.NoError(t, err)
+		assert.NotNil(t, lockFile2)
+
+		err = z2.ReleasePIDLock(lockFile2)
+		assert.NoError(t, err)
+	})
+}
+
+func TestReleasePIDLock(t *testing.T) {
+	t.Run("release nil file", func(t *testing.T) {
+		z := New(Options{})
+		err := z.ReleasePIDLock(nil)
+		assert.NoError(t, err)
+	})
+}
+
+func TestQuitWithRemovePIDFile(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "zero_test_quit")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	pidFile := tmpDir + "/test.pid"
+
+	t.Run("PID file removed after process terminates", func(t *testing.T) {
+		mp := &mockProcess{pid: 123}
+		z := New(Options{
+			PIDFile:    pidFile,
+			QuitTimout: 1 * time.Second,
+		})
+		z.processFinder = &mockProcessFinder{proc: mp}
+
+		// Write PID file
+		err := os.WriteFile(pidFile, []byte("123"), 0600)
+		assert.NoError(t, err)
+
+		// Verify PID file exists before quit
+		_, err = os.Stat(pidFile)
+		assert.NoError(t, err)
+
+		// Quit with removePIDFile=true
+		err = z.Quit(context.Background(), 123, true)
+		assert.NoError(t, err)
+
+		// Verify PID file is removed after quit
+		_, err = os.Stat(pidFile)
+		assert.True(t, os.IsNotExist(err))
+	})
+
+	t.Run("PID file not removed when removePIDFile is false", func(t *testing.T) {
+		mp := &mockProcess{pid: 123}
+		z := New(Options{
+			PIDFile:    pidFile,
+			QuitTimout: 1 * time.Second,
+		})
+		z.processFinder = &mockProcessFinder{proc: mp}
+
+		// Write PID file
+		err := os.WriteFile(pidFile, []byte("123"), 0600)
+		assert.NoError(t, err)
+
+		// Quit with removePIDFile=false
+		err = z.Quit(context.Background(), 123, false)
+		assert.NoError(t, err)
+
+		// Verify PID file still exists
+		_, err = os.Stat(pidFile)
+		assert.NoError(t, err)
+	})
+
+	t.Run("no error when PID file already deleted", func(t *testing.T) {
+		mp := &mockProcess{pid: 123}
+		z := New(Options{
+			PIDFile:    pidFile + "_nonexistent",
+			QuitTimout: 1 * time.Second,
+		})
+		z.processFinder = &mockProcessFinder{proc: mp}
+
+		// Quit with removePIDFile=true on non-existent file
+		err := z.Quit(context.Background(), 123, true)
+		assert.NoError(t, err)
 	})
 }
