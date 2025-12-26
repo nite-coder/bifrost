@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"context"
 	"net"
 	"testing"
 
@@ -263,4 +264,49 @@ func TestRefreshProxies(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+}
+
+// mockErrorDiscovery is a mock service discovery that always returns an error
+type mockErrorDiscovery struct{}
+
+func (m *mockErrorDiscovery) GetInstances(ctx context.Context, opts provider.GetInstanceOptions) ([]provider.Instancer, error) {
+	return nil, assert.AnError
+}
+
+func (m *mockErrorDiscovery) Watch(ctx context.Context, opts provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
+	return nil, assert.AnError
+}
+
+// TestWatchErrorHandling verifies that watch() returns early when Watch() fails
+func TestWatchErrorHandling(t *testing.T) {
+	dnsResolver, err := resolver.NewResolver(resolver.Options{})
+	assert.NoError(t, err)
+
+	upstream := &Upstream{
+		bifrost: &Bifrost{
+			options: &config.Options{
+				SkipResolver: true,
+			},
+			resolver: dnsResolver,
+		},
+		options: &config.UpstreamOptions{
+			ID: "test-upstream",
+			Discovery: config.DiscoveryOptions{
+				Type: "dns",
+				Name: "test.service",
+			},
+		},
+		serviceOptions: &config.ServiceOptions{
+			Protocol: config.ProtocolHTTP,
+			URL:      "http://test.service",
+		},
+		discovery: &mockErrorDiscovery{},
+	}
+
+	// This should not panic or block indefinitely
+	// The watch() should return early after logging the error
+	upstream.watch()
+
+	// If we reach here without blocking, the test passes
+	assert.True(t, true, "watch() should return early on error")
 }

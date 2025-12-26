@@ -241,3 +241,58 @@ func TestDynamicServiceMiddleware(t *testing.T) {
 	dynamicService.ServeHTTP(ctx, hzCtx)
 	assert.Equal(t, 3, hit)
 }
+
+// TestServiceNoUpstream verifies that the service handles nil upstream gracefully
+// When upstream is nil, the code path hits c.Error(nil) which panics.
+// The panic is recovered and returns 500.
+func TestServiceNoUpstream(t *testing.T) {
+	service := &Service{
+		options:  &config.ServiceOptions{ID: "test-service"},
+		upstream: nil, // No upstream configured
+	}
+
+	ctx := context.Background()
+	hzCtx := app.NewContext(0)
+	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/test")
+
+	service.ServeHTTP(ctx, hzCtx)
+
+	// When upstream is nil, proxy is nil, c.Error(nil) causes panic which is recovered as 500
+	assert.Equal(t, 500, hzCtx.Response.StatusCode())
+}
+
+// TestServiceBalancerNil verifies that the service returns 503 when balancer is nil
+func TestServiceBalancerNil(t *testing.T) {
+	dnsResolver, err := resolver.NewResolver(resolver.Options{})
+	assert.NoError(t, err)
+
+	// Create upstream with nil balancer
+	upstream := &Upstream{
+		bifrost: &Bifrost{
+			options:  &config.Options{SkipResolver: true},
+			resolver: dnsResolver,
+		},
+		options: &config.UpstreamOptions{
+			ID: "test-upstream",
+		},
+		serviceOptions: &config.ServiceOptions{
+			ID:  "test-service",
+			URL: "http://test",
+		},
+		// balancer is not set (nil)
+	}
+
+	service := &Service{
+		options:  &config.ServiceOptions{ID: "test-service"},
+		upstream: upstream,
+	}
+
+	ctx := context.Background()
+	hzCtx := app.NewContext(0)
+	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/test")
+
+	service.ServeHTTP(ctx, hzCtx)
+
+	// Should return 503 when balancer is nil
+	assert.Equal(t, 503, hzCtx.Response.StatusCode())
+}

@@ -198,17 +198,17 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		if u.serviceOptions.Timeout.Read > 0 {
 			clientOpts = append(clientOpts, client.WithClientReadTimeout(u.serviceOptions.Timeout.Read))
 		} else if u.bifrost.options.Default.Service.Timeout.Read > 0 {
-			clientOpts = append(clientOpts, client.WithDialTimeout(u.bifrost.options.Default.Service.Timeout.Read))
+			clientOpts = append(clientOpts, client.WithClientReadTimeout(u.bifrost.options.Default.Service.Timeout.Read))
 		}
 		if u.serviceOptions.Timeout.Write > 0 {
 			clientOpts = append(clientOpts, client.WithWriteTimeout(u.serviceOptions.Timeout.Write))
 		} else if u.bifrost.options.Default.Service.Timeout.Write > 0 {
-			clientOpts = append(clientOpts, client.WithDialTimeout(u.bifrost.options.Default.Service.Timeout.Write))
+			clientOpts = append(clientOpts, client.WithWriteTimeout(u.bifrost.options.Default.Service.Timeout.Write))
 		}
 		if u.serviceOptions.Timeout.MaxConnWait > 0 {
 			clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(u.serviceOptions.Timeout.MaxConnWait))
 		} else if u.bifrost.options.Default.Service.Timeout.MaxConnWait > 0 {
-			clientOpts = append(clientOpts, client.WithDialTimeout(u.bifrost.options.Default.Service.Timeout.MaxConnWait))
+			clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(u.bifrost.options.Default.Service.Timeout.MaxConnWait))
 		}
 		if u.serviceOptions.MaxConnsPerHost != nil {
 			clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*u.serviceOptions.MaxConnsPerHost))
@@ -354,6 +354,7 @@ func (u *Upstream) watch() {
 		watchCh, err := u.discovery.Watch(context.Background(), options)
 		if err != nil {
 			slog.Error("failed to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
+			return
 		}
 		go safety.Go(context.Background(), func() {
 			for instances := range watchCh {
