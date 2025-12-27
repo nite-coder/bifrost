@@ -8,7 +8,6 @@ test:
 e2e-test:
 	sudo bash ./test/e2e/upgrade_test.sh
 
-
 coverage:
 	go tool cover -func=cover.out
 
@@ -33,7 +32,7 @@ rund:
 		-v "${LOCAL_WORKSPACE_FOLDER}/server/bifrost/conf:/app/conf" \
 		jasonsoft/bifrost 
 
-release: build lint test
+release: build lint test e2e-test
 
 k8s_apply:
 	kubectl apply -f ./config/k8s/bifrost_deployment.yaml -f ./config/k8s/echo_deployment.yaml
