@@ -49,6 +49,7 @@ func (b *RandomBalancer) Select(ctx context.Context, hzCtx *app.RequestContext) 
 
 	failedRecords := map[string]bool{}
 findLoop:
+	// nolint:gosec
 	selectedIndex := rand.IntN(len(b.proxies))
 	p := b.proxies[selectedIndex]
 	if p.IsAvailable() {
