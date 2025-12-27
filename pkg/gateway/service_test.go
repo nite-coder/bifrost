@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
@@ -18,7 +19,7 @@ const (
 	backendResponse = "I am the backend"
 )
 
-func testServer() *server.Hertz {
+func testServer(t *testing.T) *server.Hertz {
 	const backendResponse = "I am the backend"
 	const backendStatus = 200
 	h := server.Default(
@@ -39,7 +40,14 @@ func testServer() *server.Hertz {
 	})
 
 	go h.Spin()
-	time.Sleep(time.Second)
+	assert.Eventually(t, func() bool {
+		conn, err := net.DialTimeout("tcp", "localhost:8088", 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		return false
+	}, 10*time.Second, 100*time.Millisecond, "Server failed to start")
 	return h
 }
 
@@ -57,7 +65,7 @@ func TestClientCancelRequest(t *testing.T) {
 }
 
 func TestServices(t *testing.T) {
-	h := testServer()
+	h := testServer(t)
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
@@ -140,7 +148,7 @@ func TestServices(t *testing.T) {
 }
 
 func TestDynamicService(t *testing.T) {
-	h := testServer()
+	h := testServer(t)
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()

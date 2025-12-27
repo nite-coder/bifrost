@@ -195,13 +195,14 @@ func TestWaitForUpgrade(t *testing.T) {
 
 	go func() {
 		safety.Go(ctx, func() {
-			time.Sleep(500 * time.Millisecond)
-			conn, err := net.Dial("unix", opts.GetUpgradeSock())
-			if err != nil {
-				t.Errorf("Failed to connect to upgrade socket: %v", err)
-				return
-			}
-			conn.Close()
+			assert.Eventually(t, func() bool {
+				conn, err := net.Dial("unix", opts.GetUpgradeSock())
+				if err == nil {
+					conn.Close()
+					return true
+				}
+				return false
+			}, 2*time.Second, 50*time.Millisecond, "Failed to connect to upgrade socket")
 			z.Close(ctx)
 		})
 	}()
@@ -558,7 +559,14 @@ func TestUpgrade(t *testing.T) {
 		}()
 
 		// Give time for listener to start
-		time.Sleep(50 * time.Millisecond)
+		assert.Eventually(t, func() bool {
+			conn, err := net.Dial("unix", sockPath)
+			if err == nil {
+				conn.Close()
+				return true
+			}
+			return false
+		}, 2*time.Second, 10*time.Millisecond, "Mock listener failed to start")
 
 		err = z.Upgrade()
 		assert.NoError(t, err)
@@ -774,7 +782,9 @@ func TestCloseWithWaitingState(t *testing.T) {
 	}()
 
 	// Wait for state to change
-	time.Sleep(100 * time.Millisecond)
+	assert.Eventually(t, func() bool {
+		return z.IsWaiting()
+	}, 1*time.Second, 10*time.Millisecond, "Zero failed to enter waiting state")
 
 	// Close should work even in waiting state
 	err = z.Close(ctx)

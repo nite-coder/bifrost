@@ -107,7 +107,14 @@ func TestGRPCProxy(t *testing.T) {
 	httpServer.Use(proxy.ServeHTTP)
 
 	go httpServer.Spin()
-	time.Sleep(1 * time.Second)
+	assert.Eventually(t, func() bool {
+		conn, err := net.DialTimeout("tcp", "127.0.0.1:8001", 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)

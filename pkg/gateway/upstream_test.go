@@ -5,7 +5,6 @@ import (
 	"net"
 	"testing"
 
-	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/resolver"

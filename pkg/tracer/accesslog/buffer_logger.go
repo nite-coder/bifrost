@@ -4,9 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/nite-coder/bifrost/internal/pkg/safety"
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/variable"
 	"io"
 	"os"
 	"os/signal"
@@ -14,6 +11,10 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 // BufferedLogger is a logger that buffers log entries and writes them to a file or stderr.
@@ -57,7 +58,15 @@ func NewBufferedLogger(opts config.AccessLogOptions) (*BufferedLogger, error) {
 		logger.flushTimer = time.AfterFunc(opts.Flush, logger.periodicFlush)
 	}
 	// Start listening for SIGUSR1 signals to reopen the log file
-	go safety.Go(context.Background(), logger.listenForSignals)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGUSR1) // Register to receive SIGUSR1 signals before starting goroutine
+	go safety.Go(context.Background(), func() {
+		l := logger
+		for {
+			<-sigChan          // Wait for a SIGUSR1 signal
+			_ = l.reopenFile() // Reopen the log file
+		}
+	})
 	return logger, nil
 }
 
@@ -105,16 +114,6 @@ func (l *BufferedLogger) Close() error {
 		return l.file.Close()
 	}
 	return nil
-}
-
-// listenForSignals listens for SIGUSR1 signals to reopen the log file.
-func (l *BufferedLogger) listenForSignals() {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGUSR1) // Register to receive SIGUSR1 signals
-	for {
-		<-sigChan          // Wait for a SIGUSR1 signal
-		_ = l.reopenFile() // Reopen the log file
-	}
 }
 
 // reopenFile closes the current log file and reopens it.
