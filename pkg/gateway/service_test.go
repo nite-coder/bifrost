@@ -296,3 +296,45 @@ func TestServiceBalancerNil(t *testing.T) {
 	// Should return 503 when balancer is nil
 	assert.Equal(t, 503, hzCtx.Response.StatusCode())
 }
+
+func TestServiceGetters(t *testing.T) {
+	dnsResolver, err := resolver.NewResolver(resolver.Options{})
+	assert.NoError(t, err)
+
+	bifrost := &Bifrost{
+		resolver: dnsResolver,
+		options: &config.Options{
+			SkipResolver: true,
+		},
+	}
+
+	upstream := &Upstream{
+		bifrost: bifrost,
+		options: &config.UpstreamOptions{
+			ID: "test-upstream",
+		},
+		serviceOptions: &config.ServiceOptions{
+			URL: "http://test",
+		},
+	}
+
+	mockHandler := func(ctx context.Context, c *app.RequestContext) {}
+
+	service := &Service{
+		options:     &config.ServiceOptions{ID: "test-service"},
+		upstream:    upstream,
+		middlewares: []app.HandlerFunc{mockHandler},
+	}
+
+	t.Run("Upstream getter", func(t *testing.T) {
+		u := service.Upstream()
+		assert.NotNil(t, u)
+		assert.Equal(t, upstream, u)
+	})
+
+	t.Run("Middlewares getter", func(t *testing.T) {
+		middlewares := service.Middlewares()
+		assert.NotNil(t, middlewares)
+		assert.Len(t, middlewares, 1)
+	})
+}

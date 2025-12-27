@@ -215,4 +215,59 @@ func TestBifrost(t *testing.T) {
 		isUnknown := strings.Contains(resp.String(), "unknown")
 		assert.False(t, isUnknown, "metric endpoint has unknown labels")
 	})
+
+	t.Run("test Service lookup", func(t *testing.T) {
+		// Test existing service
+		svc, found := bifrost.Service("orders")
+		assert.True(t, found)
+		assert.NotNil(t, svc)
+
+		// Test non-existing service
+		svc, found = bifrost.Service("nonexistent")
+		assert.False(t, found)
+		assert.Nil(t, svc)
+	})
+
+	t.Run("test IsActive and SetActive", func(t *testing.T) {
+		// Initially should be active
+		assert.True(t, bifrost.IsActive())
+
+		// Test SetActive(false)
+		bifrost.SetActive(false)
+		assert.False(t, bifrost.IsActive())
+
+		// Test SetActive(true)
+		bifrost.SetActive(true)
+		assert.True(t, bifrost.IsActive())
+	})
+}
+
+func TestBifrostShutdown(t *testing.T) {
+	options := config.NewOptions()
+
+	options.Servers["test"] = config.ServerOptions{
+		Bind: "localhost:8085",
+	}
+
+	options.Services["test"] = config.ServiceOptions{
+		URL: "http://localhost:9999",
+	}
+
+	options.Upstreams["backend"] = config.UpstreamOptions{
+		Targets: []config.TargetOptions{{Target: "127.0.0.1:9999"}},
+	}
+
+	bifrost, err := NewBifrost(options, false)
+	assert.NoError(t, err)
+
+	go bifrost.Run()
+	time.Sleep(500 * time.Millisecond)
+
+	// Test Shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	err = bifrost.Shutdown(ctx)
+	assert.NoError(t, err)
+	assert.False(t, bifrost.IsActive())
 }

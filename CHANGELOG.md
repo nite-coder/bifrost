@@ -11,11 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix gateway bugs: nil pointer dereference when proxy unavailable, timeout configuration copy-paste errors, Watch error handling, and balancer nil logging. ([#80](https://github.com/nite-coder/bifrost/pull/80) by [0x5487](https://github.com/0x5487))
 - Fix upgrade order bug where WritePIDWithLock was called before Quit, causing lock contention. Add e2e upgrade tests and CI integration. ([#81](https://github.com/nite-coder/bifrost/pull/81) by [0x5487](https://github.com/0x5487))
 - Fix race condition in `pkg/zero` package and improve test coverage. ([#83](https://github.com/nite-coder/bifrost/pull/83) by [0x5487](https://github.com/0x5487))
+- Fix typo `ProviderOtions` to `ProviderOptions` in `pkg/config`. ([#84](https://github.com/nite-coder/bifrost/pull/84) by [0x5487](https://github.com/0x5487))
 
 ### Changed
 
 - Enhance hot upgrade reliability and PID file safety with atomic writes, file locking, readiness verification, and improved process lifecycle management. ([#79](https://github.com/nite-coder/bifrost/pull/79) by [0x5487](https://github.com/0x5487))
 - Refactor `hashing` balancer to `chash` (Consistent Hashing) and optimize `roundrobin`, `random`, and `weighted` balancers with improved performance and thread-safety. ([#82](https://github.com/nite-coder/bifrost/pull/82) by [0x5487](https://github.com/0x5487))
+- Improve `pkg/gateway` test coverage and code stability. ([#84](https://github.com/nite-coder/bifrost/pull/84) by [0x5487](https://github.com/0x5487))
 
 
 ## [0.7.0] (2025-12-25)

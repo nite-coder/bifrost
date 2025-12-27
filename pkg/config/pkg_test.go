@@ -81,7 +81,7 @@ func TestDynamicProvider(t *testing.T) {
 	watch := false
 
 	mainOptions := Options{
-		Providers: ProviderOtions{
+		Providers: ProviderOptions{
 			Nacos: NacosProviderOptions{
 				Config: NacosConfigOptions{
 					Enabled: true,
