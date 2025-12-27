@@ -2,6 +2,7 @@ package weighted
 
 import (
 	"context"
+	"math"
 	"testing"
 	"time"
 
@@ -91,4 +92,71 @@ func TestWeighted(t *testing.T) {
 		}
 	})
 
+	t.Run("proxies getter", func(t *testing.T) {
+		assert.Equal(t, 3, len(b.Proxies()))
+	})
+
+	t.Run("nil proxies", func(t *testing.T) {
+		b2, _ := NewBalancer(nil)
+		p, err := b2.Select(context.Background(), nil)
+		assert.ErrorIs(t, err, balancer.ErrNotAvailable)
+		assert.Nil(t, p)
+	})
+
+	t.Run("single proxy failed", func(t *testing.T) {
+		p1Options := httpproxy.Options{
+			Target:      "http://backend1",
+			Protocol:    config.ProtocolHTTP,
+			Weight:      1,
+			FailTimeout: 10 * time.Second,
+			MaxFails:    1,
+		}
+		p1, _ := httpproxy.New(p1Options, nil)
+		_ = p1.AddFailedCount(1)
+
+		bSingle, _ := NewBalancer([]proxy.Proxy{p1})
+		p, err := bSingle.Select(context.Background(), nil)
+		assert.ErrorIs(t, err, balancer.ErrNotAvailable)
+		assert.Nil(t, p)
+	})
+
+	t.Run("registration", func(t *testing.T) {
+		p1Options := httpproxy.Options{
+			Target: "http://backend1",
+		}
+		p1, _ := httpproxy.New(p1Options, nil)
+
+		factory := balancer.Factory("weighted")
+		assert.NotNil(t, factory)
+		rr, err := factory([]proxy.Proxy{p1}, nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, rr)
+
+		p, err := rr.Select(context.Background(), nil)
+		assert.NoError(t, err)
+		assert.Equal(t, "http://backend1", p.Target())
+	})
+
+	t.Run("weight clamping and default weight", func(t *testing.T) {
+		p1Options := httpproxy.Options{
+			Target: "http://backend1",
+			Weight: math.MaxInt32 + 100, // force clamping
+		}
+		p1, _ := httpproxy.New(p1Options, nil)
+
+		p2Options := httpproxy.Options{
+			Target: "http://backend2",
+			Weight: 0, // should become 1
+		}
+		p2, _ := httpproxy.New(p2Options, nil)
+
+		bLarge, err := NewBalancer([]proxy.Proxy{p1, p2})
+		assert.NoError(t, err)
+
+		p, err := bLarge.Select(context.Background(), nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, p)
+
+		assert.GreaterOrEqual(t, bLarge.totalWeight, uint32(math.MaxInt32))
+	})
 }

@@ -2,7 +2,6 @@ package roundrobin
 
 import (
 	"context"
-	"math"
 	"sync/atomic"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -17,11 +16,13 @@ func init() {
 	})
 }
 
+// RoundRobinBalancer implements a round-robin load balancing algorithm.
 type RoundRobinBalancer struct {
 	counter atomic.Uint64
 	proxies []proxy.Proxy
 }
 
+// NewBalancer creates a new RoundRobinBalancer instance.
 func NewBalancer(proxies []proxy.Proxy) *RoundRobinBalancer {
 	return &RoundRobinBalancer{
 		counter: atomic.Uint64{},
@@ -29,41 +30,45 @@ func NewBalancer(proxies []proxy.Proxy) *RoundRobinBalancer {
 	}
 }
 
+// Proxies returns the list of proxies managed by the balancer.
 func (b *RoundRobinBalancer) Proxies() []proxy.Proxy {
 	return b.proxies
 }
 
+// Select picks the next available proxy in a round-robin fashion.
+// It handles atomic counter increments and wraps around automatically.
 func (b *RoundRobinBalancer) Select(ctx context.Context, hzCtx *app.RequestContext) (proxy.Proxy, error) {
-	if b.proxies == nil {
+	if len(b.proxies) == 0 {
 		return nil, balancer.ErrNotAvailable
 	}
 
 	if len(b.proxies) == 1 {
-		proxy := b.proxies[0]
-		if proxy.IsAvailable() {
-			return proxy, nil
+		p := b.proxies[0]
+		if p.IsAvailable() {
+			return p, nil
 		}
 		return nil, balancer.ErrNotAvailable
 	}
 
-	failedReconds := map[string]bool{}
+	failedRecords := map[string]bool{}
 
 findLoop:
-	b.counter.Add(1)
-	if b.counter.Load() >= uint64(math.MaxUint64) {
-		b.counter.Store(1)
-	}
+	// Use natural wrap-around of Uint64.
+	count := b.counter.Add(1)
+
 	// By subtracting 1 from the counter value, the code is effectively making the counter 0-indexed,
 	// so that the first element in the u.proxies list is selected when the counter is at 1.
-	index := (b.counter.Load() - 1) % uint64(len(b.proxies))
-	proxy := b.proxies[index]
-	if proxy.IsAvailable() {
-		return proxy, nil
+	index := (count - 1) % uint64(len(b.proxies))
+	p := b.proxies[index]
+
+	if p.IsAvailable() {
+		return p, nil
 	}
-	// no live upstream
-	if len(failedReconds) == len(b.proxies) {
+
+	// No live upstream
+	if len(failedRecords) == len(b.proxies) {
 		return nil, balancer.ErrNotAvailable
 	}
-	failedReconds[proxy.ID()] = true
+	failedRecords[p.ID()] = true
 	goto findLoop
 }

@@ -93,4 +93,48 @@ func TestRandom(t *testing.T) {
 		}
 	})
 
+	t.Run("proxies getter", func(t *testing.T) {
+		assert.Equal(t, 3, len(b.Proxies()))
+	})
+
+	t.Run("nil proxies", func(t *testing.T) {
+		b2 := NewBalancer(nil)
+		p, err := b2.Select(context.Background(), nil)
+		assert.ErrorIs(t, err, balancer.ErrNotAvailable)
+		assert.Nil(t, p)
+	})
+
+	t.Run("single proxy failed", func(t *testing.T) {
+		p1Options := httpproxy.Options{
+			Target:      "http://backend1",
+			Protocol:    config.ProtocolHTTP,
+			Weight:      1,
+			FailTimeout: 10 * time.Second,
+			MaxFails:    1,
+		}
+		p1, _ := httpproxy.New(p1Options, nil)
+		_ = p1.AddFailedCount(1)
+
+		bSingle := NewBalancer([]proxy.Proxy{p1})
+		p, err := bSingle.Select(context.Background(), nil)
+		assert.ErrorIs(t, err, balancer.ErrNotAvailable)
+		assert.Nil(t, p)
+	})
+
+	t.Run("registration", func(t *testing.T) {
+		p1Options := httpproxy.Options{
+			Target: "http://backend1",
+		}
+		p1, _ := httpproxy.New(p1Options, nil)
+
+		factory := balancer.Factory("random")
+		assert.NotNil(t, factory)
+		rr, err := factory([]proxy.Proxy{p1}, nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, rr)
+
+		p, err := rr.Select(context.Background(), nil)
+		assert.NoError(t, err)
+		assert.Equal(t, "http://backend1", p.Target())
+	})
 }

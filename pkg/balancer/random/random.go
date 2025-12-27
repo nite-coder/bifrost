@@ -2,9 +2,7 @@ package random
 
 import (
 	"context"
-	"crypto/rand"
-	"math/big"
-	"sync/atomic"
+	"math/rand/v2"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/balancer"
@@ -18,54 +16,48 @@ func init() {
 	})
 }
 
+// RandomBalancer implements a random load balancing algorithm.
 type RandomBalancer struct {
-	counter atomic.Uint64
 	proxies []proxy.Proxy
 }
 
+// NewBalancer creates a new RandomBalancer instance.
 func NewBalancer(proxies []proxy.Proxy) *RandomBalancer {
 	return &RandomBalancer{
-		counter: atomic.Uint64{},
 		proxies: proxies,
 	}
 }
 
+// Proxies returns the list of proxies managed by the balancer.
 func (b *RandomBalancer) Proxies() []proxy.Proxy {
 	return b.proxies
 }
 
+// Select picks a random available proxy.
 func (b *RandomBalancer) Select(ctx context.Context, hzCtx *app.RequestContext) (proxy.Proxy, error) {
-	if b.proxies == nil {
+	if len(b.proxies) == 0 {
 		return nil, balancer.ErrNotAvailable
 	}
 
 	if len(b.proxies) == 1 {
-		proxy := b.proxies[0]
-		if proxy.IsAvailable() {
-			return proxy, nil
+		p := b.proxies[0]
+		if p.IsAvailable() {
+			return p, nil
 		}
 		return nil, balancer.ErrNotAvailable
 	}
 
-	failedReconds := map[string]bool{}
+	failedRecords := map[string]bool{}
 findLoop:
-	selectedIndex, _ := getRandomNumber(int64(len(b.proxies)))
-	proxy := b.proxies[selectedIndex]
-	if proxy.IsAvailable() {
-		return proxy, nil
+	selectedIndex := rand.IntN(len(b.proxies))
+	p := b.proxies[selectedIndex]
+	if p.IsAvailable() {
+		return p, nil
 	}
 	// no live upstream
-	if len(failedReconds) == len(b.proxies) {
+	if len(failedRecords) == len(b.proxies) {
 		return nil, balancer.ErrNotAvailable
 	}
-	failedReconds[proxy.ID()] = true
+	failedRecords[p.ID()] = true
 	goto findLoop
-}
-
-func getRandomNumber(max int64) (int64, error) {
-	n, err := rand.Int(rand.Reader, big.NewInt(max))
-	if err != nil {
-		return 0, err
-	}
-	return n.Int64(), nil
 }
