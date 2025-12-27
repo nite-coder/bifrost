@@ -3,6 +3,7 @@ package chash
 import (
 	"context"
 	"errors"
+	"hash/fnv"
 	"slices"
 	"sort"
 	"strconv"
@@ -106,17 +107,8 @@ func (b *HashingBalancer) Select(ctx context.Context, c *app.RequestContext) (pr
 	return nil, balancer.ErrNotAvailable
 }
 
-// fnv32a provides a stateless FNV-1a hash implementation for strings.
-// This avoids allocations and is more efficient than using the hash/fnv package for single strings.
 func fnv32a(s string) uint32 {
-	const (
-		offset32 = 2166136261
-		prime32  = 16777619
-	)
-	hash := uint32(offset32)
-	for i := 0; i < len(s); i++ {
-		hash ^= uint32(s[i])
-		hash *= prime32
-	}
-	return hash
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(s))
+	return h.Sum32()
 }
