@@ -16,7 +16,7 @@ lint:
 	golangci-lint run --timeout 5m --verbose ./pkg/... -v
 
 lintd:
-	docker run -it --rm -v "${LOCAL_WORKSPACE_FOLDER}:/app" -w /app golangci/golangci-lint:v2.4.0-alpine golangci-lint run --timeout 5m --verbose ./pkg/...
+	docker run -it --rm -v "${LOCAL_WORKSPACE_FOLDER}:/app" -w /app golangci/golangci-lint:v2.7.2-alpine golangci-lint run --timeout 5m --verbose ./pkg/...
 
 
 build:
