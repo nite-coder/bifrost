@@ -78,4 +78,4 @@ jobs:
         run: go build -o /tmp/bifrost ./server/bifrost
 
       - name: Run E2E upgrade test
-        run: ./test/e2e/upgrade_test.sh
+        run: bash ./test/e2e/upgrade_test.sh
