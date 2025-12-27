@@ -413,3 +413,96 @@ func BenchmarkCaseInsensitive(b *testing.B) {
 		assert.True(b, result)
 	}
 }
+
+func TestGetHost(t *testing.T) {
+	ctx := app.NewContext(0)
+	ctx.Request.SetHost("example.com")
+
+	getHostFn := getHost(ctx)
+
+	// First call should compute the host
+	host1 := getHostFn()
+	assert.Equal(t, "example.com", host1)
+
+	// Second call should return cached value
+	host2 := getHostFn()
+	assert.Equal(t, "example.com", host2)
+}
+
+func TestRouteAddErrors(t *testing.T) {
+	route := newRoutes()
+
+	t.Run("empty paths", func(t *testing.T) {
+		err := route.Add(config.RouteOptions{
+			Paths: []string{},
+		}, generalkHandler)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "paths can't be empty")
+	})
+
+	t.Run("exact route empty path", func(t *testing.T) {
+		err := route.Add(config.RouteOptions{
+			Paths: []string{"="},
+		}, generalkHandler)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "exact route can't be empty")
+	})
+
+	t.Run("prefix route empty path", func(t *testing.T) {
+		err := route.Add(config.RouteOptions{
+			Paths: []string{"^~"},
+		}, generalkHandler)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "prefix route can't be empty")
+	})
+
+	t.Run("regex route empty expression", func(t *testing.T) {
+		err := route.Add(config.RouteOptions{
+			Paths: []string{"~"},
+		}, generalkHandler)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "regexp expression route can't be empty")
+	})
+
+	t.Run("case insensitive regex route empty expression", func(t *testing.T) {
+		err := route.Add(config.RouteOptions{
+			Paths: []string{"~*"},
+		}, generalkHandler)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "regexp expression route can't be empty")
+	})
+
+	t.Run("invalid path format", func(t *testing.T) {
+		err := route.Add(config.RouteOptions{
+			Paths: []string{"invalid_path"},
+		}, generalkHandler)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "is invalid path")
+	})
+
+	t.Run("invalid http method", func(t *testing.T) {
+		err := route.Add(config.RouteOptions{
+			Paths:   []string{"/test"},
+			Methods: []string{"INVALID"},
+		}, generalkHandler)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not valid")
+	})
+
+	t.Run("checkRegexpRoute with methods", func(t *testing.T) {
+		regex, _ := regexp.Compile("/test/(a|b)")
+		setting := routeSetting{
+			regex:       regex,
+			route:       &config.RouteOptions{Methods: []string{"GET"}},
+			middlewares: nil,
+		}
+
+		// Should return false for non-matching method
+		result := checkRegexpRoute(setting, "POST", "/test/a")
+		assert.False(t, result)
+
+		// Should return true for matching method and path
+		result = checkRegexpRoute(setting, "GET", "/test/a")
+		assert.True(t, result)
+	})
+}

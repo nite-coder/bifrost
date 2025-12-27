@@ -310,3 +310,121 @@ func TestWatchErrorHandling(t *testing.T) {
 	// If we reach here without blocking, the test passes
 	assert.True(t, true, "watch() should return early on error")
 }
+
+func TestNewUpstreamValidation(t *testing.T) {
+	dnsResolver, err := resolver.NewResolver(resolver.Options{})
+	assert.NoError(t, err)
+
+	bifrost := &Bifrost{
+		options: &config.Options{
+			SkipResolver: true,
+		},
+		resolver: dnsResolver,
+	}
+
+	t.Run("empty upstream ID", func(t *testing.T) {
+		_, err := newUpstream(
+			bifrost,
+			config.ServiceOptions{URL: "http://test"},
+			config.UpstreamOptions{
+				ID:      "",
+				Targets: []config.TargetOptions{{Target: "127.0.0.1:8080"}},
+			},
+		)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "upstream id can't be empty")
+	})
+
+	t.Run("empty targets without discovery", func(t *testing.T) {
+		_, err := newUpstream(
+			bifrost,
+			config.ServiceOptions{URL: "http://test"},
+			config.UpstreamOptions{
+				ID:      "test",
+				Targets: []config.TargetOptions{},
+			},
+		)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "targets can't be empty")
+	})
+
+	t.Run("DNS discovery disabled", func(t *testing.T) {
+		bifrostWithDNSDisabled := &Bifrost{
+			options: &config.Options{
+				SkipResolver: true,
+				Providers: config.ProviderOptions{
+					DNS: config.DNSProviderOptions{Enabled: false},
+				},
+			},
+			resolver: dnsResolver,
+		}
+
+		_, err := newUpstream(
+			bifrostWithDNSDisabled,
+			config.ServiceOptions{URL: "http://test"},
+			config.UpstreamOptions{
+				ID: "test",
+				Discovery: config.DiscoveryOptions{
+					Type: "dns",
+					Name: "test.service",
+				},
+			},
+		)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "dns provider is disabled")
+	})
+
+	t.Run("Nacos discovery disabled", func(t *testing.T) {
+		bifrostWithNacosDisabled := &Bifrost{
+			options: &config.Options{
+				SkipResolver: true,
+				Providers: config.ProviderOptions{
+					Nacos: config.NacosProviderOptions{
+						Discovery: config.NacosDiscoveryOptions{Enabled: false},
+					},
+				},
+			},
+			resolver: dnsResolver,
+		}
+
+		_, err := newUpstream(
+			bifrostWithNacosDisabled,
+			config.ServiceOptions{URL: "http://test"},
+			config.UpstreamOptions{
+				ID: "test",
+				Discovery: config.DiscoveryOptions{
+					Type: "nacos",
+					Name: "test.service",
+				},
+			},
+		)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "nacos discovery provider is disabled")
+	})
+
+	t.Run("K8S discovery disabled", func(t *testing.T) {
+		bifrostWithK8SDisabled := &Bifrost{
+			options: &config.Options{
+				SkipResolver: true,
+				Providers: config.ProviderOptions{
+					K8S: config.K8SProviderOptions{Enabled: false},
+				},
+			},
+			resolver: dnsResolver,
+		}
+
+		_, err := newUpstream(
+			bifrostWithK8SDisabled,
+			config.ServiceOptions{URL: "http://test"},
+			config.UpstreamOptions{
+				ID: "test",
+				Discovery: config.DiscoveryOptions{
+					Type: "k8s",
+					Name: "test.service",
+				},
+			},
+		)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "k8s provider is disabled")
+	})
+}

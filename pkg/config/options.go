@@ -14,7 +14,7 @@ type Options struct {
 	Middlewares     map[string]MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
 	Services        map[string]ServiceOptions   `yaml:"services" json:"services"`
 	Upstreams       map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
-	Providers       ProviderOtions              `yaml:"providers" json:"providers"`
+	Providers       ProviderOptions             `yaml:"providers" json:"providers"`
 	configPath      string                      `yaml:"-" json:"-"`
 	PIDFile         string                      `yaml:"pid_file" json:"pid_file"`
 	UpgradeSock     string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
@@ -86,7 +86,7 @@ func (opt Options) ConfigPath() string {
 type ExperimentOptions struct {
 	ChunkedTransfer bool `yaml:"chunked_transfer" json:"chunked_transfer"`
 }
-type ProviderOtions struct {
+type ProviderOptions struct {
 	K8S   K8SProviderOptions   `yaml:"k8s" json:"k8s"`
 	Nacos NacosProviderOptions `yaml:"nacos" json:"nacos"`
 	File  FileProviderOptions  `yaml:"file" json:"file"`
