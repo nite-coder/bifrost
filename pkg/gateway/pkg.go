@@ -277,27 +277,9 @@ func Run(mainOptions config.Options) (err error) {
 				)
 			}
 
-			// Use WritePIDWithLock for atomic PID file handling
-			slog.Debug("acquiring PID file lock and writing new PID")
-			lockFile, err := zeroDT.WritePIDWithLock()
-			if err != nil {
-				slog.Error("failed to write PID with lock", "error", err)
-				return
-			}
-			defer func() {
-				if err := zeroDT.ReleasePIDLock(lockFile); err != nil {
-					slog.Error("failed to release PID lock", "error", err)
-				}
-			}()
-			slog.Debug("PID file updated successfully",
-				"newPID", os.Getpid(),
-			)
-
-			// Only quit old process if it was running
+			// Quit old process FIRST (before acquiring lock) so it releases its lock
 			if isRunning && oldPID > 0 {
-				slog.Info("sending termination signal to old process",
-					"oldPID", oldPID,
-				)
+				slog.Info("sending termination signal to old process", "oldPID", oldPID)
 				quitStart := time.Now()
 				err = zeroDT.Quit(ctx, oldPID, false)
 				if err != nil {
@@ -314,6 +296,20 @@ func Run(mainOptions config.Options) (err error) {
 				)
 			}
 
+			// Now acquire PID lock and write new PID (old process has released it)
+			slog.Debug("acquiring PID file lock and writing new PID")
+			lockFile, err := zeroDT.WritePIDWithLock()
+			if err != nil {
+				slog.Error("failed to write PID with lock", "error", err)
+				return
+			}
+			defer func() {
+				if err := zeroDT.ReleasePIDLock(lockFile); err != nil {
+					slog.Error("failed to release PID lock", "error", err)
+				}
+			}()
+			slog.Debug("PID file updated successfully", "newPID", os.Getpid())
+
 			slog.Log(ctx, log.LevelNotice, "upgrade completed successfully",
 				"oldPID", oldPID,
 				"newPID", os.Getpid(),
@@ -321,7 +317,7 @@ func Run(mainOptions config.Options) (err error) {
 			)
 		}
 
-		if mainOptions.IsDaemon {
+		if mainOptions.IsDaemon && !zeroDT.IsUpgraded() {
 			slog.Debug("initializing daemon mode")
 
 			// Use WritePIDWithLock for daemon mode as well
