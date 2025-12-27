@@ -7,3 +7,5 @@
 - Use the slog package for all logging purposes.
 - Prefer using the `any` keyword instead of `interface{}` for empty interfaces.
 - Avoid using `fmt.Sprint` or `fmt.Sprintf` for simple string concatenation in performance-critical code; use efficient alternatives like direct concatenation or the `strconv` package.
+- Always use the `-race` flag when running Go tests (e.g., `go test -race ./...`) to detect and prevent potential race conditions.
+- Run `make lint` after development to verify code quality and fix any errors found.

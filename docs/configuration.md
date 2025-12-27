@@ -367,19 +367,19 @@ upstreams:
         weight: 1
 ```
 
-| Field                             | Type                | Default       | Description                                                                                |
-| --------------------------------- | ------------------- | ------------- | ------------------------------------------------------------------------------------------ |
-| balancer.type                     | `string`            | `round_robin` | Load balancing algorithm; supports `round_robin`、`random`、`weighted`、`hashing`          |
-| balancer.params                   | `map[string]string` |               | `hash_on` variable used for hash-based load balancing, effective only if type is `hashing` |
-| discovery.type                    | `string`            |               | discovery type.  Please refer to [Provider](./providers.md)                                |
-| discovery.name                    | `string`            |               | discovery name                                                                             |
-| discovery.namespace               | `string`            |               | discovery namespace                                                                        |
-| health_check.passive.fail_timeout | `time.Duration`     | `0`           | Time window for tracking failure counts                                                    |
-| health_check.passive.max_fails    | `int32`             | `0`           | Maximum failure count; `0` - indicates no limit                                            |
-| health_check.passive.fail_timeout | `time.Duration`     | `0`           | Time window for tracking failure counts                                                    |
-| targets.target                    | `string`            |               | Target address                                                                             |
-| targets.weight                    | `int32`             | `1`           | Weight for load balancing                                                                  |
-| targets.tags                      | `map[string]string` |               | target's tags                                                                              |
+| Field                             | Type                | Default       | Description                                                                              |
+| --------------------------------- | ------------------- | ------------- | ---------------------------------------------------------------------------------------- |
+| balancer.type                     | `string`            | `round_robin` | Load balancing algorithm; supports `round_robin`、`random`、`weighted`、`chash`          |
+| balancer.params                   | `map[string]string` |               | `hash_on` variable used for hash-based load balancing, effective only if type is `chash` |
+| discovery.type                    | `string`            |               | discovery type.  Please refer to [Provider](./providers.md)                              |
+| discovery.name                    | `string`            |               | discovery name                                                                           |
+| discovery.namespace               | `string`            |               | discovery namespace                                                                      |
+| health_check.passive.fail_timeout | `time.Duration`     | `0`           | Time window for tracking failure counts                                                  |
+| health_check.passive.max_fails    | `int32`             | `0`           | Maximum failure count; `0` - indicates no limit                                          |
+| health_check.passive.fail_timeout | `time.Duration`     | `0`           | Time window for tracking failure counts                                                  |
+| targets.target                    | `string`            |               | Target address                                                                           |
+| targets.weight                    | `int32`             | `1`           | Weight for load balancing                                                                |
+| targets.tags                      | `map[string]string` |               | target's tags                                                                            |
 
 ## default
 

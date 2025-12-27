@@ -20,12 +20,11 @@ import (
 	_ "github.com/nite-coder/bifrost/pkg/middleware/uarestriction"
 
 	// register balance
-	_ "github.com/nite-coder/bifrost/pkg/balancer/hasing"
+	_ "github.com/nite-coder/bifrost/pkg/balancer/chash"
 	_ "github.com/nite-coder/bifrost/pkg/balancer/random"
 	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
 	_ "github.com/nite-coder/bifrost/pkg/balancer/weighted"
 )
-
 
 func Bifrost() error {
 	return nil
