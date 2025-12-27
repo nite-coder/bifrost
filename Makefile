@@ -3,6 +3,12 @@ test:
 	go clean -testcache
 	go test -race -coverprofile=cover.out -covermode=atomic ./pkg/... -v
 
+# E2E upgrade test requires root privileges for daemon mode
+# Run with: sudo make e2e-test
+e2e-test:
+	./test/e2e/upgrade_test.sh
+
+
 coverage:
 	go tool cover -func=cover.out
 

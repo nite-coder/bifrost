@@ -61,3 +61,21 @@ jobs:
           token: ${{secrets.CODECOV_TOKEN}}
           files: ./cover.out
           verbose: true
+
+  e2e-upgrade-test:
+    name: E2E Upgrade Test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Build bifrost
+        run: go build -o /tmp/bifrost ./server/bifrost
+
+      - name: Run E2E upgrade test
+        run: sudo bash ./test/e2e/upgrade_test.sh
