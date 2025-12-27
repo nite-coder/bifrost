@@ -2,6 +2,7 @@ package mirror
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -37,13 +38,14 @@ func TestMirror(t *testing.T) {
 	ctx := context.Background()
 	hzCtx := app.NewContext(0)
 
-	hit := 0
+	var hit atomic.Int32
 	hzCtx.SetHandlers([]app.HandlerFunc{func(ctx context.Context, c *app.RequestContext) {
-		hit++
+		hit.Add(1)
 	}})
 
 	m(ctx, hzCtx)
 
-	time.Sleep(500 * time.Millisecond)
-	assert.Equal(t, 1, hit)
+	assert.Eventually(t, func() bool {
+		return hit.Load() == 1
+	}, 2*time.Second, 100*time.Millisecond)
 }

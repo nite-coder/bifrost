@@ -156,6 +156,13 @@ func New(opts Options) *ZeroDownTime {
 	}
 }
 
+// IsWaiting returns true if the instance is in the waitingState.
+func (z *ZeroDownTime) IsWaiting() bool {
+	z.mu.Lock()
+	defer z.mu.Unlock()
+	return z.state == waitingState
+}
+
 // Close shuts down the ZeroDownTime instance by closing all listeners
 // and stopping the upgrade waiting goroutine if active.
 func (z *ZeroDownTime) Close(ctx context.Context) error {

@@ -10,7 +10,7 @@
 			// Use -bullseye variants on local arm64/Apple Silicon.
 			"VARIANT": "1.25-bookworm",
 			// Options
-			"NODE_VERSION": "none"
+			"NODE_VERSION": "24"
 		}
 	},
 	"runArgs": [
@@ -81,7 +81,6 @@
 				"IBM.output-colorizer", // Colorize your output/test logs
 				"mohsen1.prettify-json", // Prettify JSON data
 				"zxh404.vscode-proto3", // Supports Proto syntax
-				"rooveterinaryinc.roo-cline",
 				"takumii.markdowntable"
 				// "jrebocho.vscode-random", // Generates random values
 				// "alefragnani.Bookmarks", // Manage bookmarks

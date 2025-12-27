@@ -67,12 +67,9 @@ func TestLocalLimiter(t *testing.T) {
 			t.Error("6th request should be denied")
 		}
 
-		time.Sleep(options.WindowSize)
-
-		result = limiter.Allow(ctx, key)
-		if !result.Allow {
-			t.Error("Request after reset should be allowed")
-		}
+		assert.Eventually(t, func() bool {
+			return limiter.Allow(ctx, key).Allow
+		}, options.WindowSize+1*time.Second, 100*time.Millisecond, "Request after reset should be allowed")
 	})
 
 	t.Run("Concurrent requests", func(t *testing.T) {

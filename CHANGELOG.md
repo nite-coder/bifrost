@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhance hot upgrade reliability and PID file safety with atomic writes, file locking, readiness verification, and improved process lifecycle management. ([#79](https://github.com/nite-coder/bifrost/pull/79) by [0x5487](https://github.com/0x5487))
 - Refactor `hashing` balancer to `chash` (Consistent Hashing) and optimize `roundrobin`, `random`, and `weighted` balancers with improved performance and thread-safety. ([#82](https://github.com/nite-coder/bifrost/pull/82) by [0x5487](https://github.com/0x5487))
 - Improve `pkg/gateway` test coverage and code stability. ([#84](https://github.com/nite-coder/bifrost/pull/84) by [0x5487](https://github.com/0x5487))
+- Refactor unit tests to use `assert.Eventually` instead of `time.Sleep` for better performance and reliability. ([#85](https://github.com/nite-coder/bifrost/pull/85) by [0x5487](https://github.com/0x5487))
+- Bump `golangci-lint` to `v2.7.2` ([#85](https://github.com/nite-coder/bifrost/pull/85) by [0x5487](https://github.com/0x5487))
 
 
 ## [0.7.0] (2025-12-25)

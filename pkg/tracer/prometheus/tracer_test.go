@@ -3,6 +3,7 @@ package prometheus
 import (
 	"context"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"testing"
@@ -45,7 +46,14 @@ func TestPromethusTracer(t *testing.T) {
 		_ = h.Shutdown(ctx)
 	}()
 
-	time.Sleep(time.Second) // wait server start
+	assert.Eventually(t, func() bool {
+		conn, err := net.DialTimeout("tcp", "127.0.0.1:6666", 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 
 	for i := 0; i < 10; i++ {
 		_, err := http.Get("http://127.0.0.1:6666/test_get")

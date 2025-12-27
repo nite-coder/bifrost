@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBufferedLoggerReopen(t *testing.T) {
@@ -54,8 +55,11 @@ func TestBufferedLoggerReopen(t *testing.T) {
 		t.Fatalf("Failed to send SIGUSR1 signal: %v", err)
 	}
 
-	// Wait for the signal to be processed
-	time.Sleep(100 * time.Millisecond)
+	// Wait for the signal to be processed and file to be recreated
+	assert.Eventually(t, func() bool {
+		_, err := os.Stat(tmpFile.Name())
+		return err == nil
+	}, 2*time.Second, 50*time.Millisecond, "Log file should be recreated after SIGUSR1")
 
 	// Write more logs after the file has been reopened
 	logger.Write("Log after SIGUSR1\n")

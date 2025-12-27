@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"testing"
@@ -99,7 +100,14 @@ func TestReverseProxy(t *testing.T) {
 		proxy.ServeHTTP(c, ctx)
 	})
 	go serv.Spin()
-	time.Sleep(time.Second)
+	assert.Eventually(t, func() bool {
+		conn, err := net.DialTimeout("tcp", "127.0.0.1:9990", 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
@@ -215,7 +223,14 @@ func TestReverseProxyStripHeadersPresentInConnection(t *testing.T) {
 		proxy.ServeHTTP(cc, ctx)
 	})
 	go r.Spin()
-	time.Sleep(time.Second)
+	assert.Eventually(t, func() bool {
+		conn, err := net.DialTimeout("tcp", "127.0.0.1:9991", 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
@@ -284,13 +299,19 @@ func TestReverseProxyStripEmptyConnection(t *testing.T) {
 		proxy.ServeHTTP(cc, ctx)
 	})
 	go r.Spin()
+	assert.Eventually(t, func() bool {
+		conn, err := net.DialTimeout("tcp", "127.0.0.1:9992", 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
 		_ = r.Shutdown(ctx)
 	}()
-
-	time.Sleep(time.Second)
 	cli, _ := client.NewClient()
 	req := protocol.AcquireRequest()
 	resp := protocol.AcquireResponse()
@@ -350,13 +371,19 @@ func TestXForwardedFor(t *testing.T) {
 	}
 	r.GET("/backend", proxy.ServeHTTP)
 	go r.Spin()
+	assert.Eventually(t, func() bool {
+		conn, err := net.DialTimeout("tcp", "127.0.0.1:9993", 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
 		_ = r.Shutdown(ctx)
 	}()
-
-	time.Sleep(time.Second)
 	cli, _ := client.NewClient()
 	req := protocol.AcquireRequest()
 	resp := protocol.AcquireResponse()
@@ -408,7 +435,14 @@ func TestReverseProxyQuery(t *testing.T) {
 			defer cancel()
 			_ = r.Shutdown(ctx)
 		}()
-		time.Sleep(time.Second)
+		assert.Eventually(t, func() bool {
+			conn, err := net.DialTimeout("tcp", "127.0.0.1:9995", 100*time.Millisecond)
+			if err == nil {
+				conn.Close()
+				return true
+			}
+			return false
+		}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 		cli, _ := client.NewClient()
 		req := protocol.AcquireRequest()
 		resp := protocol.AcquireResponse()
@@ -450,7 +484,14 @@ func TestReverseProxy_Post(t *testing.T) {
 
 	r.POST("/backend", proxy.ServeHTTP)
 	go r.Spin()
-	time.Sleep(time.Second)
+	assert.Eventually(t, func() bool {
+		conn, err := net.DialTimeout("tcp", "127.0.0.1:9996", 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
@@ -513,7 +554,14 @@ func TestReverseProxyWebSocket(t *testing.T) {
 	proxy, _ := New(proxyOptions, nil)
 	wsServer.GET("/websocket", proxy.ServeHTTP)
 	go wsServer.Spin()
-	time.Sleep(time.Second)
+	assert.Eventually(t, func() bool {
+		conn, err := net.DialTimeout("tcp", "127.0.0.1:9998", 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()

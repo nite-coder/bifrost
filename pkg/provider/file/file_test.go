@@ -161,18 +161,20 @@ func TestFileProvider_Watch(t *testing.T) {
 
 	// first modify
 	require.NoError(t, os.WriteFile(targetFile, []byte("modified content 1"), 0644))
-	time.Sleep(1 * time.Second)
-	assert.Equal(t, int32(1), eventCounter.Load())
+	assert.Eventually(t, func() bool {
+		return eventCounter.Load() == 1
+	}, 2*time.Second, 100*time.Millisecond)
 
 	// second modify
 	require.NoError(t, os.WriteFile(targetFile, []byte("modified content 2"), 0644))
-	time.Sleep(1 * time.Second)
-	assert.Equal(t, int32(2), eventCounter.Load())
+	assert.Eventually(t, func() bool {
+		return eventCounter.Load() == 2
+	}, 2*time.Second, 100*time.Millisecond)
 
 	// delete and create
 	require.NoError(t, os.Remove(targetFile))
-	time.Sleep(100 * time.Millisecond)
 	require.NoError(t, os.WriteFile(targetFile, []byte("new content"), 0644))
-	time.Sleep(1 * time.Second)
-	assert.Equal(t, int32(3), eventCounter.Load())
+	assert.Eventually(t, func() bool {
+		return eventCounter.Load() == 3
+	}, 2*time.Second, 100*time.Millisecond)
 }

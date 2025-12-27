@@ -138,7 +138,17 @@ func TestBifrost(t *testing.T) {
 
 	go backendServ.Spin()
 
-	time.Sleep(2 * time.Second) // wait for server ready
+	assert.Eventually(t, func() bool {
+		ports := []string{"8080", "8443", "8442", "8000"}
+		for _, port := range ports {
+			conn, err := net.DialTimeout("tcp", "localhost:"+port, 100*time.Millisecond)
+			if err != nil {
+				return false
+			}
+			conn.Close()
+		}
+		return true
+	}, 10*time.Second, 200*time.Millisecond, "Servers failed to start")
 
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
@@ -261,7 +271,14 @@ func TestBifrostShutdown(t *testing.T) {
 	assert.NoError(t, err)
 
 	go bifrost.Run()
-	time.Sleep(500 * time.Millisecond)
+	assert.Eventually(t, func() bool {
+		conn, err := net.DialTimeout("tcp", "localhost:8085", 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 
 	// Test Shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)

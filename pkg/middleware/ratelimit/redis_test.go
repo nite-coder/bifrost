@@ -177,7 +177,17 @@ func startRedisCluster(t *testing.T) func() {
 		t.Fatalf("Failed to create redis cluster: %+v", err)
 	}
 
-	time.Sleep(2 * time.Second)
+	// Wait for cluster to be ready for commands
+	assert.Eventually(t, func() bool {
+		ctx := context.Background()
+		client := redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs:    []string{"localhost:7000", "localhost:7001", "localhost:7002"},
+			Password: "bitnami",
+		})
+		defer client.Close()
+		_, err := client.Ping(ctx).Result()
+		return err == nil
+	}, 5*time.Second, 200*time.Millisecond, "Cluster nodes should be ready for commands")
 
 	return destroyFunc
 }
@@ -275,12 +285,9 @@ func testLimiter(t *testing.T, limiter Limiter, options Options) {
 			t.Error("6th request should be denied")
 		}
 
-		time.Sleep(options.WindowSize)
-
-		result = limiter.Allow(ctx, key)
-		if !result.Allow {
-			t.Error("Request after reset should be allowed")
-		}
+		assert.Eventually(t, func() bool {
+			return limiter.Allow(ctx, key).Allow
+		}, options.WindowSize+1*time.Second, 100*time.Millisecond, "Request after reset should be allowed")
 	})
 
 	t.Run("Concurrent requests", func(t *testing.T) {

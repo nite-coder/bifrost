@@ -63,8 +63,11 @@ func TestSIGUSR1Reopen(t *testing.T) {
 		t.Fatalf("Failed to send SIGUSR1 signal: %v", err)
 	}
 
-	// Wait for the signal to be processed
-	time.Sleep(1 * time.Second)
+	// Wait for the signal to be processed and log file to be recreated
+	assert.Eventually(t, func() bool {
+		_, err := os.Stat(tmpFile.Name())
+		return err == nil
+	}, 5*time.Second, 100*time.Millisecond, "Failed to detect log file recreation")
 
 	// Write more logs after the file has been reopened
 	logger.Info("Log after SIGUSR1")

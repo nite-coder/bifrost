@@ -24,7 +24,9 @@ func TestRoundRobin(t *testing.T) {
 	proxy1, _ := httpproxy.New(proxyOptions1, nil)
 	err := proxy1.AddFailedCount(1)
 	assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
-	time.Sleep(2 * time.Second) // wait and proxy1 should be available
+	assert.Eventually(t, func() bool {
+		return proxy1.IsAvailable()
+	}, 2*time.Second, 100*time.Millisecond, "proxy1 should be available after fail timeout")
 
 	proxyOptions2 := httpproxy.Options{
 		Target:      "http://backend2",

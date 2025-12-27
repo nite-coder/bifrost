@@ -106,7 +106,9 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 		}
 
 		// Wrap the file in a fileWriter to support reopening
-		fw := &fileWriter{file: file}
+		fw := &fileWriter{
+			file: file,
+		}
 		writer = fw
 
 		if !opts.DisableRedirectStdErr && (opts.Output != "stderr" && opts.Output != "") {
@@ -122,12 +124,11 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 		}
 
 		// Listen for SIGUSR1 signals to reopen the log file
-		go safety.Go(context.Background(), func() {
-			sigChan := make(chan os.Signal, 1)
-			signal.Notify(sigChan, syscall.SIGUSR1) // Register to receive SIGUSR1 signals
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGUSR1) // Register to receive SIGUSR1 signals
 
-			for {
-				<-sigChan       // Wait for a SIGUSR1 signal
+		go safety.Go(context.Background(), func() {
+			for range sigChan {
 				_ = fw.reopen() // Reopen the log file
 			}
 		})
