@@ -2,6 +2,7 @@ package zero
 
 import (
 	"context"
+	"errors"
 	"net"
 	"os"
 	"syscall"
@@ -532,5 +533,349 @@ func TestQuitWithRemovePIDFile(t *testing.T) {
 		// Quit with removePIDFile=true on non-existent file
 		err := z.Quit(context.Background(), 123, true)
 		assert.NoError(t, err)
+	})
+}
+
+func TestUpgrade(t *testing.T) {
+	t.Run("upgrade success", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "zero_test_upgrade")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		sockPath := tmpDir + "/test.sock"
+		z := New(Options{UpgradeSock: sockPath})
+
+		// Start a mock server to accept connections
+		listener, err := net.Listen("unix", sockPath)
+		assert.NoError(t, err)
+		defer listener.Close()
+
+		go func() {
+			conn, _ := listener.Accept()
+			if conn != nil {
+				conn.Close()
+			}
+		}()
+
+		// Give time for listener to start
+		time.Sleep(50 * time.Millisecond)
+
+		err = z.Upgrade()
+		assert.NoError(t, err)
+	})
+
+	t.Run("upgrade failure no socket", func(t *testing.T) {
+		z := New(Options{UpgradeSock: "/nonexistent/path.sock"})
+		err := z.Upgrade()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to connect to upgrade socket")
+	})
+}
+
+func TestRemoveUpgradeSock(t *testing.T) {
+	t.Run("remove existing socket", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "zero_test_remove")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		sockPath := tmpDir + "/test.sock"
+		z := New(Options{UpgradeSock: sockPath})
+
+		// Create a regular file to simulate socket (since closing a unix listener removes the socket)
+		err = os.WriteFile(sockPath, []byte{}, 0600)
+		assert.NoError(t, err)
+
+		// Verify file exists
+		_, err = os.Stat(sockPath)
+		assert.NoError(t, err)
+
+		// Remove socket
+		err = z.RemoveUpgradeSock()
+		assert.NoError(t, err)
+
+		// Verify file is removed
+		_, err = os.Stat(sockPath)
+		assert.True(t, os.IsNotExist(err))
+	})
+
+	t.Run("remove non-existent socket", func(t *testing.T) {
+		z := New(Options{UpgradeSock: "/nonexistent/path.sock"})
+		err := z.RemoveUpgradeSock()
+		assert.NoError(t, err)
+	})
+}
+
+func TestListenerWithConfig(t *testing.T) {
+	t.Run("listener with custom config", func(t *testing.T) {
+		z := New(Options{})
+
+		config := &net.ListenConfig{}
+		listenOptions := &ListenerOptions{
+			Config:  config,
+			Network: "tcp",
+			Address: "localhost:0",
+		}
+
+		l, err := z.Listener(context.Background(), listenOptions)
+		assert.NoError(t, err)
+		assert.NotNil(t, l)
+		defer l.Close()
+	})
+
+	t.Run("listener cache hit same key", func(t *testing.T) {
+		z := New(Options{})
+
+		// Create first listener with specific address pattern
+		listenOptions := &ListenerOptions{
+			Network: "tcp",
+			Address: "localhost:0",
+		}
+
+		l1, err := z.Listener(context.Background(), listenOptions)
+		assert.NoError(t, err)
+		defer l1.Close()
+
+		// Request listener with same Address key (cache key is Address, not actual bound port)
+		// Since localhost:0 is the key, requesting it again should return the cached one
+		l2, err := z.Listener(context.Background(), listenOptions)
+		assert.NoError(t, err)
+
+		// Should be the same listener (cache hit based on Key)
+		assert.Equal(t, l1.Addr().String(), l2.Addr().String())
+	})
+}
+
+func TestGetPIDErrors(t *testing.T) {
+	t.Run("invalid PID content", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "zero_test_pid")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		pidFile := tmpDir + "/test.pid"
+		z := New(Options{PIDFile: pidFile})
+
+		// Write invalid PID content
+		err = os.WriteFile(pidFile, []byte("not-a-number"), 0600)
+		assert.NoError(t, err)
+
+		_, err = z.GetPID()
+		assert.Error(t, err)
+	})
+
+	t.Run("file does not exist", func(t *testing.T) {
+		z := New(Options{PIDFile: "/nonexistent/path.pid"})
+		_, err := z.GetPID()
+		assert.Error(t, err)
+	})
+}
+
+func TestValidatePIDFileErrors(t *testing.T) {
+	t.Run("FindProcess error", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "zero_test_validate_err")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		pidFile := tmpDir + "/test.pid"
+		z := New(Options{PIDFile: pidFile})
+
+		// Mock FindProcess to return an error
+		z.processFinder = &mockProcessFinderWithError{}
+
+		// Write a valid PID
+		err = os.WriteFile(pidFile, []byte("12345"), 0600)
+		assert.NoError(t, err)
+
+		_, _, err = z.ValidatePIDFile()
+		assert.Error(t, err)
+	})
+}
+
+type mockProcessFinderWithError struct{}
+
+func (m *mockProcessFinderWithError) FindProcess(pid int) (process, error) {
+	return nil, errors.New("mock FindProcess error")
+}
+
+func TestQuitErrors(t *testing.T) {
+	t.Run("FindProcess error", func(t *testing.T) {
+		z := New(Options{QuitTimout: 1 * time.Second})
+		z.processFinder = &mockProcessFinderWithError{}
+
+		err := z.Quit(context.Background(), 123, false)
+		assert.Error(t, err)
+	})
+
+	t.Run("Signal error", func(t *testing.T) {
+		mp := &mockProcess{pid: 123, err: errors.New("signal error")}
+		z := New(Options{QuitTimout: 1 * time.Second})
+		z.processFinder = &mockProcessFinder{proc: mp}
+
+		err := z.Quit(context.Background(), 123, false)
+		assert.Error(t, err)
+	})
+}
+
+func TestWaitForUpgradeStateError(t *testing.T) {
+	t.Run("already in waiting state", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "zero_test_wait")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		z := New(Options{
+			UpgradeSock: tmpDir + "/test.sock",
+		})
+
+		// Manually set state to waiting
+		z.state = waitingState
+
+		err = z.WaitForUpgrade(context.Background())
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "state is not default")
+	})
+}
+
+func TestWritePIDWithLockErrors(t *testing.T) {
+	t.Run("directory creation", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "zero_test_lock_dir")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		// Use a nested path that doesn't exist
+		pidFile := tmpDir + "/subdir/test.pid"
+		z := New(Options{PIDFile: pidFile})
+
+		lockFile, err := z.WritePIDWithLock()
+		assert.NoError(t, err)
+		assert.NotNil(t, lockFile)
+
+		// Verify directory was created
+		_, err = os.Stat(tmpDir + "/subdir")
+		assert.NoError(t, err)
+
+		z.ReleasePIDLock(lockFile)
+	})
+}
+
+func TestCloseWithWaitingState(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "zero_test_close")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	z := New(Options{
+		UpgradeSock: tmpDir + "/test.sock",
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	// Start WaitForUpgrade in background
+	go func() {
+		_ = z.WaitForUpgrade(ctx)
+	}()
+
+	// Wait for state to change
+	time.Sleep(100 * time.Millisecond)
+
+	// Close should work even in waiting state
+	err = z.Close(ctx)
+	assert.NoError(t, err)
+}
+
+func TestWritePIDDirectoryCreation(t *testing.T) {
+	t.Run("creates directory if not exists", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "zero_test_writepid")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		// Use a nested path that doesn't exist
+		pidFile := tmpDir + "/subdir/nested/test.pid"
+		z := New(Options{PIDFile: pidFile})
+
+		err = z.writePID()
+		assert.NoError(t, err)
+
+		// Verify directories were created
+		_, err = os.Stat(tmpDir + "/subdir/nested")
+		assert.NoError(t, err)
+
+		// Verify PID file was written
+		pid, err := z.GetPID()
+		assert.NoError(t, err)
+		assert.Equal(t, os.Getpid(), pid)
+	})
+}
+
+func TestQuitProcessTerminatesAfterSIGKILL(t *testing.T) {
+	t.Run("process terminates after SIGKILL", func(t *testing.T) {
+		// Create a mock process that:
+		// 1. Accepts SIGTERM but doesn't die
+		// 2. Responds to Signal(0) indicating still alive for a few checks
+		// 3. Then Kill() is called
+		// 4. After Kill(), Signal(0) returns ErrProcessDone
+		mp := &mockProcessWithKillBehavior{
+			killCount:      0,
+			signalCount:    0,
+			dieAfterKill:   true,
+			surviveSignals: 2, // survive 2 Signal(0) checks before timeout
+		}
+
+		z := New(Options{
+			QuitTimout: 2 * time.Second, // Short timeout to speed up test
+		})
+		z.processFinder = &mockProcessFinder{proc: mp}
+
+		err := z.Quit(context.Background(), 123, false)
+		assert.NoError(t, err)
+		assert.True(t, mp.killCalled)
+	})
+}
+
+type mockProcessWithKillBehavior struct {
+	killCount      int
+	signalCount    int
+	dieAfterKill   bool
+	surviveSignals int
+	killCalled     bool
+}
+
+func (m *mockProcessWithKillBehavior) Signal(sig os.Signal) error {
+	if sig == syscall.Signal(0) {
+		m.signalCount++
+		if m.killCalled {
+			return os.ErrProcessDone
+		}
+		if m.signalCount > m.surviveSignals {
+			// Still alive until killed
+			return nil
+		}
+		return nil
+	}
+	return nil
+}
+
+func (m *mockProcessWithKillBehavior) Kill() error {
+	m.killCalled = true
+	return nil
+}
+
+func (m *mockProcessWithKillBehavior) Wait() (*os.ProcessState, error) {
+	return nil, nil
+}
+
+func (m *mockProcessWithKillBehavior) Release() error {
+	return nil
+}
+
+func TestListenerCreateError(t *testing.T) {
+	t.Run("listener creation error with invalid address", func(t *testing.T) {
+		z := New(Options{})
+
+		listenOptions := &ListenerOptions{
+			Network: "tcp",
+			Address: "invalid:address:format:99999",
+		}
+
+		_, err := z.Listener(context.Background(), listenOptions)
+		assert.Error(t, err)
 	})
 }

@@ -162,7 +162,10 @@ func (z *ZeroDownTime) Close(ctx context.Context) error {
 	for _, info := range z.listeners {
 		_ = info.listener.Close()
 	}
-	if z.state == waitingState {
+	z.mu.Lock()
+	isWaiting := z.state == waitingState
+	z.mu.Unlock()
+	if isWaiting {
 		z.stopWaitingCh <- true
 		<-z.isShutdownCh
 	}

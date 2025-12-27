@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Fixed
 - Fix gateway bugs: nil pointer dereference when proxy unavailable, timeout configuration copy-paste errors, Watch error handling, and balancer nil logging. ([#80](https://github.com/nite-coder/bifrost/pull/80) by [0x5487](https://github.com/0x5487))
 - Fix upgrade order bug where WritePIDWithLock was called before Quit, causing lock contention. Add e2e upgrade tests and CI integration. ([#81](https://github.com/nite-coder/bifrost/pull/81) by [0x5487](https://github.com/0x5487))
+- Fix race condition in `pkg/zero` package and improve test coverage. ([#83](https://github.com/nite-coder/bifrost/pull/83) by [0x5487](https://github.com/0x5487))
 
 ### Changed
 

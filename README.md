@@ -19,7 +19,7 @@ A low-latency and high-throughput API gateway library in Go
 1. Built-in Prometheus monitoring.
 1. Built-in OpenTelemetry tracing.
 1. Supports `HTTP1.1`/`HTTP2`/`H2C`/`Webosocket`/`GRPC` protocols.
-1. Multiple built-in balancer algorithm (`round_robin`, `random`, `weighted`, `hashing`) and allow to build your own
+1. Multiple built-in balancer algorithm (`round_robin`, `random`, `weighted`, `chash`) and allow to build your own
 
 ## Comparative Analysis
 
