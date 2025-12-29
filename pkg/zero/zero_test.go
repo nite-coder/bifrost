@@ -460,6 +460,40 @@ func TestWritePIDWithLock(t *testing.T) {
 	})
 }
 
+func TestForceWritePID(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "zero_test_force")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	pidFile := tmpDir + "/test.pid"
+
+	t.Run("force write ignores lock", func(t *testing.T) {
+		z1 := New(Options{PIDFile: pidFile}) // Lock holder
+		z2 := New(Options{PIDFile: pidFile}) // Force writer
+
+		// 1. z1 acquires lock
+		lockFile1, err := z1.WritePIDWithLock()
+		assert.NoError(t, err)
+		assert.NotNil(t, lockFile1)
+
+		// 2. z2 writes with lock (should fail)
+		_, err = z2.WritePIDWithLock()
+		assert.Error(t, err)
+
+		// 3. z2 force writes (should succeed)
+		err = z2.ForceWritePID()
+		assert.NoError(t, err)
+
+		// 4. Verify PID file was updated (implicitly check content if we could, but err check is good)
+		pid, err := z2.GetPID()
+		assert.NoError(t, err)
+		assert.Equal(t, os.Getpid(), pid)
+
+		// Cleanup
+		z1.ReleasePIDLock(lockFile1)
+	})
+}
+
 func TestReleasePIDLock(t *testing.T) {
 	t.Run("release nil file", func(t *testing.T) {
 		z := New(Options{})

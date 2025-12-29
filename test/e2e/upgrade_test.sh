@@ -97,8 +97,46 @@ get_process_count() {
 }
 
 # Get PID from PID file
+# Get PID from PID file
 get_pid_from_file() {
     cat "$LOGS_DIR/bifrost.pid" 2>/dev/null || echo "0"
+}
+
+# --------------------------------------------------------------------------
+# Systemd Simulation Logic
+# --------------------------------------------------------------------------
+# This logic simulates Systemd's requirement: verify that when PID file updates,
+# the OLD process is still running.
+
+PID_FILE="$LOGS_DIR/bifrost.pid"
+monitor_pid_file() {
+    local last_pid=$1
+    log_info "Monitor: Watching $PID_FILE for changes (Initial: $last_pid)..."
+    
+    while true; do
+        if [ ! -f "$PID_FILE" ]; then
+            sleep 0.1
+            continue
+        fi
+
+        local current_pid
+        current_pid=$(cat "$PID_FILE")
+
+        if [ "$current_pid" != "$last_pid" ]; then
+            log_info "Monitor: PID changed from $last_pid to $current_pid"
+            
+            # CRITICAL CHECK: Is the old PID still running?
+            if kill -0 "$last_pid" 2>/dev/null; then
+                log_info "Monitor: SUCCESS - Old PID $last_pid is still alive during handover!"
+                echo "PASS" > "$LOGS_DIR/monitor_result.txt"
+            else
+                log_error "Monitor: FAILURE - Old PID $last_pid is DEAD before/during handover!"
+                echo "FAIL" > "$LOGS_DIR/monitor_result.txt"
+            fi
+            break
+        fi
+        sleep 0.01
+    done
 }
 
 # Run the upgrade test
@@ -130,26 +168,45 @@ run_upgrade_test() {
     
     # Step 2: Trigger upgrade
     log_info "Step 2: Triggering upgrade..."
+    
+    # [Systemd Simulation] Start monitor before triggering upgrade
+    rm -f "$LOGS_DIR/monitor_result.txt"
+    monitor_pid_file "$old_pid" &
+    local monitor_pid=$!
+
     "$BIFROST_BIN" -c "$CONFIG_FILE" -u
     
     # Wait for upgrade to complete
     sleep 5
     
+    # [Systemd Simulation] Wait for monitor
+    wait "$monitor_pid" 2>/dev/null || true
+
     # Step 3: Verify results
     log_info "Step 3: Verifying results..."
     
     local new_pid=$(get_pid_from_file)
     local new_process_count=$(get_process_count)
     local listeners=$(ss -tlnp 2>/dev/null | grep ":$TEST_PORT" | wc -l)
-    
+    local monitor_result=$(cat "$LOGS_DIR/monitor_result.txt" 2>/dev/null || echo "UNKNOWN")
+
     log_info "  Old PID: $old_pid"
     log_info "  New PID: $new_pid"
     log_info "  Process count: $new_process_count"
     log_info "  Port listeners: $listeners"
+    log_info "  Systemd Simulation Result: $monitor_result"
     
     # Verification checks
     local failed=0
     
+    # Check 0: Systemd Simulation (PID Update Handover)
+    if [ "$monitor_result" == "PASS" ]; then
+        log_info "PASS: Systemd simulation (Active Time Check)"
+    else
+        log_error "FAIL: Systemd simulation (Active Time Check) failed with result: $monitor_result"
+        failed=1
+    fi
+
     # Check 1: Only one process should be running
     if [ "$new_process_count" -ne 1 ]; then
         log_error "FAIL: Expected 1 process, found $new_process_count"

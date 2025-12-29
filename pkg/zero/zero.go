@@ -483,6 +483,14 @@ func (z *ZeroDownTime) writePID() error {
 	return nil
 }
 
+// ForceWritePID writes the PID file without acquiring a lock.
+// This is used during the upgrade handoff phase where the new process
+// needs to update the PID file before the old process exits.
+// WARNING: Only use this in upgrade scenarios where you are the "inheritor".
+func (z *ZeroDownTime) ForceWritePID() error {
+	return z.writePID()
+}
+
 // GetPID reads and returns the process ID from the PID file.
 // Returns an error if the file cannot be read or the content is not a valid integer.
 func (z *ZeroDownTime) GetPID() (int, error) {

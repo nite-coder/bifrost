@@ -277,7 +277,19 @@ func Run(mainOptions config.Options) (err error) {
 				)
 			}
 
-			// Quit old process FIRST (before acquiring lock) so it releases its lock
+			// Step 1: Force update PID file FIRST (before quitting old process)
+			// This allows Systemd to see the new PID while old process is still alive
+			slog.Info("force updating PID file for Systemd", "newPID", os.Getpid())
+			if err := zeroDT.ForceWritePID(); err != nil {
+				slog.Error("failed to force write PID", "error", err)
+				return
+			}
+
+			// Give Systemd some time to notice the PID file change via inotify
+			// before we kill the old process. 100ms is sufficient and negligible for upgrade duration.
+			time.Sleep(100 * time.Millisecond)
+
+			// Step 2: Quit old process (release lock)
 			if isRunning && oldPID > 0 {
 				slog.Info("sending termination signal to old process", "oldPID", oldPID)
 				quitStart := time.Now()
@@ -296,7 +308,7 @@ func Run(mainOptions config.Options) (err error) {
 				)
 			}
 
-			// Now acquire PID lock and write new PID (old process has released it)
+			// Step 3: Now acquire PID lock and write new PID (old process has released it)
 			slog.Debug("acquiring PID file lock and writing new PID")
 			lockFile, err := zeroDT.WritePIDWithLock()
 			if err != nil {
