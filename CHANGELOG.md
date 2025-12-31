@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improve `pkg/gateway` test coverage and code stability. ([#84](https://github.com/nite-coder/bifrost/pull/84) by [0x5487](https://github.com/0x5487))
 - Refactor unit tests to use `assert.Eventually` instead of `time.Sleep` for better performance and reliability. ([#85](https://github.com/nite-coder/bifrost/pull/85) by [0x5487](https://github.com/0x5487))
 - Bump `golangci-lint` to `v2.7.2` ([#85](https://github.com/nite-coder/bifrost/pull/85) by [0x5487](https://github.com/0x5487))
+- Standardize error messages by lowercasing strings to follow Go idioms and optimize string formatting by replacing `fmt.Sprintf` with string concatenation. ([#86](https://github.com/nite-coder/bifrost/pull/86) by [0x5487](https://github.com/0x5487))
 
 
 ## [0.7.0] (2025-12-25)

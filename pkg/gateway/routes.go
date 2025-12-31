@@ -33,43 +33,42 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 			continue
 		}
 
-		if len(routeOptions.Paths) == 0 {
-			return nil, fmt.Errorf("paths can't be empty in route: '%s'", routeOptions.ID)
-		}
-
-		routeOptions.ServiceID = strings.TrimSpace(routeOptions.ServiceID)
-		if len(routeOptions.ServiceID) == 0 {
-			return nil, fmt.Errorf("service_id can't be empty in route: '%s'", routeOptions.ID)
-		}
-
-		routeMiddlewares := make([]app.HandlerFunc, 0)
-
-		rOptions := &variable.RequestRoute{
-			RouteID:   routeOptions.ID,
-			Route:     routeOptions.Route,
-			Tags:      routeOptions.Tags,
-			ServiceID: routeOptions.ServiceID,
-		}
-
-		firstRouteMiddleware := newFirstRouteMiddleware(rOptions)
-		routeMiddlewares = append(routeMiddlewares, firstRouteMiddleware.ServeHTTP)
-
-		for _, m := range routeOptions.Middlewares {
-			if len(m.Use) > 0 {
-				val, found := bifrost.middlewares[m.Use]
-				if !found {
-					return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", m.Use, routeOptions.ID)
-				}
-
-				routeMiddlewares = append(routeMiddlewares, val)
-				continue
-			}
-
-			if len(m.Type) == 0 {
-				return nil, fmt.Errorf("middleware type can't be empty in route: '%s'", routeOptions.Paths)
-			}
-
-			handler := middleware.Factory(m.Type)
+		        if len(routeOptions.Paths) == 0 {
+		            return nil, fmt.Errorf("paths cannot be empty for route ID: %s", routeOptions.ID)
+		        }
+		
+		        routeOptions.ServiceID = strings.TrimSpace(routeOptions.ServiceID)
+		        if len(routeOptions.ServiceID) == 0 {
+		            return nil, fmt.Errorf("service_ID cannot be empty for route ID: %s", routeOptions.ID)
+		        }
+		
+		        routeMiddlewares := make([]app.HandlerFunc, 0)
+		
+		        rOptions := &variable.RequestRoute{
+		            RouteID:   routeOptions.ID,
+		            Route:     routeOptions.Route,
+		            Tags:      routeOptions.Tags,
+		            ServiceID: routeOptions.ServiceID,
+		        }
+		
+		        firstRouteMiddleware := newFirstRouteMiddleware(rOptions)
+		        routeMiddlewares = append(routeMiddlewares, firstRouteMiddleware.ServeHTTP)
+		
+		        for _, m := range routeOptions.Middlewares {
+		            if len(m.Use) > 0 {
+		                val, found := bifrost.middlewares[m.Use]
+		                if !found {
+		                    return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", m.Use, routeOptions.ID)
+		                }
+		
+		                routeMiddlewares = append(routeMiddlewares, val)
+		                continue
+		            }
+		
+		            if len(m.Type) == 0 {
+		                return nil, fmt.Errorf("middleware type cannot be empty for route: %s", routeOptions.Paths)
+		            }
+					handler := middleware.Factory(m.Type)
 			if handler == nil {
 				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", m.Type, routeOptions.Paths)
 			}
@@ -165,7 +164,7 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 
 	// validate
 	if len(routeOpts.Paths) == 0 {
-		return errors.New("paths can't be empty")
+		return errors.New("paths cannot be empty")
 	}
 
 	for _, path := range routeOpts.Paths {
@@ -176,7 +175,7 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 		case strings.HasPrefix(path, "~*"):
 			expr := strings.TrimSpace(path[2:])
 			if len(expr) == 0 {
-				return fmt.Errorf("router: regexp expression route can't be empty in route: '%s'", routeOpts.ID)
+				return fmt.Errorf("router: regular expression route cannot be empty for route ID: %s", routeOpts.ID)
 			}
 			regx, err := regexp.Compile(`(?i)` + expr)
 			if err != nil {
@@ -192,7 +191,7 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 		case strings.HasPrefix(path, "~"):
 			expr := strings.TrimSpace(path[1:])
 			if len(expr) == 0 {
-				return fmt.Errorf("router: regexp expression route can't be empty in route: '%s'", routeOpts.ID)
+				return fmt.Errorf("router: regular expression route cannot be empty for route ID: %s", routeOpts.ID)
 			}
 			regx, err := regexp.Compile(expr)
 			if err != nil {
@@ -209,13 +208,13 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 			nodeType = router.Exact
 			path = strings.TrimSpace(path[1:])
 			if len(path) == 0 {
-				return fmt.Errorf("router: exact route can't be empty in route: '%s'", routeOpts.ID)
+				return fmt.Errorf("router: exact route cannot be empty for route ID: %s", routeOpts.ID)
 			}
 		case strings.HasPrefix(path, "^~"):
 			nodeType = router.PreferentialPrefix
 			path = strings.TrimSpace(path[2:])
 			if len(path) == 0 {
-				return fmt.Errorf("router: prefix route can't be empty in route: '%s'", routeOpts.ID)
+				return fmt.Errorf("router: prefix route cannot be empty for route ID: %s", routeOpts.ID)
 			}
 
 		default:

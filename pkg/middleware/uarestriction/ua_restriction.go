@@ -28,9 +28,9 @@ type UARestriction struct {
 
 func NewMiddleware(options Options) (*UARestriction, error) {
 	if len(options.Allow) == 0 && len(options.Deny) == 0 {
-		return nil, errors.New("allow and deny can't be empty")
+		return nil, errors.New("allow and deny cannot be empty")
 	} else if len(options.Allow) > 0 && len(options.Deny) > 0 {
-		return nil, errors.New("allow and deny can't be set at the same time")
+		return nil, errors.New("allow and deny cannot be set at the same time")
 	}
 	if options.RejectedHTTPStatusCode == 0 {
 		options.RejectedHTTPStatusCode = 403

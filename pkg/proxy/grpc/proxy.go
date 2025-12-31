@@ -67,7 +67,7 @@ type GRPCProxy struct {
 func New(options Options) (*GRPCProxy, error) {
 	addr, err := url.Parse(options.Target)
 	if err != nil {
-		return nil, fmt.Errorf("proxy: grpc proxy failed to parse target url; %w", err)
+		return nil, fmt.Errorf("proxy: gRPC proxy failed to parse target URL: %w", err)
 	}
 	if options.Weight == 0 {
 		options.Weight = 1
@@ -168,12 +168,12 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	defer func() {
 		if r := recover(); r != nil {
 			stackTrace := cast.B2S(debug.Stack())
-			logger.ErrorContext(ctx, "proxy: grpc proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
+			logger.ErrorContext(ctx, "proxy: gRPC proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
 			c.Abort()
 		}
 	}()
 	if p.client == nil {
-		logger.ErrorContext(ctx, "proxy: grpc proxy client is nil", slog.Any("error", "grpc proxy client is nil"))
+		logger.ErrorContext(ctx, "proxy: gRPC proxy client is nil", slog.Any("error", "gRPC proxy client is nil"))
 		c.Abort()
 		return
 	}
@@ -192,7 +192,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// Check if the request payload is valid
 	payload := c.Request.Body()
 	if len(payload) < 5 {
-		logger.ErrorContext(ctx, "proxy: grpc proxy request payload is invalid", slog.Any("error", "grpc proxy request payload is invalid"))
+		logger.ErrorContext(ctx, "proxy: gRPC proxy request payload is invalid", slog.Any("error", "gRPC proxy request payload is invalid"))
 		return
 	}
 	// Get the length of the message
@@ -277,8 +277,8 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// Set the length of the message
 	val := len(respBody)
 	if val > math.MaxUint32 || val < 0 {
-		logger.Error("proxy: grpc proxy response payload is overflow")
-		err := errors.New("proxy: grpc proxy response payload is overflow")
+		logger.Error("proxy: gRPC proxy response payload overflow")
+		err := errors.New("proxy: gRPC proxy response payload overflow")
 		_ = c.Error(err)
 		return
 	}
@@ -316,7 +316,7 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 	}
 	c.Set(variable.GRPCStatusCode, st.Code())
 	c.Set(variable.GRPCMessage, st.Message())
-	logger.Error("failed to invoke grpc server",
+	logger.Error("failed to invoke gRPC server",
 		slog.String("error", err.Error()),
 		slog.String("original_path", originalPath),
 		slog.String("upstream", p.targetHost+string(c.Request.Path())),
@@ -361,7 +361,7 @@ func makeGRPCErrorFrame(ctx context.Context, st *status.Status) []byte {
 		// Check for potential overflow
 		// Handle the error appropriately, e.g., log and return an empty frame
 		logger := log.FromContext(ctx)
-		logger.Error("proxy: Serialized data too large to create gRPC error frame")
+		logger.Error("proxy: serialized data too large to create gRPC error frame")
 		return []byte{}
 	}
 	frame := make([]byte, val+5)

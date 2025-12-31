@@ -40,7 +40,7 @@ func loadServices(bifrost *Bifrost) (map[string]*Service, error) {
 
 	for id, serviceOptions := range bifrost.options.Services {
 		if len(id) == 0 {
-			return nil, errors.New("service id can't be empty")
+			return nil, errors.New("service ID cannot be empty")
 		}
 
 		serviceOptions.ID = id
@@ -112,7 +112,7 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 		}
 
 		if len(middlewareOpts.Type) == 0 {
-			return nil, fmt.Errorf("middleware kind can't be empty in service: '%s'", serviceOptions.ID)
+			return nil, fmt.Errorf("middleware type cannot be empty for service: %s", serviceOptions.ID)
 		}
 
 		handler := middleware.Factory(middlewareOpts.Type)
@@ -137,7 +137,7 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 
 	// validate
 	if len(hostname) == 0 {
-		return nil, fmt.Errorf("the hostname is invalid in service url. service_id: %s", serviceOptions.ID)
+		return nil, fmt.Errorf("hostname is invalid in service URL for service ID: %s", serviceOptions.ID)
 	}
 
 	// dynamic upstream
@@ -147,7 +147,7 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	}
 
 	// exist upstream
-	// the hostname can't be found in upstreams because user can use real domain name like www.google.com
+	// the hostname cannot be found in upstreams because user can use real domain name like www.google.com
 	upstream, found := svc.upstreams[hostname]
 	if found {
 		svc.upstream = upstream

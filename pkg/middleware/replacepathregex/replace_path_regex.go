@@ -12,7 +12,7 @@ import (
 func init() {
 	_ = middleware.Register([]string{"replace_path_regex"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
-			return nil, errors.New("replace_path_regex middleware params is not set or invalid")
+			return nil, errors.New("replace_path_regex middleware parameters are missing or invalid")
 		}
 
 		if val, ok := params.(map[string]interface{}); ok {
@@ -43,7 +43,7 @@ func init() {
 			return m.ServeHTTP, nil
 		}
 
-		return nil, errors.New("replace_path_regex is not set or regex is invalid")
+		return nil, errors.New("replace_path_regex middleware parameters are missing or invalid")
 	})
 
 }

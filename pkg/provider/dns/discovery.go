@@ -43,7 +43,7 @@ func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*DNSServiceD
 		newServers = append(newServers, targetHost)
 	}
 	if len(newServers) == 0 {
-		return nil, errors.New("no valid dns server found for dns provider")
+		return nil, errors.New("no valid DNS servers found")
 	}
 	if valid.Seconds() <= 0 {
 		valid = 30 * time.Second
@@ -131,7 +131,7 @@ func (d *DNSServiceDiscovery) Lookup(ctx context.Context, host string) ([]string
 		slog.Debug("ttl updated", "host", host, "ips", ips, "ttl", ttlDuration)
 	}
 	if len(ips) == 0 {
-		return nil, fmt.Errorf("dns: %w; can't resolve host '%s'", ErrNotFound, host)
+		return nil, fmt.Errorf("dns: %w; cannot resolve host '%s'", ErrNotFound, host)
 	}
 	ips = slices.Compact(ips)
 	return ips, nil

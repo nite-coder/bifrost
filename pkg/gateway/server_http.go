@@ -228,10 +228,10 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 			},
 		}
 		if serverOptions.TLS.CertPEM == "" {
-			return nil, errors.New("cert_pem can't be empty")
+			return nil, errors.New("cert_PEM cannot be empty")
 		}
 		if serverOptions.TLS.KeyPEM == "" {
-			return nil, errors.New("key_pem can't be empty")
+			return nil, errors.New("key_PEM cannot be empty")
 		}
 		certPEM, err := os.ReadFile(serverOptions.TLS.CertPEM)
 		if err != nil {

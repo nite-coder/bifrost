@@ -122,7 +122,7 @@ func TestValidateRoutes(t *testing.T) {
 		options.Routes = append(options.Routes, &route1)
 
 		err := validateRoutes(options, true)
-		assert.ErrorContains(t, err, "the service 'test1' can't be found in the route 'route1'")
+		assert.ErrorContains(t, err, "service 'test1' not found for route ID: route1")
 	})
 
 	t.Run("ignore service", func(t *testing.T) {
@@ -296,7 +296,7 @@ func TestValidateMiddlewares(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("can't run as use mode", func(t *testing.T) {
+	t.Run("cannot run as use mode", func(t *testing.T) {
 		options := NewOptions()
 
 		options.Middlewares["cors_id"] = MiddlwareOptions{
@@ -319,7 +319,7 @@ func TestValidateServer(t *testing.T) {
 		options.Servers["apiv1"] = server
 
 		err := validateServers(options, true)
-		assert.ErrorContains(t, err, "the bind can't be empty for server")
+		assert.ErrorContains(t, err, "bind cannot be empty for server ID: apiv1")
 	})
 
 	t.Run("client ip", func(t *testing.T) {
@@ -647,7 +647,7 @@ func TestValidateMetrics(t *testing.T) {
 		options.Metrics.Prometheus.ServerID = "test"
 
 		err := validateMetrics(options, true)
-		assert.ErrorContains(t, err, "the server_id 'test' for the prometheus is not found")
+		assert.ErrorContains(t, err, "server_id 'test' not found for prometheus")
 	})
 
 }

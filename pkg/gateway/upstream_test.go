@@ -331,7 +331,7 @@ func TestNewUpstreamValidation(t *testing.T) {
 			},
 		)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "upstream id can't be empty")
+		assert.Contains(t, err.Error(), "upstream ID cannot be empty")
 	})
 
 	t.Run("empty targets without discovery", func(t *testing.T) {
@@ -344,7 +344,7 @@ func TestNewUpstreamValidation(t *testing.T) {
 			},
 		)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "targets can't be empty")
+		assert.Contains(t, err.Error(), "targets cannot be empty")
 	})
 
 	t.Run("DNS discovery disabled", func(t *testing.T) {

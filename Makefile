@@ -8,7 +8,7 @@ test:
 e2e-test:
 	sudo bash ./test/e2e/upgrade_test.sh
 
-coverage:
+coverage: test
 	go tool cover -func=cover.out
 
 lint:

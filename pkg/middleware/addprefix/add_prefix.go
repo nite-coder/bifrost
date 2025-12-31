@@ -14,13 +14,13 @@ import (
 func init() {
 	_ = middleware.Register([]string{"add_prefix"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
-			return nil, errors.New("prefix is not set or prefix is invalid")
+			return nil, errors.New("prefix is required and must be a string")
 		}
 		var prefix string
 		if val, ok := params.(map[string]any); ok {
 			prefix, ok = val["prefix"].(string)
 			if !ok {
-				return nil, errors.New("prefix is not set or prefix is invalid")
+				return nil, errors.New("prefix is required and must be a string")
 			}
 		}
 		m := NewMiddleware(prefix)

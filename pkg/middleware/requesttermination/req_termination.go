@@ -57,7 +57,7 @@ func init() {
 		}
 
 		if opts.StatusCode == 0 {
-			return nil, errors.New("requesttermination: status_code can't be empty")
+			return nil, errors.New("request_termination: status_code cannot be empty")
 		}
 
 		m := NewMiddleware(*opts)

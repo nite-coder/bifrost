@@ -65,7 +65,7 @@ func newEngine(bifrost *Bifrost, serverOptions config.ServerOptions) (*Engine, e
 		}
 
 		if len(m.Type) == 0 {
-			return nil, fmt.Errorf("middleware type can't be empty in server id: '%s'", serverOptions.ID)
+			return nil, fmt.Errorf("middleware type cannot be empty for server ID: %s", serverOptions.ID)
 		}
 
 		handler := middleware.Factory(m.Type)

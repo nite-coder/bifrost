@@ -73,7 +73,7 @@ func TestLoadMiddlewares(t *testing.T) {
 
 		_, err := loadMiddlewares(middlewareOptions)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "middleware id can't be empty")
+		assert.Contains(t, err.Error(), "middleware ID cannot be empty")
 	})
 
 	t.Run("empty middleware type", func(t *testing.T) {
@@ -85,7 +85,7 @@ func TestLoadMiddlewares(t *testing.T) {
 
 		_, err := loadMiddlewares(middlewareOptions)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "middleware type can't be empty")
+		assert.Contains(t, err.Error(), "middleware type cannot be empty")
 	})
 
 	t.Run("unknown middleware type", func(t *testing.T) {

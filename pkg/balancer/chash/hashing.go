@@ -21,13 +21,13 @@ const (
 func init() {
 	_ = balancer.Register([]string{"hashing", "chash"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
 		if params == nil {
-			return nil, errors.New("params can't be empty")
+			return nil, errors.New("params cannot be empty")
 		}
 		var hashon string
 		if val, ok := params.(map[string]any); ok {
 			hashon, ok = val["hash_on"].(string)
 			if !ok {
-				return nil, errors.New("hash_on is not set or hash_on is invalid")
+				return nil, errors.New("hash_on is required and must be a string")
 			}
 		}
 
