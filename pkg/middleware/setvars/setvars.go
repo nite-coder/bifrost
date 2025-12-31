@@ -32,7 +32,7 @@ func init() {
 
 		for _, opt := range options {
 			if opt.Key == "" {
-				return nil, errors.New("the key can't be empty in setvars middleware params")
+				return nil, errors.New("key cannot be empty in setvars middleware parameters")
 			}
 		}
 

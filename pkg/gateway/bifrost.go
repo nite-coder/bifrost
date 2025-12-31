@@ -198,11 +198,11 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	}
 	for id, server := range mainOptions.Servers {
 		if id == "" {
-			return nil, errors.New("http server id can't be empty")
+			return nil, errors.New("HTTP server ID cannot be empty")
 		}
 		server.ID = id
 		if server.Bind == "" {
-			return nil, errors.New("http server bind can't be empty")
+			return nil, errors.New("HTTP server bind cannot be empty")
 		}
 		_, found := bifrost.httpServers[id]
 		if found {

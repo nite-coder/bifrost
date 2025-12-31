@@ -23,7 +23,7 @@ type Balancer interface {
 
 func Register(names []string, h CreateBalancerHandler) error {
 	if len(names) == 0 {
-		return errors.New("balancer names can't be empty")
+		return errors.New("balancer names cannot be empty")
 	}
 
 	for _, name := range names {

@@ -45,18 +45,18 @@ func Initialize(ctx context.Context, options []config.RedisOptions) error {
 
 	for _, option := range options {
 		if len(option.Addrs) == 0 {
-			return errors.New("redis options addrs can't be empty")
+			return errors.New("redis options addresses cannot be empty")
 		}
 
 		if option.ID == "" {
-			return errors.New("redis options id can't be empty")
+			return errors.New("redis options ID cannot be empty")
 		}
 
 		if len(option.Addrs) == 1 {
 			// signle redis
 			addr := strings.TrimSpace(option.Addrs[0])
 			if addr == "" {
-				return errors.New("redis addrs can't be empty")
+				return errors.New("redis addresses cannot be empty")
 			}
 
 			if variable.IsDirective(option.Username) {
@@ -89,7 +89,7 @@ func Initialize(ctx context.Context, options []config.RedisOptions) error {
 			for _, addr := range option.Addrs {
 				addr := strings.TrimSpace(addr)
 				if addr == "" {
-					return errors.New("redis addrs can't be empty")
+					return errors.New("redis addresses cannot be empty")
 				}
 				addrs = append(addrs, addr)
 			}

@@ -67,8 +67,8 @@ func TestAdd(t *testing.T) {
 
 	assert.Equal(t, "web", hzCtx.Request.Header.Get("x-source"))
 	assert.Equal(t, "12345678", hzCtx.Request.Header.Get("x-http-start"))
-	assert.Equal(t, "world", hzCtx.Request.Header.Get("x-existing-value")) // can't overwrite
-	assert.Equal(t, "foo1", hzCtx.Query("foo"))                            // can't overwrite
+	assert.Equal(t, "world", hzCtx.Request.Header.Get("x-existing-value")) // cannot overwrite
+	assert.Equal(t, "foo1", hzCtx.Query("foo"))                            // cannot overwrite
 
 	mode := hzCtx.Query("mode")
 	assert.Equal(t, "1", mode)

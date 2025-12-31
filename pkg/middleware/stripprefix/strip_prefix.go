@@ -14,7 +14,7 @@ import (
 func init() {
 	_ = middleware.Register([]string{"strip_prefix"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
-			return nil, errors.New("strip_prefix middleware params is empty or invalid")
+			return nil, errors.New("strip_prefix middleware parameters are missing or invalid")
 		}
 
 		prefixes := make([]string, 0)
@@ -22,7 +22,7 @@ func init() {
 			prefixVal, found := val["prefixes"]
 
 			if !found {
-				return nil, errors.New("prefixes params is not set or prefixes is invalid")
+				return nil, errors.New("prefixes parameter is missing or invalid")
 			}
 
 			err := mapstructure.Decode(prefixVal, &prefixes)

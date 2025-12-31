@@ -116,7 +116,7 @@ var hopHeaders = []string{
 func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 	addr, err := url.Parse(opts.Target)
 	if err != nil {
-		return nil, fmt.Errorf("proxy: http proxy failed to parse target url; %w", err)
+		return nil, fmt.Errorf("proxy: HTTP proxy failed to parse target URL: %w", err)
 	}
 	if client == nil {
 		clientOptions := ClientOptions{
@@ -208,7 +208,7 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	defer func() {
 		if r := recover(); r != nil {
 			stackTrace := cast.B2S(debug.Stack())
-			logger.ErrorContext(ctx, "proxy: http proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
+			logger.ErrorContext(ctx, "proxy: HTTP proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
 			c.Abort()
 		}
 		// check upstream health

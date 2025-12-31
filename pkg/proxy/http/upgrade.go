@@ -67,7 +67,7 @@ func (p *HTTPProxy) roundTrip(ctx context.Context, clientCtx *app.RequestContext
 	}
 
 	if resp.StatusCode() != http.StatusSwitchingProtocols {
-		err := fmt.Errorf("backend returns status is not 101, status code: %d", resp.StatusCode())
+		err := fmt.Errorf("backend returned unexpected status code %d (expected 101)", resp.StatusCode())
 		p.handleError(ctx, clientCtx, err)
 		return err
 	}
@@ -89,13 +89,13 @@ func (p *HTTPProxy) roundTrip(ctx context.Context, clientCtx *app.RequestContext
 
 	_, err = clientConn.Write(backendHeader.Header())
 	if err != nil {
-		p.handleError(ctx, clientCtx, fmt.Errorf("write header to client error %w", err))
+		p.handleError(ctx, clientCtx, fmt.Errorf("failed to write header to client: %w", err))
 		return err
 	}
 
 	err = clientConn.Flush()
 	if err != nil {
-		p.handleError(ctx, clientCtx, fmt.Errorf("flush header to client error %w", err))
+		p.handleError(ctx, clientCtx, fmt.Errorf("failed to flush header to client: %w", err))
 		return err
 	}
 

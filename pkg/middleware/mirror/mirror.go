@@ -28,7 +28,7 @@ func init() {
 		}
 
 		if opts.ServiceID == "" {
-			return nil, errors.New("mirror: service_id can't be empty")
+			return nil, errors.New("mirror: service_ID cannot be empty")
 		}
 
 		m := NewMiddleware(*opts)

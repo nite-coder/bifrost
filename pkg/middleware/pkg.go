@@ -15,7 +15,7 @@ type CreateMiddlewareHandler func(param any) (app.HandlerFunc, error)
 
 func Register(names []string, handler CreateMiddlewareHandler) error {
 	if len(names) == 0 {
-		return errors.New("middleware names can't be empty")
+		return errors.New("middleware names cannot be empty")
 	}
 
 	for _, name := range names {

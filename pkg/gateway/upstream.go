@@ -57,10 +57,10 @@ type Upstream struct {
 
 func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstreamOptions config.UpstreamOptions) (*Upstream, error) {
 	if len(upstreamOptions.ID) == 0 {
-		return nil, errors.New("upstream id can't be empty")
+		return nil, errors.New("upstream ID cannot be empty")
 	}
 	if upstreamOptions.Discovery.Type == "" && len(upstreamOptions.Targets) == 0 {
-		return nil, fmt.Errorf("targets can't be empty. upstream id: %s", upstreamOptions.ID)
+		return nil, fmt.Errorf("targets cannot be empty for upstream ID: %s", upstreamOptions.ID)
 	}
 
 	upstream := &Upstream{
@@ -71,7 +71,7 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 	switch strings.ToLower(upstreamOptions.Discovery.Type) {
 	case "dns":
 		if !bifrost.options.Providers.DNS.Enabled {
-			return nil, fmt.Errorf("dns provider is disabled. upstream id: %s", upstreamOptions.ID)
+			return nil, fmt.Errorf("dns provider is disabled for upstream ID: %s", upstreamOptions.ID)
 		}
 		discovery, err := dns.NewDNSServiceDiscovery(bifrost.options.Providers.DNS.Servers, bifrost.options.Providers.DNS.Valid)
 		if err != nil {
@@ -80,7 +80,7 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 		upstream.discovery = discovery
 	case "nacos":
 		if !bifrost.options.Providers.Nacos.Discovery.Enabled {
-			return nil, fmt.Errorf("nacos discovery provider is disabled. upstream id: %s", upstreamOptions.ID)
+			return nil, fmt.Errorf("nacos discovery provider is disabled for upstream ID: %s", upstreamOptions.ID)
 		}
 		options := nacos.Options{
 			Username:    bifrost.options.Providers.Nacos.Discovery.Username,
@@ -99,7 +99,7 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 		upstream.discovery = discovery
 	case "k8s":
 		if !bifrost.options.Providers.K8S.Enabled {
-			return nil, fmt.Errorf("k8s provider is disabled. upstream id: %s", upstreamOptions.ID)
+			return nil, fmt.Errorf("k8s provider is disabled for upstream ID: %s", upstreamOptions.ID)
 		}
 		option := k8s.Options{
 			APIServer: bifrost.options.Providers.K8S.APIServer,
@@ -167,7 +167,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			return err
 		}
 	} else if len(instances) == 0 {
-		return fmt.Errorf("no instances found, upstream id: %s", u.options.ID)
+		return fmt.Errorf("no instances found for upstream ID: %s", u.options.ID)
 	}
 	newProxies := make([]proxy.Proxy, 0)
 

@@ -14,7 +14,7 @@ import (
 func init() {
 	_ = middleware.Register([]string{"replace_path"}, func(params any) (app.HandlerFunc, error) {
 		if params == nil {
-			return nil, errors.New("replace_path middleware params is not set or invalid")
+			return nil, errors.New("replace_path middleware parameters are missing or invalid")
 		}
 		var path string
 		var err error

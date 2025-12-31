@@ -437,7 +437,7 @@ func TestRouteAddErrors(t *testing.T) {
 			Paths: []string{},
 		}, generalkHandler)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "paths can't be empty")
+		assert.Contains(t, err.Error(), "paths cannot be empty")
 	})
 
 	t.Run("exact route empty path", func(t *testing.T) {
@@ -445,7 +445,7 @@ func TestRouteAddErrors(t *testing.T) {
 			Paths: []string{"="},
 		}, generalkHandler)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "exact route can't be empty")
+		assert.Contains(t, err.Error(), "exact route cannot be empty")
 	})
 
 	t.Run("prefix route empty path", func(t *testing.T) {
@@ -453,7 +453,7 @@ func TestRouteAddErrors(t *testing.T) {
 			Paths: []string{"^~"},
 		}, generalkHandler)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "prefix route can't be empty")
+		assert.Contains(t, err.Error(), "prefix route cannot be empty")
 	})
 
 	t.Run("regex route empty expression", func(t *testing.T) {
@@ -461,7 +461,7 @@ func TestRouteAddErrors(t *testing.T) {
 			Paths: []string{"~"},
 		}, generalkHandler)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "regexp expression route can't be empty")
+		assert.Contains(t, err.Error(), "regular expression route cannot be empty")
 	})
 
 	t.Run("case insensitive regex route empty expression", func(t *testing.T) {
@@ -469,7 +469,7 @@ func TestRouteAddErrors(t *testing.T) {
 			Paths: []string{"~*"},
 		}, generalkHandler)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "regexp expression route can't be empty")
+		assert.Contains(t, err.Error(), "regular expression route cannot be empty")
 	})
 
 	t.Run("invalid path format", func(t *testing.T) {

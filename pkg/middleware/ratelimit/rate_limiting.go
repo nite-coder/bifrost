@@ -154,12 +154,12 @@ func init() {
 			return nil, fmt.Errorf("rate_limit middleware params is invalid: %w", err)
 		}
 		if len(option.LimitBy) == 0 {
-			return nil, errors.New("limit_by can't be empty for rate_limit middleware")
+			return nil, errors.New("limit_by cannot be empty")
 		}
 		switch option.Strategy {
 		case Local, Redis:
 		case "":
-			return nil, errors.New("strategy can't be empty for rate_limit middleware")
+			return nil, errors.New("strategy cannot be empty")
 		default:
 			return nil, fmt.Errorf("strategy '%s' is invalid", option.Strategy)
 		}

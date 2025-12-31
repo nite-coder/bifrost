@@ -111,13 +111,13 @@ func loadMiddlewares(middlewareOptions map[string]config.MiddlwareOptions) (map[
 	for id, middlewareOpts := range middlewareOptions {
 
 		if len(id) == 0 {
-			return nil, errors.New("middleware id can't be empty")
+			return nil, errors.New("middleware ID cannot be empty")
 		}
 
 		middlewareOpts.ID = id
 
 		if len(middlewareOpts.Type) == 0 {
-			return nil, fmt.Errorf("middleware type can't be empty in middleware id: '%s'", middlewareOpts.ID)
+			return nil, fmt.Errorf("middleware type cannot be empty for middleware ID: %s", middlewareOpts.ID)
 		}
 
 		handler := middleware.Factory(middlewareOpts.Type)

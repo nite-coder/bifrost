@@ -94,43 +94,43 @@ func ValidateConfig(mainOptions Options, isFullMode bool) error {
 func validateProviders(mainOptions Options) error {
 
 	if mainOptions.Providers.File.Enabled && len(mainOptions.Providers.File.Paths) == 0 {
-		return errors.New("the paths can't be empty for the file provider")
+		return errors.New("paths cannot be empty for file provider")
 	}
 
 	if mainOptions.Providers.Nacos.Config.Enabled {
 		if len(mainOptions.Providers.Nacos.Config.Endpoints) == 0 {
-			return errors.New("the endpoints can't be empty for the nacos config provider")
+			return errors.New("endpoints cannot be empty for Nacos config provider")
 		}
 
 		for _, endpoint := range mainOptions.Providers.Nacos.Config.Endpoints {
 			_, err := url.Parse(endpoint)
 			if err != nil {
-				return fmt.Errorf("the endpoint '%s' is invalid for nacos config provider, error: %w", endpoint, err)
+				return fmt.Errorf("invalid endpoint '%s' for Nacos config provider: %w", endpoint, err)
 			}
 
 			if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
-				return fmt.Errorf("the endpoint '%s' is invalid for nacos config provider.  It should start with http:// or https://", endpoint)
+				return fmt.Errorf("invalid endpoint '%s' for Nacos config provider; must start with http:// or https://", endpoint)
 			}
 		}
 
 		if len(mainOptions.Providers.Nacos.Config.Files) == 0 {
-			return errors.New("the files can't be empty for the nacos config provider")
+			return errors.New("files cannot be empty for Nacos config provider")
 		}
 	}
 
 	if mainOptions.Providers.Nacos.Discovery.Enabled {
 		if len(mainOptions.Providers.Nacos.Discovery.Endpoints) == 0 {
-			return errors.New("the endpoints can't be empty for the nacos discovery provider")
+			return errors.New("endpoints cannot be empty for Nacos discovery provider")
 		}
 
 		for _, endpoint := range mainOptions.Providers.Nacos.Discovery.Endpoints {
 			_, err := url.Parse(endpoint)
 			if err != nil {
-				return fmt.Errorf("the endpoint '%s' is invalid for nacos discovery provider, error: %w", endpoint, err)
+				return fmt.Errorf("invalid endpoint '%s' for Nacos discovery provider: %w", endpoint, err)
 			}
 
 			if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
-				return fmt.Errorf("the endpoint '%s' is invalid for nacos discovery provider.  It should start with http:// or https://", endpoint)
+				return fmt.Errorf("invalid endpoint '%s' for Nacos discovery provider; must start with http:// or https://", endpoint)
 			}
 		}
 	}
@@ -144,7 +144,7 @@ func validateLogging(opts LoggingOtions) error {
 	switch level {
 	case "", "debug", "info", "warn", "error":
 	default:
-		msg := fmt.Sprintf("logging level '%s' is not supported", level)
+		msg := fmt.Sprintf("unsupported logging level '%s'", level)
 		structure := []string{"logging", "level"}
 		return newInvalidConfig(structure, level, msg)
 	}
@@ -153,7 +153,7 @@ func validateLogging(opts LoggingOtions) error {
 	switch handler {
 	case "text", "json", "":
 	default:
-		msg := fmt.Sprintf("logging handler '%s' is not supported", opts.Handler)
+		msg := fmt.Sprintf("unsupported logging handler '%s'", opts.Handler)
 		structure := []string{"logging", "handler"}
 		return newInvalidConfig(structure, opts.Handler, msg)
 	}
@@ -168,16 +168,16 @@ func validateTracing(opts TracingOptions) error {
 	}
 
 	if opts.ServiceName == "" {
-		return errors.New("the service_name can't be empty for the tracing")
+		return errors.New("service_name cannot be empty for tracing")
 	}
 
 	for _, propagator := range opts.Propagators {
 		switch propagator {
 		case "b3", "tracecontext", "baggage", "jaeger": // ok
 		case "":
-			return errors.New("the propagator can't be empty for the tracing")
+			return errors.New("propagator cannot be empty for tracing")
 		default:
-			return fmt.Errorf("the propagator '%s' is not supported in tracing", propagator)
+			return fmt.Errorf("unsupported propagator '%s' for tracing", propagator)
 		}
 	}
 
@@ -189,7 +189,7 @@ func validateAccessLog(options map[string]AccessLogOptions) error {
 
 	for id, opt := range options {
 		if opt.Template == "" {
-			msg := fmt.Sprintf("the template can't be empty for access log '%s'", id)
+			msg := fmt.Sprintf("template cannot be empty for access log '%s'", id)
 			structure := []string{"access_logs", id, "template"}
 			return newInvalidConfig(structure, opt.Template, msg)
 		}
@@ -197,7 +197,7 @@ func validateAccessLog(options map[string]AccessLogOptions) error {
 		if len(opt.TimeFormat) > 0 {
 			_, err := time.Parse(opt.TimeFormat, time.Now().Format(opt.TimeFormat))
 			if err != nil {
-				msg := fmt.Sprintf("the time format '%s' for access log '%s' is invalid", opt.TimeFormat, id)
+				msg := fmt.Sprintf("invalid time format '%s' for access log '%s'", opt.TimeFormat, id)
 				structure := []string{"access_logs", id, "time_format"}
 				return newInvalidConfig(structure, opt.TimeFormat, msg)
 			}
@@ -207,7 +207,7 @@ func validateAccessLog(options map[string]AccessLogOptions) error {
 			switch opt.Escape {
 			case "json", "none", "default", "":
 			default:
-				msg := fmt.Sprintf("the escape '%s' for access log '%s' is invalid", opt.Escape, id)
+				msg := fmt.Sprintf("invalid escape '%s' for access log '%s'", opt.Escape, id)
 				structure := []string{"access_logs", id, "escape"}
 				return newInvalidConfig(structure, opt.Escape, msg)
 			}
@@ -217,7 +217,7 @@ func validateAccessLog(options map[string]AccessLogOptions) error {
 
 		for _, directive := range directives {
 			if !variable.IsDirective(directive) {
-				return fmt.Errorf("the directive '%s' is not supported in the access log '%s'", directive, id)
+				return fmt.Errorf("unsupported directive '%s' for access log '%s'", directive, id)
 			}
 		}
 	}
@@ -229,18 +229,18 @@ func validateMiddlewares(mainOptions Options, isFullMode bool) error {
 
 	for middlewareID, middlewareOptions := range mainOptions.Middlewares {
 		if len(middlewareOptions.Use) > 0 {
-			return fmt.Errorf("the middleware '%s' can't run as `use` mode for the middleware id '%s'", middlewareOptions.Use, middlewareID)
+			return fmt.Errorf("middleware '%s' cannot run in 'use' mode for middleware ID: %s", middlewareOptions.Use, middlewareID)
 		}
 
 		if len(middlewareOptions.Type) == 0 {
-			return fmt.Errorf("the middleware type can't be empty for the middleware id '%s'", middlewareID)
+			return fmt.Errorf("middleware type cannot be empty for middleware ID: %s", middlewareID)
 		}
 
 		if isFullMode {
 			if len(middlewareOptions.Type) > 0 {
 				hander := middleware.Factory(middlewareOptions.Type)
 				if hander == nil {
-					return fmt.Errorf("the middleware '%s' can't be found for the middleware id '%s'", middlewareOptions.Type, middlewareID)
+					return fmt.Errorf("middleware '%s' not found for middleware ID: %s", middlewareOptions.Type, middlewareID)
 				}
 			}
 		}
@@ -253,7 +253,7 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 
 	for serverID, serverOptions := range mainOptions.Servers {
 		if serverOptions.Bind == "" {
-			msg := fmt.Sprintf("the bind can't be empty for server '%s'", serverID)
+			msg := "bind cannot be empty for server ID: " + serverID
 			structure := []string{"servers", serverID, "bind"}
 			return newInvalidConfig(structure, "", msg)
 		}
@@ -261,10 +261,10 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 		if len(serverOptions.TLS.CertPEM) > 0 {
 			_, err := os.ReadFile(serverOptions.TLS.CertPEM)
 			if err != nil {
-				msg := fmt.Sprintf("the cert pem file is invalid for server '%s'", serverID)
+				msg := "invalid cert PEM file for server ID: " + serverID
 
 				if os.IsNotExist(err) {
-					msg = fmt.Sprintf("the cert pem file doesn't exist for server '%s'", serverID)
+					msg = "cert PEM file not found for server ID: " + serverID
 				}
 
 				structure := []string{"servers", serverID, "tls", "cert_pem"}
@@ -275,10 +275,10 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 		if len(serverOptions.TLS.KeyPEM) > 0 {
 			_, err := os.ReadFile(serverOptions.TLS.KeyPEM)
 			if err != nil {
-				msg := fmt.Sprintf("the key pem file is invalid for server '%s'", serverID)
+				msg := "invalid key PEM file for server ID: " + serverID
 
 				if os.IsNotExist(err) {
-					msg = fmt.Sprintf("the key pem file doesn't exist for server '%s'", serverID)
+					msg = "key PEM file not found for server ID: " + serverID
 				}
 
 				structure := []string{"servers", serverID, "tls", "key_pem"}
@@ -288,7 +288,7 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 
 		if serverOptions.AccessLogID != "" {
 			if _, found := mainOptions.AccessLogs[serverOptions.AccessLogID]; !found {
-				msg := fmt.Sprintf("the access log '%s' doesn't exist for server '%s'", serverOptions.AccessLogID, serverID)
+				msg := fmt.Sprintf("access log '%s' not found for server ID: %s", serverOptions.AccessLogID, serverID)
 				structure := []string{"servers", serverID, "access_log_id"}
 				return newInvalidConfig(structure, serverOptions.AccessLogID, msg)
 			}
@@ -297,7 +297,7 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 		for _, cidr := range serverOptions.TrustedCIDRS {
 			_, _, err := net.ParseCIDR(cidr)
 			if err != nil {
-				msg := fmt.Sprintf("the cidr '%s' is invalid for server '%s'", cidr, serverID)
+				msg := fmt.Sprintf("invalid CIDR '%s' for server ID: %s", cidr, serverID)
 				structure := []string{"servers", serverID, "trusted_cidrs"}
 				return newInvalidConfig(structure, cidr, msg)
 			}
@@ -307,14 +307,14 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 			for _, m := range serverOptions.Middlewares {
 				if len(m.Use) > 0 {
 					if _, found := mainOptions.Middlewares[m.Use]; !found {
-						return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Use, serverID)
+						return fmt.Errorf("middleware '%s' not found for server ID: %s", m.Use, serverID)
 					}
 				}
 
 				if len(m.Type) > 0 {
 					hander := middleware.Factory(m.Type)
 					if hander == nil {
-						return fmt.Errorf("the middleware '%s' can't be found in the server '%s'", m.Type, serverID)
+						return fmt.Errorf("middleware '%s' not found for server ID: %s", m.Type, serverID)
 					}
 				}
 			}
@@ -336,13 +336,13 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 		route.ServiceID = strings.TrimSpace(route.ServiceID)
 
 		if route.ServiceID == "" {
-			msg := fmt.Sprintf("the 'service_id' can't be empty in the route '%s'", route.ID)
+			msg := "service_id cannot be empty for route ID: " + route.ID
 			structure := []string{"routes", route.ID, "service_id"}
 			return newInvalidConfig(structure, "", msg)
 		}
 
 		if len(route.Paths) == 0 {
-			msg := fmt.Sprintf("the paths can't be empty in the route '%s'", route.ID)
+			msg := "paths cannot be empty for route ID: " + route.ID
 			structure := []string{"routes", route.ID, "paths"}
 			return newInvalidConfig(structure, "", msg)
 		}
@@ -357,7 +357,7 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 			}
 
 			if _, found := mainOptions.Services[route.ServiceID]; !found {
-				msg := fmt.Sprintf("the service '%s' can't be found in the route '%s'", route.ServiceID, route.ID)
+				msg := fmt.Sprintf("service '%s' not found for route ID: %s", route.ServiceID, route.ID)
 				structure := []string{"routes", route.ID, "service_id"}
 				return newInvalidConfig(structure, "", msg)
 			}
@@ -365,7 +365,7 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 
 		for _, serverID := range route.Servers {
 			if _, found := mainOptions.Servers[serverID]; !found {
-				msg := fmt.Sprintf("the server '%s' can't be found in the route '%s'", serverID, route.ID)
+				msg := fmt.Sprintf("server '%s' not found for route ID: %s", serverID, route.ID)
 				structure := []string{"routes", route.ID, "servers"}
 				return newInvalidConfig(structure, serverID, msg)
 			}
@@ -374,7 +374,7 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 		for _, m := range route.Middlewares {
 			if len(m.Use) > 0 {
 				if _, found := mainOptions.Middlewares[m.Use]; !found {
-					msg := fmt.Sprintf("the middleware '%s' can't be found in the route '%s'", m.Use, route.ID)
+					msg := fmt.Sprintf("middleware '%s' not found for route ID: %s", m.Use, route.ID)
 					structure := []string{"routes", route.ID, "middlewares"}
 					return newInvalidConfig(structure, m.Use, msg)
 				}
@@ -383,7 +383,7 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 			if len(m.Type) > 0 {
 				hander := middleware.Factory(m.Type)
 				if hander == nil {
-					return fmt.Errorf("the middleware '%s' can't be found in the route '%s'", m.Type, route.ID)
+					return fmt.Errorf("middleware '%s' not found for route ID: %s", m.Type, route.ID)
 				}
 			}
 		}
@@ -426,7 +426,7 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 
 		// validate
 		if len(hostname) == 0 {
-			return fmt.Errorf("the host is invalid in service url. service_id: %s", serviceID)
+			return fmt.Errorf("invalid host in service URL for service ID: %s", serviceID)
 		}
 
 		// exist upstream
@@ -436,16 +436,16 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 				if dnsResolver != nil && !mainOptions.SkipResolver {
 					ips, err := dnsResolver.Lookup(context.Background(), hostname)
 					if err != nil {
-						return fmt.Errorf("failed to lookup host '%s' in the service '%s', error: %w", hostname, serviceID, err)
+						return fmt.Errorf("failed to lookup host '%s' for service ID '%s': %w", hostname, serviceID, err)
 					}
 
 					if len(ips) == 0 {
-						return fmt.Errorf("failed to lookup host '%s' in the service '%s', error: no ip found", hostname, serviceID)
+						return fmt.Errorf("failed to lookup host '%s' for service ID '%s': no IP found", hostname, serviceID)
 					}
 				} else {
 					ip := net.ParseIP(hostname)
 					if !IsValidDomain(hostname) && ip == nil {
-						return fmt.Errorf("the upstream '%s' can't be found in the service '%s'", hostname, serviceID)
+						return fmt.Errorf("upstream '%s' not found for service ID: %s", hostname, serviceID)
 					}
 				}
 			}
@@ -454,14 +454,14 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 		for _, m := range service.Middlewares {
 			if len(m.Use) > 0 {
 				if _, found := mainOptions.Middlewares[m.Use]; !found {
-					return fmt.Errorf("the middleware '%s' can't be found in the service '%s'", m.Use, serviceID)
+					return fmt.Errorf("middleware '%s' not found for service ID: %s", m.Use, serviceID)
 				}
 			}
 
 			if len(m.Type) > 0 {
 				hander := middleware.Factory(m.Type)
 				if hander == nil {
-					return fmt.Errorf("the middleware '%s' can't be found in the service '%s'", m.Type, serviceID)
+					return fmt.Errorf("middleware '%s' not found for service ID: %s", m.Type, serviceID)
 				}
 			}
 		}
@@ -479,7 +479,7 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 		}
 
 		if upstreamID[0] == '$' {
-			msg := fmt.Sprintf("the upstream '%s' can't start with '$'", upstreamID)
+			msg := fmt.Sprintf("upstream ID '%s' cannot start with '$'", upstreamID)
 			structure := []string{"upstreams", upstreamID}
 			return newInvalidConfig(structure, "", msg)
 		}
@@ -487,7 +487,7 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 		factory := balancer.Factory(upstreamOptions.Balancer.Type)
 		if factory == nil && upstreamOptions.Balancer.Type == "" {
 		} else if factory == nil {
-			msg := fmt.Sprintf("the strategy '%s' for the upstream '%s' is not supported", upstreamOptions.Balancer, upstreamID)
+			msg := fmt.Sprintf("unsupported balancer strategy '%s' for upstream ID: %s", upstreamOptions.Balancer, upstreamID)
 			structure := []string{"upstreams", upstreamID, "strategy"}
 			return newInvalidConfig(structure, upstreamOptions.Balancer, msg)
 		}
@@ -495,34 +495,34 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 		switch upstreamOptions.Discovery.Type {
 		case "dns":
 			if !mainOptions.Providers.DNS.Enabled {
-				return fmt.Errorf("dns provider is disabled. upstream id: %s", upstreamID)
+				return fmt.Errorf("DNS provider is disabled for upstream ID: %s", upstreamID)
 			}
 
 			if upstreamOptions.Discovery.Name == "" {
-				return fmt.Errorf("discovery name can't be empty in the upstream '%s'", upstreamID)
+				return fmt.Errorf("discovery name cannot be empty for upstream ID: %s", upstreamID)
 			}
 		case "nacos":
 			if !mainOptions.Providers.Nacos.Discovery.Enabled {
-				return fmt.Errorf("nacos service discovery provider is disabled. upstream id: %s", upstreamID)
+				return fmt.Errorf("nacos service discovery provider is disabled for upstream ID: %s", upstreamID)
 			}
 
 			if upstreamOptions.Discovery.Name == "" {
-				return fmt.Errorf("discovery name can't be empty in the upstream '%s'", upstreamID)
+				return fmt.Errorf("discovery name cannot be empty for upstream ID: %s", upstreamID)
 			}
 		case "k8s":
 			if !mainOptions.Providers.K8S.Enabled {
-				return fmt.Errorf("k8s service discovery provider is disabled. upstream id: %s", upstreamID)
+				return fmt.Errorf("K8s service discovery provider is disabled for upstream ID: %s", upstreamID)
 			}
 
 			if upstreamOptions.Discovery.Name == "" {
-				return fmt.Errorf("discovery name can't be empty in the upstream '%s'", upstreamID)
+				return fmt.Errorf("discovery name cannot be empty for upstream ID: %s", upstreamID)
 			}
 		case "":
 			if upstreamOptions.Discovery.Type == "" && len(upstreamOptions.Targets) == 0 {
-				return fmt.Errorf("the targets can't be empty in the upstream '%s'", upstreamID)
+				return fmt.Errorf("targets cannot be empty for upstream ID: %s", upstreamID)
 			}
 		default:
-			msg := fmt.Sprintf("the discovery type '%s' for the upstream '%s' is not supported", upstreamOptions.Discovery.Type, upstreamID)
+			msg := fmt.Sprintf("unsupported discovery type '%s' for upstream ID: %s", upstreamOptions.Discovery.Type, upstreamID)
 			structure := []string{"upstreams", upstreamID, "discovery", "type"}
 			return newInvalidConfig(structure, upstreamOptions.Discovery.Type, msg)
 		}
@@ -533,11 +533,11 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 				if dnsResolver != nil && !mainOptions.SkipResolver {
 					ips, err := dnsResolver.Lookup(context.Background(), addr)
 					if err != nil {
-						return fmt.Errorf("failed to lookup host '%s' in the upstream '%s', error: %w", addr, upstreamID, err)
+						return fmt.Errorf("failed to lookup host '%s' for upstream ID '%s': %w", addr, upstreamID, err)
 					}
 
 					if len(ips) == 0 {
-						return fmt.Errorf("failed to lookup host '%s' in the upstream '%s', error: no ip found", addr, upstreamID)
+						return fmt.Errorf("failed to lookup host '%s' for upstream ID '%s': no IP found", addr, upstreamID)
 					}
 				}
 			}
@@ -550,7 +550,7 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 func validateMetrics(options Options, isFullMode bool) error {
 	if options.Metrics.Prometheus.Enabled {
 		if options.Metrics.Prometheus.ServerID == "" {
-			return errors.New("the server_id can't be empty for the prometheus")
+			return errors.New("server_id cannot be empty for Prometheus")
 		}
 
 		if !isFullMode {
@@ -559,7 +559,7 @@ func validateMetrics(options Options, isFullMode bool) error {
 
 		_, found := options.Servers[options.Metrics.Prometheus.ServerID]
 		if !found {
-			msg := fmt.Sprintf("the server_id '%s' for the prometheus is not found", options.Metrics.Prometheus.ServerID)
+			msg := "server_id '" + options.Metrics.Prometheus.ServerID + "' not found for prometheus"
 			structure := []string{"metrics", "prometheus", "server_id"}
 			return newInvalidConfig(structure, options.Metrics.Prometheus.ServerID, msg)
 		}
@@ -582,7 +582,7 @@ func validateResolver(options Options) error {
 			switch strings.ToLower(order) {
 			case "last", "a", "cname":
 			default:
-				msg := fmt.Sprintf("the order '%s' is not supported", order)
+				msg := fmt.Sprintf("unsupported resolver order '%s'", order)
 				structure := []string{"resolver", "order"}
 				return newInvalidConfig(structure, order, msg)
 			}
@@ -617,18 +617,18 @@ func addRoute(r *router.Router, routeOptions RouteOptions) error {
 			nodeType = router.Exact
 			path = strings.TrimSpace(path[1:])
 			if len(path) == 0 {
-				return fmt.Errorf("config: exact route can't be empty in route: '%s'", routeOptions.ID)
+				return fmt.Errorf("config: exact route path cannot be empty for route ID: %s", routeOptions.ID)
 			}
 		case strings.HasPrefix(path, "^~"):
 			nodeType = router.PreferentialPrefix
 			path = strings.TrimSpace(path[2:])
 			if len(path) == 0 {
-				return fmt.Errorf("config: prefix route can't be empty in route: '%s'", routeOptions.ID)
+				return fmt.Errorf("config: prefix route path cannot be empty for route ID: %s", routeOptions.ID)
 			}
 
 		default:
 			if !strings.HasPrefix(path, "/") {
-				return fmt.Errorf("config: '%s' is invalid path. Path needs to begin with '/'", path)
+				return fmt.Errorf("config: invalid path '%s'; must begin with '/'", path)
 			}
 			nodeType = router.Prefix
 		}
@@ -645,7 +645,7 @@ func addRoute(r *router.Router, routeOptions RouteOptions) error {
 		for _, method := range routeOptions.Methods {
 			method := strings.ToUpper(method)
 			if !router.IsValidHTTPMethod(method) {
-				return fmt.Errorf("http method %s is not valid", method)
+				return fmt.Errorf("HTTP method %s is not valid", method)
 			}
 
 			err := r.Add(method, path, nodeType, func(c context.Context, ctx *app.RequestContext) {})

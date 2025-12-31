@@ -169,7 +169,7 @@ func NewRouter() *Router {
 // Add adds a route to radix tree
 func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.HandlerFunc) error {
 	if len(path) == 0 || path[0] != '/' {
-		return fmt.Errorf("router: '%s' is invalid path.  Path needs to begin with '/'", path)
+		return fmt.Errorf("router: invalid path '%s'; must begin with '/'", path)
 	}
 	originalPath := path
 	currentNode := r.tree
@@ -185,7 +185,7 @@ func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.H
 		}
 		handlers := currentNode.findHandler(method)
 		if len(handlers) > 0 {
-			return fmt.Errorf("router: duplicate route method:'%s', path:'%s' %w", method, originalPath, ErrAlreadyExists)
+			return fmt.Errorf("router: duplicate route for method '%s' and path '%s': %w", method, originalPath, ErrAlreadyExists)
 		}
 		currentNode.addHandler(method, middleware)
 		return nil
@@ -222,7 +222,7 @@ func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.H
 	}
 	handlers := currentNode.findHandler(method)
 	if len(handlers) > 0 {
-		return fmt.Errorf("router: duplicate route method:'%s', path:'%s' %w", method, originalPath, ErrAlreadyExists)
+		return fmt.Errorf("router: duplicate route for method '%s' and path '%s': %w", method, originalPath, ErrAlreadyExists)
 	}
 	// Add handler functions to the final node
 	currentNode.addHandler(method, middleware)
