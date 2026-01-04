@@ -139,7 +139,15 @@ func main() {
 			if isDaemon {
 				mainOptions.IsDaemon = true
 				if os.Getenv("DAEMONIZED") == "" {
-					return gateway.RunAsDaemon(mainOptions)
+					err := gateway.RunAsDaemon(mainOptions)
+					if err != nil {
+						return err
+					}
+					// If DAEMONIZED was set by RunAsDaemon (systemd mode), continue to Run()
+					// Otherwise, the fork was successful and parent should exit
+					if os.Getenv("DAEMONIZED") == "" {
+						return nil
+					}
 				}
 			}
 

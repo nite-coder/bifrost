@@ -395,6 +395,15 @@ func Run(mainOptions config.Options) (err error) {
 // It takes mainOptions of type config.Options which contains the user and group information to run the daemon process.
 // Returns an error if the daemon process fails to start.
 func RunAsDaemon(mainOptions config.Options) error {
+	// When running under systemd with Type=notify, skip forking.
+	// systemd expects the main process to send sd_notify, not a forked child.
+	if os.Getenv("NOTIFY_SOCKET") != "" {
+		slog.Debug("running under systemd (NOTIFY_SOCKET detected), skipping fork")
+		// Set DAEMONIZED to trigger daemon mode behavior in Run()
+		os.Setenv("DAEMONIZED", "1")
+		return nil
+	}
+
 	if os.Geteuid() != 0 {
 		return errors.New("must be run as root to execute in daemon mode")
 	}

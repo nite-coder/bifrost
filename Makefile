@@ -8,6 +8,11 @@ test:
 e2e-test:
 	sudo bash ./test/e2e/upgrade_test.sh
 
+# Systemd integration test - requires Docker with privileged mode
+# Run with: make systemd-test
+systemd-test:
+	bash ./test/systemd/systemd_test.sh
+
 coverage: test
 	go tool cover -func=cover.out
 
@@ -32,7 +37,7 @@ rund:
 		-v "${LOCAL_WORKSPACE_FOLDER}/server/bifrost/conf:/app/conf" \
 		jasonsoft/bifrost 
 
-release: build lint test e2e-test
+release: build lint test systemd-test e2e-test
 
 k8s_apply:
 	kubectl apply -f ./config/k8s/bifrost_deployment.yaml -f ./config/k8s/echo_deployment.yaml
