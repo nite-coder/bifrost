@@ -22,6 +22,7 @@ import (
 	cgopool "github.com/cloudwego/gopkg/concurrency/gopool"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/netpoll"
+	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/connector/redis"
@@ -249,6 +250,13 @@ func Run(mainOptions config.Options) (err error) {
 			"readinessCheckDuration", readinessElapsed,
 		)
 
+		// Notify systemd that the service is ready (no-op if not running under systemd)
+		if sent, err := daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
+			slog.Warn("failed to notify systemd", "error", err)
+		} else if sent {
+			slog.Debug("notified systemd: READY=1")
+		}
+
 		zeroDT := bifrost.ZeroDownTime()
 
 		if zeroDT != nil && zeroDT.IsUpgraded() {
@@ -321,6 +329,15 @@ func Run(mainOptions config.Options) (err error) {
 				}
 			}()
 			slog.Debug("PID file updated successfully", "newPID", os.Getpid())
+
+			// Notify systemd about the new main PID and that we're ready
+			// This is critical for Type=notify to correctly track the new process
+			notifyState := fmt.Sprintf("MAINPID=%d\n%s", os.Getpid(), daemon.SdNotifyReady)
+			if sent, err := daemon.SdNotify(false, notifyState); err != nil {
+				slog.Warn("failed to notify systemd about upgrade", "error", err)
+			} else if sent {
+				slog.Info("notified systemd about new main PID", "pid", os.Getpid())
+			}
 
 			slog.Log(ctx, log.LevelNotice, "upgrade completed successfully",
 				"oldPID", oldPID,
