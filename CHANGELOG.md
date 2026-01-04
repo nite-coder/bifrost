@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bump `golangci-lint` to `v2.7.2` ([#85](https://github.com/nite-coder/bifrost/pull/85) by [0x5487](https://github.com/0x5487))
 - Standardize error messages by lowercasing strings to follow Go idioms and optimize string formatting by replacing `fmt.Sprintf` with string concatenation. ([#86](https://github.com/nite-coder/bifrost/pull/86) by [0x5487](https://github.com/0x5487))
 - Replace Unix socket with SIGHUP signal for upgrade mechanism to improve reliability. ([#87](https://github.com/nite-coder/bifrost/pull/87) by [0x5487](https://github.com/0x5487))
+- Switch systemd service from `Type=forking` to `Type=notify` and add `sd_notify` support for reliable hot reload. ([#88](https://github.com/nite-coder/bifrost/pull/88) by [0x5487](https://github.com/0x5487))
 
 
 ## [0.7.0] (2025-12-25)

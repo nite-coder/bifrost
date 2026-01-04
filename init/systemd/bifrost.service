@@ -3,7 +3,8 @@ Description=Bifrost Service
 After=network.target
 
 [Service]
-Type=forking
+Type=notify
+NotifyAccess=all
 Environment=GOTRACEBACK=crash
 WorkingDirectory=/home/my-gateway
 PIDFile=/home/my-gateway/logs/bifrost.pid

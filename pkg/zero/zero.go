@@ -393,6 +393,11 @@ func (z *ZeroDownTime) Quit(ctx context.Context, pid int, removePIDFile bool) er
 	}
 	err = process.Signal(syscall.SIGTERM)
 	if err != nil {
+		// If process already terminated (e.g., crash or killed externally), this is not a fatal error
+		if errors.Is(err, os.ErrProcessDone) || errors.Is(err, syscall.ESRCH) {
+			slog.Info("process already terminated", "pid", pid)
+			return nil
+		}
 		slog.Error("send signal error", "error", err)
 		return err
 	}
