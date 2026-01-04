@@ -33,26 +33,6 @@ func TestGetPIDFile(t *testing.T) {
 	}
 }
 
-func TestGetUpgradeSock(t *testing.T) {
-	tests := []struct {
-		name        string
-		upgradeSock string
-		expected    string
-	}{
-		{"Default", "", "./logs/bifrost.sock"},
-		{"Custom", "./custom.sock", "./custom.sock"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			opts := Options{UpgradeSock: tt.upgradeSock}
-			if got := opts.GetUpgradeSock(); got != tt.expected {
-				t.Errorf("GetUpgradeSock() = %v, want %v", got, tt.expected)
-			}
-		})
-	}
-}
-
 func TestIsUpgraded(t *testing.T) {
 	t.Run("upgraded", func(t *testing.T) {
 		z := New(Options{})
@@ -185,8 +165,7 @@ func TestWaitForUpgrade(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	opts := Options{
-		UpgradeSock: tmpDir + "/test.sock",
-		PIDFile:     tmpDir + "/test.pid",
+		PIDFile: tmpDir + "/test.pid",
 	}
 	z := New(opts)
 
@@ -195,14 +174,15 @@ func TestWaitForUpgrade(t *testing.T) {
 
 	go func() {
 		safety.Go(ctx, func() {
+			// Wait for WaitForUpgrade to set up signal handler
 			assert.Eventually(t, func() bool {
-				conn, err := net.Dial("unix", opts.GetUpgradeSock())
-				if err == nil {
-					conn.Close()
-					return true
-				}
-				return false
-			}, 2*time.Second, 50*time.Millisecond, "Failed to connect to upgrade socket")
+				return z.IsWaiting()
+			}, 2*time.Second, 10*time.Millisecond, "WaitForUpgrade should be in waiting state")
+
+			// Send SIGHUP to self to trigger upgrade
+			syscall.Kill(os.Getpid(), syscall.SIGHUP)
+
+			// Close will signal the goroutine to exit
 			z.Close(ctx)
 		})
 	}()
@@ -577,73 +557,67 @@ func TestUpgrade(t *testing.T) {
 		assert.NoError(t, err)
 		defer os.RemoveAll(tmpDir)
 
-		sockPath := tmpDir + "/test.sock"
-		z := New(Options{UpgradeSock: sockPath})
+		pidFile := tmpDir + "/test.pid"
+		z := New(Options{PIDFile: pidFile})
 
-		// Start a mock server to accept connections
-		listener, err := net.Listen("unix", sockPath)
+		// Mock process finder to verify SIGHUP is sent
+		mp := &mockProcess{pid: os.Getpid()}
+		z.processFinder = &mockProcessFinder{proc: mp}
+
+		// Write current PID to file
+		err = z.writePID()
 		assert.NoError(t, err)
-		defer listener.Close()
-
-		go func() {
-			conn, _ := listener.Accept()
-			if conn != nil {
-				conn.Close()
-			}
-		}()
-
-		// Give time for listener to start
-		assert.Eventually(t, func() bool {
-			conn, err := net.Dial("unix", sockPath)
-			if err == nil {
-				conn.Close()
-				return true
-			}
-			return false
-		}, 2*time.Second, 10*time.Millisecond, "Mock listener failed to start")
 
 		err = z.Upgrade()
 		assert.NoError(t, err)
+
+		// Verify SIGHUP was sent
+		assert.Len(t, mp.signals, 1)
+		assert.Equal(t, syscall.SIGHUP, mp.signals[0])
 	})
 
-	t.Run("upgrade failure no socket", func(t *testing.T) {
-		z := New(Options{UpgradeSock: "/nonexistent/path.sock"})
+	t.Run("upgrade failure no pid file", func(t *testing.T) {
+		z := New(Options{PIDFile: "/nonexistent/path.pid"})
 		err := z.Upgrade()
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to connect to upgrade socket")
+		assert.Contains(t, err.Error(), "failed to read PID file")
 	})
-}
 
-func TestRemoveUpgradeSock(t *testing.T) {
-	t.Run("remove existing socket", func(t *testing.T) {
-		tmpDir, err := os.MkdirTemp("", "zero_test_remove")
+	t.Run("upgrade failure find process error", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "zero_test_upgrade_err")
 		assert.NoError(t, err)
 		defer os.RemoveAll(tmpDir)
 
-		sockPath := tmpDir + "/test.sock"
-		z := New(Options{UpgradeSock: sockPath})
+		pidFile := tmpDir + "/test.pid"
+		z := New(Options{PIDFile: pidFile})
+		z.processFinder = &mockProcessFinderWithError{}
 
-		// Create a regular file to simulate socket (since closing a unix listener removes the socket)
-		err = os.WriteFile(sockPath, []byte{}, 0600)
+		// Write PID
+		err = os.WriteFile(pidFile, []byte("12345"), 0600)
 		assert.NoError(t, err)
 
-		// Verify file exists
-		_, err = os.Stat(sockPath)
-		assert.NoError(t, err)
-
-		// Remove socket
-		err = z.RemoveUpgradeSock()
-		assert.NoError(t, err)
-
-		// Verify file is removed
-		_, err = os.Stat(sockPath)
-		assert.True(t, os.IsNotExist(err))
+		err = z.Upgrade()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to find process")
 	})
 
-	t.Run("remove non-existent socket", func(t *testing.T) {
-		z := New(Options{UpgradeSock: "/nonexistent/path.sock"})
-		err := z.RemoveUpgradeSock()
+	t.Run("upgrade failure signal error", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "zero_test_upgrade_sig")
 		assert.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		pidFile := tmpDir + "/test.pid"
+		z := New(Options{PIDFile: pidFile})
+
+		mp := &mockProcess{pid: 12345, err: errors.New("signal error")}
+		z.processFinder = &mockProcessFinder{proc: mp}
+
+		err = os.WriteFile(pidFile, []byte("12345"), 0600)
+		assert.NoError(t, err)
+
+		err = z.Upgrade()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to send SIGHUP")
 	})
 }
 
@@ -763,9 +737,7 @@ func TestWaitForUpgradeStateError(t *testing.T) {
 		assert.NoError(t, err)
 		defer os.RemoveAll(tmpDir)
 
-		z := New(Options{
-			UpgradeSock: tmpDir + "/test.sock",
-		})
+		z := New(Options{})
 
 		// Manually set state to waiting
 		z.state = waitingState
@@ -803,9 +775,7 @@ func TestCloseWithWaitingState(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	z := New(Options{
-		UpgradeSock: tmpDir + "/test.sock",
-	})
+	z := New(Options{})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()

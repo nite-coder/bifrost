@@ -137,8 +137,7 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	}
 	slog.SetDefault(logger)
 	zeroOptions := zero.Options{
-		UpgradeSock: mainOptions.UpgradeSock,
-		PIDFile:     mainOptions.PIDFile,
+		PIDFile: mainOptions.PIDFile,
 	}
 	resolveOptions := resolver.Options{
 		Servers:  mainOptions.Resolver.Servers,

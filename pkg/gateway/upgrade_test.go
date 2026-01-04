@@ -21,12 +21,10 @@ func TestUpgradeFlow_QuitCalledBeforeWritePIDWithLock(t *testing.T) {
 	// Create a temp directory for PID files
 	tmpDir := t.TempDir()
 	pidFile := tmpDir + "/test.pid"
-	upgradeSock := tmpDir + "/test.sock"
 
 	// Simulate "old process" by creating PID file with lock
 	oldZeroDT := zero.New(zero.Options{
-		PIDFile:     pidFile,
-		UpgradeSock: upgradeSock,
+		PIDFile: pidFile,
 	})
 
 	// Write PID file with lock (simulating old process)
@@ -44,8 +42,7 @@ func TestUpgradeFlow_QuitCalledBeforeWritePIDWithLock(t *testing.T) {
 
 	// Now simulate "new process" trying to acquire lock (should fail without Quit)
 	newZeroDT := zero.New(zero.Options{
-		PIDFile:     pidFile,
-		UpgradeSock: upgradeSock,
+		PIDFile: pidFile,
 	})
 
 	// Attempt to acquire lock - this should FAIL because old process holds it
@@ -62,12 +59,10 @@ func TestUpgradeFlow_QuitCalledBeforeWritePIDWithLock(t *testing.T) {
 func TestUpgradeFlow_SucceedsAfterLockRelease(t *testing.T) {
 	tmpDir := t.TempDir()
 	pidFile := tmpDir + "/test.pid"
-	upgradeSock := tmpDir + "/test.sock"
 
 	// Simulate "old process"
 	oldZeroDT := zero.New(zero.Options{
-		PIDFile:     pidFile,
-		UpgradeSock: upgradeSock,
+		PIDFile: pidFile,
 	})
 
 	// Old process acquires lock
@@ -80,8 +75,7 @@ func TestUpgradeFlow_SucceedsAfterLockRelease(t *testing.T) {
 
 	// Now new process should be able to acquire lock
 	newZeroDT := zero.New(zero.Options{
-		PIDFile:     pidFile,
-		UpgradeSock: upgradeSock,
+		PIDFile: pidFile,
 	})
 
 	newLockFile, err := newZeroDT.WritePIDWithLock()
@@ -98,12 +92,10 @@ func TestUpgradeFlow_SucceedsAfterLockRelease(t *testing.T) {
 func TestUpgradeFlow_ConcurrentLockContention(t *testing.T) {
 	tmpDir := t.TempDir()
 	pidFile := tmpDir + "/test.pid"
-	upgradeSock := tmpDir + "/test.sock"
 
 	// Holder acquires lock first
 	holder := zero.New(zero.Options{
-		PIDFile:     pidFile,
-		UpgradeSock: upgradeSock,
+		PIDFile: pidFile,
 	})
 
 	lockFile, err := holder.WritePIDWithLock()
@@ -119,8 +111,7 @@ func TestUpgradeFlow_ConcurrentLockContention(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			contender := zero.New(zero.Options{
-				PIDFile:     pidFile,
-				UpgradeSock: upgradeSock,
+				PIDFile: pidFile,
 			})
 			_, err := contender.WritePIDWithLock()
 			if err != nil {
@@ -139,8 +130,7 @@ func TestUpgradeFlow_ConcurrentLockContention(t *testing.T) {
 
 	// Now one should succeed
 	winner := zero.New(zero.Options{
-		PIDFile:     pidFile,
-		UpgradeSock: upgradeSock,
+		PIDFile: pidFile,
 	})
 	winnerLock, err := winner.WritePIDWithLock()
 	assert.NoError(t, err, "should succeed after lock is released")
@@ -154,14 +144,12 @@ func TestUpgradeFlow_ConcurrentLockContention(t *testing.T) {
 func TestUpgradeFlow_PIDFileUpdatedAfterUpgrade(t *testing.T) {
 	tmpDir := t.TempDir()
 	pidFile := tmpDir + "/test.pid"
-	upgradeSock := tmpDir + "/test.sock"
 
 	oldPID := 12345
 
 	// Simulate old process writing its PID
 	oldZeroDT := zero.New(zero.Options{
-		PIDFile:     pidFile,
-		UpgradeSock: upgradeSock,
+		PIDFile: pidFile,
 	})
 
 	lockFile, err := oldZeroDT.WritePIDWithLock()
@@ -182,8 +170,7 @@ func TestUpgradeFlow_PIDFileUpdatedAfterUpgrade(t *testing.T) {
 
 	// New process writes its PID
 	newZeroDT := zero.New(zero.Options{
-		PIDFile:     pidFile,
-		UpgradeSock: upgradeSock,
+		PIDFile: pidFile,
 	})
 
 	newLockFile, err := newZeroDT.WritePIDWithLock()
@@ -209,11 +196,9 @@ func TestUpgradeFlow_PIDFileUpdatedAfterUpgrade(t *testing.T) {
 func TestUpgradeFlow_ValidatePIDFileReturnsCorrectState(t *testing.T) {
 	tmpDir := t.TempDir()
 	pidFile := tmpDir + "/test.pid"
-	upgradeSock := tmpDir + "/test.sock"
 
 	zeroDT := zero.New(zero.Options{
-		PIDFile:     pidFile,
-		UpgradeSock: upgradeSock,
+		PIDFile: pidFile,
 	})
 
 	t.Run("no PID file exists", func(t *testing.T) {
