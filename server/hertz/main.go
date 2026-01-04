@@ -46,7 +46,7 @@ func main() {
 	ctx := context.Background()
 
 	zeroOpts := zero.Options{
-		UpgradeSock: "./hertz.sock",
+		
 		PIDFile:     "./hertz.pid",
 	}
 

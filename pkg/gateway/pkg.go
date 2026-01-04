@@ -345,16 +345,8 @@ func Run(mainOptions config.Options) (err error) {
 			}()
 			slog.Debug("daemon PID file created", "pid", os.Getpid())
 
-			err = zeroDT.RemoveUpgradeSock()
-			if err != nil {
-				slog.Error("failed to remove upgrade sock file", "error", err)
-				return
-			}
-			slog.Debug("upgrade socket cleaned up")
-
 			slog.Info("daemon mode ready, waiting for upgrade signals",
 				"pid", os.Getpid(),
-				"upgradeSock", mainOptions.UpgradeSock,
 			)
 			if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
 				slog.Error("failed to wait for upgrade process", "error", err)
@@ -439,12 +431,11 @@ func RunAsDaemon(mainOptions config.Options) error {
 
 // StopDaemon stops the daemon process.
 //
-// It takes mainOptions of type config.Options which contains the upgrade socket and PID file information.
+// It takes mainOptions of type config.Options which contains the PID file information.
 // Returns an error if the daemon process fails to stop.
 func StopDaemon(mainOptions config.Options) error {
 	zeroOpts := zero.Options{
-		UpgradeSock: mainOptions.UpgradeSock,
-		PIDFile:     mainOptions.PIDFile,
+		PIDFile: mainOptions.PIDFile,
 	}
 
 	zeroDT := zero.New(zeroOpts)
@@ -465,12 +456,11 @@ func StopDaemon(mainOptions config.Options) error {
 
 // Upgrade upgrades the daemon process.
 //
-// It takes mainOptions of type config.Options which contains the upgrade socket and PID file information.
+// It takes mainOptions of type config.Options which contains the PID file information.
 // Returns an error if the upgrade fails.
 func Upgrade(mainOptions config.Options) error {
 	zeroOpts := zero.Options{
-		UpgradeSock: mainOptions.UpgradeSock,
-		PIDFile:     mainOptions.PIDFile,
+		PIDFile: mainOptions.PIDFile,
 	}
 
 	zeroDT := zero.New(zeroOpts)

@@ -14,7 +14,6 @@ This configuration file is divided into two primary types: `static configuration
 * [user_group](#user_group)
 * [resolver](#resolver)
 * [pid_file](#pid_file)
-* [upgrade_sock](#upgrade_sock)
 * [providers](#providers)
 * [logging](#logging)
 * [metrics](#metrics)
@@ -92,9 +91,6 @@ resolver:
 
 When the gateway process runs as a background task (daemon), the system records the current process's PID in this file.
 
-## upgrade_sock
-
-Facilitates communication between two gateway processes during upgrades via a UNIX socket.
 
 ## providers
 

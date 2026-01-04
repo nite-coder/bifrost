@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -112,8 +113,6 @@ type ListenerOptions struct {
 
 // Options contains configuration for the ZeroDownTime instance.
 type Options struct {
-	// UpgradeSock is the path to the Unix socket used for upgrade signaling.
-	UpgradeSock string
 	// PIDFile is the path to the file where the process ID is stored.
 	PIDFile string
 	// QuitTimout is the maximum time to wait for the old process to terminate.
@@ -126,14 +125,6 @@ func (opts Options) GetPIDFile() string {
 		return "./logs/bifrost.pid"
 	}
 	return opts.PIDFile
-}
-
-// GetUpgradeSock returns the upgrade socket path, using a default value if not configured.
-func (opts Options) GetUpgradeSock() string {
-	if opts.UpgradeSock == "" {
-		return "./logs/bifrost.sock"
-	}
-	return opts.UpgradeSock
 }
 
 // New creates a new ZeroDownTime instance with the given options.
@@ -174,20 +165,29 @@ func (z *ZeroDownTime) Close(ctx context.Context) error {
 	z.mu.Unlock()
 	if isWaiting {
 		z.stopWaitingCh <- true
-		<-z.isShutdownCh
 	}
 	return nil
 }
 
-// Upgrade triggers an upgrade by connecting to the upgrade socket.
+// Upgrade triggers an upgrade by sending SIGHUP signal to the running process.
 // This signals the running process to spawn a new process and transfer listeners.
 func (z *ZeroDownTime) Upgrade() error {
-	dialer := &net.Dialer{}
-	conn, err := dialer.DialContext(context.Background(), "unix", z.options.GetUpgradeSock())
+	pid, err := z.GetPID()
 	if err != nil {
-		return fmt.Errorf("failed to connect to upgrade socket: %w", err)
+		return fmt.Errorf("failed to read PID file: %w", err)
 	}
-	defer conn.Close()
+
+	process, err := z.processFinder.FindProcess(pid)
+	if err != nil {
+		return fmt.Errorf("failed to find process %d: %w", pid, err)
+	}
+
+	err = process.Signal(syscall.SIGHUP)
+	if err != nil {
+		return fmt.Errorf("failed to send SIGHUP to process %d: %w", pid, err)
+	}
+
+	slog.Info("sent SIGHUP signal to trigger upgrade", "pid", pid)
 	return nil
 }
 
@@ -272,7 +272,7 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 	return listener, nil
 }
 
-// WaitForUpgrade blocks until an upgrade signal is received on the upgrade socket.
+// WaitForUpgrade blocks until a SIGHUP signal is received.
 // When an upgrade is triggered, it spawns a new process with inherited file descriptors
 // and waits for the Close method to be called before returning.
 func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
@@ -283,98 +283,92 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	}
 	z.state = waitingState
 	z.mu.Unlock()
-	dir := filepath.Dir(z.options.GetUpgradeSock())
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
-		}
-	}
-	config := &net.ListenConfig{}
-	socket, err := config.Listen(ctx, "unix", z.options.GetUpgradeSock())
-	if err != nil {
-		return fmt.Errorf("failed to open upgrade socket: %w", err)
-	}
-	defer func() {
-		socket.Close()
-		z.isShutdownCh <- true
-	}()
-	slog.Info("unix socket is created", "path", z.options.GetUpgradeSock())
+
+	// Listen for SIGHUP signal
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGHUP)
+
+	slog.Info("waiting for SIGHUP signal to trigger upgrade", "pid", os.Getpid())
+
 	go safety.Go(context.Background(), func() {
+		defer func() {
+			signal.Stop(sigCh)
+			z.isShutdownCh <- true
+		}()
+
 		upgradeCount := 0
 		for {
-			conn, err := socket.Accept()
-			if err != nil {
-				if errors.Is(err, net.ErrClosed) {
-					slog.Info("unix socket is closed", "pid", os.Getpid())
-					break
-				}
-				slog.Info("failed to accept upgrade connection", "error", err)
-				continue
-			}
-			conn.Close()
+			select {
+			case <-z.stopWaitingCh:
+				slog.Info("stop waiting for upgrade signal", "pid", os.Getpid())
+				return
+			case sig := <-sigCh:
+				upgradeCount++
+				slog.Info("upgrade signal received",
+					"signal", sig,
+					"upgradeCount", upgradeCount,
+					"currentPID", os.Getpid(),
+				)
 
-			upgradeCount++
-			slog.Info("upgrade signal received",
-				"upgradeCount", upgradeCount,
-				"currentPID", os.Getpid(),
-			)
-
-			slog.Debug("collecting listener file descriptors", "listenerCount", len(z.listeners))
-			files := []*os.File{}
-			for _, l := range z.listeners {
-				proxylistener, ok := l.listener.(*proxyproto.Listener)
-				if ok {
-					f, err := proxylistener.Listener.(*net.TCPListener).File()
-					if err != nil {
-						slog.ErrorContext(ctx, "failed to get listener file", "error", err, "key", l.Key)
-						continue
+				slog.Debug("collecting listener file descriptors", "listenerCount", len(z.listeners))
+				files := []*os.File{}
+				for _, l := range z.listeners {
+					proxylistener, ok := l.listener.(*proxyproto.Listener)
+					if ok {
+						f, err := proxylistener.Listener.(*net.TCPListener).File()
+						if err != nil {
+							slog.ErrorContext(ctx, "failed to get listener file", "error", err, "key", l.Key)
+							continue
+						}
+						files = append(files, f)
+						slog.Debug("listener file descriptor collected", "key", l.Key, "fd", f.Fd())
+					} else {
+						f, err := l.listener.(*net.TCPListener).File()
+						if err != nil {
+							slog.ErrorContext(ctx, "failed to get listener file", "error", err, "key", l.Key)
+							continue
+						}
+						files = append(files, f)
+						slog.Debug("listener file descriptor collected", "key", l.Key, "fd", f.Fd())
 					}
-					files = append(files, f)
-					slog.Debug("listener file descriptor collected", "key", l.Key, "fd", f.Fd())
-				} else {
-					f, err := l.listener.(*net.TCPListener).File()
-					if err != nil {
-						slog.ErrorContext(ctx, "failed to get listener file", "error", err, "key", l.Key)
-						continue
-					}
-					files = append(files, f)
-					slog.Debug("listener file descriptor collected", "key", l.Key, "fd", f.Fd())
 				}
+				slog.Info("listener file descriptors ready for transfer", "count", len(files))
+
+				b, err := sonic.Marshal(z.listeners)
+				if err != nil {
+					slog.Error("failed to marshal listeners", "error", err)
+					continue
+				}
+
+				slog.Debug("spawning new process",
+					"executable", os.Args[0],
+					"args", os.Args[1:],
+					"fdCount", len(files),
+				)
+
+				cmd := z.command.Command(os.Args[0], os.Args[1:]...)
+				cmd.Env = append(os.Environ(), "UPGRADE=1", "LISTENERS="+string(b))
+				cmd.Stdin = nil
+				cmd.Stdout = nil
+				cmd.Stderr = nil
+				cmd.ExtraFiles = files
+				if err := cmd.Start(); err != nil {
+					slog.ErrorContext(ctx, "failed to start a new process", "error", err)
+					continue
+				}
+
+				slog.Info("new process spawned successfully",
+					"newPID", cmd.Process.Pid,
+					"currentPID", os.Getpid(),
+					"fdCount", len(files),
+				)
 			}
-			slog.Info("listener file descriptors ready for transfer", "count", len(files))
-
-			b, err := sonic.Marshal(z.listeners)
-			if err != nil {
-				slog.Error("failed to marshal listeners", "error", err)
-				break
-			}
-
-			slog.Debug("spawning new process",
-				"executable", os.Args[0],
-				"args", os.Args[1:],
-				"fdCount", len(files),
-			)
-
-			cmd := z.command.Command(os.Args[0], os.Args[1:]...)
-			cmd.Env = append(os.Environ(), "UPGRADE=1", "LISTENERS="+string(b))
-			cmd.Stdin = nil
-			cmd.Stdout = nil
-			cmd.Stderr = nil
-			cmd.ExtraFiles = files
-			if err := cmd.Start(); err != nil {
-				slog.ErrorContext(ctx, "failed to start a new process", "error", err)
-				continue
-			}
-
-			slog.Info("new process spawned successfully",
-				"newPID", cmd.Process.Pid,
-				"currentPID", os.Getpid(),
-				"fdCount", len(files),
-			)
 		}
 	})
-	<-z.stopWaitingCh
-	slog.Info("stop waiting for upgrade signal", "pid", os.Getpid())
+
+	// Wait for goroutine to complete (triggered by Close sending to stopWaitingCh)
+	<-z.isShutdownCh
+	slog.Info("WaitForUpgrade completed", "pid", os.Getpid())
 	return nil
 }
 
@@ -505,19 +499,6 @@ func (z *ZeroDownTime) GetPID() (int, error) {
 		return 0, err
 	}
 	return pid, nil
-}
-
-// RemoveUpgradeSock removes the upgrade socket file if it exists.
-// Returns nil if the file does not exist.
-func (z *ZeroDownTime) RemoveUpgradeSock() error {
-	_, err := os.Stat(z.options.GetUpgradeSock())
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	return os.Remove(z.options.GetUpgradeSock())
 }
 
 // ValidatePIDFile checks if the process specified in the PID file is still running.

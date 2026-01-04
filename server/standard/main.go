@@ -43,7 +43,7 @@ func main() {
 	ctx := context.Background()
 
 	zeroOpts := zero.Options{
-		UpgradeSock: "./std.sock",
+		
 		PIDFile:     "./std.pid",
 	}
 
