@@ -9,7 +9,7 @@ Environment=GOTRACEBACK=crash
 WorkingDirectory=/home/my-gateway
 PIDFile=/home/my-gateway/logs/bifrost.pid
 ExecStartPre=/home/my-gateway/bifrost -t -c=conf/config.yaml
-ExecStart=/bin/sh -c '/home/my-gateway/bifrost -d -c=conf/config.yaml && /bin/sleep 1'
+ExecStart=/home/my-gateway/bifrost -d -c=conf/config.yaml
 ExecReload=/home/my-gateway/bifrost -u -c=conf/config.yaml
 ExecStop=/home/my-gateway/bifrost -s -c=conf/config.yaml
 Restart=on-failure
