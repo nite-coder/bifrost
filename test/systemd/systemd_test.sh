@@ -51,6 +51,8 @@ fi
 docker run -d --name "$CONTAINER_NAME" \
     $DOCKER_OPTS \
     --cgroupns=host \
+    --dns=8.8.8.8 \
+    --dns=8.8.4.4 \
     "$IMAGE_NAME"
 
 # Wait for container to start
