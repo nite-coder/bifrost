@@ -41,3 +41,4 @@ server/hertz/hertz
 
 pkg/provider/nacos/log/nacos-sdk.log
 docs/features/*
+test/systemd/bifrost
