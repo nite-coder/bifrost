@@ -259,116 +259,128 @@ func Run(mainOptions config.Options) (err error) {
 
 		zeroDT := bifrost.ZeroDownTime()
 
-		if zeroDT != nil && zeroDT.IsUpgraded() {
-			upgradeStart := time.Now()
-			slog.Info("upgrade process started",
-				"newPID", os.Getpid(),
-			)
+		if mainOptions.IsDaemon {
+			var lockFile *os.File
+			var err error
 
-			// Validate old process is running before trying to quit it
-			slog.Debug("validating PID file for old process")
-			isRunning, oldPID, err := zeroDT.ValidatePIDFile()
-			if err != nil {
-				slog.Error("failed to validate PID file", "error", err)
-				return
-			}
-
-			if !isRunning {
-				slog.Warn("old process is not running, skipping quit",
-					"pid", oldPID,
-					"reason", "process not found or already terminated",
-				)
+			// Log daemon mode type for debugging
+			if os.Getenv("NOTIFY_SOCKET") != "" {
+				slog.Debug("running in systemd mode")
 			} else {
-				slog.Debug("old process validated",
-					"oldPID", oldPID,
-					"isRunning", isRunning,
+				slog.Debug("running in standalone daemon mode")
+			}
+
+			if zeroDT.IsUpgraded() {
+				upgradeStart := time.Now()
+				slog.Info("upgrade process started",
+					"newPID", os.Getpid(),
 				)
-			}
 
-			// Step 1: Force update PID file FIRST (before quitting old process)
-			// This allows Systemd to see the new PID while old process is still alive
-			slog.Info("force updating PID file for Systemd", "newPID", os.Getpid())
-			if err := zeroDT.ForceWritePID(); err != nil {
-				slog.Error("failed to force write PID", "error", err)
-				return
-			}
-
-			// Give Systemd some time to notice the PID file change via inotify
-			// before we kill the old process. 100ms is sufficient and negligible for upgrade duration.
-			time.Sleep(100 * time.Millisecond)
-
-			// Step 2: Quit old process (release lock)
-			if isRunning && oldPID > 0 {
-				slog.Info("sending termination signal to old process", "oldPID", oldPID)
-				quitStart := time.Now()
-				err = zeroDT.Quit(ctx, oldPID, false)
+				// Validate old process is running before trying to quit it
+				slog.Debug("validating PID file for old process")
+				isRunning, oldPID, err := zeroDT.ValidatePIDFile()
 				if err != nil {
-					slog.Error("failed to quit old process",
-						"error", err,
-						"oldPID", oldPID,
-						"elapsed", time.Since(quitStart).Round(time.Millisecond),
-					)
+					slog.Error("failed to validate PID file", "error", err)
 					return
 				}
-				slog.Info("old process terminated successfully",
+
+				if !isRunning {
+					slog.Warn("old process is not running, skipping quit",
+						"pid", oldPID,
+						"reason", "process not found or already terminated",
+					)
+				} else {
+					slog.Debug("old process validated",
+						"oldPID", oldPID,
+						"isRunning", isRunning,
+					)
+				}
+
+				// Step 1: Force update PID file FIRST (before quitting old process)
+				// This allows Systemd to see the new PID while old process is still alive
+				slog.Info("force updating PID file for Systemd", "newPID", os.Getpid())
+				if err := zeroDT.ForceWritePID(); err != nil {
+					slog.Error("failed to force write PID", "error", err)
+					return
+				}
+
+				// Give Systemd some time to notice the PID file change via inotify
+				// before we kill the old process. 100ms is sufficient and negligible for upgrade duration.
+				time.Sleep(100 * time.Millisecond)
+
+				// Step 2: Quit old process (release lock)
+				if isRunning && oldPID > 0 {
+					slog.Info("sending termination signal to old process", "oldPID", oldPID)
+					quitStart := time.Now()
+					err = zeroDT.Quit(ctx, oldPID, false)
+					if err != nil {
+						slog.Error("failed to quit old process",
+							"error", err,
+							"oldPID", oldPID,
+							"elapsed", time.Since(quitStart).Round(time.Millisecond),
+						)
+						return
+					}
+					slog.Info("old process terminated successfully",
+						"oldPID", oldPID,
+						"quitDuration", time.Since(quitStart).Round(time.Millisecond),
+					)
+				}
+
+				// Step 3: Now acquire PID lock and write new PID (old process has released it)
+				slog.Debug("acquiring PID file lock and writing new PID")
+				lockFile, err = zeroDT.WritePIDWithLock()
+				if err != nil {
+					slog.Error("failed to write PID with lock", "error", err)
+					return
+				}
+
+				slog.Debug("PID file updated successfully", "newPID", os.Getpid())
+
+				// Notify systemd about the new main PID and that we're ready
+				// This is critical for Type=notify to correctly track the new process
+				notifyState := fmt.Sprintf("MAINPID=%d\n%s", os.Getpid(), daemon.SdNotifyReady)
+				if sent, err := daemon.SdNotify(false, notifyState); err != nil {
+					slog.Warn("failed to notify systemd about upgrade", "error", err)
+				} else if sent {
+					slog.Info("notified systemd about new main PID", "pid", os.Getpid())
+				}
+
+				slog.Log(ctx, log.LevelNotice, "upgrade completed successfully",
 					"oldPID", oldPID,
-					"quitDuration", time.Since(quitStart).Round(time.Millisecond),
+					"newPID", os.Getpid(),
+					"upgradeDuration", time.Since(upgradeStart).Round(time.Millisecond),
 				)
+			} else {
+				slog.Debug("initializing daemon mode")
+
+				// Use WritePIDWithLock for daemon mode as well
+				lockFile, err = zeroDT.WritePIDWithLock()
+				if err != nil {
+					slog.Error("failed to write PID with lock", "error", err)
+					return
+				}
+
+				slog.Debug("daemon PID file created", "pid", os.Getpid())
 			}
 
-			// Step 3: Now acquire PID lock and write new PID (old process has released it)
-			slog.Debug("acquiring PID file lock and writing new PID")
-			lockFile, err := zeroDT.WritePIDWithLock()
-			if err != nil {
-				slog.Error("failed to write PID with lock", "error", err)
-				return
-			}
+			// Defer release lock
 			defer func() {
 				if err := zeroDT.ReleasePIDLock(lockFile); err != nil {
 					slog.Error("failed to release PID lock", "error", err)
 				}
 			}()
-			slog.Debug("PID file updated successfully", "newPID", os.Getpid())
-
-			// Notify systemd about the new main PID and that we're ready
-			// This is critical for Type=notify to correctly track the new process
-			notifyState := fmt.Sprintf("MAINPID=%d\n%s", os.Getpid(), daemon.SdNotifyReady)
-			if sent, err := daemon.SdNotify(false, notifyState); err != nil {
-				slog.Warn("failed to notify systemd about upgrade", "error", err)
-			} else if sent {
-				slog.Info("notified systemd about new main PID", "pid", os.Getpid())
-			}
-
-			slog.Log(ctx, log.LevelNotice, "upgrade completed successfully",
-				"oldPID", oldPID,
-				"newPID", os.Getpid(),
-				"upgradeDuration", time.Since(upgradeStart).Round(time.Millisecond),
-			)
-		}
-
-		if mainOptions.IsDaemon && !zeroDT.IsUpgraded() {
-			slog.Debug("initializing daemon mode")
-
-			// Use WritePIDWithLock for daemon mode as well
-			lockFile, err := zeroDT.WritePIDWithLock()
-			if err != nil {
-				slog.Error("failed to write PID with lock", "error", err)
-				return
-			}
-			defer func() {
-				if err := zeroDT.ReleasePIDLock(lockFile); err != nil {
-					slog.Error("failed to release PID lock", "error", err)
-				}
-			}()
-			slog.Debug("daemon PID file created", "pid", os.Getpid())
 
 			slog.Info("daemon mode ready, waiting for upgrade signals",
 				"pid", os.Getpid(),
 			)
-			if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
-				slog.Error("failed to wait for upgrade process", "error", err)
-				return
-			}
+
+			// Run WaitForUpgrade in a goroutine so it doesn't block signal handling
+			go safety.Go(context.Background(), func() {
+				if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
+					slog.Error("failed to wait for upgrade process", "error", err)
+				}
+			})
 		}
 	})
 
