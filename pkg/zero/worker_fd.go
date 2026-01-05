@@ -1,9 +1,12 @@
 package zero
 
 import (
+	"encoding/base64"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
+	"strings"
 	"sync"
 
 	proxyproto "github.com/pires/go-proxyproto"
@@ -46,7 +49,7 @@ func (h *WorkerFDHandler) RegisterListener(listener net.Listener, key string) {
 }
 
 // HandleFDRequest handles an FD request from Master.
-// It collects all listener FDs and sends them via the control plane.
+// It collects all listener FDs and keys, then sends them via the control plane.
 func (h *WorkerFDHandler) HandleFDRequest() error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -56,6 +59,7 @@ func (h *WorkerFDHandler) HandleFDRequest() error {
 	}
 
 	files := make([]*os.File, 0, len(h.listeners))
+	keys := make([]string, 0, len(h.listeners))
 
 	for _, l := range h.listeners {
 		file, err := h.getListenerFile(l.listener)
@@ -64,7 +68,7 @@ func (h *WorkerFDHandler) HandleFDRequest() error {
 			continue
 		}
 		files = append(files, file)
-		slog.Debug("collected listener FD", "key", l.key, "fd", file.Fd())
+		keys = append(keys, l.key)
 	}
 
 	if len(files) == 0 {
@@ -73,7 +77,7 @@ func (h *WorkerFDHandler) HandleFDRequest() error {
 	}
 
 	slog.Info("sending FDs to Master", "count", len(files))
-	return h.wcp.SendFDs(files)
+	return h.wcp.SendFDs(files, keys)
 }
 
 // getListenerFile extracts the underlying file descriptor from a listener.
@@ -84,17 +88,16 @@ func (h *WorkerFDHandler) getListenerFile(listener net.Listener) (*os.File, erro
 	}
 
 	// Get underlying TCPListener
-	tcpListener, ok := listener.(*net.TCPListener)
-	if !ok {
-		// Try UnixListener
-		if unixListener, ok := listener.(*net.UnixListener); ok {
-			return unixListener.File()
-		}
-		slog.Warn("unsupported listener type for FD extraction")
-		return nil, nil
+	if tcpListener, ok := listener.(*net.TCPListener); ok {
+		return tcpListener.File()
 	}
 
-	return tcpListener.File()
+	// Try UnixListener
+	if unixListener, ok := listener.(*net.UnixListener); ok {
+		return unixListener.File()
+	}
+
+	return nil, fmt.Errorf("unsupported listener type: %T", listener)
 }
 
 // ListenerCount returns the number of registered listeners.
@@ -104,39 +107,65 @@ func (h *WorkerFDHandler) ListenerCount() int {
 	return len(h.listeners)
 }
 
-// InheritedFDs returns the listener FDs inherited from Master via ExtraFiles.
-// Worker calls this on startup when UPGRADE=1 to get inherited listeners.
-func InheritedFDs() []*os.File {
+// InheritedListeners returns the listener FDs and their keys inherited from Master.
+// Worker calls this on startup when UPGRADE=1.
+func InheritedListeners() (map[string]*os.File, error) {
 	if os.Getenv("UPGRADE") != "1" {
-		return nil
+		return nil, nil
 	}
 
-	// ExtraFiles are passed as FD 3, 4, 5, ...
-	// FD 0=stdin, 1=stdout, 2=stderr, 3+ are ExtraFiles
-	files := make([]*os.File, 0)
-
-	// Try to detect how many FDs were passed
-	// Look for BIFROST_FD_COUNT env var or just try opening FDs
-	for i := 3; i < 20; i++ { // Reasonable upper limit
-		file := os.NewFile(uintptr(i), "")
-		if file == nil {
-			break
+	// 1. Decode Keys
+	keysEnv := os.Getenv("BIFROST_LISTENER_KEYS")
+	var keys []string
+	if keysEnv != "" {
+		// Use base64 decoding for safety
+		decoded, err := base64.StdEncoding.DecodeString(keysEnv)
+		if err == nil {
+			keysStr := string(decoded)
+			if keysStr != "" {
+				keys = strings.Split(keysStr, ",")
+			}
+		} else {
+			slog.Error("failed to decode BIFROST_LISTENER_KEYS", "error", err)
 		}
+	}
 
-		// Check if the FD is actually valid
-		_, err := file.Stat()
-		if err != nil {
-			file.Close()
-			break
+	// 2. Collect FDs (ExtraFiles start at FD 3)
+	listeners := make(map[string]*os.File)
+	count := 0
+
+	// If we have keys, we map them 1:1 to FDs starting at 3
+	if len(keys) > 0 {
+		for i, key := range keys {
+			fd := 3 + i
+			file := os.NewFile(uintptr(fd), "")
+			if file == nil {
+				slog.Error("inherited FD is nil", "fd", fd)
+				continue
+			}
+			// Verify FD is valid
+			if _, err := file.Stat(); err != nil {
+				slog.Error("inherited FD is invalid", "fd", fd, "error", err)
+				continue
+			}
+			listeners[key] = file
+			count++
+			slog.Debug("inherited FD mapped", "fd", fd, "key", key)
 		}
-
-		files = append(files, file)
-		slog.Debug("inherited FD from Master", "fd", i)
+	} else {
+		// Fallback: Just return list of found FDs (legacy behavior or no keys provided)
+		// But return type is map... just map by index?
+		// Actually, if we don't have keys, we can't map them correctly to addresses
+		// which means `bind: address already in use` will likely happen.
+		// However, for backward compatibility or simple cases, we might scan FDs.
+		// But in this context, we rely on keys.
+		slog.Warn("no listener keys found in env, FD inheritance requires keys for mapping")
+		return nil, nil
 	}
 
-	if len(files) > 0 {
-		slog.Info("inherited FDs from Master", "count", len(files))
+	if count > 0 {
+		slog.Info("inherited listeners from Master", "count", count)
 	}
 
-	return files
+	return listeners, nil
 }

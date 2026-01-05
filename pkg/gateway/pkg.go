@@ -383,14 +383,6 @@ func Run(mainOptions config.Options) (err error) {
 // It takes mainOptions of type config.Options which contains the user and group information to run the daemon process.
 // Returns a boolean indicating whether the parent process should exit (true) or continue (false), and an error if the daemon process fails to start.
 func RunAsDaemon(mainOptions config.Options) (bool, error) {
-	// When running under systemd with Type=notify, skip forking.
-	// systemd expects the main process to send sd_notify, not a forked child.
-	if os.Getenv("NOTIFY_SOCKET") != "" {
-		slog.Debug("running under systemd (NOTIFY_SOCKET detected), skipping fork")
-		// Set DAEMONIZED to trigger daemon mode behavior in Run()
-		os.Setenv("DAEMONIZED", "1")
-		return false, nil
-	}
 
 	if os.Geteuid() != 0 {
 		return false, errors.New("must be run as root to execute in daemon mode")
@@ -399,8 +391,22 @@ func RunAsDaemon(mainOptions config.Options) (bool, error) {
 	cmd := exec.CommandContext(context.TODO(), os.Args[0], os.Args[1:]...)
 	cmd.Stdin = nil
 	cmd.Stdout = nil
-	cmd.Stderr = nil
-	cmd.Env = append(os.Environ(), "DAEMONIZED=1")
+
+	// Redirect stderr to file for debugging panics
+	f, err := os.OpenFile("/tmp/bifrost_stderr.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err == nil {
+		cmd.Stderr = f
+		// Note: We don't close f here, it needs to stay open for the child?
+		// Actually cmd.Start() passes the FD.
+		// We can close f in parent after Start()? No, cmd.Stderr uses it.
+		// But cmd.Start duplicates it? Yes.
+		// So we can defer close?
+		defer f.Close()
+	} else {
+		cmd.Stderr = nil
+	}
+
+	cmd.Env = append(os.Environ(), "BIFROST_DAEMONIZED=1")
 
 	if mainOptions.User != "" {
 		u, err := user.Lookup(mainOptions.User)
@@ -433,7 +439,7 @@ func RunAsDaemon(mainOptions config.Options) (bool, error) {
 		setUserAndGroup(cmd, uint32(uid), uint32(gid))
 	}
 
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		slog.Error("failed to run as daemon", "error", err)
 		return false, err

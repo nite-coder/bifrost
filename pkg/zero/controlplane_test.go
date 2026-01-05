@@ -148,7 +148,7 @@ func TestWorkerControlPlane_NotConnected(t *testing.T) {
 	err = wcp.NotifyReady()
 	assert.Error(t, err)
 
-	err = wcp.SendFDs(nil)
+	err = wcp.SendFDs(nil, nil)
 	assert.Error(t, err)
 }
 

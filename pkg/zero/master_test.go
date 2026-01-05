@@ -121,7 +121,7 @@ func TestMaster_SpawnWorker(t *testing.T) {
 		require.NoError(t, err)
 		defer m.controlPlane.Close()
 
-		cmd, err := m.spawnWorker(context.Background(), nil)
+		cmd, err := m.spawnWorker(context.Background(), nil, nil)
 		require.NoError(t, err)
 		assert.NotNil(t, cmd)
 		assert.NotNil(t, cmd.Process)

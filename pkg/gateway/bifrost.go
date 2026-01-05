@@ -13,7 +13,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/tracer"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/resolver"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/tracer/accesslog"
@@ -130,12 +129,7 @@ func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	tCache := timecache.New(mainOptions.TimerResolution)
 	timecache.Set(tCache)
-	// system logger
-	logger, err := log.NewLogger(mainOptions.Logging)
-	if err != nil {
-		return nil, err
-	}
-	slog.SetDefault(logger)
+
 	zeroOptions := zero.Options{
 		PIDFile: mainOptions.PIDFile,
 	}

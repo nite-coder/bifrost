@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"runtime/debug"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -81,12 +82,6 @@ func runAsMaster() {
 				Value:   false,
 				Usage:   "Send SIGTERM to running Master to trigger graceful shutdown",
 			},
-			&cli.BoolFlag{
-				Name:    "master",
-				Aliases: []string{"m"},
-				Value:   false,
-				Usage:   "Run in Master-Worker mode (Master spawns Worker subprocess)",
-			},
 		},
 		Action: func(cCtx *cli.Context) error {
 			defer func() {
@@ -141,6 +136,8 @@ func runAsMaster() {
 				return err
 			}
 
+			_ = initialize.Logger(mainOptions)
+
 			if isTest {
 				slog.Info("the config file tested successfully", "path", mainOptions.ConfigPath())
 				return nil
@@ -156,32 +153,13 @@ func runAsMaster() {
 				return gateway.Upgrade(mainOptions)
 			}
 
-			// Check if Master-Worker mode is requested
-			isMasterMode := cCtx.Bool("master")
+			if zero.IsWorker() {
+				runAsWorker()
+				return nil
+			}
+
 			isDaemon := cCtx.Bool("daemon")
-
-			if isMasterMode {
-				// New Master-Worker architecture
-				return runMasterMode(mainOptions)
-			}
-
-			// Legacy mode: direct execution (backward compatible)
-			if isDaemon {
-				// Ensure IsDaemon is set so that gateway.Run() activates daemon-specific logic
-				// (e.g., PID file management, upgrade monitoring).
-				mainOptions.IsDaemon = true
-				if os.Getenv("DAEMONIZED") == "" {
-					shouldExit, err := gateway.RunAsDaemon(mainOptions)
-					if err != nil {
-						return err
-					}
-					if shouldExit {
-						return nil
-					}
-				}
-			}
-
-			return gateway.Run(mainOptions)
+			return runMasterMode(mainOptions, isDaemon)
 		},
 	}
 
@@ -193,7 +171,33 @@ func runAsMaster() {
 
 // runMasterMode starts the Master process which spawns and manages Worker subprocesses.
 // This provides PID stability for process managers like Systemd.
-func runMasterMode(mainOptions config.Options) error {
+func runMasterMode(mainOptions config.Options, isDaemon bool) error {
+	if isDaemon {
+		// Determine log output for daemon (redirect stdout/stderr)
+		// If config specifies a file, use it to unify logs (like Nginx).
+		// If config uses stdout/stderr, fallback to master.log to ensure we capture logs in daemon mode.
+		logOutput := mainOptions.Logging.Output
+		switch logOutput {
+		case "":
+			logOutput = "/dev/null" // User wants silence
+		case "stdout", "stderr":
+			logOutput = "./logs/master.log" // Fallback: Daemon cannot write to stdout/stderr
+		}
+
+		// Daemonize the process
+		daemonOpts := &zero.DaemonOptions{
+			PIDFile:   mainOptions.PIDFile,
+			LogOutput: logOutput,
+		}
+		shouldExit, err := zero.Daemonize(daemonOpts)
+		if err != nil {
+			return fmt.Errorf("failed to daemonize: %w", err)
+		}
+		if shouldExit {
+			return nil
+		}
+	}
+
 	slog.Info("starting in Master-Worker mode", "pid", os.Getpid())
 
 	masterOpts := &zero.MasterOptions{
@@ -208,6 +212,7 @@ func runMasterMode(mainOptions config.Options) error {
 // runAsWorker handles Worker process logic.
 // Workers are spawned by Master and handle actual traffic processing.
 func runAsWorker() {
+	// Worker inherits Master's stdout/stderr via FD inheritance (zero-copy log aggregation)
 	slog.Debug("starting as worker", "pid", os.Getpid())
 
 	_ = initialize.Bifrost()
@@ -232,24 +237,69 @@ func runAsWorker() {
 		os.Exit(1)
 	}
 
+	// Initialize logger for worker process to match master's format
+	_ = initialize.Logger(mainOptions)
+
 	// Connect to Master's control plane
 	socketPath := zero.GetControlSocketPath()
+	slog.Info("Worker socket path debugging",
+		"env", os.Getenv("BIFROST_CONTROL_SOCKET"),
+		"socketPath", socketPath,
+	)
+
 	if socketPath != "" {
 		wcp := zero.NewWorkerControlPlane(socketPath)
 		if err := wcp.Connect(); err != nil {
 			slog.Warn("failed to connect to control plane", "error", err)
 		} else {
+			slog.Info("Worker connected to control plane", "socket", socketPath) // Success log
 			defer wcp.Close()
 
 			// Register with Master
+			slog.Info("Worker sending register message")
 			if err := wcp.Register(); err != nil {
 				slog.Warn("failed to register with master", "error", err)
+			} else {
+				slog.Info("Worker register message sent")
 			}
 
-			// Notify Master when ready (after starting servers)
-			defer func() {
-				if err := wcp.NotifyReady(); err != nil {
-					slog.Warn("failed to notify master ready", "error", err)
+			// Setup FD handler
+			fdHandler := zero.NewWorkerFDHandler(wcp)
+
+			// Start control plane loop
+			go func() {
+				if err := wcp.Start(context.Background(), fdHandler); err != nil {
+					slog.Error("control plane loop exited with error", "error", err)
+				}
+			}()
+
+			// Asynchronously wait for Bifrost to be ready and register listeners
+			go func() {
+				// Poll until Bifrost instance is available
+				ticker := time.NewTicker(100 * time.Millisecond)
+				defer ticker.Stop()
+
+				for range ticker.C {
+					b := gateway.GetBifrost()
+					if b != nil && b.IsActive() {
+						// Bifrost is ready, register listeners
+						z := b.ZeroDownTime()
+						if z != nil {
+							listeners := z.GetListeners()
+							for _, l := range listeners {
+								fdHandler.RegisterListener(l.Listener, l.Key) // Note: l.Listener needs to be exported from listenInfo?
+							}
+							if len(listeners) > 0 {
+								slog.Info("registered listeners with control plane", "count", len(listeners))
+							}
+						}
+
+						// Notify Master we are ready
+						if err := wcp.NotifyReady(); err != nil {
+							slog.Warn("failed to notify master ready", "error", err)
+						}
+						return
+					}
 				}
 			}()
 		}

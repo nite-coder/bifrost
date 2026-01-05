@@ -19,6 +19,8 @@ type DaemonOptions struct {
 	PIDFile string
 	// ReadyTimeout is the maximum time to wait for child ready signal.
 	ReadyTimeout time.Duration
+	// LogOutput is the path to redirect stdout/stderr (optional).
+	LogOutput string
 }
 
 // ErrDaemonTimeout is returned when the child doesn't signal ready in time.
@@ -39,8 +41,10 @@ var ErrDaemonTimeout = errors.New("daemon child did not signal ready within time
 func Daemonize(opts *DaemonOptions) (bool, error) {
 	// Check if we're already the child (daemon)
 	if os.Getenv("BIFROST_DAEMONIZED") == "1" {
-		// We are the child process, notify parent we're ready
-		return notifyParentReady()
+		// We are the child process.
+		// Do not notify yet; wait until Master is fully initialized.
+		// FD 3 (pipe) will be used by NotifyDaemonReady later.
+		return false, nil
 	}
 
 	// We are the parent, spawn child and wait for ready signal
@@ -74,6 +78,20 @@ func spawnDaemonChild(opts *DaemonOptions) (bool, error) {
 	cmd.Stdin = nil
 	cmd.Stdout = nil
 	cmd.Stderr = nil
+
+	if opts.LogOutput != "" {
+		// Redirect stdout/stderr to file for debugging/logging
+		logFile, err := os.OpenFile(opts.LogOutput, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			return false, fmt.Errorf("failed to open daemon log file: %w", err)
+		}
+		// We don't close logFile in parent; child will inherit it.
+		// (Actually cmd.Start duplicates it, so we can close it in parent after Start)
+		defer logFile.Close()
+
+		cmd.Stdout = logFile
+		cmd.Stderr = logFile
+	}
 
 	// Start child
 	if err := cmd.Start(); err != nil {

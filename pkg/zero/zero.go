@@ -67,7 +67,7 @@ var defaultFileOpener = func(name string) (*os.File, error) {
 
 // listenInfo holds information about a network listener.
 type listenInfo struct {
-	listener net.Listener `json:"-"`
+	Listener net.Listener `json:"-"`
 	Key      string       `json:"key"`
 }
 
@@ -158,7 +158,7 @@ func (z *ZeroDownTime) IsWaiting() bool {
 // and stopping the upgrade waiting goroutine if active.
 func (z *ZeroDownTime) Close(ctx context.Context) error {
 	for _, info := range z.listeners {
-		_ = info.listener.Close()
+		_ = info.Listener.Close()
 	}
 	z.mu.Lock()
 	isWaiting := z.state == waitingState
@@ -204,6 +204,39 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 	var err error
 	z.listenerOnce.Do(func() {
 		if z.IsUpgraded() {
+			// Try new BIFROST_LISTENER_KEYS mechanism first
+			listeners, err := InheritedListeners()
+			if err != nil {
+				slog.Error("failed to get inherited listeners", "error", err)
+			}
+
+			if len(listeners) > 0 {
+				for key, file := range listeners {
+					fileListener, err := net.FileListener(file)
+					if err != nil {
+						slog.Error("failed to create file listener", "error", err, "key", key)
+						_ = file.Close()
+						continue
+					}
+
+					info := &listenInfo{
+						Listener: fileListener,
+						Key:      key,
+					}
+					if options.ProxyProtocol {
+						info.Listener = &proxyproto.Listener{Listener: fileListener}
+					}
+
+					z.mu.Lock()
+					z.listeners = append(z.listeners, info)
+					z.mu.Unlock()
+
+					slog.Info("file Listener is created from inheritance", "addr", fileListener.Addr(), "key", key)
+				}
+				return
+			}
+
+			// Fallback to legacy LISTENERS env var (if any)
 			str := os.Getenv("LISTENERS")
 			if len(str) > 0 {
 				err := sonic.Unmarshal([]byte(str), &z.listeners)
@@ -230,9 +263,9 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 					slog.Error("failed to create file listener", "error", err, "fd", fd)
 					continue
 				}
-				l.listener = fileListener
+				l.Listener = fileListener
 				if options.ProxyProtocol {
-					l.listener = &proxyproto.Listener{Listener: fileListener}
+					l.Listener = &proxyproto.Listener{Listener: fileListener}
 				}
 				slog.Info("file Listener is created", "addr", fileListener.Addr(), "fd", fd)
 			}
@@ -241,7 +274,7 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 	for _, l := range z.listeners {
 		if l.Key == options.Address {
 			slog.Info("get listener from cache", "addr", options.Address)
-			return l.listener, nil
+			return l.Listener, nil
 		}
 	}
 	var listener net.Listener
@@ -260,16 +293,26 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 		}
 	}
 	info := &listenInfo{
-		listener: listener,
+		Listener: listener,
 		Key:      options.Address,
 	}
 	if options.ProxyProtocol {
-		info.listener = &proxyproto.Listener{Listener: listener}
+		info.Listener = &proxyproto.Listener{Listener: listener}
 	}
 	z.mu.Lock()
 	z.listeners = append(z.listeners, info)
 	z.mu.Unlock()
 	return listener, nil
+}
+
+// GetListeners returns the list of active listeners.
+func (z *ZeroDownTime) GetListeners() []*listenInfo {
+	z.mu.Lock()
+	defer z.mu.Unlock()
+	// Return a copy to avoid race conditions
+	listeners := make([]*listenInfo, len(z.listeners))
+	copy(listeners, z.listeners)
+	return listeners
 }
 
 // WaitForUpgrade blocks until a SIGHUP signal is received.
@@ -313,7 +356,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 				slog.Debug("collecting listener file descriptors", "listenerCount", len(z.listeners))
 				files := []*os.File{}
 				for _, l := range z.listeners {
-					proxylistener, ok := l.listener.(*proxyproto.Listener)
+					proxylistener, ok := l.Listener.(*proxyproto.Listener)
 					if ok {
 						f, err := proxylistener.Listener.(*net.TCPListener).File()
 						if err != nil {
@@ -323,7 +366,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 						files = append(files, f)
 						slog.Debug("listener file descriptor collected", "key", l.Key, "fd", f.Fd())
 					} else {
-						f, err := l.listener.(*net.TCPListener).File()
+						f, err := l.Listener.(*net.TCPListener).File()
 						if err != nil {
 							slog.ErrorContext(ctx, "failed to get listener file", "error", err, "key", l.Key)
 							continue

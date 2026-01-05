@@ -74,7 +74,7 @@ func TestHashing(t *testing.T) {
 		ctx := context.Background()
 
 		// Run 100 goroutines to call Select concurrently
-		for i := 0; i < 100; i++ {
+		for i := range 100 {
 			t.Run(fmt.Sprintf("worker-%d", i), func(t *testing.T) {
 				t.Parallel()
 				for j := 0; j < 100; j++ {

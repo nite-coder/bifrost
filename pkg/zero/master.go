@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -73,16 +75,24 @@ type MasterOptions struct {
 // It provides PID stability for process managers (Systemd, Supervisor)
 // and handles signal forwarding, hot reload, and worker monitoring.
 type Master struct {
-	options       *MasterOptions
-	currentWorker *exec.Cmd
-	controlPlane  *ControlPlane
-	keepAlive     *KeepAlive
-	state         MasterState
-	mu            sync.RWMutex
-	stopCh        chan struct{}
-	workerDoneCh  chan struct{}
-	readyCh       chan struct{} // Signaled when worker is ready
-	listenerFDs   []*os.File    // Inherited listener FDs for reload
+	options        *MasterOptions
+	currentWorker  *exec.Cmd
+	controlPlane   *ControlPlane
+	keepAlive      *KeepAlive
+	state          MasterState
+	mu             sync.RWMutex
+	stopCh         chan struct{}
+	workerDoneCh   chan struct{}
+	readyCh        chan struct{} // Signaled when worker is ready
+	listenerFDs    []*os.File    // Inherited listener FDs for reload
+	listenerKeys   []string      // Listener keys mapped to FDs
+	listenerDataCh chan *listenerData
+}
+
+// listenerData holds the FDs and their keys (addresses)
+type listenerData struct {
+	fds  []*os.File
+	keys []string
 }
 
 // ErrMasterShuttingDown is returned when operations are attempted during shutdown.
@@ -101,13 +111,14 @@ func NewMaster(opts *MasterOptions) *Master {
 	}
 
 	return &Master{
-		options:      opts,
-		keepAlive:    NewKeepAlive(opts.KeepAlive),
-		controlPlane: NewControlPlane(nil),
-		state:        MasterStateIdle,
-		stopCh:       make(chan struct{}),
-		workerDoneCh: make(chan struct{}, 1),
-		readyCh:      make(chan struct{}, 1),
+		options:        opts,
+		keepAlive:      NewKeepAlive(opts.KeepAlive),
+		controlPlane:   NewControlPlane(nil),
+		state:          MasterStateIdle,
+		stopCh:         make(chan struct{}),
+		workerDoneCh:   make(chan struct{}, 1),
+		readyCh:        make(chan struct{}, 1),
+		listenerDataCh: make(chan *listenerData, 1),
 	}
 }
 
@@ -126,6 +137,7 @@ func (m *Master) Run(ctx context.Context) error {
 
 	// Setup message handler
 	m.controlPlane.SetMessageHandler(m.handleControlMessage)
+	m.controlPlane.SetFDHandler(m.handleFDTransfer)
 
 	// Start accepting control plane connections
 	go safety.Go(ctx, func() {
@@ -149,6 +161,13 @@ func (m *Master) Run(ctx context.Context) error {
 		"workerPID", m.WorkerPID(),
 	)
 
+	// Write PID file
+	if err := m.writePIDFile(); err != nil {
+		slog.Error("failed to write PID file", "error", err)
+		return err
+	}
+	defer m.removePIDFile()
+
 	// Notify parent process that daemon is ready (for Type=forking)
 	// This allows the parent to exit and Systemd to consider startup complete
 	if err := NotifyDaemonReady(); err != nil {
@@ -157,6 +176,7 @@ func (m *Master) Run(ctx context.Context) error {
 
 	for {
 		select {
+
 		case <-ctx.Done():
 			return m.Shutdown(ctx)
 
@@ -243,6 +263,37 @@ func (m *Master) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+// writePIDFile writes the current process ID to the configured PID file.
+func (m *Master) writePIDFile() error {
+	pidFile := m.options.PIDFile
+	if pidFile == "" {
+		pidFile = "./logs/bifrost.pid"
+	}
+
+	// Ensure directory exists
+	if err := os.MkdirAll(filepath.Dir(pidFile), 0755); err != nil {
+		return fmt.Errorf("failed to create PID file directory: %w", err)
+	}
+
+	pid := os.Getpid()
+	if err := os.WriteFile(pidFile, []byte(fmt.Sprintf("%d", pid)), 0644); err != nil {
+		return fmt.Errorf("failed to write PID file: %w", err)
+	}
+	slog.Info("PID file written", "path", pidFile, "pid", pid)
+	m.options.PIDFile = pidFile // Update option with actual path
+	return nil
+}
+
+// removePIDFile removes the PID file.
+func (m *Master) removePIDFile() {
+	pidFile := m.options.PIDFile
+	if pidFile == "" {
+		return
+	}
+	_ = os.Remove(pidFile)
+	slog.Info("PID file removed", "path", pidFile)
+}
+
 // State returns the current state of the Master.
 func (m *Master) State() MasterState {
 	m.mu.RLock()
@@ -263,7 +314,7 @@ func (m *Master) WorkerPID() int {
 
 // spawnAndWatch spawns a new worker and starts watching it.
 func (m *Master) spawnAndWatch(ctx context.Context) error {
-	cmd, err := m.spawnWorker(ctx, m.listenerFDs)
+	cmd, err := m.spawnWorker(ctx, m.listenerFDs, m.listenerKeys) // Pass stored keys
 	if err != nil {
 		return err
 	}
@@ -281,8 +332,8 @@ func (m *Master) spawnAndWatch(ctx context.Context) error {
 	return nil
 }
 
-// spawnWorker starts a new Worker process with inherited file descriptors.
-func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File) (*exec.Cmd, error) {
+// spawnWorker starts a new Worker process with inherited file descriptors and keys.
+func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File, keys []string) (*exec.Cmd, error) {
 	args := m.options.Args
 	if m.options.ConfigPath != "" {
 		args = append([]string{"-c", m.options.ConfigPath}, args...)
@@ -306,6 +357,12 @@ func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File) (*exec.
 	if len(extraFiles) > 0 {
 		cmd.ExtraFiles = extraFiles
 		cmd.Env = append(cmd.Env, "UPGRADE=1")
+		if len(keys) > 0 {
+			// Encode keys as a comma-separated string, then base64 encode it
+			keysStr := strings.Join(keys, ",")
+			encodedKeys := base64.StdEncoding.EncodeToString([]byte(keysStr))
+			cmd.Env = append(cmd.Env, "BIFROST_LISTENER_KEYS="+encodedKeys)
+		}
 	}
 
 	if err := cmd.Start(); err != nil {
@@ -315,6 +372,7 @@ func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File) (*exec.
 	slog.Info("spawned new worker",
 		"workerPID", cmd.Process.Pid,
 		"extraFiles", len(extraFiles),
+		"keys", keys,
 	)
 
 	return cmd, nil
@@ -379,26 +437,35 @@ func (m *Master) handleReload(ctx context.Context) error {
 
 	// Step 1: Request FDs from old worker
 	var fds []*os.File
+	var keys []string
 	if oldWorkerPID > 0 {
+		// Clear any stale data
+		select {
+		case <-m.listenerDataCh:
+		default:
+		}
+
 		if err := m.controlPlane.SendMessage(oldWorkerPID, &ControlMessage{
 			Type: MessageTypeFDRequest,
 		}); err != nil {
 			slog.Warn("failed to request FDs from old worker", "error", err)
 			// Continue without FDs - new worker will create new listeners
 		} else {
-			// Wait briefly for FDs
-			time.Sleep(100 * time.Millisecond)
-			var err error
-			fds, err = m.controlPlane.ReceiveFDs(oldWorkerPID)
-			if err != nil {
-				slog.Warn("failed to receive FDs from old worker", "error", err)
+			// Wait for FDs via channel
+			select {
+			case data := <-m.listenerDataCh:
+				fds = data.fds
+				keys = data.keys
+			case <-time.After(5 * time.Second):
+				slog.Warn("timeout waiting for FDs from old worker")
 			}
 		}
 	}
 
 	// Step 2: Spawn new worker with FDs
 	m.listenerFDs = fds
-	newCmd, err := m.spawnWorker(ctx, fds)
+	m.listenerKeys = keys
+	newCmd, err := m.spawnWorker(ctx, fds, keys)
 	if err != nil {
 		return fmt.Errorf("failed to spawn new worker: %w", err)
 	}
@@ -456,10 +523,20 @@ func (m *Master) handleControlMessage(conn net.Conn, msg *ControlMessage) {
 		default:
 		}
 
-	case MessageTypeFDTransfer:
-		slog.Debug("worker sending FDs", "workerPID", msg.WorkerPID)
 	case MessageTypeFDRequest, MessageTypeShutdown:
 		// Not handled by master
+	}
+}
+
+// handleFDTransfer handles transferred FDs from a worker.
+func (m *Master) handleFDTransfer(fds []*os.File, keys []string) {
+	select {
+	case m.listenerDataCh <- &listenerData{fds: fds, keys: keys}:
+	default:
+		slog.Warn("received FDs but no reload in progress or channel full", "count", len(fds))
+		for _, f := range fds {
+			_ = f.Close()
+		}
 	}
 }
 

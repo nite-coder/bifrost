@@ -50,14 +50,11 @@ Bifrost 目前採用的熱重啟機制是基於 **Self-Exec (自我重啟)** 模
 ```mermaid
 graph TD
     User["Administrator/Supervisor"] -->|Signal/Command| Master["Master Process (PID Constant)"]
-    Master -->|Spawn/Monitor| WorkerV1["Worker Process V1 (Active)"]
-    
-    subgraph Hot Reload Flow
-    Master -->|1. Spawn| WorkerV2["Worker Process V2 (New)"]
-    WorkerV1 -.->|2. Pass Socket FDs| WorkerV2
-    WorkerV2 -->|3. Ready Signal| Master
-    Master -->|4. Terminate Signal| WorkerV1
-    end
+    Master -->|1. Request FDs| WorkerV1["Worker Process V1 (Active)"]
+    WorkerV1 -->|2. Pass Socket FDs| Master
+    Master -->|3. Spawn & Inherit FDs| WorkerV2["Worker Process V2 (New)"]
+    WorkerV2 -->|4. Ready Signal| Master
+    Master -->|5. Terminate Signal| WorkerV1
 ```
 
 ### 核心實作 (Core Implementation)
@@ -198,7 +195,7 @@ graph TD
         r, w, _ := os.Pipe()
         
         cmd := exec.Command(os.Args[0], os.Args[1:]...)
-        cmd.Env = append(os.Environ(), "DAEMONIZED=1")
+        cmd.Env = append(os.Environ(), "BIFROST_DAEMONIZED=1")
         cmd.ExtraFiles = []*os.File{w}  // FD 3 = write end of pipe
         
         if err := cmd.Start(); err != nil {

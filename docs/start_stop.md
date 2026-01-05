@@ -1,28 +1,74 @@
-# Start and Stop
+# Command Line Interface
 
-Bifrost supports command-line functions for starting, testing, and more. For a complete API Gateway setup, refer to [Gateway](./../../examples/gateway/main.go)
+Bifrost supports command-line functions for starting, testing, and managing the gateway lifecycle. 
+The gateway automatically uses the Master-Worker architecture for high availability and zero-downtime upgrades.
 
-## Start
+| Flag                  | Description                                            |
+| :-------------------- | :----------------------------------------------------- |
+| `-d`, `--daemon`      | Run Master in background (Daemon mode)                 |
+| `-u`, `--upgrade`     | Trigger a hot reload (Zero Downtime Upgrade)           |
+| `-s`, `--stop`        | Gracefully stop the running instance                   |
+| `-t`, `--test`        | Test if the configuration file format is correct       |
+| `-c`, `--conf`        | Specify the configuration file path                    |
+| `-v`, `--version`     | Show version information                               |
 
-| Command Parameter |   Default    | Description                                      |
-| :---------------- | :----------: | :----------------------------------------------- |
-| -d, --daemon      |    false     | Run in background mode                           |
-| -t, --test        |    false     | Test if the configuration file format is correct |
-| -c, --conf        | empty string | Specify the configuration file path              |
-| -u, --upgrade     |    false     | Perform a hot reload upgrade                     |
+## Starting Bifrost
 
-## Stop
+### Foreground (Development)
 
-This section will introduce how to upgrade the API Gateway and stop the daemon process.
+To run Bifrost in the foreground (useful for development):
 
-### SIGINT: Fast shutdown
+```bash
+./bifrost -c conf/config.yaml
+```
 
-When the SIGINT (ctrl + c) signal is received, the server will exit immediately, without delay, and all ongoing requests will be interrupted. This is generally not recommended, as it can disrupt in-progress requests.
+The Master process will start in the foreground and spawn a Worker process.
 
-### SIGTERM: Graceful shutdown
+### Daemon Mode (Production)
 
-Upon receiving the SIGTERM signal, the server will notify all services to shut down, wait for the preset timeout period, and then exit. This behavior grants a grace period for requests to complete before shutting down gracefully.
+To run Bifrost in the background as a daemon:
 
-### SIGQUIT: Graceful upgrade
+```bash
+./bifrost -d -c conf/config.yaml
+```
 
-When the server receives a signal similar to SIGTERM, it transfers all listening sockets to a new Bifrost instance, ensuring no downtime during the upgrade process. For more details, refer to the graceful upgrade section.
+The Master process will fork to the background, write a PID file, and manage the Worker process.
+
+## Stopping Bifrost
+
+### Via CLI
+
+You can use the `-s` flag to stop the running daemon:
+
+```bash
+./bifrost -s
+```
+
+### Via Signals (Manual)
+
+*   **SIGINT (Ctrl+C)** or **SIGTERM**: Graceful Shutdown. The Master process will instruct the Worker to finish active requests (within a timeout) before exiting.
+
+## Zero Downtime Upgrade (Hot Reload)
+
+Bifrost supports hot reloading to apply new configurations or upgrade the binary without dropping connections.
+
+### Via CLI
+
+```bash
+./bifrost -u
+```
+
+### Via Signal
+
+Send `SIGHUP` to the Master process PID:
+
+```bash
+kill -HUP <MASTER_PID>
+```
+
+### How it works
+
+1.  Master receives the upgrade signal.
+2.  Master spawns a new Worker process with the new configuration/binary.
+3.  New Worker inherits active listeners from the old Worker (Zero Downtime).
+4.  Once the new Worker is ready, Master gracefully shuts down the old Worker.

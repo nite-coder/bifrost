@@ -18,7 +18,7 @@ ExecStartPre=/home/my-gateway/bifrost -t -c=conf/config.yaml
 # Start in Master-Worker + Daemon mode
 # -m: Master-Worker mode (PID stable)
 # -d: Daemon mode (fork to background)
-ExecStart=/home/my-gateway/bifrost -m -d -c=conf/config.yaml
+ExecStart=/home/jason/bifrost/bifrost -d -c ./conf/config.yaml
 
 # Hot reload: send SIGHUP to Master (triggers Worker replacement)
 ExecReload=/bin/kill -HUP $MAINPID
