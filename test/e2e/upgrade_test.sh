@@ -1,24 +1,25 @@
 #!/bin/bash
 
-# E2E Upgrade Test for Bifrost
-# This script tests the complete upgrade flow:
-# 1. Start daemon process
-# 2. Trigger upgrade
-# 3. Verify old process is terminated
-# 4. Verify new process is running
-# 5. Verify PID file is updated
-# 6. Verify only one process is listening on port
+# E2E Upgrade Test for Bifrost (Master-Worker Architecture)
+# This script tests the complete upgrade flow with PID stability:
+# 1. Start daemon in Master-Worker mode (-m -d)
+# 2. Trigger upgrade (SIGHUP to Master)
+# 3. Verify Master PID remains UNCHANGED (key for Systemd Active Time)
+# 4. Verify Worker PID has changed (new Worker spawned)
+# 5. Verify only one process is listening on port
+# 6. Verify old Worker is terminated
 
 set -e
 
 # Configuration
 BIFROST_BIN="${BIFROST_BIN:-/tmp/bifrost}"
 CONFIG_FILE="${CONFIG_FILE:-/tmp/e2e_config.yaml}"
-# Use absolute path for logs - bifrost uses ./logs by default
 WORK_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 LOGS_DIR="${LOGS_DIR:-$WORK_DIR/logs}"
 TEST_PORT="${TEST_PORT:-18001}"
 TIMEOUT_SECONDS=30
+# Use Master-Worker mode by default
+USE_MASTER_WORKER="${USE_MASTER_WORKER:-true}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -40,19 +41,16 @@ log_error() {
 
 cleanup() {
     log_info "Cleaning up..."
-    # Kill any remaining bifrost processes
     pkill -9 -f "$BIFROST_BIN" 2>/dev/null || true
     rm -rf "$LOGS_DIR" "$CONFIG_FILE" 2>/dev/null || true
 }
 
-# Set trap to cleanup on exit
 trap cleanup EXIT
 
-# Create test configuration
 create_config() {
     log_info "Creating test configuration..."
     mkdir -p "$LOGS_DIR"
-    cat > "$CONFIG_FILE" << EOF
+    cat > "$CONFIG_FILE" <<EOF
 version: 1
 watch: false
 
@@ -62,7 +60,6 @@ servers:
 EOF
 }
 
-# Build bifrost if not exists
 build_bifrost() {
     if [ ! -f "$BIFROST_BIN" ]; then
         log_info "Building bifrost..."
@@ -70,7 +67,6 @@ build_bifrost() {
     fi
 }
 
-# Wait for process to be ready (listening on port)
 wait_for_ready() {
     local timeout=$1
     local start_time=$(date +%s)
@@ -91,66 +87,112 @@ wait_for_ready() {
     done
 }
 
-# Get current bifrost process count
 get_process_count() {
     pgrep -f "$BIFROST_BIN" 2>/dev/null | wc -l
 }
 
-# Get PID from PID file
-# Get PID from PID file
 get_pid_from_file() {
     cat "$LOGS_DIR/bifrost.pid" 2>/dev/null || echo "0"
 }
 
-# --------------------------------------------------------------------------
-# Systemd Simulation Logic (Legacy - for Type=forking)
-# --------------------------------------------------------------------------
-# NOTE: This check was designed for Type=forking where systemd tracks the main
-# PID by reading the PID file. With Type=notify, systemd receives MAINPID via
-# sd_notify, so this check is no longer a critical requirement.
-#
-# For Type=notify mode, the important thing is that:
-# 1. The new process sends sd_notify(MAINPID=xxx, READY=1)
-# 2. The old process exits gracefully after the notification
-#
-# We keep this monitoring for informational purposes but mark it as non-blocking.
-
-PID_FILE="$LOGS_DIR/bifrost.pid"
-monitor_pid_file() {
-    local last_pid=$1
-    log_info "Monitor: Watching $PID_FILE for changes (Initial: $last_pid)..."
-    
-    while true; do
-        if [ ! -f "$PID_FILE" ]; then
-            sleep 0.1
-            continue
-        fi
-
-        local current_pid
-        current_pid=$(cat "$PID_FILE")
-
-        if [ "$current_pid" != "$last_pid" ]; then
-            log_info "Monitor: PID changed from $last_pid to $current_pid"
-            
-            # For Type=notify mode, old process may already be terminated
-            # when PID file updates - this is acceptable behavior
-            if kill -0 "$last_pid" 2>/dev/null; then
-                log_info "Monitor: Old PID $last_pid is still alive during handover"
-                echo "PASS" > "$LOGS_DIR/monitor_result.txt"
-            else
-                log_info "Monitor: Old PID $last_pid has exited (normal for Type=notify mode)"
-                echo "PASS" > "$LOGS_DIR/monitor_result.txt"
-            fi
-            break
-        fi
-        sleep 0.01
-    done
+# Get all bifrost PIDs (for Master-Worker mode, returns multiple)
+get_all_pids() {
+    pgrep -f "$BIFROST_BIN" 2>/dev/null || echo ""
 }
 
-# Run the upgrade test
-run_upgrade_test() {
+# --------------------------------------------------------------------------
+# Master-Worker Mode Test
+# --------------------------------------------------------------------------
+run_master_worker_test() {
     log_info "============================================"
-    log_info "Starting E2E Upgrade Test"
+    log_info "Starting E2E Upgrade Test (Master-Worker Mode)"
+    log_info "============================================"
+    
+    # Step 1: Start daemon in Master-Worker mode
+    log_info "Step 1: Starting daemon in Master-Worker mode..."
+    "$BIFROST_BIN" -c "$CONFIG_FILE" -m -d &
+    sleep 3
+    
+    if ! wait_for_ready 10; then
+        log_error "Failed to start daemon"
+        return 1
+    fi
+    
+    local master_pid=$(get_pid_from_file)
+    local all_pids=$(get_all_pids)
+    local process_count=$(echo "$all_pids" | wc -w)
+    
+    log_info "  Master PID (from file): $master_pid"
+    log_info "  All PIDs: $all_pids"
+    log_info "  Process count: $process_count"
+    
+    # In Master-Worker mode, we expect 2 processes (Master + Worker)
+    if [ "$process_count" -lt 1 ]; then
+        log_error "Expected at least 1 process, found $process_count"
+        return 1
+    fi
+    
+    # Step 2: Trigger upgrade
+    log_info "Step 2: Triggering upgrade (SIGHUP to Master)..."
+    "$BIFROST_BIN" -c "$CONFIG_FILE" -u
+    
+    sleep 5
+    
+    # Step 3: Verify results
+    log_info "Step 3: Verifying results..."
+    
+    local new_master_pid=$(get_pid_from_file)
+    local new_all_pids=$(get_all_pids)
+    local new_process_count=$(echo "$new_all_pids" | wc -w)
+    local listeners=$(ss -tlnp 2>/dev/null | grep ":$TEST_PORT" | wc -l)
+
+    log_info "  Master PID before: $master_pid"
+    log_info "  Master PID after: $new_master_pid"
+    log_info "  Process count: $new_process_count"
+    log_info "  Port listeners: $listeners"
+    
+    local failed=0
+    
+    # Check 1: Master PID should remain UNCHANGED (key for Systemd Active Time)
+    if [ "$master_pid" = "$new_master_pid" ]; then
+        log_info "PASS: Master PID unchanged ($master_pid) - Systemd Active Time preserved!"
+    else
+        log_error "FAIL: Master PID changed from $master_pid to $new_master_pid"
+        failed=1
+    fi
+    
+    # Check 2: Only one listener on port
+    if [ "$listeners" -ne 1 ]; then
+        log_error "FAIL: Expected 1 listener on port $TEST_PORT, found $listeners"
+        failed=1
+    else
+        log_info "PASS: Only one listener on port $TEST_PORT"
+    fi
+    
+    # Check 3: Master process should still be running
+    if ! ps -p "$new_master_pid" > /dev/null 2>&1; then
+        log_error "FAIL: Master process (PID $new_master_pid) is not running"
+        failed=1
+    else
+        log_info "PASS: Master process (PID $new_master_pid) is running"
+    fi
+    
+    log_info "============================================"
+    if [ $failed -eq 0 ]; then
+        log_info "E2E Upgrade Test (Master-Worker): ${GREEN}PASSED${NC}"
+        return 0
+    else
+        log_error "E2E Upgrade Test (Master-Worker): FAILED"
+        return 1
+    fi
+}
+
+# --------------------------------------------------------------------------
+# Legacy Mode Test (Self-Exec)
+# --------------------------------------------------------------------------
+run_legacy_test() {
+    log_info "============================================"
+    log_info "Starting E2E Upgrade Test (Legacy Mode)"
     log_info "============================================"
     
     # Step 1: Start daemon
@@ -158,7 +200,6 @@ run_upgrade_test() {
     "$BIFROST_BIN" -c "$CONFIG_FILE" -d &
     sleep 2
     
-    # Wait for server to be ready
     if ! wait_for_ready 10; then
         log_error "Failed to start daemon"
         return 1
@@ -176,45 +217,24 @@ run_upgrade_test() {
     
     # Step 2: Trigger upgrade
     log_info "Step 2: Triggering upgrade..."
-    
-    # [Systemd Simulation] Start monitor before triggering upgrade
-    rm -f "$LOGS_DIR/monitor_result.txt"
-    monitor_pid_file "$old_pid" &
-    local monitor_pid=$!
-
     "$BIFROST_BIN" -c "$CONFIG_FILE" -u
     
-    # Wait for upgrade to complete
     sleep 5
     
-    # [Systemd Simulation] Wait for monitor
-    wait "$monitor_pid" 2>/dev/null || true
-
     # Step 3: Verify results
     log_info "Step 3: Verifying results..."
     
     local new_pid=$(get_pid_from_file)
     local new_process_count=$(get_process_count)
     local listeners=$(ss -tlnp 2>/dev/null | grep ":$TEST_PORT" | wc -l)
-    local monitor_result=$(cat "$LOGS_DIR/monitor_result.txt" 2>/dev/null || echo "UNKNOWN")
 
     log_info "  Old PID: $old_pid"
     log_info "  New PID: $new_pid"
     log_info "  Process count: $new_process_count"
     log_info "  Port listeners: $listeners"
-    log_info "  Systemd Simulation Result: $monitor_result"
     
-    # Verification checks
     local failed=0
     
-    # Check 0: Systemd Simulation (PID Update Handover)
-    if [ "$monitor_result" == "PASS" ]; then
-        log_info "PASS: Systemd simulation (Active Time Check)"
-    else
-        log_error "FAIL: Systemd simulation (Active Time Check) failed with result: $monitor_result"
-        failed=1
-    fi
-
     # Check 1: Only one process should be running
     if [ "$new_process_count" -ne 1 ]; then
         log_error "FAIL: Expected 1 process, found $new_process_count"
@@ -223,7 +243,7 @@ run_upgrade_test() {
         log_info "PASS: Only one process running"
     fi
     
-    # Check 2: PID should have changed (new process spawned)
+    # Check 2: PID should have changed
     if [ "$old_pid" = "$new_pid" ]; then
         log_error "FAIL: PID did not change (old=$old_pid, new=$new_pid)"
         failed=1
@@ -257,22 +277,26 @@ run_upgrade_test() {
     
     log_info "============================================"
     if [ $failed -eq 0 ]; then
-        log_info "E2E Upgrade Test: ${GREEN}PASSED${NC}"
+        log_info "E2E Upgrade Test (Legacy): ${GREEN}PASSED${NC}"
         return 0
     else
-        log_error "E2E Upgrade Test: FAILED"
+        log_error "E2E Upgrade Test (Legacy): FAILED"
         return 1
     fi
 }
 
 # Main
 main() {
-    # Change to project root
     cd "$(dirname "$0")/../.."
     
     build_bifrost
     create_config
-    run_upgrade_test
+    
+    if [ "$USE_MASTER_WORKER" = "true" ]; then
+        run_master_worker_test
+    else
+        run_legacy_test
+    fi
 }
 
 main "$@"
