@@ -149,6 +149,12 @@ func (m *Master) Run(ctx context.Context) error {
 		"workerPID", m.WorkerPID(),
 	)
 
+	// Notify parent process that daemon is ready (for Type=forking)
+	// This allows the parent to exit and Systemd to consider startup complete
+	if err := NotifyDaemonReady(); err != nil {
+		slog.Warn("failed to notify daemon ready", "error", err)
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
