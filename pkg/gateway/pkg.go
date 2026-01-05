@@ -405,19 +405,19 @@ func Run(mainOptions config.Options) (err error) {
 // RunAsDaemon runs the current process as a daemon.
 //
 // It takes mainOptions of type config.Options which contains the user and group information to run the daemon process.
-// Returns an error if the daemon process fails to start.
-func RunAsDaemon(mainOptions config.Options) error {
+// Returns a boolean indicating whether the parent process should exit (true) or continue (false), and an error if the daemon process fails to start.
+func RunAsDaemon(mainOptions config.Options) (bool, error) {
 	// When running under systemd with Type=notify, skip forking.
 	// systemd expects the main process to send sd_notify, not a forked child.
 	if os.Getenv("NOTIFY_SOCKET") != "" {
 		slog.Debug("running under systemd (NOTIFY_SOCKET detected), skipping fork")
 		// Set DAEMONIZED to trigger daemon mode behavior in Run()
 		os.Setenv("DAEMONIZED", "1")
-		return nil
+		return false, nil
 	}
 
 	if os.Geteuid() != 0 {
-		return errors.New("must be run as root to execute in daemon mode")
+		return false, errors.New("must be run as root to execute in daemon mode")
 	}
 
 	cmd := exec.CommandContext(context.TODO(), os.Args[0], os.Args[1:]...)
@@ -429,27 +429,27 @@ func RunAsDaemon(mainOptions config.Options) error {
 	if mainOptions.User != "" {
 		u, err := user.Lookup(mainOptions.User)
 		if err != nil {
-			return fmt.Errorf("failed to lookup user %s: %w", mainOptions.User, err)
+			return false, fmt.Errorf("failed to lookup user %s: %w", mainOptions.User, err)
 		}
 		uid64, err := strconv.ParseUint(u.Uid, 10, 32)
 		if err != nil {
-			return fmt.Errorf("failed to parse uid %s: %w", u.Uid, err)
+			return false, fmt.Errorf("failed to parse uid %s: %w", u.Uid, err)
 		}
 		uid := uint32(uid64)
 		gid64, err := strconv.ParseUint(u.Gid, 10, 32)
 		if err != nil {
-			return fmt.Errorf("failed to parse gid %s: %w", u.Gid, err)
+			return false, fmt.Errorf("failed to parse gid %s: %w", u.Gid, err)
 		}
 		gid := uint32(gid64)
 
 		if mainOptions.Group != "" {
 			g, err := user.LookupGroup(mainOptions.Group)
 			if err != nil {
-				return fmt.Errorf("failed to lookup group %s: %w", mainOptions.Group, err)
+				return false, fmt.Errorf("failed to lookup group %s: %w", mainOptions.Group, err)
 			}
 			gid64, err = strconv.ParseUint(g.Gid, 10, 32)
 			if err != nil {
-				return fmt.Errorf("failed to parse gid %s: %w", g.Gid, err)
+				return false, fmt.Errorf("failed to parse gid %s: %w", g.Gid, err)
 			}
 			gid = uint32(gid64)
 		}
@@ -460,11 +460,11 @@ func RunAsDaemon(mainOptions config.Options) error {
 	err := cmd.Start()
 	if err != nil {
 		slog.Error("failed to run as daemon", "error", err)
-		return err
+		return false, err
 	}
 
 	slog.Debug("daemon process started", "pid", cmd.Process.Pid)
-	return nil
+	return true, nil
 }
 
 // StopDaemon stops the daemon process.

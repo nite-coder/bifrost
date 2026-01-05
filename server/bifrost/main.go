@@ -137,15 +137,15 @@ func main() {
 
 			isDaemon := cCtx.Bool("daemon")
 			if isDaemon {
+				// Ensure IsDaemon is set so that gateway.Run() activates daemon-specific logic
+				// (e.g., PID file management, upgrade monitoring).
 				mainOptions.IsDaemon = true
 				if os.Getenv("DAEMONIZED") == "" {
-					err := gateway.RunAsDaemon(mainOptions)
+					shouldExit, err := gateway.RunAsDaemon(mainOptions)
 					if err != nil {
 						return err
 					}
-					// If DAEMONIZED was set by RunAsDaemon (systemd mode), continue to Run()
-					// Otherwise, the fork was successful and parent should exit
-					if os.Getenv("DAEMONIZED") == "" {
+					if shouldExit {
 						return nil
 					}
 				}

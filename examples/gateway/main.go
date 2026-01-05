@@ -48,7 +48,7 @@ func main() {
 		Action: func(cCtx *cli.Context) error {
 			var err error
 
-				_ = initialize.Bifrost()
+			_ = initialize.Bifrost()
 
 			configPath := cCtx.String("config")
 			isTest := cCtx.Bool("test")
@@ -81,7 +81,13 @@ func main() {
 			if isDaemon {
 				mainOptions.IsDaemon = true
 				if os.Getenv("DAEMONIZED") == "" {
-					return gateway.RunAsDaemon(mainOptions)
+					shouldExit, err := gateway.RunAsDaemon(mainOptions)
+					if err != nil {
+						return err
+					}
+					if shouldExit {
+						return nil
+					}
 				}
 			}
 
