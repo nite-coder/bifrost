@@ -200,15 +200,6 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 				return
 			}
 
-			// Fallback to legacy LISTENERS env var (if any)
-			str := os.Getenv("LISTENERS")
-			if len(str) > 0 {
-				err := sonic.Unmarshal([]byte(str), &z.listeners)
-				if err != nil {
-					slog.Error("failed to unmarshal LISTENERS", "error", err)
-					return
-				}
-			}
 			z.mu.Lock()
 			defer z.mu.Unlock()
 			index := 0
