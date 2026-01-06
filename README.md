@@ -1,4 +1,4 @@
-# Bifrost [![GoDoc][doc-img]][doc] [![Build][ci-img]][ci] [![GoReport][report-img]][report] [![Security][security-img]][security] [![Coverage Status][cov-img]][cov]
+# Bifrost [![GoDoc][doc-img]][doc] [![Build][ci-img]][ci] [![GoReport][report-img]][report] [![Security][security-img]][security] [![Coverage Status][cov-img]][cov] [![CodeWiki][codewiki-img]][codewiki]
 
 A low-latency and high-throughput API gateway library in Go
 
@@ -79,3 +79,5 @@ A low-latency and high-throughput API gateway library in Go
 [security]: https://github.com/nite-coder/bifrost/security
 [cov-img]: https://codecov.io/github/nite-coder/bifrost/graph/badge.svg
 [cov]: https://codecov.io/github/nite-coder/bifrost
+[codewiki-img]: https://www.gstatic.com/_/boq-sdlc-agents-ui/_/r/YUi5dj2UWvE.svg
+[codewiki]: https://codewiki.google/github.com/nite-coder/bifrost
