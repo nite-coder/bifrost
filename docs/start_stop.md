@@ -1,74 +1,84 @@
 # Command Line Interface
 
-Bifrost supports command-line functions for starting, testing, and managing the gateway lifecycle. 
-The gateway automatically uses the Master-Worker architecture for high availability and zero-downtime upgrades.
+Bifrost runs in foreground mode using the Master-Worker architecture for high availability and zero-downtime upgrades.
 
-| Flag                  | Description                                            |
-| :-------------------- | :----------------------------------------------------- |
-| `-d`, `--daemon`      | Run Master in background (Daemon mode)                 |
-| `-u`, `--upgrade`     | Trigger a hot reload (Zero Downtime Upgrade)           |
-| `-s`, `--stop`        | Gracefully stop the running instance                   |
-| `-t`, `--test`        | Test if the configuration file format is correct       |
-| `-c`, `--conf`        | Specify the configuration file path                    |
-| `-v`, `--version`     | Show version information                               |
+| Flag              | Description                                      |
+| :---------------- | :----------------------------------------------- |
+| `-t`, `--test`    | Test if the configuration file format is correct |
+| `-c`, `--conf`    | Specify the configuration file path              |
+| `-v`, `--version` | Show version information                         |
 
 ## Starting Bifrost
 
-### Foreground (Development)
-
-To run Bifrost in the foreground (useful for development):
+### Foreground Mode (All Environments)
 
 ```bash
 ./bifrost -c conf/config.yaml
 ```
 
-The Master process will start in the foreground and spawn a Worker process.
+The Master process runs in the foreground and spawns a Worker process. All logs are output to stdout/stderr.
 
-### Daemon Mode (Production)
-
-To run Bifrost in the background as a daemon:
+### With Systemd
 
 ```bash
-./bifrost -d -c conf/config.yaml
+systemctl start bifrost
 ```
 
-The Master process will fork to the background, write a PID file, and manage the Worker process.
+Systemd manages the process lifecycle. Logs are captured by Journald:
+
+```bash
+journalctl -u bifrost -f
+```
+
+### With Docker
+
+```bash
+docker run -d bifrost:latest -c /etc/bifrost/config.yaml
+```
+
+Logs are captured by Docker:
+
+```bash
+docker logs -f <container_id>
+```
 
 ## Stopping Bifrost
 
-### Via CLI
+### Via Signals
 
-You can use the `-s` flag to stop the running daemon:
+*   **SIGINT (Ctrl+C)** or **SIGTERM**: Graceful Shutdown. The Master process instructs the Worker to finish active requests before exiting.
+
+### With Systemd
 
 ```bash
-./bifrost -s
+systemctl stop bifrost
 ```
 
-### Via Signals (Manual)
+### With Docker/Kubernetes
 
-*   **SIGINT (Ctrl+C)** or **SIGTERM**: Graceful Shutdown. The Master process will instruct the Worker to finish active requests (within a timeout) before exiting.
+The container orchestrator sends `SIGTERM` to the process.
 
 ## Zero Downtime Upgrade (Hot Reload)
 
-Bifrost supports hot reloading to apply new configurations or upgrade the binary without dropping connections.
-
-### Via CLI
-
-```bash
-./bifrost -u
-```
+Bifrost supports hot reloading to apply new configurations without dropping connections.
 
 ### Via Signal
 
-Send `SIGHUP` to the Master process PID:
+Send `SIGHUP` to the Master process:
 
 ```bash
-kill -HUP <MASTER_PID>
+kill -HUP $(pgrep -f 'bifrost.*-c')
+```
+
+### With Systemd
+
+```bash
+systemctl reload bifrost
 ```
 
 ### How it works
 
-1.  Master receives the upgrade signal.
-2.  Master spawns a new Worker process with the new configuration/binary.
+1.  Master receives `SIGHUP`.
+2.  Master spawns a new Worker process with the new configuration.
 3.  New Worker inherits active listeners from the old Worker (Zero Downtime).
 4.  Once the new Worker is ready, Master gracefully shuts down the old Worker.
