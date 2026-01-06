@@ -8,11 +8,11 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/initialize"
-	"github.com/nite-coder/bifrost/pkg/zero"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/urfave/cli/v2"
 	_ "go.uber.org/automaxprocs"
@@ -158,7 +158,7 @@ func Run(opts ...Option) error {
 				return nil
 			}
 
-			if zero.IsWorker() {
+			if runtime.IsWorker() {
 				runAsWorker(mainOptions)
 				return nil
 			}
@@ -176,11 +176,11 @@ func Run(opts ...Option) error {
 func runMasterMode(mainOptions config.Options) error {
 	slog.Debug("starting in Master-Worker mode", "pid", os.Getpid())
 
-	masterOpts := &zero.MasterOptions{
+	masterOpts := &runtime.MasterOptions{
 		ConfigPath: mainOptions.ConfigPath(),
 	}
 
-	master := zero.NewMaster(masterOpts)
+	master := runtime.NewMaster(masterOpts)
 	return master.Run(context.Background())
 }
 
@@ -193,14 +193,14 @@ func runAsWorker(mainOptions config.Options) {
 	_ = initialize.Bifrost()
 
 	// Connect to Master's control plane
-	socketPath := zero.GetControlSocketPath()
+	socketPath := runtime.GetControlSocketPath()
 	slog.Debug("worker socket path",
 		"env", os.Getenv("BIFROST_CONTROL_SOCKET"),
 		"socketPath", socketPath,
 	)
 
 	if socketPath != "" {
-		wcp := zero.NewWorkerControlPlane(socketPath)
+		wcp := runtime.NewWorkerControlPlane(socketPath)
 		if err := wcp.Connect(); err != nil {
 			slog.Warn("failed to connect to control plane", "error", err)
 		} else {
@@ -216,7 +216,7 @@ func runAsWorker(mainOptions config.Options) {
 			}
 
 			// Setup FD handler
-			fdHandler := zero.NewWorkerFDHandler(wcp)
+			fdHandler := runtime.NewWorkerFDHandler(wcp)
 
 			// Start control plane loop
 			go safety.Go(context.Background(), func() {

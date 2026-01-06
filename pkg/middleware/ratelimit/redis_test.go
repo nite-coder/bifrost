@@ -3,196 +3,165 @@ package ratelimit
 import (
 	"context"
 	"fmt"
-	"net"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
+	"github.com/testcontainers/testcontainers-go"
+	redisMod "github.com/testcontainers/testcontainers-go/modules/redis"
+	"github.com/testcontainers/testcontainers-go/network"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func startRedis(t *testing.T) (string, func()) {
-	pool, err := dockertest.NewPool("")
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	ctx := context.Background()
+
+	redisContainer, err := redisMod.Run(ctx,
+		"redis:7.4",
+		redisMod.WithSnapshotting(10, 1),
+		redisMod.WithLogLevel(redisMod.LogLevelVerbose),
+	)
 	if err != nil {
-		t.Fatalf("Failed to start Dockertest: %+v", err)
+		t.Fatalf("failed to start container: %s", err)
 	}
 
-	resource, err := pool.Run("redis", "7.4", nil)
+	endpoint, err := redisContainer.ConnectionString(ctx)
 	if err != nil {
-		t.Fatalf("Failed to start redis: %+v", err)
+		t.Fatalf("failed to get connection string: %s", err)
 	}
+	// Strip redis:// prefix if present, as go-redis Options.Addr expects host:port
+	endpoint = strings.TrimPrefix(endpoint, "redis://")
 
-	// determine the port the container is listening on
-	addr := net.JoinHostPort("localhost", resource.GetPort("6379/tcp"))
-
-	// wait for the container to be ready
-	err = pool.Retry(func() error {
-		var e error
-		ctx := context.Background()
-		client := redis.NewClient(&redis.Options{Addr: addr})
-		defer client.Close()
-
-		_, e = client.Ping(ctx).Result()
-		return e
-	})
-
-	if err != nil {
-		t.Fatalf("Failed to ping Redis: %+v", err)
+	return endpoint, func() {
+		if err := redisContainer.Terminate(ctx); err != nil {
+			t.Fatalf("failed to terminate container: %s", err)
+		}
 	}
-
-	destroyFunc := func() {
-		_ = pool.Purge(resource)
-	}
-
-	return addr, destroyFunc
 }
 
-func startRedisCluster(t *testing.T) func() {
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to start Dockertest: %+v", err)
+func startRedisCluster(t *testing.T) ([]string, map[string]string, func()) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
 	}
 
-	networks, err := pool.NetworksByName("redis-cluster-network")
-	if err != nil {
-		t.Fatalf("Could not find docker network: %s", err)
-	}
+	ctx := context.Background()
 
-	var network *dockertest.Network
-	if len(networks) > 0 {
-		network = &networks[0]
-	} else {
-		network, err = pool.CreateNetwork("redis-cluster-network")
-		if err != nil {
-			t.Fatalf("Could not create docker network: %s", err)
+	// 1. Create a network
+	newNetwork, err := network.New(ctx, network.WithCheckDuplicate())
+	if err != nil {
+		t.Fatal(err)
+	}
+	networkName := newNetwork.Name
+
+	// 2. Start 3 Redis nodes
+	var containers []testcontainers.Container
+	var nodeIPs []string
+	var hostAddrs []string
+
+	for i := 0; i < 3; i++ {
+		req := testcontainers.ContainerRequest{
+			Image:        "redis:7.4",
+			Cmd:          []string{"redis-server", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--requirepass", "bitnami"},
+			ExposedPorts: []string{"6379/tcp"},
+			Networks:     []string{networkName},
+			WaitingFor:   wait.ForLog("Ready to accept connections"),
 		}
-	}
 
-	node0, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Name:       "redis-node-0",
-		Repository: "redis",
-		Tag:        "7.4",
-		Cmd:        []string{"redis-server", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--port", "6379", "--appendonly", "yes", "--requirepass", "bitnami"},
-		PortBindings: map[docker.Port][]docker.PortBinding{
-			"6379/tcp": {{HostPort: "7000"}},
-		},
-		Networks: []*dockertest.Network{network},
-	})
-	if err != nil {
-		t.Fatalf("Failed to start redis node 0: %+v", err)
-	}
-
-	node1, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Name:       "redis-node-1",
-		Repository: "redis",
-		Tag:        "7.4",
-		Cmd:        []string{"redis-server", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--port", "6379", "--appendonly", "yes", "--requirepass", "bitnami"},
-		PortBindings: map[docker.Port][]docker.PortBinding{
-			"6379/tcp": {{HostPort: "7001"}},
-		},
-		Networks: []*dockertest.Network{network},
-	})
-	if err != nil {
-		t.Fatalf("Failed to start redis node 1: %+v", err)
-	}
-
-	node2, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Name:       "redis-node-2",
-		Repository: "redis",
-		Tag:        "7.4",
-		Cmd:        []string{"redis-server", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--port", "6379", "--appendonly", "yes", "--requirepass", "bitnami"},
-		PortBindings: map[docker.Port][]docker.PortBinding{
-			"6379/tcp": {{HostPort: "7002"}},
-		},
-		Networks: []*dockertest.Network{network},
-	})
-	if err != nil {
-		t.Fatalf("Failed to start redis: %+v", err)
-	}
-
-	destroyFunc := func() {
-		_ = pool.Purge(node0)
-		_ = pool.Purge(node1)
-		_ = pool.Purge(node2)
-		network.Close()
-	}
-
-	// Wait for individual nodes to be ready
-	nodes := []*dockertest.Resource{node0, node1, node2}
-	for i, node := range nodes {
-		addr := net.JoinHostPort("localhost", node.GetPort("6379/tcp"))
-		err = pool.Retry(func() error {
-			ctx := context.Background()
-			client := redis.NewClient(&redis.Options{Addr: addr, Password: "bitnami"})
-			defer client.Close()
-
-			_, e := client.Ping(ctx).Result()
-			return e
+		container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+			ContainerRequest: req,
+			Started:          true,
 		})
 		if err != nil {
-			t.Fatalf("Failed to ping redis node %d: %+v", i, err)
+			t.Fatalf("failed to start redis node %d: %v", i, err)
 		}
+		containers = append(containers, container)
+
+		// Get internal IP
+		ip, err := container.ContainerIP(ctx)
+		if err != nil {
+			t.Fatalf("failed to get container IP: %v", err)
+		}
+		nodeIPs = append(nodeIPs, ip)
+
+		// Get mapped host port
+		endpoint, err := container.PortEndpoint(ctx, "6379/tcp", "")
+		if err != nil {
+			t.Fatalf("failed to get endpoint: %v", err)
+		}
+		hostAddrs = append(hostAddrs, endpoint)
 	}
 
-	// Create the cluster
+	// 3. Create Cluster
+	// We run redis-cli --cluster create on the first node
 	clusterCmd := []string{"redis-cli", "-a", "bitnami", "--cluster", "create"}
-	for i := 0; i < len(nodes); i++ {
-		clusterCmd = append(clusterCmd, fmt.Sprintf("redis-node-%d:6379", i))
+	for _, ip := range nodeIPs {
+		clusterCmd = append(clusterCmd, fmt.Sprintf("%s:6379", ip))
 	}
 	clusterCmd = append(clusterCmd, "--cluster-replicas", "0", "--cluster-yes")
 
-	// Execute the cluster creation command on one of the nodes
-	err = pool.Retry(func() error {
-		_, err := node0.Exec(clusterCmd, dockertest.ExecOptions{})
-		if err != nil {
-			return err
-		}
-
-		// After cluster creation, wait for the cluster to be healthy
-		ctx := context.Background()
-		client := redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs:    []string{"localhost:7000", "localhost:7001", "localhost:7002"},
-			Password: "bitnami",
-		})
-		defer client.Close()
-
-		info, err := client.ClusterInfo(ctx).Result()
-		if err != nil {
-			return err
-		}
-
-		if strings.Contains(info, "cluster_state:ok") {
-			return nil
-		} else {
-			return fmt.Errorf("cluster state is not ok: %s", info)
-		}
-	})
-
+	exitCode, _, err := containers[0].Exec(ctx, clusterCmd)
 	if err != nil {
-		t.Fatalf("Failed to create redis cluster: %+v", err)
+		t.Fatalf("failed to execute cluster create: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("cluster create failed with exit code %d", exitCode)
 	}
 
-	// Wait for cluster to be ready for commands
-	assert.Eventually(t, func() bool {
-		ctx := context.Background()
-		client := redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs:    []string{"localhost:7000", "localhost:7001", "localhost:7002"},
-			Password: "bitnami",
-		})
-		defer client.Close()
-		_, err := client.Ping(ctx).Result()
-		return err == nil
-	}, 5*time.Second, 200*time.Millisecond, "Cluster nodes should be ready for commands")
+	// 4. Wait for Cluster state OK
+	// Collect Node ID -> HostAddr mapping
+	idMap := make(map[string]string)
 
-	return destroyFunc
+	assert.Eventually(t, func() bool {
+		// Verify with single node connection first
+		for _, addr := range hostAddrs {
+			rdb := redis.NewClient(&redis.Options{
+				Addr:     addr,
+				Password: "bitnami",
+			})
+			info, err := rdb.ClusterInfo(ctx).Result()
+			if err != nil {
+				_ = rdb.Close()
+				return false
+			}
+			if !strings.Contains(info, "cluster_state:ok") {
+				_ = rdb.Close()
+				return false
+			}
+
+			// Get Node ID
+			myID, err := rdb.ClusterMyID(ctx).Result()
+			_ = rdb.Close()
+			if err != nil {
+				return false
+			}
+			idMap[myID] = addr
+		}
+		return true
+	}, 60*time.Second, 1*time.Second, "Cluster state should be OK")
+
+	destroyFunc := func() {
+		for _, c := range containers {
+			_ = c.Terminate(ctx)
+		}
+		_ = newNetwork.Remove(ctx)
+	}
+
+	return hostAddrs, idMap, destroyFunc
 }
 
 func TestRedis(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	addr, destroyRedis := startRedis(t)
 	defer destroyRedis()
 
@@ -212,15 +181,45 @@ func TestRedis(t *testing.T) {
 }
 
 func TestRedisCluster(t *testing.T) {
-	destroyRedis := startRedisCluster(t)
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	addrs, idMap, destroyRedis := startRedisCluster(t)
 	defer destroyRedis()
 
 	ctx := context.Background()
 	client := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:        []string{"localhost:7000", "localhost:7001", "localhost:7002"},
+		Addrs:        addrs,
 		Password:     "bitnami",
 		ReadTimeout:  3 * time.Second,
 		WriteTimeout: 3 * time.Second,
+		// Custom ClusterSlots to rewrite internal container IPs to localhost mapped ports
+		ClusterSlots: func(ctx context.Context) ([]redis.ClusterSlot, error) {
+			// Create a temporary single-node client to fetch slots
+			// usage of any node is fine
+			rdb := redis.NewClient(&redis.Options{
+				Addr:     addrs[0],
+				Password: "bitnami",
+			})
+			defer rdb.Close()
+
+			slots, err := rdb.ClusterSlots(ctx).Result()
+			if err != nil {
+				return nil, err
+			}
+
+			// Rewrite addrs
+			for i := range slots {
+				for j := range slots[i].Nodes {
+					nodeID := slots[i].Nodes[j].ID
+					if mappedAddr, ok := idMap[nodeID]; ok {
+						slots[i].Nodes[j].Addr = mappedAddr
+					}
+				}
+			}
+			return slots, nil
+		},
 	})
 	_, e := client.Ping(ctx).Result()
 	assert.NoError(t, e)

@@ -1,23 +1,19 @@
-package zero
+package runtime
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
-	"github.com/nite-coder/blackbear/pkg/cast"
 	proxyproto "github.com/pires/go-proxyproto"
 )
 
@@ -113,18 +109,8 @@ type ListenerOptions struct {
 
 // Options contains configuration for the ZeroDownTime instance.
 type Options struct {
-	// PIDFile is the path to the file where the process ID is stored.
-	PIDFile string
 	// QuitTimout is the maximum time to wait for the old process to terminate.
 	QuitTimout time.Duration
-}
-
-// GetPIDFile returns the PID file path, using a default value if not configured.
-func (opts Options) GetPIDFile() string {
-	if opts.PIDFile == "" {
-		return "./logs/bifrost.pid"
-	}
-	return opts.PIDFile
 }
 
 // New creates a new ZeroDownTime instance with the given options.
@@ -166,28 +152,6 @@ func (z *ZeroDownTime) Close(ctx context.Context) error {
 	if isWaiting {
 		z.stopWaitingCh <- true
 	}
-	return nil
-}
-
-// Upgrade triggers an upgrade by sending SIGHUP signal to the running process.
-// This signals the running process to spawn a new process and transfer listeners.
-func (z *ZeroDownTime) Upgrade() error {
-	pid, err := z.GetPID()
-	if err != nil {
-		return fmt.Errorf("failed to read PID file: %w", err)
-	}
-
-	process, err := z.processFinder.FindProcess(pid)
-	if err != nil {
-		return fmt.Errorf("failed to find process %d: %w", pid, err)
-	}
-
-	err = process.Signal(syscall.SIGHUP)
-	if err != nil {
-		return fmt.Errorf("failed to send SIGHUP to process %d: %w", pid, err)
-	}
-
-	slog.Info("sent SIGHUP signal to trigger upgrade", "pid", pid)
 	return nil
 }
 
@@ -413,222 +377,4 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	<-z.isShutdownCh
 	slog.Info("WaitForUpgrade completed", "pid", os.Getpid())
 	return nil
-}
-
-var (
-	ErrKillTimeout = errors.New("process did not terminate within the timeout period")
-)
-
-// Quit sends a signal to the process and waits for it to exit. If the process
-// does not exit within the timeout period, it will be sent a SIGKILL signal.
-// If removePIDFile is true, the PID file will be removed if it exists.
-//
-// The signal sent is SIGHUP, which is usually used to restart a process.
-// If the process has already exited, this method will return nil immediately.
-//
-// If the process does not exit within the timeout period, ErrKillTimeout will
-// be returned.
-func (z *ZeroDownTime) Quit(ctx context.Context, pid int, removePIDFile bool) error {
-	process, err := z.processFinder.FindProcess(pid)
-	if err != nil {
-		slog.Error("find process error", "error", err)
-		return err
-	}
-	err = process.Signal(syscall.SIGTERM)
-	if err != nil {
-		// If process already terminated (e.g., crash or killed externally), this is not a fatal error
-		if errors.Is(err, os.ErrProcessDone) || errors.Is(err, syscall.ESRCH) {
-			slog.Info("process already terminated", "pid", pid)
-			return nil
-		}
-		slog.Error("send signal error", "error", err)
-		return err
-	}
-	// Create a ticker to check process status
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-	// Set timeout deadline
-	deadline := time.Now().Add(z.QuitTimeout)
-	for time.Now().Before(deadline) {
-		<-ticker.C
-		// Try to send a null signal to check if the process exists
-		err := process.Signal(syscall.Signal(0))
-		if err != nil {
-			if errors.Is(err, os.ErrProcessDone) || errors.Is(err, syscall.ESRCH) {
-				// Process no longer exists, now remove PID file if requested
-				if removePIDFile {
-					if err := os.Remove(z.options.GetPIDFile()); err != nil {
-						if !os.IsNotExist(err) {
-							slog.Error("failed to remove PID file", "error", err)
-							return err
-						}
-					}
-				}
-				return nil
-			}
-			// Other errors, possibly permission issues
-			return fmt.Errorf("check process error: %w", err)
-		}
-	}
-	// If we reach here, it means timeout occurred
-	// Optionally send SIGKILL
-	err = process.Kill()
-	if err != nil {
-		return fmt.Errorf("failed to kill process after timeout: %w", err)
-	}
-	// Check again if the process has terminated
-	time.Sleep(100 * time.Millisecond)
-	if err := process.Signal(syscall.Signal(0)); err != nil {
-		if errors.Is(err, os.ErrProcessDone) || errors.Is(err, syscall.ESRCH) {
-			// Process terminated after SIGKILL, remove PID file if requested
-			if removePIDFile {
-				if err := os.Remove(z.options.GetPIDFile()); err != nil {
-					if !os.IsNotExist(err) {
-						slog.Error("failed to remove PID file", "error", err)
-						return err
-					}
-				}
-			}
-			return nil
-		}
-	}
-	return ErrKillTimeout
-}
-
-// writePID writes the current process ID to the PID file atomically.
-// It uses a temporary file and rename to ensure the PID file is never partially written.
-// This prevents corruption if the process is killed during the write operation.
-func (z *ZeroDownTime) writePID() error {
-	pid := os.Getpid()
-	dir := filepath.Dir(z.options.GetPIDFile())
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
-		}
-	}
-
-	// Use temp file + rename for atomic write
-	tmpFile := z.options.GetPIDFile() + ".tmp"
-	data := []byte(strconv.Itoa(pid))
-	err := os.WriteFile(tmpFile, data, 0600)
-	if err != nil {
-		slog.Error("failed to write temp PID file", "error", err)
-		return fmt.Errorf("failed to write temp PID file: %w", err)
-	}
-
-	err = os.Rename(tmpFile, z.options.GetPIDFile())
-	if err != nil {
-		os.Remove(tmpFile)
-		slog.Error("failed to rename PID file", "error", err)
-		return fmt.Errorf("failed to rename PID file: %w", err)
-	}
-	return nil
-}
-
-// ForceWritePID writes the PID file without acquiring a lock.
-// This is used during the upgrade handoff phase where the new process
-// needs to update the PID file before the old process exits.
-// WARNING: Only use this in upgrade scenarios where you are the "inheritor".
-func (z *ZeroDownTime) ForceWritePID() error {
-	return z.writePID()
-}
-
-// GetPID reads and returns the process ID from the PID file.
-// Returns an error if the file cannot be read or the content is not a valid integer.
-func (z *ZeroDownTime) GetPID() (int, error) {
-	b, err := os.ReadFile(z.options.GetPIDFile())
-	if err != nil {
-		slog.Error("shutdown error", "error", err)
-		return 0, err
-	}
-	pid, err := cast.ToInt(string(b))
-	if err != nil {
-		slog.Error("pid is invalid", "error", err)
-		return 0, err
-	}
-	return pid, nil
-}
-
-// ValidatePIDFile checks if the process specified in the PID file is still running.
-// It returns:
-//   - isRunning: true if the process is running, false otherwise
-//   - pid: the process ID read from the file (0 if file doesn't exist)
-//   - error: any error that occurred during validation
-//
-// If the PID file does not exist, it returns (false, 0, nil).
-// This is useful for verifying that an old process is still alive before attempting to stop it.
-func (z *ZeroDownTime) ValidatePIDFile() (bool, int, error) {
-	pid, err := z.GetPID()
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, 0, nil
-		}
-		return false, 0, err
-	}
-
-	process, err := z.processFinder.FindProcess(pid)
-	if err != nil {
-		return false, pid, err
-	}
-
-	// Send null signal to check if the process exists
-	err = process.Signal(syscall.Signal(0))
-	if err != nil {
-		if errors.Is(err, os.ErrProcessDone) || errors.Is(err, syscall.ESRCH) {
-			return false, pid, nil
-		}
-		return false, pid, err
-	}
-
-	return true, pid, nil
-}
-
-// WritePIDWithLock writes the PID file while holding an exclusive file lock.
-// This prevents race conditions when multiple processes attempt to write the PID file
-// simultaneously, such as during rapid successive upgrades.
-//
-// The returned *os.File must be kept open to maintain the lock. Call ReleasePIDLock
-// when the lock is no longer needed (typically when the process exits or the upgrade completes).
-//
-// Returns an error if another process already holds the lock.
-func (z *ZeroDownTime) WritePIDWithLock() (*os.File, error) {
-	dir := filepath.Dir(z.options.GetPIDFile())
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return nil, fmt.Errorf("failed to create directory %s: %w", dir, err)
-		}
-	}
-
-	lockFile := z.options.GetPIDFile() + ".lock"
-	f, err := z.fileOpener(lockFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open lock file: %w", err)
-	}
-
-	// Try to acquire exclusive lock (non-blocking)
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		f.Close()
-		return nil, fmt.Errorf("failed to acquire lock, another process may be running: %w", err)
-	}
-
-	// Atomic write PID file
-	if err := z.writePID(); err != nil {
-		_ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
-		f.Close()
-		return nil, err
-	}
-
-	return f, nil
-}
-
-// ReleasePIDLock releases the file lock acquired by WritePIDWithLock and closes the file.
-// It is safe to call with a nil file pointer.
-func (z *ZeroDownTime) ReleasePIDLock(f *os.File) error {
-	if f == nil {
-		return nil
-	}
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_UN); err != nil {
-		return fmt.Errorf("failed to release lock: %w", err)
-	}
-	return f.Close()
 }

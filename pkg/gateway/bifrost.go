@@ -11,13 +11,13 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/resolver"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/tracer/accesslog"
 	"github.com/nite-coder/bifrost/pkg/tracer/prometheus"
-	"github.com/nite-coder/bifrost/pkg/zero"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -25,7 +25,7 @@ type Bifrost struct {
 	tracerProvider *sdktrace.TracerProvider
 	options        *config.Options
 	resolver       *resolver.Resolver
-	zero           *zero.ZeroDownTime
+	runtime        *runtime.ZeroDownTime
 	middlewares    map[string]app.HandlerFunc
 	services       map[string]*Service
 	httpServers    map[string]*HTTPServer
@@ -47,8 +47,8 @@ func (b *Bifrost) Run() {
 		i++
 	}
 }
-func (b *Bifrost) ZeroDownTime() *zero.ZeroDownTime {
-	return b.zero
+func (b *Bifrost) ZeroDownTime() *runtime.ZeroDownTime {
+	return b.runtime
 }
 
 // Shutdown shuts down all HTTP servers in the Bifrost instance gracefully.
@@ -117,7 +117,7 @@ func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 		_ = b.tracerProvider.Shutdown(ctx)
 	}
 
-	return b.zero.Close(ctx)
+	return b.runtime.Close(ctx)
 }
 
 // NewBifrost creates a new instance of Bifrost.
@@ -130,7 +130,7 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	tCache := timecache.New(mainOptions.TimerResolution)
 	timecache.Set(tCache)
 
-	zeroOptions := zero.Options{}
+	zeroOptions := runtime.Options{}
 	resolveOptions := resolver.Options{
 		Servers:  mainOptions.Resolver.Servers,
 		SkipTest: mainOptions.SkipResolver,
@@ -148,7 +148,7 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 		middlewares: middlewares,
 		resolver:    dnsResolver,
 		httpServers: make(map[string]*HTTPServer),
-		zero:        zero.New(zeroOptions),
+		runtime:     runtime.New(zeroOptions),
 	}
 	// services
 	services, err := loadServices(bifrost)

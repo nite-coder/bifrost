@@ -5,6 +5,15 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
+	"net"
+	"os"
+	"runtime"
+	"sync/atomic"
+	"syscall"
+	"time"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
@@ -17,20 +26,12 @@ import (
 	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/pprof"
+	bifrostRuntime "github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/zero"
 	proxyproto "github.com/pires/go-proxyproto"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/unix"
-	"io"
-	"log/slog"
-	"net"
-	"os"
-	"runtime"
-	"sync/atomic"
-	"syscall"
-	"time"
 )
 
 var (
@@ -139,7 +140,7 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 				return opErr
 			},
 		}
-		listenerOptions := &zero.ListenerOptions{
+		listenerOptions := &bifrostRuntime.ListenerOptions{
 			Network: "tcp",
 			Address: serverOptions.Bind,
 			Config:  listenerConfig,
@@ -147,7 +148,7 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 		if serverOptions.ProxyProtocol {
 			listenerOptions.ProxyProtocol = true
 		}
-		listener, err := bifrost.zero.Listener(ctx, listenerOptions)
+		listener, err := bifrost.runtime.Listener(ctx, listenerOptions)
 		if err != nil {
 			return nil, err
 		}
