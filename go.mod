@@ -10,6 +10,7 @@ require (
 	github.com/cloudwego/netpoll v0.7.1
 	github.com/corazawaf/coraza-coreruleset/v4 v4.20.0
 	github.com/corazawaf/coraza/v3 v3.3.3
+	github.com/coreos/go-systemd/v22 v22.6.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/go-viper/mapstructure/v2 v2.4.0

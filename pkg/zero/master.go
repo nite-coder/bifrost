@@ -10,8 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -58,8 +56,6 @@ func (s MasterState) String() string {
 
 // MasterOptions contains configuration for the Master process.
 type MasterOptions struct {
-	// PIDFile is the path to store the Master's PID.
-	PIDFile string
 	// ConfigPath is the path to the configuration file passed to Worker.
 	ConfigPath string
 	// Binary is the path to the executable (defaults to os.Args[0]).
@@ -162,18 +158,9 @@ func (m *Master) Run(ctx context.Context) error {
 		"workerPID", m.WorkerPID(),
 	)
 
-	// Write PID file
-	if err := m.writePIDFile(); err != nil {
-		slog.Error("failed to write PID file", "error", err)
-		return err
-	}
-	defer m.removePIDFile()
-
-	// Notify parent process that daemon is ready (for Type=forking)
-	// This allows the parent to exit and Systemd to consider startup complete
-	if err := NotifyDaemonReady(); err != nil {
-		slog.Warn("failed to notify daemon ready", "error", err)
-	}
+	// Notify systemd that service is ready (for Type=notify)
+	// This is called after Worker is spawned and control plane is ready
+	NotifySystemdReady()
 
 	for {
 		select {
@@ -264,37 +251,6 @@ func (m *Master) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// writePIDFile writes the current process ID to the configured PID file.
-func (m *Master) writePIDFile() error {
-	pidFile := m.options.PIDFile
-	if pidFile == "" {
-		pidFile = "./logs/bifrost.pid"
-	}
-
-	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(pidFile), 0755); err != nil {
-		return fmt.Errorf("failed to create PID file directory: %w", err)
-	}
-
-	pid := os.Getpid()
-	if err := os.WriteFile(pidFile, []byte(strconv.Itoa(pid)), 0600); err != nil {
-		return fmt.Errorf("failed to write PID file: %w", err)
-	}
-	slog.Info("PID file written", "path", pidFile, "pid", pid)
-	m.options.PIDFile = pidFile // Update option with actual path
-	return nil
-}
-
-// removePIDFile removes the PID file.
-func (m *Master) removePIDFile() {
-	pidFile := m.options.PIDFile
-	if pidFile == "" {
-		return
-	}
-	_ = os.Remove(pidFile)
-	slog.Info("PID file removed", "path", pidFile)
-}
-
 // State returns the current state of the Master.
 func (m *Master) State() MasterState {
 	m.mu.RLock()
@@ -370,7 +326,7 @@ func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File, keys []
 		return nil, fmt.Errorf("failed to start worker: %w", err)
 	}
 
-	slog.Info("spawned new worker",
+	slog.Debug("spawned new worker",
 		"workerPID", cmd.Process.Pid,
 		"extraFiles", len(extraFiles),
 		"keys", keys,
@@ -518,7 +474,7 @@ func (m *Master) handleControlMessage(conn net.Conn, msg *ControlMessage) {
 		slog.Debug("worker registered", "workerPID", msg.WorkerPID)
 
 	case MessageTypeReady:
-		slog.Debug("worker ready", "workerPID", msg.WorkerPID)
+		slog.Info("worker ready", "workerPID", msg.WorkerPID)
 		select {
 		case m.readyCh <- struct{}{}:
 		default:

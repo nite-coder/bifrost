@@ -3,11 +3,7 @@ Description=Bifrost Gateway Service
 After=network.target
 
 [Service]
-# Use forking type - Master daemonizes and writes PID file before parent exits
-Type=forking
-
-# Master writes PID file after successful initialization
-PIDFile=/home/my-gateway/logs/bifrost.pid
+Type=notify
 
 Environment=GOTRACEBACK=crash
 WorkingDirectory=/home/my-gateway
@@ -15,10 +11,8 @@ WorkingDirectory=/home/my-gateway
 # Validate config before starting
 ExecStartPre=/home/my-gateway/bifrost -t -c=conf/config.yaml
 
-# Start in Master-Worker + Daemon mode
-# -m: Master-Worker mode (PID stable)
-# -d: Daemon mode (fork to background)
-ExecStart=/home/jason/bifrost/bifrost -d -c ./conf/config.yaml
+# Start in foreground Master-Worker mode
+ExecStart=/home/my-gateway/bifrost -c conf/config.yaml
 
 # Hot reload: send SIGHUP to Master (triggers Worker replacement)
 ExecReload=/bin/kill -HUP $MAINPID
@@ -26,11 +20,8 @@ ExecReload=/bin/kill -HUP $MAINPID
 # Graceful shutdown: send SIGTERM to Master
 ExecStop=/bin/kill -TERM $MAINPID
 
-# Restart on failure
-Restart=on-failure
-
-# Allow 30 seconds for graceful shutdown
 TimeoutStopSec=30s
+Restart=on-failure
 
 # File descriptor limits
 LimitNOFILE=1048576

@@ -130,9 +130,7 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	tCache := timecache.New(mainOptions.TimerResolution)
 	timecache.Set(tCache)
 
-	zeroOptions := zero.Options{
-		PIDFile: mainOptions.PIDFile,
-	}
+	zeroOptions := zero.Options{}
 	resolveOptions := resolver.Options{
 		Servers:  mainOptions.Resolver.Servers,
 		SkipTest: mainOptions.SkipResolver,

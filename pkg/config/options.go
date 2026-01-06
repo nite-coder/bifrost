@@ -16,8 +16,6 @@ type Options struct {
 	Upstreams       map[string]UpstreamOptions  `yaml:"upstreams" json:"upstreams"`
 	Providers       ProviderOptions             `yaml:"providers" json:"providers"`
 	configPath      string                      `yaml:"-" json:"-"`
-	PIDFile         string                      `yaml:"pid_file" json:"pid_file"`
-	UpgradeSock     string                      `yaml:"upgrade_sock" json:"upgrade_sock"`
 	User            string                      `yaml:"user" json:"user"`
 	Group           string                      `yaml:"group" json:"group"`
 	Metrics         MetricsOptions              `yaml:"metrics" json:"metrics"`
@@ -29,7 +27,6 @@ type Options struct {
 	Default         DefaultOptions              `yaml:"default" json:"default"`
 	EventLoops      int                         `yaml:"event_loops" json:"event_loops"`
 	TimerResolution time.Duration               `yaml:"timer_resolution" json:"timer_resolution"`
-	IsDaemon        bool                        `yaml:"-" json:"-"`
 	SkipResolver    bool                        `yaml:"-" json:"-"`
 	Gopool          bool                        `yaml:"gopool" json:"gopool"`
 	Experiment      ExperimentOptions           `yaml:"experiment" json:"experiment"`

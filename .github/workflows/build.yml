@@ -62,21 +62,6 @@ jobs:
           files: ./cover.out
           verbose: true
 
-  systemd-integration-test:
-    name: Systemd Integration Test
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Check out code
-        uses: actions/checkout@v5
-
-      - name: Run Systemd Integration Test
-        run: make systemd-test
-
   e2e-upgrade-test:
     name: E2E Upgrade Test
     runs-on: ubuntu-22.04

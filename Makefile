@@ -8,10 +8,6 @@ test:
 e2e-test: build
 	sudo bash ./test/e2e/upgrade_test.sh
 
-# Systemd integration test - requires Docker with privileged mode
-# Run with: make systemd-test
-systemd-test:
-	bash ./test/systemd/systemd_test.sh
 
 coverage: test
 	go tool cover -func=cover.out

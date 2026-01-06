@@ -3,16 +3,12 @@ package gateway
 import (
 	"context"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"os"
-	"os/exec"
 	"os/signal"
-	"os/user"
 	"runtime/debug"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -27,7 +23,6 @@ import (
 	"github.com/nite-coder/bifrost/pkg/connector/redis"
 	"github.com/nite-coder/bifrost/pkg/log"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
-	"github.com/nite-coder/bifrost/pkg/zero"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
 )
@@ -249,118 +244,12 @@ func Run(mainOptions config.Options) (err error) {
 			"readinessCheckDuration", readinessElapsed,
 		)
 
-		zeroDT := bifrost.ZeroDownTime()
-
-		if mainOptions.IsDaemon {
-			var lockFile *os.File
-			var err error
-
-			if zeroDT.IsUpgraded() {
-				upgradeStart := time.Now()
-				slog.Info("upgrade process started",
-					"newPID", os.Getpid(),
-				)
-
-				// Validate old process is running before trying to quit it
-				slog.Debug("validating PID file for old process")
-				isRunning, oldPID, err := zeroDT.ValidatePIDFile()
-				if err != nil {
-					slog.Error("failed to validate PID file", "error", err)
-					return
-				}
-
-				if !isRunning {
-					slog.Warn("old process is not running, skipping quit",
-						"pid", oldPID,
-						"reason", "process not found or already terminated",
-					)
-				} else {
-					slog.Debug("old process validated",
-						"oldPID", oldPID,
-						"isRunning", isRunning,
-					)
-				}
-
-				// Step 1: Force update PID file FIRST (before quitting old process)
-				// This allows Systemd to see the new PID while old process is still alive
-				slog.Info("force updating PID file for Systemd", "newPID", os.Getpid())
-				if err := zeroDT.ForceWritePID(); err != nil {
-					slog.Error("failed to force write PID", "error", err)
-					return
-				}
-
-				// Give Systemd some time to notice the PID file change via inotify
-				// before we kill the old process. 100ms is sufficient and negligible for upgrade duration.
-				time.Sleep(100 * time.Millisecond)
-
-				// Step 2: Quit old process (release lock)
-				if isRunning && oldPID > 0 {
-					slog.Info("sending termination signal to old process", "oldPID", oldPID)
-					quitStart := time.Now()
-					err = zeroDT.Quit(ctx, oldPID, false)
-					if err != nil {
-						slog.Error("failed to quit old process",
-							"error", err,
-							"oldPID", oldPID,
-							"elapsed", time.Since(quitStart).Round(time.Millisecond),
-						)
-						return
-					}
-					slog.Info("old process terminated successfully",
-						"oldPID", oldPID,
-						"quitDuration", time.Since(quitStart).Round(time.Millisecond),
-					)
-				}
-
-				// Step 3: Now acquire PID lock and write new PID (old process has released it)
-				slog.Debug("acquiring PID file lock and writing new PID")
-				lockFile, err = zeroDT.WritePIDWithLock()
-				if err != nil {
-					slog.Error("failed to write PID with lock", "error", err)
-					return
-				}
-
-				slog.Debug("PID file updated successfully", "newPID", os.Getpid())
-
-				slog.Log(ctx, log.LevelNotice, "upgrade completed successfully",
-					"oldPID", oldPID,
-					"newPID", os.Getpid(),
-					"upgradeDuration", time.Since(upgradeStart).Round(time.Millisecond),
-				)
-			} else {
-				slog.Debug("initializing daemon mode")
-
-				// Use WritePIDWithLock for daemon mode as well
-				lockFile, err = zeroDT.WritePIDWithLock()
-				if err != nil {
-					slog.Error("failed to write PID with lock", "error", err)
-					return
-				}
-
-				slog.Debug("daemon PID file created", "pid", os.Getpid())
-			}
-
-			// Defer release lock
-			defer func() {
-				if err := zeroDT.ReleasePIDLock(lockFile); err != nil {
-					slog.Error("failed to release PID lock", "error", err)
-				}
-			}()
-
-			slog.Info("daemon mode ready, waiting for upgrade signals",
-				"pid", os.Getpid(),
-			)
-
-			// Run WaitForUpgrade in a goroutine so it doesn't block signal handling
-			go safety.Go(context.Background(), func() {
-				if err := bifrost.ZeroDownTime().WaitForUpgrade(ctx); err != nil {
-					slog.Error("failed to wait for upgrade process", "error", err)
-				}
-			})
-		}
+		// In Master-Worker mode, the Master handles hot reload via SIGHUP
+		// Worker just needs to run until it receives SIGTERM
 	})
 
 	var sigs os.Signal
+
 	defer func() {
 		// shutdown bifrost
 		if sigs == syscall.SIGINT {
@@ -375,121 +264,6 @@ func Run(mainOptions config.Options) (err error) {
 	sigs = <-stopChan
 
 	slog.Debug("received shutdown signal", "signal", sigs, "pid", os.Getpid())
-	return nil
-}
-
-// RunAsDaemon runs the current process as a daemon.
-//
-// It takes mainOptions of type config.Options which contains the user and group information to run the daemon process.
-// Returns a boolean indicating whether the parent process should exit (true) or continue (false), and an error if the daemon process fails to start.
-func RunAsDaemon(mainOptions config.Options) (bool, error) {
-
-	if os.Geteuid() != 0 {
-		return false, errors.New("must be run as root to execute in daemon mode")
-	}
-
-	cmd := exec.CommandContext(context.TODO(), os.Args[0], os.Args[1:]...)
-	cmd.Stdin = nil
-	cmd.Stdout = nil
-
-	// Redirect stderr to file for debugging panics
-	f, err := os.OpenFile("/tmp/bifrost_stderr.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err == nil {
-		cmd.Stderr = f
-		// Note: We don't close f here, it needs to stay open for the child?
-		// Actually cmd.Start() passes the FD.
-		// We can close f in parent after Start()? No, cmd.Stderr uses it.
-		// But cmd.Start duplicates it? Yes.
-		// So we can defer close?
-		defer f.Close()
-	} else {
-		cmd.Stderr = nil
-	}
-
-	cmd.Env = append(os.Environ(), "BIFROST_DAEMONIZED=1")
-
-	if mainOptions.User != "" {
-		u, err := user.Lookup(mainOptions.User)
-		if err != nil {
-			return false, fmt.Errorf("failed to lookup user %s: %w", mainOptions.User, err)
-		}
-		uid64, err := strconv.ParseUint(u.Uid, 10, 32)
-		if err != nil {
-			return false, fmt.Errorf("failed to parse uid %s: %w", u.Uid, err)
-		}
-		uid := uint32(uid64)
-		gid64, err := strconv.ParseUint(u.Gid, 10, 32)
-		if err != nil {
-			return false, fmt.Errorf("failed to parse gid %s: %w", u.Gid, err)
-		}
-		gid := uint32(gid64)
-
-		if mainOptions.Group != "" {
-			g, err := user.LookupGroup(mainOptions.Group)
-			if err != nil {
-				return false, fmt.Errorf("failed to lookup group %s: %w", mainOptions.Group, err)
-			}
-			gid64, err = strconv.ParseUint(g.Gid, 10, 32)
-			if err != nil {
-				return false, fmt.Errorf("failed to parse gid %s: %w", g.Gid, err)
-			}
-			gid = uint32(gid64)
-		}
-
-		setUserAndGroup(cmd, uint32(uid), uint32(gid))
-	}
-
-	err = cmd.Start()
-	if err != nil {
-		slog.Error("failed to run as daemon", "error", err)
-		return false, err
-	}
-
-	slog.Debug("daemon process started", "pid", cmd.Process.Pid)
-	return true, nil
-}
-
-// StopDaemon stops the daemon process.
-//
-// It takes mainOptions of type config.Options which contains the PID file information.
-// Returns an error if the daemon process fails to stop.
-func StopDaemon(mainOptions config.Options) error {
-	zeroOpts := zero.Options{
-		PIDFile: mainOptions.PIDFile,
-	}
-
-	zeroDT := zero.New(zeroOpts)
-
-	ctx := context.Background()
-
-	oldPID, err := zeroDT.GetPID()
-	if err != nil {
-		return err
-	}
-	err = zeroDT.Quit(ctx, oldPID, true)
-	if err != nil {
-		slog.Error("failed to stop", "error", err)
-		return err
-	}
-	return nil
-}
-
-// Upgrade upgrades the daemon process.
-//
-// It takes mainOptions of type config.Options which contains the PID file information.
-// Returns an error if the upgrade fails.
-func Upgrade(mainOptions config.Options) error {
-	zeroOpts := zero.Options{
-		PIDFile: mainOptions.PIDFile,
-	}
-
-	zeroDT := zero.New(zeroOpts)
-
-	if err := zeroDT.Upgrade(); err != nil {
-		slog.Error("failed to upgrade", "error", err)
-		return err
-	}
-
 	return nil
 }
 

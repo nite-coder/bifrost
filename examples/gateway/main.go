@@ -21,28 +21,10 @@ func main() {
 				Usage:   "The path to the configuration file",
 			},
 			&cli.BoolFlag{
-				Name:    "daemon",
-				Aliases: []string{"d"},
-				Value:   false,
-				Usage:   "Daemonize the server",
-			},
-			&cli.BoolFlag{
-				Name:    "upgrade",
-				Aliases: []string{"u"},
-				Value:   false,
-				Usage:   "This server should gracefully upgrade a running server",
-			},
-			&cli.BoolFlag{
 				Name:    "test",
 				Aliases: []string{"t"},
 				Value:   false,
 				Usage:   "Test the server conf and then exit",
-			},
-			&cli.BoolFlag{
-				Name:    "stop",
-				Aliases: []string{"s"},
-				Value:   false,
-				Usage:   "This server should gracefully shutdown a running server",
 			},
 		},
 		Action: func(cCtx *cli.Context) error {
@@ -65,30 +47,6 @@ func main() {
 			if isTest {
 				slog.Info("the config file tested successfully", "path", configPath)
 				return nil
-			}
-
-			isStop := cCtx.Bool("stop")
-			if isStop {
-				return gateway.StopDaemon(mainOptions)
-			}
-
-			isUpgrade := cCtx.Bool("upgrade")
-			if isUpgrade {
-				return gateway.Upgrade(mainOptions)
-			}
-
-			isDaemon := cCtx.Bool("daemon")
-			if isDaemon {
-				mainOptions.IsDaemon = true
-				if os.Getenv("DAEMONIZED") == "" {
-					shouldExit, err := gateway.RunAsDaemon(mainOptions)
-					if err != nil {
-						return err
-					}
-					if shouldExit {
-						return nil
-					}
-				}
 			}
 
 			return gateway.Run(mainOptions)
