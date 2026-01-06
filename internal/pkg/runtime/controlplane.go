@@ -347,6 +347,7 @@ type WorkerControlPlane struct {
 	conn       net.Conn
 	socketPath string
 	pid        int
+	signalFunc func(pid int, sig os.Signal) error // Mockable signal function
 }
 
 // NewWorkerControlPlane creates a Worker-side control plane client.
@@ -354,6 +355,13 @@ func NewWorkerControlPlane(socketPath string) *WorkerControlPlane {
 	return &WorkerControlPlane{
 		socketPath: socketPath,
 		pid:        os.Getpid(),
+		signalFunc: func(pid int, sig os.Signal) error {
+			p, err := os.FindProcess(pid)
+			if err != nil {
+				return err
+			}
+			return p.Signal(sig)
+		},
 	}
 }
 
@@ -520,8 +528,9 @@ func (wcp *WorkerControlPlane) Start(ctx context.Context, fdHandler FDHandler) e
 		case MessageTypeShutdown:
 			slog.Info("worker received shutdown request")
 			// Send SIGTERM to self to trigger graceful shutdown
-			p, _ := os.FindProcess(os.Getpid())
-			_ = p.Signal(syscall.SIGTERM)
+			if err := wcp.signalFunc(wcp.pid, syscall.SIGTERM); err != nil {
+				slog.Error("failed to signal self", "error", err)
+			}
 			return nil
 		default:
 			slog.Debug("worker ignored message", "type", msg.Type)
