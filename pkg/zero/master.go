@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
+	"github.com/nite-coder/bifrost/pkg/log"
 )
 
 // Environment variable used to identify worker processes.
@@ -158,6 +159,15 @@ func (m *Master) Run(ctx context.Context) error {
 		"workerPID", m.WorkerPID(),
 	)
 
+	// Wait for worker to be ready
+	// This ensures we digest the initial "ready" signal so it doesn't linger for hot reload.
+	select {
+	case <-m.readyCh:
+		slog.Info("initial worker is ready")
+	case <-time.After(30 * time.Second):
+		slog.Warn("initial worker ready timeout, proceeding anyway")
+	}
+
 	// Notify systemd that service is ready (for Type=notify)
 	// This is called after Worker is spawned and control plane is ready
 	NotifySystemdReady()
@@ -174,7 +184,7 @@ func (m *Master) Run(ctx context.Context) error {
 		case sig := <-sigCh:
 			switch sig {
 			case syscall.SIGHUP:
-				slog.Info("received SIGHUP, triggering hot reload")
+				slog.Log(ctx, log.LevelNotice, "received SIGHUP, triggering hot reload")
 				if err := m.handleReload(ctx); err != nil {
 					slog.Error("hot reload failed", "error", err)
 				}
@@ -427,6 +437,13 @@ func (m *Master) handleReload(ctx context.Context) error {
 		return fmt.Errorf("failed to spawn new worker: %w", err)
 	}
 
+	// Step 2b: Drain any stale ready signals
+	select {
+	case <-m.readyCh:
+		slog.Info("drained stale ready signal")
+	default:
+	}
+
 	// Step 3: Wait for new worker ready signal (with timeout)
 	readyTimeout := 30 * time.Second
 	select {
@@ -459,7 +476,7 @@ func (m *Master) handleReload(ctx context.Context) error {
 	// Reset keepalive on successful reload
 	m.keepAlive.Reset()
 
-	slog.Info("hot reload completed",
+	slog.Log(ctx, log.LevelNotice, "hot reload completed",
 		"oldWorkerPID", oldWorkerPID,
 		"newWorkerPID", newCmd.Process.Pid,
 	)

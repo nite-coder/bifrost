@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Adjust to modern foreground master-worker architecture ([#90](https://github.com/nite-coder/bifrost/pull/90) by [0x5487](https://github.com/0x5487))
+- Optimize SDK usage to make it easier for developers to integrate bifrost sdk ([#90](https://github.com/nite-coder/bifrost/pull/90) by [0x5487](https://github.com/0x5487))
 - Enhance hot upgrade reliability and PID file safety with atomic writes, file locking, readiness verification, and improved process lifecycle management. ([#79](https://github.com/nite-coder/bifrost/pull/79) by [0x5487](https://github.com/0x5487))
 - Refactor `hashing` balancer to `chash` (Consistent Hashing) and optimize `roundrobin`, `random`, and `weighted` balancers with improved performance and thread-safety. ([#82](https://github.com/nite-coder/bifrost/pull/82) by [0x5487](https://github.com/0x5487))
 - Improve `pkg/gateway` test coverage and code stability. ([#84](https://github.com/nite-coder/bifrost/pull/84) by [0x5487](https://github.com/0x5487))
