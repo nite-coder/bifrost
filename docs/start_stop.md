@@ -1,28 +1,84 @@
-# Start and Stop
+# Command Line Interface
 
-Bifrost supports command-line functions for starting, testing, and more. For a complete API Gateway setup, refer to [Gateway](./../../examples/gateway/main.go)
+Bifrost runs in foreground mode using the Master-Worker architecture for high availability and zero-downtime upgrades.
 
-## Start
+| Flag              | Description                                      |
+| :---------------- | :----------------------------------------------- |
+| `-t`, `--test`    | Test if the configuration file format is correct |
+| `-c`, `--conf`    | Specify the configuration file path              |
+| `-v`, `--version` | Show version information                         |
 
-| Command Parameter |   Default    | Description                                      |
-| :---------------- | :----------: | :----------------------------------------------- |
-| -d, --daemon      |    false     | Run in background mode                           |
-| -t, --test        |    false     | Test if the configuration file format is correct |
-| -c, --conf        | empty string | Specify the configuration file path              |
-| -u, --upgrade     |    false     | Perform a hot reload upgrade                     |
+## Starting Bifrost
 
-## Stop
+### Foreground Mode (All Environments)
 
-This section will introduce how to upgrade the API Gateway and stop the daemon process.
+```bash
+./bifrost -c conf/config.yaml
+```
 
-### SIGINT: Fast shutdown
+The Master process runs in the foreground and spawns a Worker process. All logs are output to stdout/stderr.
 
-When the SIGINT (ctrl + c) signal is received, the server will exit immediately, without delay, and all ongoing requests will be interrupted. This is generally not recommended, as it can disrupt in-progress requests.
+### With Systemd
 
-### SIGTERM: Graceful shutdown
+```bash
+systemctl start bifrost
+```
 
-Upon receiving the SIGTERM signal, the server will notify all services to shut down, wait for the preset timeout period, and then exit. This behavior grants a grace period for requests to complete before shutting down gracefully.
+Systemd manages the process lifecycle. Logs are captured by Journald:
 
-### SIGQUIT: Graceful upgrade
+```bash
+journalctl -u bifrost -f
+```
 
-When the server receives a signal similar to SIGTERM, it transfers all listening sockets to a new Bifrost instance, ensuring no downtime during the upgrade process. For more details, refer to the graceful upgrade section.
+### With Docker
+
+```bash
+docker run -d bifrost:latest -c /etc/bifrost/config.yaml
+```
+
+Logs are captured by Docker:
+
+```bash
+docker logs -f <container_id>
+```
+
+## Stopping Bifrost
+
+### Via Signals
+
+*   **SIGINT (Ctrl+C)** or **SIGTERM**: Graceful Shutdown. The Master process instructs the Worker to finish active requests before exiting.
+
+### With Systemd
+
+```bash
+systemctl stop bifrost
+```
+
+### With Docker/Kubernetes
+
+The container orchestrator sends `SIGTERM` to the process.
+
+## Zero Downtime Upgrade (Hot Reload)
+
+Bifrost supports hot reloading to apply new configurations without dropping connections.
+
+### Via Signal
+
+Send `SIGHUP` to the Master process:
+
+```bash
+kill -HUP $(pgrep -f 'bifrost.*-c')
+```
+
+### With Systemd
+
+```bash
+systemctl reload bifrost
+```
+
+### How it works
+
+1.  Master receives `SIGHUP`.
+2.  Master spawns a new Worker process with the new configuration.
+3.  New Worker inherits active listeners from the old Worker (Zero Downtime).
+4.  Once the new Worker is ready, Master gracefully shuts down the old Worker.

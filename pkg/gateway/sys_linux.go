@@ -3,9 +3,6 @@
 package gateway
 
 import (
-	"os/exec"
-	"syscall"
-
 	"golang.org/x/sys/unix"
 )
 
@@ -31,15 +28,6 @@ func setTCPFastOpen(fd uintptr) error {
 		return err
 	}
 	return nil
-}
-
-func setUserAndGroup(cmd *exec.Cmd, uid, gid uint32) {
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Credential: &syscall.Credential{
-			Uid: uid,
-			Gid: gid,
-		},
-	}
 }
 
 func setCloExec(fd int) error {

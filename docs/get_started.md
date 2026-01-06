@@ -46,23 +46,16 @@ Forward all HTTP requests to the backend upstream services. With two upstream se
 package main
 
 import (
- "github.com/nite-coder/bifrost/pkg/config"
- "github.com/nite-coder/bifrost/pkg/gateway"
- "github.com/nite-coder/bifrost/pkg/initialize"
+	"os"
+
+	"github.com/nite-coder/bifrost"
 )
 
 func main() {
- _ = initialize.Bifrost()
-
- options, err := config.Load("./config.yaml")
- if err != nil {
-  panic(err)
- }
-
- err = gateway.Run(options)
- if err != nil {
-  panic(err)
- }
+	err := bifrost.Run()
+	if err != nil {
+		os.Exit(1)
+	}
 }
  ```
 

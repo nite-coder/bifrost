@@ -1,22 +1,31 @@
 [Unit]
-Description=Bifrost Service
+Description=Bifrost Gateway Service
 After=network.target
 
 [Service]
 Type=notify
-NotifyAccess=all
+
 Environment=GOTRACEBACK=crash
 WorkingDirectory=/home/my-gateway
-PIDFile=/home/my-gateway/logs/bifrost.pid
+
+# Validate config before starting
 ExecStartPre=/home/my-gateway/bifrost -t -c=conf/config.yaml
-ExecStart=/home/my-gateway/bifrost -d -c=conf/config.yaml
+
+# Start in foreground Master-Worker mode
+ExecStart=/home/my-gateway/bifrost -c conf/config.yaml
+
+# Hot reload: send SIGHUP to Master (triggers Worker replacement)
 ExecReload=/bin/kill -HUP $MAINPID
+
+# Graceful shutdown: send SIGTERM to Master
 ExecStop=/bin/kill -TERM $MAINPID
+
+TimeoutStopSec=30s
 Restart=on-failure
 
+# File descriptor limits
 LimitNOFILE=1048576
 LimitCORE=infinity
-
 
 [Install]
 WantedBy=multi-user.target

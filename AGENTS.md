@@ -23,6 +23,8 @@ bifrost/
 ├── examples/         # Example implementations and use cases
 ├── init/             # Initialization scripts (systemd service files, etc.)
 ├── internal/         # Internal packages (not for external use)
+│   └── pkg/          # Internal shared packages
+│       └── runtime/  # Process management (master/worker) and hot reload logic
 ├── pkg/              # Public packages - core library code
 │   ├── balancer/     # Load balancing algorithms (round_robin, random, weighted, chash)
 │   ├── config/       # Configuration parsing and management
@@ -38,8 +40,7 @@ bifrost/
 │   ├── timecache/    # Time caching utilities
 │   ├── tracer/       # Tracing implementations
 │   ├── tracing/      # OpenTelemetry integration
-│   ├── variable/     # Variable handling for configuration
-│   └── zero/         # Zero-downtime upgrade utilities
+│   └── variable/     # Variable handling for configuration
 ├── proto/            # Protocol buffer definitions
 ├── script/           # Build and utility scripts
 ├── server/           # Server implementations
@@ -53,7 +54,7 @@ bifrost/
 
 ## Project rules
 
-- Communicate in the same language as the user. If the user speaks English, respond in English; if the user speaks Chinese, respond in Chinese.
+- Communicate in the same language as the user. Ensure that all outputs, including **Task Status**, **Implementation Plans**, and **Task Lists**, align with the language used by the user.
 - Use English to write code and comments.
 - Add comments for each function and struct to help developers understand their purpose.
 - Use the slog package for all logging purposes.

@@ -1,24 +1,20 @@
 .PHONY: test
 test:
 	go clean -testcache
-	go test -race -coverprofile=cover.out -covermode=atomic ./pkg/... -v
+	go tool gotestsum --format testname -- -race -coverprofile=cover.out -covermode=atomic ./pkg/... ./internal/pkg/... -v
 
 # E2E upgrade test requires root privileges for daemon mode
 # Run with: sudo make e2e-test
-e2e-test:
+e2e-test: build
 	sudo bash ./test/e2e/upgrade_test.sh
 
-# Systemd integration test - requires Docker with privileged mode
-# Run with: make systemd-test
-systemd-test:
-	bash ./test/systemd/systemd_test.sh
 
 coverage: test
 	go tool cover -func=cover.out
 
 lint:
 	golangci-lint cache clean
-	golangci-lint run --timeout 5m --verbose ./pkg/... -v
+	golangci-lint run --timeout 5m --verbose ./pkg/... ./internal/pkg/... -v
 
 lintd:
 	docker run -it --rm -v "${LOCAL_WORKSPACE_FOLDER}:/app" -w /app golangci/golangci-lint:v2.7.2-alpine golangci-lint run --timeout 5m --verbose ./pkg/...

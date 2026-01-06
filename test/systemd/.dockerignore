@@ -1,8 +1,0 @@
-# Systemd test Docker ignore
-# Only exclude what's not needed for testing
-docs/
-examples/
-client/
-server/bifrost/logs
-.git/
-.github/
