@@ -143,26 +143,6 @@ func spawnDaemonChild(opts *DaemonOptions) (bool, error) {
 	}
 }
 
-// notifyParentReady sends "ready" signal to parent via pipe (FD 3).
-// Called by child process after initialization is complete.
-func notifyParentReady() (bool, error) {
-	// FD 3 is the write end of the pipe passed by parent
-	pipe := os.NewFile(3, "ready-pipe")
-	if pipe == nil {
-		// No pipe, might be started directly (not via Daemonize)
-		return false, nil
-	}
-	defer pipe.Close()
-
-	_, err := pipe.WriteString("ready")
-	if err != nil {
-		return false, fmt.Errorf("failed to signal parent: %w", err)
-	}
-
-	slog.Debug("notified parent of ready state", "pid", os.Getpid())
-	return false, nil
-}
-
 // NotifyDaemonReady should be called by the daemon after it's fully initialized.
 // This sends the ready signal to the parent process if running in daemon mode.
 func NotifyDaemonReady() error {

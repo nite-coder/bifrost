@@ -5,7 +5,7 @@ test:
 
 # E2E upgrade test requires root privileges for daemon mode
 # Run with: sudo make e2e-test
-e2e-test:
+e2e-test: build
 	sudo bash ./test/e2e/upgrade_test.sh
 
 # Systemd integration test - requires Docker with privileged mode

@@ -523,6 +523,8 @@ func (wcp *WorkerControlPlane) Start(ctx context.Context, fdHandler FDHandler) e
 			p, _ := os.FindProcess(os.Getpid())
 			_ = p.Signal(syscall.SIGTERM)
 			return nil
+		default:
+			slog.Debug("worker ignored message", "type", msg.Type)
 		}
 	}
 }

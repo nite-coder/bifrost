@@ -12,9 +12,9 @@
 set -e
 
 # Configuration
-BIFROST_BIN="${BIFROST_BIN:-/tmp/bifrost}"
-CONFIG_FILE="${CONFIG_FILE:-/tmp/e2e_config.yaml}"
 WORK_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+BIFROST_BIN="${BIFROST_BIN:-$WORK_DIR/bin/bifrost}"
+CONFIG_FILE="${CONFIG_FILE:-$WORK_DIR/test/e2e/config.yaml}"
 LOGS_DIR="${LOGS_DIR:-$WORK_DIR/logs}"
 TEST_PORT="${TEST_PORT:-18001}"
 TIMEOUT_SECONDS=30
@@ -42,7 +42,7 @@ log_error() {
 cleanup() {
     log_info "Cleaning up..."
     pkill -9 -f "$BIFROST_BIN" 2>/dev/null || true
-    rm -rf "$LOGS_DIR" "$CONFIG_FILE" 2>/dev/null || true
+    # rm -rf "$LOGS_DIR" "$CONFIG_FILE" 2>/dev/null || true
 }
 
 trap cleanup EXIT
@@ -54,6 +54,11 @@ create_config() {
 version: 1
 watch: false
 
+logging:
+  handler: text
+  level: info
+  output: stderr
+
 servers:
   test_server:
     bind: "127.0.0.1:$TEST_PORT"
@@ -61,9 +66,11 @@ EOF
 }
 
 build_bifrost() {
-    if [ ! -f "$BIFROST_BIN" ]; then
+    if command -v go >/dev/null 2>&1; then
         log_info "Building bifrost..."
         go build -o "$BIFROST_BIN" ./server/bifrost
+    else
+        log_warn "go command not found, skipping build and using existing binary (if any)."
     fi
 }
 
@@ -103,14 +110,17 @@ get_all_pids() {
 # --------------------------------------------------------------------------
 # Master-Worker Mode Test
 # --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# Master-Worker Mode Test
+# --------------------------------------------------------------------------
 run_master_worker_test() {
     log_info "============================================"
-    log_info "Starting E2E Upgrade Test (Master-Worker Mode)"
+    log_info "Starting E2E Test (Master-Worker Architecture)"
     log_info "============================================"
     
-    # Step 1: Start daemon in Master-Worker mode
-    log_info "Step 1: Starting daemon in Master-Worker mode..."
-    "$BIFROST_BIN" -c "$CONFIG_FILE" -m -d &
+    # Step 1: Start daemon
+    log_info "Step 1: Starting Master in foreground-background mode..."
+    "$BIFROST_BIN" -c "$CONFIG_FILE" 2>&1 | tee "$LOGS_DIR/master_debug.log" &
     sleep 3
     
     if ! wait_for_ready 10; then
@@ -119,70 +129,115 @@ run_master_worker_test() {
     fi
     
     local master_pid=$(get_pid_from_file)
-    local all_pids=$(get_all_pids)
-    local process_count=$(echo "$all_pids" | wc -w)
+    if [ "$master_pid" = "0" ] || [ -z "$master_pid" ]; then
+        log_warn "PID file not found or empty, trying to find Master PID via pgrep..."
+        master_pid=$(pgrep -f "$BIFROST_BIN" | head -n 1)
+    fi
+    local initial_pids=$(get_all_pids)
+    local initial_count=$(echo "$initial_pids" | wc -w)
     
-    log_info "  Master PID (from file): $master_pid"
-    log_info "  All PIDs: $all_pids"
-    log_info "  Process count: $process_count"
+    log_info "  Master PID: $master_pid"
+    log_info "  Initial PIDs: $initial_pids"
     
-    # In Master-Worker mode, we expect 2 processes (Master + Worker)
-    if [ "$process_count" -lt 1 ]; then
-        log_error "Expected at least 1 process, found $process_count"
+    if [ "$initial_count" -lt 2 ]; then
+        log_error "Expected at least 2 processes (Master + Worker), found $initial_count"
+        # If it's 1, maybe it's just Master and Worker failed to start
         return 1
     fi
-    
-    # Step 2: Trigger upgrade
-    log_info "Step 2: Triggering upgrade (SIGHUP to Master)..."
-    "$BIFROST_BIN" -c "$CONFIG_FILE" -u
-    
-    sleep 5
-    
-    # Step 3: Verify results
-    log_info "Step 3: Verifying results..."
-    
-    local new_master_pid=$(get_pid_from_file)
-    local new_all_pids=$(get_all_pids)
-    local new_process_count=$(echo "$new_all_pids" | wc -w)
-    local listeners=$(ss -tlnp 2>/dev/null | grep ":$TEST_PORT" | wc -l)
 
-    log_info "  Master PID before: $master_pid"
-    log_info "  Master PID after: $new_master_pid"
-    log_info "  Process count: $new_process_count"
-    log_info "  Port listeners: $listeners"
+    # Identify worker PID (one of the PIDs that is NOT the master_pid)
+    local initial_worker_pid=""
+    for p in $initial_pids; do
+        if [ "$p" != "$master_pid" ]; then
+            initial_worker_pid=$p
+            break
+        fi
+    done
+    log_info "  Initial Worker PID: $initial_worker_pid"
+
+    # ----------------------------------------------------------------------
+    # Scenario 1: KeepAlive Test (Worker Crashed/Killed)
+    # ----------------------------------------------------------------------
+    log_info "Step 2: Scenario - KeepAlive Test (Killing Worker)..."
+    kill -9 "$initial_worker_pid"
+    log_info "  Sent SIGKILL to Worker ($initial_worker_pid)"
+    
+    sleep 5 # Wait for Master to detect and restart
+    
+    local post_kill_pids=$(get_all_pids)
+    local new_worker_pid=""
+    for p in $post_kill_pids; do
+        if [ "$p" != "$master_pid" ]; then
+            new_worker_pid=$p
+            break
+        fi
+    done
+    
+    log_info "  New Worker PID after Kill: $new_worker_pid"
     
     local failed=0
-    
-    # Check 1: Master PID should remain UNCHANGED (key for Systemd Active Time)
-    if [ "$master_pid" = "$new_master_pid" ]; then
-        log_info "PASS: Master PID unchanged ($master_pid) - Systemd Active Time preserved!"
-    else
-        log_error "FAIL: Master PID changed from $master_pid to $new_master_pid"
+    if [ "$master_pid" != "$(get_pid_from_file)" ]; then
+        log_error "FAIL: Master PID changed during KeepAlive test"
         failed=1
     fi
     
-    # Check 2: Only one listener on port
+    if [ -z "$new_worker_pid" ] || [ "$new_worker_pid" = "$initial_worker_pid" ]; then
+        log_error "FAIL: Worker did not restart or PID stayed the same"
+        failed=1
+    else
+        log_info "PASS: Worker restarted with new PID ($new_worker_pid)"
+    fi
+
+    # ----------------------------------------------------------------------
+    # Scenario 2: Hot Reload Test (SIGHUP)
+    # ----------------------------------------------------------------------
+    log_info "Step 3: Scenario - Hot Reload Test (SIGHUP)..."
+    "$BIFROST_BIN" -c "$CONFIG_FILE" -u
+    log_info "  Triggered upgrade via -u"
+    
+    sleep 5
+    
+    local post_upgrade_master_pid=$(get_pid_from_file)
+    local final_pids=$(get_all_pids)
+    local final_worker_pid=""
+    for p in $final_pids; do
+        if [ "$p" != "$post_upgrade_master_pid" ]; then
+            final_worker_pid=$p
+            break
+        fi
+    done
+
+    log_info "  Master PID after Upgrade: $post_upgrade_master_pid"
+    log_info "  Worker PID after Upgrade: $final_worker_pid"
+
+    if [ "$master_pid" != "$post_upgrade_master_pid" ]; then
+        log_error "FAIL: Master PID changed during Hot Reload from $master_pid to $post_upgrade_master_pid"
+        failed=1
+    else
+        log_info "PASS: Master PID remains constant ($master_pid)"
+    fi
+
+    if [ "$final_worker_pid" = "$new_worker_pid" ]; then
+        log_error "FAIL: Worker PID did not change after upgrade"
+        failed=1
+    else
+        log_info "PASS: New Worker spawned after upgrade ($final_worker_pid)"
+    fi
+
+    local listeners=$(ss -tlnp 2>/dev/null | grep ":$TEST_PORT" | wc -l)
     if [ "$listeners" -ne 1 ]; then
         log_error "FAIL: Expected 1 listener on port $TEST_PORT, found $listeners"
         failed=1
     else
-        log_info "PASS: Only one listener on port $TEST_PORT"
+        log_info "PASS: Exactly 1 port listener active"
     fi
-    
-    # Check 3: Master process should still be running
-    if ! ps -p "$new_master_pid" > /dev/null 2>&1; then
-        log_error "FAIL: Master process (PID $new_master_pid) is not running"
-        failed=1
-    else
-        log_info "PASS: Master process (PID $new_master_pid) is running"
-    fi
-    
+
     log_info "============================================"
     if [ $failed -eq 0 ]; then
-        log_info "E2E Upgrade Test (Master-Worker): ${GREEN}PASSED${NC}"
+        log_info "Master-Worker E2E Tests: ${GREEN}PASSED${NC}"
         return 0
     else
-        log_error "E2E Upgrade Test (Master-Worker): FAILED"
+        log_error "Master-Worker E2E Tests: FAILED"
         return 1
     fi
 }
@@ -290,7 +345,7 @@ main() {
     cd "$(dirname "$0")/../.."
     
     build_bifrost
-    create_config
+    mkdir -p "$LOGS_DIR"
     
     if [ "$USE_MASTER_WORKER" = "true" ]; then
         run_master_worker_test

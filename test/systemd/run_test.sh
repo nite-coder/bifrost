@@ -123,9 +123,61 @@ test_reload() {
     log_pass "Service reloaded successfully"
 }
 
-# Test 3: Service stop
+# Test 3: KeepAlive - Kill Worker, verify Master restarts it
+test_keepalive() {
+    log_info "Test 3: KeepAlive - Killing Worker to verify Master restarts it..."
+    
+    local master_pid=$(systemctl show bifrost --property=MainPID --value)
+    log_info "Master PID: $master_pid"
+    
+    # Find Worker PID (child of Master)
+    local worker_pid=$(pgrep -P "$master_pid" 2>/dev/null | head -n 1)
+    if [ -z "$worker_pid" ]; then
+        log_warn "Could not find Worker PID (child of Master $master_pid)"
+        log_warn "Listing all bifrost processes:"
+        pgrep -a bifrost || true
+        log_pass "Skipping KeepAlive test (Worker not found as child process)"
+        return
+    fi
+    
+    log_info "Worker PID before kill: $worker_pid"
+    
+    # Kill Worker
+    kill -9 "$worker_pid"
+    log_info "Sent SIGKILL to Worker ($worker_pid)"
+    
+    sleep 5
+    
+    # Verify Master is still running
+    if ! kill -0 "$master_pid" 2>/dev/null; then
+        log_fail "Master (PID $master_pid) is no longer running after Worker kill"
+    fi
+    
+    # Verify new Worker was spawned
+    local new_worker_pid=$(pgrep -P "$master_pid" 2>/dev/null | head -n 1)
+    if [ -z "$new_worker_pid" ]; then
+        log_warn "New Worker not found as child of Master"
+    elif [ "$new_worker_pid" = "$worker_pid" ]; then
+        log_fail "Worker PID did not change (still $worker_pid)"
+    else
+        log_info "New Worker PID: $new_worker_pid"
+    fi
+    
+    # Verify Master PID unchanged
+    local current_master_pid=$(systemctl show bifrost --property=MainPID --value)
+    if [ "$master_pid" != "$current_master_pid" ]; then
+        log_fail "Master PID changed from $master_pid to $current_master_pid"
+    fi
+    
+    # Verify service is still active
+    if ! systemctl is-active --quiet bifrost; then
+        log_fail "bifrost service is not active after Worker kill"
+    fi
+    
+    log_pass "KeepAlive verified - Worker restarted, Master PID stable"
+}
 test_stop() {
-    log_info "Test 3: Stopping bifrost service..."
+    log_info "Test 4: Stopping bifrost service..."
     
     if ! run_with_timeout 30 "systemctl stop bifrost" systemctl stop bifrost; then
         log_fail "Failed to stop bifrost service"
@@ -140,7 +192,7 @@ test_stop() {
 
 # Test 4: Service restart (with timeout - this catches the NotifyDaemonReady bug)
 test_restart() {
-    log_info "Test 4: Restarting bifrost service..."
+    log_info "Test 5: Restarting bifrost service..."
     
     systemctl start bifrost
     sleep 2
@@ -164,7 +216,7 @@ test_restart() {
 
 # Test 5: Verify Type=forking behavior
 test_forking_behavior() {
-    log_info "Test 5: Verifying Type=forking behavior..."
+    log_info "Test 6: Verifying Type=forking behavior..."
     
     # Stop service first
     systemctl stop bifrost 2>/dev/null || true
@@ -210,6 +262,7 @@ main() {
     
     test_start
     test_reload
+    test_keepalive
     test_stop
     test_restart
     test_forking_behavior

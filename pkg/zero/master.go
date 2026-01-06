@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -276,7 +277,7 @@ func (m *Master) writePIDFile() error {
 	}
 
 	pid := os.Getpid()
-	if err := os.WriteFile(pidFile, []byte(fmt.Sprintf("%d", pid)), 0644); err != nil {
+	if err := os.WriteFile(pidFile, []byte(strconv.Itoa(pid)), 0600); err != nil {
 		return fmt.Errorf("failed to write PID file: %w", err)
 	}
 	slog.Info("PID file written", "path", pidFile, "pid", pid)
@@ -525,6 +526,8 @@ func (m *Master) handleControlMessage(conn net.Conn, msg *ControlMessage) {
 
 	case MessageTypeFDRequest, MessageTypeShutdown:
 		// Not handled by master
+	default:
+		slog.Debug("master ignored message", "type", msg.Type)
 	}
 }
 

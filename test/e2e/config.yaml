@@ -1,10 +1,10 @@
-
+version: 1
 watch: false
 
 logging:
   handler: text
   level: info
-  output: /app/logs/bifrost.log
+  output: stderr
 
 servers:
   test_server:
