@@ -200,6 +200,13 @@ func (m *Master) Run(ctx context.Context) error {
 				continue
 			}
 
+			// If we are reloading, the old worker is expected to exit (or if it crashed early,
+			// the new worker is already on the way). We shouldn't restart the old one.
+			if m.State() == MasterStateReloading {
+				slog.Info("worker exited during hot reload (expected or ignored)", "pid", m.WorkerPID())
+				continue
+			}
+
 			shouldRestart, backoff, err := m.keepAlive.ShouldRestart()
 			if err != nil {
 				slog.Error("restart limit exceeded, master exiting", "error", err)
@@ -323,7 +330,10 @@ func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File, keys []
 	// Pass listener FDs for zero-downtime reload
 	if len(extraFiles) > 0 {
 		cmd.ExtraFiles = extraFiles
-		cmd.Env = append(cmd.Env, "UPGRADE=1")
+		cmd.Env = append(cmd.Env,
+			"UPGRADE=1",
+			fmt.Sprintf("BIFROST_FD_COUNT=%d", len(extraFiles)),
+		)
 		if len(keys) > 0 {
 			// Encode keys as a comma-separated string, then base64 encode it
 			keysStr := strings.Join(keys, ",")

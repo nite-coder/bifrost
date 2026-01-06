@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -116,18 +117,30 @@ func InheritedListeners() (map[string]*os.File, error) {
 
 	// 1. Decode Keys
 	keysEnv := os.Getenv("BIFROST_LISTENER_KEYS")
-	var keys []string
-	if keysEnv != "" {
-		// Use base64 decoding for safety
-		decoded, err := base64.StdEncoding.DecodeString(keysEnv)
-		if err == nil {
-			keysStr := string(decoded)
-			if keysStr != "" {
-				keys = strings.Split(keysStr, ",")
-			}
-		} else {
-			slog.Error("failed to decode BIFROST_LISTENER_KEYS", "error", err)
-		}
+	keys, err := decodeListenerKeys(keysEnv)
+	if err != nil {
+		slog.Error("failed to decode BIFROST_LISTENER_KEYS", "error", err)
+		return nil, nil
+	}
+
+	// 1.5 Sanity Check: BIFROST_FD_COUNT must match key count
+	// This prevents accidental usage of FDs (like epoll FDs) in test environments
+	// where only keys might be mocked but FDs are not actually passed.
+	fdCountEnv := os.Getenv("BIFROST_FD_COUNT")
+	if fdCountEnv == "" {
+		slog.Warn("BIFROST_FD_COUNT not set, refusing to inherit FDs for safety")
+		return nil, nil
+	}
+
+	fdCount, err := strconv.Atoi(fdCountEnv)
+	if err != nil {
+		slog.Error("invalid BIFROST_FD_COUNT", "error", err, "val", fdCountEnv)
+		return nil, nil
+	}
+
+	if fdCount != len(keys) {
+		slog.Error("BIFROST_FD_COUNT mismatch", "env", fdCount, "keys", len(keys))
+		return nil, nil
 	}
 
 	// 2. Collect FDs (ExtraFiles start at FD 3)
@@ -168,4 +181,24 @@ func InheritedListeners() (map[string]*os.File, error) {
 	}
 
 	return listeners, nil
+}
+
+// decodeListenerKeys decodes the base64 encoded listener keys from environment variable.
+func decodeListenerKeys(keysEnv string) ([]string, error) {
+	if keysEnv == "" {
+		return nil, nil
+	}
+
+	// Use base64 decoding for safety
+	decoded, err := base64.StdEncoding.DecodeString(keysEnv)
+	if err != nil {
+		return nil, err
+	}
+
+	keysStr := string(decoded)
+	if keysStr == "" {
+		return nil, nil
+	}
+
+	return strings.Split(keysStr, ","), nil
 }
