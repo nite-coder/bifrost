@@ -13,11 +13,22 @@ import (
 	proxyproto "github.com/pires/go-proxyproto"
 )
 
+var (
+	// startFD is the starting file descriptor for inherited listeners.
+	// It is a variable to allow tests to verify logic without conflicting with test runner FDs.
+	startFD = 3
+)
+
+// ControlPlaneClient defines the methods required by WorkerFDHandler to communicate with Master.
+type ControlPlaneClient interface {
+	SendFDs(files []*os.File, keys []string) error
+}
+
 // WorkerFDHandler handles FD requests from Master in Worker processes.
 // It collects listener file descriptors and sends them to Master via ControlPlane.
 type WorkerFDHandler struct {
 	listeners []*listenerInfo
-	wcp       *WorkerControlPlane
+	wcp       ControlPlaneClient
 	mu        sync.RWMutex
 }
 
@@ -28,7 +39,7 @@ type listenerInfo struct {
 }
 
 // NewWorkerFDHandler creates a new WorkerFDHandler.
-func NewWorkerFDHandler(wcp *WorkerControlPlane) *WorkerFDHandler {
+func NewWorkerFDHandler(wcp ControlPlaneClient) *WorkerFDHandler {
 	return &WorkerFDHandler{
 		wcp:       wcp,
 		listeners: make([]*listenerInfo, 0),
@@ -147,10 +158,10 @@ func InheritedListeners() (map[string]*os.File, error) {
 	listeners := make(map[string]*os.File)
 	count := 0
 
-	// If we have keys, we map them 1:1 to FDs starting at 3
+	// If we have keys, we map them 1:1 to FDs starting at startFD
 	if len(keys) > 0 {
 		for i, key := range keys {
-			fd := 3 + i
+			fd := startFD + i
 			file := os.NewFile(uintptr(fd), "")
 			if file == nil {
 				slog.Error("inherited FD is nil", "fd", fd)

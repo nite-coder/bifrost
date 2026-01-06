@@ -19,6 +19,9 @@ import (
 	"github.com/nite-coder/bifrost/pkg/log"
 )
 
+// execCommandContext allows mocking exec.CommandContext in tests.
+var execCommandContext = exec.CommandContext
+
 // Environment variable used to identify worker processes.
 const EnvBifrostRole = "BIFROST_ROLE"
 
@@ -80,7 +83,8 @@ type Master struct {
 	state          MasterState
 	mu             sync.RWMutex
 	stopCh         chan struct{}
-	workerDoneCh   chan struct{}
+	workerDoneCh   chan struct{} // Signals when a worker exits
+	workerExitCh   chan struct{} // Closed when the current worker process has finished waiting
 	readyCh        chan struct{} // Signaled when worker is ready
 	listenerFDs    []*os.File    // Inherited listener FDs for reload
 	listenerKeys   []string      // Listener keys mapped to FDs
@@ -218,7 +222,14 @@ func (m *Master) Run(ctx context.Context) error {
 					"backoff", backoff,
 				)
 				m.keepAlive.RecordRestart()
-				time.Sleep(backoff)
+
+				select {
+				case <-time.After(backoff):
+				case <-ctx.Done():
+					return m.Shutdown(ctx)
+				case <-m.stopCh:
+					return nil
+				}
 
 				if err := m.spawnAndWatch(ctx); err != nil {
 					slog.Error("failed to restart worker", "error", err)
@@ -249,11 +260,8 @@ func (m *Master) Shutdown(ctx context.Context) error {
 		}
 
 		// Wait for worker to exit with timeout
-		done := make(chan struct{})
-		go safety.Go(ctx, func() {
-			_ = m.currentWorker.Wait()
-			close(done)
-		})
+		// We use workerExitCh to wait since watchWorker owns the Wait() call
+		done := m.workerExitCh
 
 		select {
 		case <-done:
@@ -299,8 +307,13 @@ func (m *Master) spawnAndWatch(ctx context.Context) error {
 	m.mu.Unlock()
 
 	// Start watching the worker
+	m.mu.Lock()
+	exitCh := make(chan struct{})
+	m.workerExitCh = exitCh
+	m.mu.Unlock()
+
 	go safety.Go(ctx, func() {
-		m.watchWorker(cmd)
+		m.watchWorker(cmd, exitCh)
 	})
 
 	return nil
@@ -313,7 +326,7 @@ func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File, keys []
 		args = append([]string{"-c", m.options.ConfigPath}, args...)
 	}
 
-	cmd := exec.CommandContext(ctx, m.options.Binary, args...)
+	cmd := execCommandContext(ctx, m.options.Binary, args...)
 
 	// Set worker role via environment variable
 	// Note: Socket path is base64 encoded because Abstract Namespace contains NUL byte
@@ -356,8 +369,13 @@ func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File, keys []
 }
 
 // watchWorker monitors the Worker process and handles unexpected exits.
-func (m *Master) watchWorker(cmd *exec.Cmd) {
-	state, err := cmd.Process.Wait()
+func (m *Master) watchWorker(cmd *exec.Cmd, exitCh chan struct{}) {
+	// Disable signal forwarding to this child
+	// We handle signals manually in Master and forward them if needed
+	// (Actually exec.Cmd doesn't automatically forward signals unless we utilize specific SysProcAttr)
+
+	err := cmd.Wait()
+	close(exitCh)
 
 	m.mu.RLock()
 	currentWorker := m.currentWorker
@@ -366,8 +384,9 @@ func (m *Master) watchWorker(cmd *exec.Cmd) {
 	// Only notify if this is still the current worker
 	if currentWorker == cmd {
 		exitCode := -1
-		if state != nil {
-			exitCode = state.ExitCode()
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
+			exitCode = exitError.ExitCode()
 		}
 
 		slog.Info("worker exited",
@@ -466,11 +485,14 @@ func (m *Master) handleReload(ctx context.Context) error {
 	// Step 4: Update current worker and stop old one
 	m.mu.Lock()
 	m.currentWorker = newCmd
+	// Create new exit channel for the new worker
+	m.workerExitCh = make(chan struct{})
+	newExitCh := m.workerExitCh
 	m.mu.Unlock()
 
 	// Start watching new worker
 	go safety.Go(ctx, func() {
-		m.watchWorker(newCmd)
+		m.watchWorker(newCmd, newExitCh)
 	})
 
 	// Gracefully stop old worker
