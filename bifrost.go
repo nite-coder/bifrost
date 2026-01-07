@@ -24,6 +24,7 @@ type options struct {
 	build   string
 	flags   []cli.Flag
 	init    func(*cli.Context, config.Options) error
+	debug   bool
 }
 
 type Option func(*options)
@@ -32,6 +33,14 @@ type Option func(*options)
 func WithVersion(version string) Option {
 	return func(o *options) {
 		o.version = version
+	}
+}
+
+// WithDebugMode enables single-process mode for debugging.
+// In this mode, the Master logic is bypassed, and the application runs directly as a Worker.
+func WithDebugMode(debug bool) Option {
+	return func(o *options) {
+		o.debug = debug
 	}
 }
 
@@ -152,7 +161,7 @@ func Run(opts ...Option) error {
 				return nil
 			}
 
-			if runtime.IsWorker() {
+			if runtime.IsWorker() || opt.debug {
 				// Execute User Init Hook
 				if opt.init != nil {
 					if err := opt.init(cCtx, mainOptions); err != nil {
@@ -160,7 +169,7 @@ func Run(opts ...Option) error {
 					}
 				}
 
-				runAsWorker(mainOptions)
+				runAsWorker(mainOptions, opt.debug)
 				return nil
 			}
 
@@ -187,9 +196,13 @@ func runMasterMode(mainOptions config.Options) error {
 
 // runAsWorker handles Worker process logic.
 // Workers are spawned by Master and handle actual traffic processing.
-func runAsWorker(mainOptions config.Options) {
+func runAsWorker(mainOptions config.Options, debugMode bool) {
 	// Worker inherits Master's stdout/stderr via FD inheritance (zero-copy log aggregation)
-	slog.Debug("starting as worker", "pid", os.Getpid())
+	if debugMode {
+		slog.Info("running in single process mode (debugging enabled)")
+	} else {
+		slog.Debug("starting as worker", "pid", os.Getpid())
+	}
 
 	_ = initialize.Bifrost()
 

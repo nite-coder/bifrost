@@ -127,27 +127,6 @@ func TestListener(t *testing.T) {
 			return os.CreateTemp(t.TempDir(), "fd3")
 		}
 
-		// However, InheritedListeners logic is in worker_fd.go, but zero.go calls it?
-		// No, zero.go calls z.GetListeners() ?? No.
-		// zero.go Listener() calls:
-		// if z.IsUpgraded() {
-		//   return z.getListenerFromInherited(ctx, network, address)
-		// }
-
-		// getListenerFromInherited iterates z.inheritedListeners.
-		// z.inheritedListeners is populated in New() -> z.InheritedListeners().
-		// InheritedListeners() is in worker_fd.go? No, zero.go calls `InheritedListeners` from `worker_fd.go`?
-		// No, `InheritedListeners` is in `worker_fd.go`.
-		// But `ZeroDownTime` struct has `inheritedListeners`.
-		// Let's check `zero.go` `New`.
-
-		// Wait, `New` calls `InheritedListeners`.
-		// So we need to mock env BEFORE `New` called?
-		// No, `New` returns struct. `InheritedListeners` uses `os.Getenv` directly?
-		// If `InheritedListeners` uses `os.Getenv`, we are stuck unless we set real env vars.
-		// BUT `worker_fd.go` `InheritedListeners` uses `os.Getenv`.
-		// DOES `zero.go` use `InheritedListeners`?
-		// Let's check `zero.go`.
 	})
 }
 
@@ -178,13 +157,11 @@ func TestWaitForUpgrade(t *testing.T) {
 	err = p.Signal(syscall.SIGHUP)
 	require.NoError(t, err)
 
-	select {
-	case <-time.After(200 * time.Millisecond):
-		z.mu.Lock()
-		state := z.state
-		z.mu.Unlock()
-		assert.Equal(t, waitingState, state)
-	}
+	<-time.After(200 * time.Millisecond)
+	z.mu.Lock()
+	state := z.state
+	z.mu.Unlock()
+	assert.Equal(t, waitingState, state)
 }
 
 func TestDefaultProcessFinder(t *testing.T) {
@@ -192,7 +169,7 @@ func TestDefaultProcessFinder(t *testing.T) {
 	proc, err := pf.FindProcess(os.Getpid())
 	require.NoError(t, err)
 	assert.NotNil(t, proc)
-	// Just verify it implements interface
-	_, ok := proc.(process)
+	// Verify it is the expected concrete type
+	_, ok := proc.(*os.Process)
 	assert.True(t, ok)
 }

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"net/url"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/protocol"
@@ -10,6 +11,7 @@ import (
 var (
 	spaceByte       = []byte{byte(' ')}
 	https           = []byte("https")
+	trailersBytes   = []byte("trailers")
 	chunkedTransfer = false
 )
 
@@ -46,14 +48,18 @@ func JoinURLPath(req *protocol.Request, target string) (path []byte) {
 	defer bytebufferpool.Put(buffer)
 
 	_, _ = buffer.WriteString(targetQuery[0])
+
+	escapedPath := (&url.URL{Path: string(req.URI().Path())}).EscapedPath()
 	switch {
 	case aslash && bslash:
-		_, _ = buffer.Write(req.URI().Path()[1:])
+		if len(escapedPath) > 1 {
+			_, _ = buffer.WriteString(escapedPath[1:])
+		}
 	case !aslash && !bslash:
 		_, _ = buffer.Write([]byte{'/'})
-		_, _ = buffer.Write(req.URI().Path())
+		_, _ = buffer.WriteString(escapedPath)
 	default:
-		_, _ = buffer.Write(req.URI().Path())
+		_, _ = buffer.WriteString(escapedPath)
 	}
 	if len(targetQuery) > 1 {
 		_, _ = buffer.Write([]byte{'?'})
