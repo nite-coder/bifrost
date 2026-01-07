@@ -99,3 +99,167 @@ func TestDynamicProvider(t *testing.T) {
 	assert.Equal(t, options, mainOptions)
 	assert.Equal(t, len(providers), 1)
 }
+
+func TestMergeOptions(t *testing.T) {
+	t.Run("merge middlewares", func(t *testing.T) {
+		mainOpts := NewOptions()
+		content := `middlewares:
+  rate_limit:
+    type: rate_limit
+`
+		result, err := mergeOptions(mainOpts, content)
+		assert.NoError(t, err)
+		assert.Contains(t, result.Middlewares, "rate_limit")
+	})
+
+	t.Run("duplicate middleware error", func(t *testing.T) {
+		mainOpts := NewOptions()
+		mainOpts.Middlewares["rate_limit"] = MiddlwareOptions{}
+		content := `middlewares:
+  rate_limit:
+    type: rate_limit
+`
+		_, err := mergeOptions(mainOpts, content)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "duplicated")
+	})
+
+	t.Run("merge servers", func(t *testing.T) {
+		mainOpts := NewOptions()
+		content := `servers:
+  web:
+    bind: ":8080"
+`
+		result, err := mergeOptions(mainOpts, content)
+		assert.NoError(t, err)
+		assert.Contains(t, result.Servers, "web")
+	})
+
+	t.Run("duplicate server error", func(t *testing.T) {
+		mainOpts := NewOptions()
+		mainOpts.Servers["web"] = ServerOptions{}
+		content := `servers:
+  web:
+    bind: ":8080"
+`
+		_, err := mergeOptions(mainOpts, content)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "duplicated")
+	})
+
+	t.Run("merge services", func(t *testing.T) {
+		mainOpts := NewOptions()
+		content := `services:
+  backend:
+    url: http://localhost:8080
+`
+		result, err := mergeOptions(mainOpts, content)
+		assert.NoError(t, err)
+		assert.Contains(t, result.Services, "backend")
+	})
+
+	t.Run("duplicate service error", func(t *testing.T) {
+		mainOpts := NewOptions()
+		mainOpts.Services["backend"] = ServiceOptions{}
+		content := `services:
+  backend:
+    url: http://localhost:8080
+`
+		_, err := mergeOptions(mainOpts, content)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "duplicated")
+	})
+
+	t.Run("merge upstreams", func(t *testing.T) {
+		mainOpts := NewOptions()
+		content := `upstreams:
+  api:
+    targets:
+      - target: localhost:8080
+`
+		result, err := mergeOptions(mainOpts, content)
+		assert.NoError(t, err)
+		assert.Contains(t, result.Upstreams, "api")
+	})
+
+	t.Run("duplicate upstream error", func(t *testing.T) {
+		mainOpts := NewOptions()
+		mainOpts.Upstreams["api"] = UpstreamOptions{}
+		content := `upstreams:
+  api:
+    targets:
+      - target: localhost:8080
+`
+		_, err := mergeOptions(mainOpts, content)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "duplicated")
+	})
+
+	t.Run("invalid yaml error", func(t *testing.T) {
+		mainOpts := NewOptions()
+		content := `invalid: yaml: content: [`
+		_, err := mergeOptions(mainOpts, content)
+		assert.Error(t, err)
+	})
+
+	t.Run("merge with nil maps", func(t *testing.T) {
+		mainOpts := Options{}
+		content := `middlewares:
+  test:
+    type: test
+`
+		result, err := mergeOptions(mainOpts, content)
+		assert.NoError(t, err)
+		assert.NotNil(t, result.Middlewares)
+	})
+}
+
+func TestWatch(t *testing.T) {
+	t.Run("watch with nil providers", func(t *testing.T) {
+		mainProvider = nil
+		dynamicProviders = nil
+		err := Watch()
+		assert.NoError(t, err)
+	})
+}
+
+func TestTestAndSkipResovler(t *testing.T) {
+	t.Run("valid config", func(t *testing.T) {
+		configPath := "./../../test/config/min.yaml"
+		path, err := TestAndSkipResovler(configPath)
+		assert.NoError(t, err)
+		assert.Contains(t, path, "min.yaml")
+	})
+
+	t.Run("invalid config path", func(t *testing.T) {
+		configPath := "./../../test/config/nonexistent.yaml"
+		_, err := TestAndSkipResovler(configPath)
+		assert.Error(t, err)
+	})
+}
+
+func TestFindConfigurationLine(t *testing.T) {
+	t.Run("json content", func(t *testing.T) {
+		content := `{"logging": {"level": "debug"}}`
+		path := []string{"logging", "level"}
+		line := findConfigurationLine(content, path, "debug")
+		assert.Equal(t, -1, line) // JSON doesn't have line concept like YAML
+	})
+
+	t.Run("yaml content", func(t *testing.T) {
+		content := `logging:
+  level: debug
+  handler: text
+`
+		path := []string{"logging", "level"}
+		line := findConfigurationLine(content, path, "debug")
+		assert.GreaterOrEqual(t, line, 1)
+	})
+
+	t.Run("invalid content", func(t *testing.T) {
+		content := `{{{invalid`
+		path := []string{"key"}
+		line := findConfigurationLine(content, path, "value")
+		assert.Equal(t, -1, line)
+	})
+}

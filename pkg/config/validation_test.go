@@ -717,3 +717,172 @@ func TestConfigDNS(t *testing.T) {
 	err = ValidateConfig(options, true)
 	assert.ErrorIs(t, err, resolver.ErrNotFound)
 }
+
+func TestValidateLogging(t *testing.T) {
+	t.Run("valid levels", func(t *testing.T) {
+		for _, level := range []string{"", "debug", "info", "warn", "error", "DEBUG", "INFO"} {
+			err := validateLogging(LoggingOtions{Level: level})
+			assert.NoError(t, err, "level: %s", level)
+		}
+	})
+
+	t.Run("invalid level", func(t *testing.T) {
+		err := validateLogging(LoggingOtions{Level: "invalid"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported logging level")
+	})
+
+	t.Run("valid handlers", func(t *testing.T) {
+		for _, handler := range []string{"", "text", "json", "TEXT", "JSON"} {
+			err := validateLogging(LoggingOtions{Handler: handler})
+			assert.NoError(t, err, "handler: %s", handler)
+		}
+	})
+
+	t.Run("invalid handler", func(t *testing.T) {
+		err := validateLogging(LoggingOtions{Handler: "invalid"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported logging handler")
+	})
+}
+
+func TestValidateUpstreams(t *testing.T) {
+	t.Run("skip validation when not full mode", func(t *testing.T) {
+		options := NewOptions()
+		options.Upstreams["test"] = UpstreamOptions{}
+		err := validateUpstreams(options, false)
+		assert.NoError(t, err)
+	})
+
+	t.Run("upstream ID cannot start with dollar", func(t *testing.T) {
+		options := NewOptions()
+		options.Upstreams["$invalid"] = UpstreamOptions{
+			Targets: []TargetOptions{{Target: "localhost:8080"}},
+		}
+		err := validateUpstreams(options, true)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot start with '$'")
+	})
+
+	t.Run("invalid balancer type", func(t *testing.T) {
+		options := NewOptions()
+		options.Upstreams["test"] = UpstreamOptions{
+			Balancer: BalancerOptions{Type: "invalid_balancer"},
+			Targets:  []TargetOptions{{Target: "localhost:8080"}},
+		}
+		err := validateUpstreams(options, true)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported balancer")
+	})
+
+	t.Run("dns discovery without provider enabled", func(t *testing.T) {
+		options := NewOptions()
+		options.Upstreams["test"] = UpstreamOptions{
+			Discovery: DiscoveryOptions{Type: "dns", Name: "example.com"},
+		}
+		err := validateUpstreams(options, true)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "DNS provider is disabled")
+	})
+
+	t.Run("dns discovery without name", func(t *testing.T) {
+		options := NewOptions()
+		options.Providers.DNS.Enabled = true
+		options.Upstreams["test"] = UpstreamOptions{
+			Discovery: DiscoveryOptions{Type: "dns"},
+		}
+		err := validateUpstreams(options, true)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "discovery name cannot be empty")
+	})
+
+	t.Run("nacos discovery without provider enabled", func(t *testing.T) {
+		options := NewOptions()
+		options.Upstreams["test"] = UpstreamOptions{
+			Discovery: DiscoveryOptions{Type: "nacos", Name: "service"},
+		}
+		err := validateUpstreams(options, true)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "nacos service discovery provider is disabled")
+	})
+
+	t.Run("k8s discovery without provider enabled", func(t *testing.T) {
+		options := NewOptions()
+		options.Upstreams["test"] = UpstreamOptions{
+			Discovery: DiscoveryOptions{Type: "k8s", Name: "service"},
+		}
+		err := validateUpstreams(options, true)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "K8s service discovery provider is disabled")
+	})
+
+	t.Run("empty targets without discovery", func(t *testing.T) {
+		options := NewOptions()
+		options.Upstreams["test"] = UpstreamOptions{
+			Targets: []TargetOptions{},
+		}
+		err := validateUpstreams(options, true)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "targets cannot be empty")
+	})
+
+	t.Run("unsupported discovery type", func(t *testing.T) {
+		options := NewOptions()
+		options.Upstreams["test"] = UpstreamOptions{
+			Discovery: DiscoveryOptions{Type: "unknown"},
+		}
+		err := validateUpstreams(options, true)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported discovery type")
+	})
+
+	t.Run("valid upstream with targets", func(t *testing.T) {
+		options := NewOptions()
+		options.SkipResolver = true
+		options.Upstreams["test"] = UpstreamOptions{
+			Targets: []TargetOptions{{Target: "localhost:8080"}},
+		}
+		err := validateUpstreams(options, true)
+		assert.NoError(t, err)
+	})
+}
+
+func TestValidateAccessLog(t *testing.T) {
+	t.Run("valid access log", func(t *testing.T) {
+		options := NewOptions()
+		options.AccessLogs["main"] = AccessLogOptions{
+			Template: "$http.request.method $http.request.path",
+		}
+		err := validateAccessLog(options.AccessLogs)
+		assert.NoError(t, err)
+	})
+
+	t.Run("invalid template variable", func(t *testing.T) {
+		options := NewOptions()
+		options.AccessLogs["main"] = AccessLogOptions{
+			Template: "$invalid.variable",
+		}
+		err := validateAccessLog(options.AccessLogs)
+		assert.Error(t, err)
+	})
+}
+
+func TestValidateServers(t *testing.T) {
+	t.Run("server with empty bind", func(t *testing.T) {
+		options := NewOptions()
+		options.Servers["test"] = ServerOptions{
+			Bind: "",
+		}
+		err := validateServers(options, true)
+		assert.Error(t, err)
+	})
+
+	t.Run("valid server", func(t *testing.T) {
+		options := NewOptions()
+		options.Servers["test"] = ServerOptions{
+			Bind: ":8080",
+		}
+		err := validateServers(options, true)
+		assert.NoError(t, err)
+	})
+}
