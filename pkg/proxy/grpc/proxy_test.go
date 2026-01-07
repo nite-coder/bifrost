@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/hertz-contrib/http2/factory"
 	"github.com/nite-coder/bifrost/proto"
@@ -196,4 +197,42 @@ func TestProxyTags(t *testing.T) {
 	val, found := proxy.Tag("id")
 	assert.True(t, found)
 	assert.Equal(t, "123", val)
+}
+
+type mockClientConn struct {
+	grpc.ClientConnInterface
+}
+
+func (m *mockClientConn) Invoke(ctx context.Context, method string, args interface{}, reply interface{}, opts ...grpc.CallOption) error {
+	return nil
+}
+
+func TestGRPCProxy_PanicOnInvalidPayload(t *testing.T) {
+	// Setup
+	proxy := &GRPCProxy{
+		client: &mockClientConn{}, // minimal mock
+		options: &Options{
+			Timeout: time.Second,
+		},
+	}
+
+	// Case: Payload declares length 100, but provides only 10 bytes (header 5 + body 5)
+	// gRPC Header: [0 (compression), 0, 0, 0, 100 (length)]
+	malformedBody := make([]byte, 10)
+	frameHeader := []byte{0, 0, 0, 0, 100} // Length 100
+	copy(malformedBody, frameHeader)
+	// Remaining 5 bytes are zeros. Total len 10.
+	// 5 + 100 = 105. Slice [5:105] will panic on capacity 10 if not checked.
+
+	ctx := context.Background()
+	c := app.NewContext(0)
+	c.Request.SetRequestURI("/TestService/TestMethod")
+	c.Request.SetBody(malformedBody)
+
+	// Execute
+	proxy.ServeHTTP(ctx, c)
+
+	// Assert: No panic should occur.
+	// Check if status code became 400 (as per our fix)
+	assert.Equal(t, 400, c.Response.StatusCode(), "Should return 400 Bad Request for invalid payload length")
 }

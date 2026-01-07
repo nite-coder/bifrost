@@ -192,11 +192,20 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// Check if the request payload is valid
 	payload := c.Request.Body()
 	if len(payload) < 5 {
-		logger.ErrorContext(ctx, "proxy: gRPC proxy request payload is invalid", slog.Any("error", "gRPC proxy request payload is invalid"))
+		logger.WarnContext(ctx, "proxy: gRPC proxy request payload is invalid", slog.Any("error", "gRPC proxy request payload is invalid"))
 		return
 	}
 	// Get the length of the message
 	msgLen := binary.BigEndian.Uint32(payload[1:5])
+	// Check if the payload is large enough
+	if uint64(len(payload)) < 5+uint64(msgLen) {
+		logger.WarnContext(ctx, "proxy: gRPC proxy request payload length mismatch",
+			slog.Any("declared_len", msgLen),
+			slog.Any("actual_len", len(payload)-5),
+		)
+		c.SetStatusCode(400) // Bad Request
+		return
+	}
 	// Get the message payload
 	payload = payload[5 : 5+msgLen]
 	// Create a new header and trailer metadata
