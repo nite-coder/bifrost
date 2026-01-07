@@ -65,3 +65,57 @@ func TestReplacePathRegexMiddleware(t *testing.T) {
 		})
 	}
 }
+
+func TestReplacePathRegexMiddleware_Errors(t *testing.T) {
+	h := middleware.Factory("replace_path_regex")
+
+	tests := []struct {
+		name        string
+		params      any
+		expectedErr string
+	}{
+		{
+			name:        "nil params",
+			params:      nil,
+			expectedErr: "replace_path_regex middleware parameters are missing or invalid",
+		},
+		{
+			name:        "invalid params type",
+			params:      "invalid",
+			expectedErr: "replace_path_regex middleware parameters are missing or invalid",
+		},
+		{
+			name:        "missing regex",
+			params:      map[string]any{"replacement": "bar"},
+			expectedErr: "regex field is not set",
+		},
+		{
+			name:        "invalid regex type",
+			params:      map[string]any{"regex": 123, "replacement": "bar"},
+			expectedErr: "regex field  is invalid",
+		},
+		{
+			name:        "missing replacement",
+			params:      map[string]any{"regex": "foo"},
+			expectedErr: "replacement field is not set",
+		},
+		{
+			name:        "invalid replacement type",
+			params:      map[string]any{"regex": "foo", "replacement": 123},
+			expectedErr: "replacement field is invalid",
+		},
+		{
+			name:        "empty regex",
+			params:      map[string]any{"regex": "", "replacement": "bar"},
+			expectedErr: "regex or replacement is empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := h(tt.params)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tt.expectedErr)
+		})
+	}
+}

@@ -11,7 +11,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
-func getRandomNumber(max int64) (int64, error) {
+var getRandomNumber = func(max int64) (int64, error) {
 	n, err := rand.Int(rand.Reader, big.NewInt(max))
 	if err != nil {
 		return 0, err

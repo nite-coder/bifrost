@@ -102,7 +102,7 @@ func (m *RequestTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.R
 			if variable.IsDirective(v) {
 				v = variable.GetString(v, c)
 			}
-			c.Request.SetQueryString(k + "=" + v)
+			c.Request.URI().QueryArgs().Set(k, v)
 		}
 	}
 }
