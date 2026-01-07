@@ -32,6 +32,7 @@ server/bifrost/core
 server/bifrost/bifrost
 server/bifrost/conf
 server/bifrost/config.yaml
+server/bifrost/.env
 
 bin
 obj

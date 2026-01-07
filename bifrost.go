@@ -36,14 +36,6 @@ func WithVersion(version string) Option {
 	}
 }
 
-// WithDebugMode enables single-process mode for debugging.
-// In this mode, the Master logic is bypassed, and the application runs directly as a Worker.
-func WithDebugMode(debug bool) Option {
-	return func(o *options) {
-		o.debug = debug
-	}
-}
-
 // WithFlags adds custom CLI flags.
 func WithFlags(flags ...cli.Flag) Option {
 	return func(o *options) {
@@ -75,6 +67,11 @@ func Run(opts ...Option) error {
 				break
 			}
 		}
+	}
+
+	// Set debug mode from environment variable (can be overridden by WithDebugMode)
+	if os.Getenv("BIFROST_SINGLE_PROCESS") == "true" {
+		opt.debug = true
 	}
 
 	for _, o := range opts {
@@ -184,6 +181,9 @@ func Run(opts ...Option) error {
 // This provides PID stability for process managers like Systemd.
 // Master runs in foreground mode - process management is handled by Systemd/Docker/K8s.
 func runMasterMode(mainOptions config.Options) error {
+	// Set process name for identification in top/htop
+	_ = runtime.SetProcessName("bifrost-master")
+
 	slog.Debug("starting in Master-Worker mode", "pid", os.Getpid())
 
 	masterOpts := &runtime.MasterOptions{
@@ -197,6 +197,9 @@ func runMasterMode(mainOptions config.Options) error {
 // runAsWorker handles Worker process logic.
 // Workers are spawned by Master and handle actual traffic processing.
 func runAsWorker(mainOptions config.Options, debugMode bool) {
+	// Set process name for identification in top/htop
+	_ = runtime.SetProcessName("bifrost-worker")
+
 	// Worker inherits Master's stdout/stderr via FD inheritance (zero-copy log aggregation)
 	if debugMode {
 		slog.Info("running in single process mode (debugging enabled)")
