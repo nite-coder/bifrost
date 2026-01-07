@@ -297,7 +297,7 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 				if c.Response.StatusCode() > 0 {
 					labels = append(labels, semconv.HTTPResponseStatusCode(c.Response.StatusCode()))
 				}
-				if c.Response.StatusCode() >= 400 {
+				if c.Response.StatusCode() >= 500 {
 					span.SetStatus(codes.Error, "")
 				}
 				if c.GetBool(variable.TargetTimeout) {
@@ -445,7 +445,7 @@ func removeResponseConnHeaders(c *app.RequestContext) {
 func checkTeHeader(header *protocol.RequestHeader) bool {
 	teHeaders := header.PeekAll("Te")
 	for _, te := range teHeaders {
-		if bytes.Contains(te, []byte("trailers")) {
+		if bytes.Contains(te, trailersBytes) {
 			return true
 		}
 	}

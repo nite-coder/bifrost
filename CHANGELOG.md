@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Add CodeWiki badge to README allowing users to analyze code via CodeWiki ([#92](https://github.com/nite-coder/bifrost/pull/92) by [0x5487](https://github.com/0x5487))
 
+## Security
+- Fix path traversal and injection vulnerability caused by incorrect URL encoding. Ensure non-ASCII characters and special delimiters (e.g., `%3F`, `%2F`) are properly escaped when forwarding requests to upstream. ([#93](https://github.com/nite-coder/bifrost/pull/93) by [0x5487](https://github.com/0x5487))
+
 ## Fixed
 - Fix gateway bugs: nil pointer dereference when proxy unavailable, timeout configuration copy-paste errors, Watch error handling, and balancer nil logging. ([#80](https://github.com/nite-coder/bifrost/pull/80) by [0x5487](https://github.com/0x5487))
 - Fix upgrade order bug where WritePIDWithLock was called before Quit, causing lock contention. Add e2e upgrade tests and CI integration. ([#81](https://github.com/nite-coder/bifrost/pull/81) by [0x5487](https://github.com/0x5487))

@@ -13,7 +13,6 @@ This configuration file is divided into two primary types: `static configuration
 * [gopool](#gopool)
 * [user_group](#user_group)
 * [resolver](#resolver)
-* [pid_file](#pid_file)
 * [providers](#providers)
 * [logging](#logging)
 * [metrics](#metrics)
@@ -86,10 +85,6 @@ resolver:
 | timeout    | `string`   | `0s`                     | Query timeout for dns server                                           |
 | hosts_file | `string`   | `/etc/hosts`             | Path of hosts file                                                     |
 | order      | `[]string` | `["last", "a", "cname"]` | Order of dns resolution                                                |
-
-## pid_file
-
-When the gateway process runs as a background task (daemon), the system records the current process's PID in this file.
 
 
 ## providers
