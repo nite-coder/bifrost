@@ -6,7 +6,7 @@
 Bifrost 採用 **Master-Worker** 架構，提供穩定的 PID 和零停機熱更新能力。此架構設計為雲原生優先，同時兼容傳統 Systemd 環境。
 
 ### 領域名詞定義 (Domain Context)
-- **Master**: 一個輕量級的父進程，負責管理 Worker 的生命週期、信號轉發和配置監聽。它的 PID 在服務生命週期內保持不變。
+- **Master**: 一個輕量級的父進程，負責管理 Worker 的生命週期。它的 PID 在服務生命週期內保持不變。
 - **Worker**: 實際承載業務流量的子進程（Bifrost Server）。它由 Master 啟動，並在熱更新時被替換。
 - **Hot Restart (熱重啟/熱更新)**: 在不中斷現有連接的情況下，用新版本的代碼或配置替換舊版本的過程。
 - **Socket Passing**: 通過 Unix Domain Socket 將監聯中的文件描述符 (FD) 從舊進程傳遞給新進程的技術。
@@ -183,7 +183,7 @@ wait $MASTER_PID
 ```
 
 ### 連接不中斷測試
-- 使用 `wrk` 或 `ab` 持續壓測，熱更新期間錯誤率應為 0。
+- 使用 `k6` 持續壓測，熱更新期間錯誤率應為 0。
 
 ---
 
