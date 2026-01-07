@@ -96,6 +96,8 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 	switch output {
 	case "":
 		writer = io.Discard // Discard logs if no output is specified
+	case "stdout":
+		writer = os.Stdout // Write logs to stdout
 	case "stderr":
 		writer = os.Stderr // Write logs to stderr
 	default:

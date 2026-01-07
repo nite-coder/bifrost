@@ -24,6 +24,20 @@ func TestLogging(t *testing.T) {
 	logger.Info("test")
 }
 
+func TestLoggingStdout(t *testing.T) {
+	options := config.LoggingOtions{
+		Level:   "info",
+		Handler: "text",
+		Output:  "stdout",
+	}
+
+	logger, err := NewLogger(options)
+	assert.NoError(t, err)
+	assert.NotNil(t, logger)
+
+	logger.Info("test stdout output")
+}
+
 // TestSIGUSR1Reopen tests the SIGUSR1 signal handling to reopen the log file.
 func TestSIGUSR1Reopen(t *testing.T) {
 	// Create a temporary log file for testing
