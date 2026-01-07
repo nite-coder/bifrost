@@ -11,19 +11,17 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
+type Config struct {
+	Prefix string `mapstructure:"prefix"`
+}
+
 func init() {
-	_ = middleware.Register([]string{"add_prefix"}, func(params any) (app.HandlerFunc, error) {
-		if params == nil {
+	_ = middleware.RegisterTyped([]string{"add_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
+		if cfg.Prefix == "" {
 			return nil, errors.New("prefix is required and must be a string")
 		}
-		var prefix string
-		if val, ok := params.(map[string]any); ok {
-			prefix, ok = val["prefix"].(string)
-			if !ok {
-				return nil, errors.New("prefix is required and must be a string")
-			}
-		}
-		m := NewMiddleware(prefix)
+
+		m := NewMiddleware(cfg.Prefix)
 		return m.ServeHTTP, nil
 	})
 }

@@ -4,34 +4,22 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
+type Config struct {
+	Prefixes []string `mapstructure:"prefixes"`
+}
+
 func init() {
-	_ = middleware.Register([]string{"strip_prefix"}, func(params any) (app.HandlerFunc, error) {
-		if params == nil {
-			return nil, errors.New("strip_prefix middleware parameters are missing or invalid")
+	_ = middleware.RegisterTyped([]string{"strip_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
+		if len(cfg.Prefixes) == 0 {
+			return nil, errors.New("prefixes parameter is missing or invalid")
 		}
 
-		prefixes := make([]string, 0)
-		if val, ok := params.(map[string]any); ok {
-			prefixVal, found := val["prefixes"]
-
-			if !found {
-				return nil, errors.New("prefixes parameter is missing or invalid")
-			}
-
-			err := mapstructure.Decode(prefixVal, &prefixes)
-			if err != nil {
-				return nil, fmt.Errorf("prefixes params is invalid, error: %w", err)
-			}
-		}
-
-		m := NewMiddleware(prefixes)
+		m := NewMiddleware(cfg.Prefixes)
 		return m.ServeHTTP, nil
 	})
 }

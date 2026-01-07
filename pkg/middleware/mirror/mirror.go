@@ -3,11 +3,9 @@ package mirror
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/log"
@@ -15,23 +13,12 @@ import (
 )
 
 func init() {
-	_ = middleware.Register([]string{"mirror"}, func(params any) (app.HandlerFunc, error) {
-		if params == nil {
-			return nil, errors.New("mirror middleware params is empty or invalid")
-		}
-
-		opts := &Options{}
-
-		err := mapstructure.Decode(params, &opts)
-		if err != nil {
-			return nil, fmt.Errorf("mirror middleware params is invalid: %w", err)
-		}
-
+	_ = middleware.RegisterTyped([]string{"mirror"}, func(opts Options) (app.HandlerFunc, error) {
 		if opts.ServiceID == "" {
 			return nil, errors.New("mirror: service_ID cannot be empty")
 		}
 
-		m := NewMiddleware(*opts)
+		m := NewMiddleware(opts)
 
 		return m.ServeHTTP, nil
 	})

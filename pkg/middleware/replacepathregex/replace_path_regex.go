@@ -9,43 +9,26 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
+type Config struct {
+	Regex       string `mapstructure:"regex"`
+	Replacement string `mapstructure:"replacement"`
+}
+
 func init() {
-	_ = middleware.Register([]string{"replace_path_regex"}, func(params any) (app.HandlerFunc, error) {
-		if params == nil {
-			return nil, errors.New("replace_path_regex middleware parameters are missing or invalid")
+	_ = middleware.RegisterTyped([]string{"replace_path_regex"}, func(cfg Config) (app.HandlerFunc, error) {
+		if cfg.Regex == "" {
+			return nil, errors.New("regex field is not set")
+		}
+		if cfg.Replacement == "" {
+			return nil, errors.New("replacement field is not set")
 		}
 
-		if val, ok := params.(map[string]interface{}); ok {
-			regexVal, found := val["regex"]
-			if !found {
-				return nil, errors.New("regex field is not set")
-			}
-
-			regex, ok := regexVal.(string)
-			if !ok {
-				return nil, errors.New("regex field  is invalid")
-			}
-
-			replacementVal, found := val["replacement"]
-			if !found {
-				return nil, errors.New("replacement field is not set")
-			}
-
-			replacement, ok := replacementVal.(string)
-			if !ok {
-				return nil, errors.New("replacement field is invalid")
-			}
-
-			m, err := NewMiddleware(regex, replacement)
-			if err != nil {
-				return nil, err
-			}
-			return m.ServeHTTP, nil
+		m, err := NewMiddleware(cfg.Regex, cfg.Replacement)
+		if err != nil {
+			return nil, err
 		}
-
-		return nil, errors.New("replace_path_regex middleware parameters are missing or invalid")
+		return m.ServeHTTP, nil
 	})
-
 }
 
 type ReplacePathRegexMiddleware struct {

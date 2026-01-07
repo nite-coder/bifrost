@@ -3,31 +3,17 @@ package setvars
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 func init() {
-	_ = middleware.Register([]string{"setvars"}, func(params any) (app.HandlerFunc, error) {
-		if params == nil {
-			return nil, errors.New("setvars middleware params is empty or invalid")
-		}
-
-		options := []*Options{}
-
-		paramsSlice, ok := params.([]interface{})
-		if !ok {
+	_ = middleware.RegisterTyped([]string{"setvars"}, func(options []*Options) (app.HandlerFunc, error) {
+		if len(options) == 0 {
 			return nil, errors.New("setvars middleware params is invalid")
-		}
-
-		err := mapstructure.Decode(paramsSlice, &options)
-		if err != nil {
-			return nil, fmt.Errorf("setvars middleware params is invalid: %w", err)
 		}
 
 		for _, opt := range options {

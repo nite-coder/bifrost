@@ -3,11 +3,9 @@ package iprestriction
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
@@ -109,20 +107,7 @@ func (m *IPRestriction) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}
 }
 func init() {
-	_ = middleware.Register([]string{"ip_restriction"}, func(params any) (app.HandlerFunc, error) {
-		if params == nil {
-			return nil, errors.New("ip_restriction middleware params is empty or invalid")
-		}
-		option := Options{}
-		decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-			DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
-			WeaklyTypedInput: true,
-			Result:           &option,
-		})
-		err := decoder.Decode(params)
-		if err != nil {
-			return nil, fmt.Errorf("ip_restriction middleware params is invalid: %w", err)
-		}
+	_ = middleware.RegisterTyped([]string{"ip_restriction"}, func(option Options) (app.HandlerFunc, error) {
 		m, err := NewMiddleware(option)
 		if err != nil {
 			return nil, err

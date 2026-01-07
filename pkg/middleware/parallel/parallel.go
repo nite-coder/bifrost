@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/middleware"
@@ -48,19 +47,11 @@ func (m *ParallelMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContex
 	}
 }
 func init() {
-	_ = middleware.Register([]string{"parallel"}, func(params any) (app.HandlerFunc, error) {
-		if params == nil {
+	_ = middleware.RegisterTyped([]string{"parallel"}, func(middlewareOptions []*config.MiddlwareOptions) (app.HandlerFunc, error) {
+		if len(middlewareOptions) == 0 {
 			return nil, errors.New("parallel middleware params is empty or invalid")
 		}
-		middlewareOptions := []*config.MiddlwareOptions{}
-		paramsSlice, ok := params.([]interface{})
-		if !ok {
-			return nil, errors.New("parallel middleware params is invalid")
-		}
-		err := mapstructure.Decode(paramsSlice, &middlewareOptions)
-		if err != nil {
-			return nil, fmt.Errorf("parallel middleware params is invalid, error: %w", err)
-		}
+
 		options := make([]*Options, 0)
 		for _, middlewareOption := range middlewareOptions {
 			h := middleware.Factory(middlewareOption.Type)

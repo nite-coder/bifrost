@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/connector/redis"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
@@ -139,23 +138,11 @@ func buildReplacer(directives []string, c *app.RequestContext) []string {
 	return replacements
 }
 func init() {
-	_ = middleware.Register([]string{"rate_limit"}, func(params any) (app.HandlerFunc, error) {
-		if params == nil {
-			return nil, errors.New("rate_limit middleware params is empty or invalid")
-		}
-		option := Options{}
-		decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-			DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
-			WeaklyTypedInput: true,
-			Result:           &option,
-		})
-		err := decoder.Decode(params)
-		if err != nil {
-			return nil, fmt.Errorf("rate_limit middleware params is invalid: %w", err)
-		}
+	_ = middleware.RegisterTyped([]string{"rate_limit"}, func(option Options) (app.HandlerFunc, error) {
 		if len(option.LimitBy) == 0 {
 			return nil, errors.New("limit_by cannot be empty")
 		}
+
 		switch option.Strategy {
 		case Local, Redis:
 		case "":
@@ -163,9 +150,11 @@ func init() {
 		default:
 			return nil, fmt.Errorf("strategy '%s' is invalid", option.Strategy)
 		}
+
 		if option.WindowSize == 0 {
 			return nil, errors.New("window_size must be greater than 0 for rate_limit middleware")
 		}
+
 		m, err := NewMiddleware(option)
 		if err != nil {
 			return nil, err

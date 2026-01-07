@@ -8,29 +8,19 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
+type Config struct {
+	Path string `mapstructure:"path"`
+}
+
 func init() {
-	_ = middleware.Register([]string{"replace_path"}, func(params any) (app.HandlerFunc, error) {
-		if params == nil {
-			return nil, errors.New("replace_path middleware parameters are missing or invalid")
+	_ = middleware.RegisterTyped([]string{"replace_path"}, func(cfg Config) (app.HandlerFunc, error) {
+		if cfg.Path == "" {
+			return nil, errors.New("path field is not set")
 		}
-		var path string
-		var err error
-		if val, ok := params.(map[string]any); ok {
-			pathVal, found := val["path"]
-			if !found {
-				return nil, errors.New("path field is not set")
-			}
-			path, err = cast.ToString(pathVal)
-			if err != nil {
-				return nil, errors.New("path field is invalid")
-			}
-			m := NewMiddleware(path)
-			return m.ServeHTTP, nil
-		}
-		return nil, errors.New("replace_path middleware params is invalid")
+		m := NewMiddleware(cfg.Path)
+		return m.ServeHTTP, nil
 	})
 }
 

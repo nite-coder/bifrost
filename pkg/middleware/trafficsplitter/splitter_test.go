@@ -56,21 +56,18 @@ func TestFactory_Errors(t *testing.T) {
 		expectedErr string
 	}{
 		{
-			name:        "nil params",
-			params:      nil,
-			expectedErr: "traffic_splitter middleware params is empty or invalid",
-		},
-		{
 			name:        "invalid params structure",
 			params:      "invalid-string",
-			expectedErr: "traffic_splitter middleware params is invalid",
+			expectedErr: "failed to decode middleware params",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := h(tt.params)
-			assert.Error(t, err)
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tt.expectedErr)
+			}
 			assert.Contains(t, err.Error(), tt.expectedErr)
 		})
 	}
