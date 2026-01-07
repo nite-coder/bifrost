@@ -30,12 +30,10 @@ package cors
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
@@ -179,31 +177,26 @@ func NewMiddleware(config Config) app.HandlerFunc {
 	}
 }
 func init() {
-	_ = middleware.Register([]string{"cors"}, func(params any) (app.HandlerFunc, error) {
-		cfg := Config{}
-		if params == nil {
-			cfg = DefaultConfig()
-			cfg.AllowAllOrigins = true
-		} else {
-			decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-				DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
-				WeaklyTypedInput: true,
-				Result:           &cfg,
-			})
-			err := decoder.Decode(params)
-			if err != nil {
-				return nil, fmt.Errorf("cors middleware params is invalid: %w", err)
-			}
-			if len(cfg.AllowMethods) == 0 {
-				cfg.AllowMethods = DefaultConfig().AllowMethods
-			}
-			if len(cfg.AllowHeaders) == 0 {
-				cfg.AllowHeaders = DefaultConfig().AllowHeaders
-			}
-			if cfg.MaxAge == 0 {
-				cfg.MaxAge = DefaultConfig().MaxAge
+	_ = middleware.RegisterTyped([]string{"cors"}, func(cfg Config) (app.HandlerFunc, error) {
+		// Validates if the config is valid or considered empty/invalid which implies default
+		if err := cfg.Validate(); err != nil {
+			// Check if it's the specific "conflict settings: all origins disabled" error which happens when config is empty
+			if strings.Contains(err.Error(), "conflict settings: all origins disabled") {
+				cfg = DefaultConfig()
+				cfg.AllowAllOrigins = true
 			}
 		}
+
+		if len(cfg.AllowMethods) == 0 {
+			cfg.AllowMethods = DefaultConfig().AllowMethods
+		}
+		if len(cfg.AllowHeaders) == 0 {
+			cfg.AllowHeaders = DefaultConfig().AllowHeaders
+		}
+		if cfg.MaxAge == 0 {
+			cfg.MaxAge = DefaultConfig().MaxAge
+		}
+
 		m := NewMiddleware(cfg)
 		return m, nil
 	})

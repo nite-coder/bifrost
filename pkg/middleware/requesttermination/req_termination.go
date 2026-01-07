@@ -3,10 +3,8 @@ package requesttermination
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
@@ -44,23 +42,12 @@ func (m *RequestTerminationMiddleware) ServeHTTP(ctx context.Context, c *app.Req
 }
 
 func init() {
-	_ = middleware.Register([]string{"request_termination"}, func(params any) (app.HandlerFunc, error) {
-		if params == nil {
-			return nil, errors.New("requesttermination middleware params is empty or invalid")
-		}
-
-		opts := &Options{}
-
-		err := mapstructure.Decode(params, &opts)
-		if err != nil {
-			return nil, fmt.Errorf("requesttermination middleware params is invalid: %w", err)
-		}
-
+	_ = middleware.RegisterTyped([]string{"request_termination"}, func(opts Options) (app.HandlerFunc, error) {
 		if opts.StatusCode == 0 {
 			return nil, errors.New("request_termination: status_code cannot be empty")
 		}
 
-		m := NewMiddleware(*opts)
+		m := NewMiddleware(opts)
 		return m.ServeHTTP, nil
 	})
 }

@@ -2,7 +2,6 @@ package coroza
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 
@@ -10,7 +9,6 @@ import (
 	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
@@ -196,20 +194,7 @@ func init() {
 		[]string{"server_id", "method", "path", "rule_id", "client_ip"},
 	)
 	prom.MustRegister(bifrostWAFCoreRulesetHits)
-	_ = middleware.Register([]string{"coraza"}, func(params any) (app.HandlerFunc, error) {
-		if params == nil {
-			return nil, errors.New("coraza middleware params is empty or invalid")
-		}
-		options := Options{}
-		decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-			DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
-			WeaklyTypedInput: true,
-			Result:           &options,
-		})
-		err := decoder.Decode(params)
-		if err != nil {
-			return nil, fmt.Errorf("coraza middleware params is invalid: %w", err)
-		}
+	_ = middleware.RegisterTyped([]string{"coraza"}, func(options Options) (app.HandlerFunc, error) {
 		m, err := NewMiddleware(options)
 		if err != nil {
 			return nil, err

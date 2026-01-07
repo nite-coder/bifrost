@@ -3,13 +3,11 @@ package compression
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/compress"
 	"github.com/cloudwego/hertz/pkg/protocol"
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
@@ -78,19 +76,12 @@ func (m *CompressionMiddleware) shouldCompress(req *protocol.Request) bool {
 }
 
 func init() {
-	_ = middleware.Register([]string{"compression"}, func(params any) (app.HandlerFunc, error) {
-		opts := &Options{}
-
-		if params == nil {
+	_ = middleware.RegisterTyped([]string{"compression"}, func(opts Options) (app.HandlerFunc, error) {
+		if opts.Level == 0 {
 			opts.Level = compress.CompressDefaultCompression
-		} else {
-			err := mapstructure.Decode(params, &opts)
-			if err != nil {
-				return nil, fmt.Errorf("compression middleware params is invalid: %w", err)
-			}
 		}
 
-		m := NewMiddleware(*opts)
+		m := NewMiddleware(opts)
 		return m.ServeHTTP, nil
 	})
 }
