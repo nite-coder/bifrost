@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Bifrost (Master)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/server/bifrost/main.go",
+            "args": [
+                "-c",
+                "${workspaceFolder}/server/bifrost/config.yaml"
+            ],
+            "env": {
+                "BIFROST_LOG_LEVEL": "debug"
+            }
+        },
+        {
+            "name": "Attach to Worker",
+            "type": "go",
+            "request": "attach",
+            "mode": "local",
+            "processId": 0
+        }
+    ]
+}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	stdruntime "runtime"
 	"runtime/debug"
 	"time"
 
@@ -72,7 +73,7 @@ func Run(opts ...Option) error {
 	}
 
 	cli.VersionPrinter = func(cliCtx *cli.Context) {
-		fmt.Printf("version=%s, build=%s\n", cliCtx.App.Version, opt.build)
+		fmt.Printf("version=%s, build=%s, go=%s\n", cliCtx.App.Version, opt.build, stdruntime.Version())
 	}
 
 	app := &cli.App{
@@ -146,19 +147,19 @@ func Run(opts ...Option) error {
 
 			_ = initialize.Logger(mainOptions)
 
-			// Execute User Init Hook
-			if opt.init != nil {
-				if err := opt.init(cCtx, mainOptions); err != nil {
-					return err
-				}
-			}
-
 			if isTest {
 				slog.Info("the config file tested successfully", "path", mainOptions.ConfigPath())
 				return nil
 			}
 
 			if runtime.IsWorker() {
+				// Execute User Init Hook
+				if opt.init != nil {
+					if err := opt.init(cCtx, mainOptions); err != nil {
+						return err
+					}
+				}
+
 				runAsWorker(mainOptions)
 				return nil
 			}
