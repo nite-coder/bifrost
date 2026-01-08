@@ -11,9 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add CodeWiki badge to README allowing users to analyze code via CodeWiki ([#92](https://github.com/nite-coder/bifrost/pull/92) by [0x5487](https://github.com/0x5487))
 - Add `stdout` output option for `logging.output` configuration ([#95](https://github.com/nite-coder/bifrost/pull/95) by [0x5487](https://github.com/0x5487))
 - Introduce `RegisterTyped` for type-safe middleware registration with `mapstructure` integration ([#96](https://github.com/nite-coder/bifrost/pull/96) by [0x5487](https://github.com/0x5487))
+- Add `develop_balancer.md` guide for custom balancer development and update `develop_middleware.md` to reflect `RegisterTyped` usage ([#97](https://github.com/nite-coder/bifrost/pull/97) by [0x5487](https://github.com/0x5487))
 
 ### Refactor
 - Refactor all middlewares to use `RegisterTyped` for better type safety and simplified initialization ([#96](https://github.com/nite-coder/bifrost/pull/96) by [0x5487](https://github.com/0x5487))
+
 
 ## Security
 - Fix path traversal and injection vulnerability caused by incorrect URL encoding. Ensure non-ASCII characters and special delimiters (e.g., `%3F`, `%2F`) are properly escaped when forwarding requests to upstream. ([#93](https://github.com/nite-coder/bifrost/pull/93) by [0x5487](https://github.com/0x5487))
