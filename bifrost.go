@@ -23,7 +23,7 @@ type options struct {
 	version string
 	build   string
 	flags   []cli.Flag
-	init    func(*cli.Context, config.Options) error
+	init    func(config.Options) error
 	debug   bool
 }
 
@@ -45,7 +45,7 @@ func WithFlags(flags ...cli.Flag) Option {
 
 // WithInit registers an initialization hook that runs after config loading
 // and before the application starts (Master or Worker).
-func WithInit(fn func(*cli.Context, config.Options) error) Option {
+func WithInit(fn func(config.Options) error) Option {
 	return func(o *options) {
 		o.init = fn
 	}
@@ -161,7 +161,7 @@ func Run(opts ...Option) error {
 			if runtime.IsWorker() || opt.debug {
 				// Execute User Init Hook
 				if opt.init != nil {
-					if err := opt.init(cCtx, mainOptions); err != nil {
+					if err := opt.init(mainOptions); err != nil {
 						return err
 					}
 				}
