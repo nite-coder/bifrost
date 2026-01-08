@@ -120,24 +120,21 @@ WantedBy=multi-user.target
 
 ### 熱更新完整流程
 
-```
-Master                     Worker V1                  Worker V2
-  |                           |                          |
-  |--- SIGHUP received ------>|                          |
-  |                           |                          |
-  |--- Request FDs via UDS -->|                          |
-  |<-- FDs sent via UDS ------|                          |
-  |                           |                          |
-  |--- Spawn Worker V2 (with FDs in ExtraFiles) -------->|
-  |                           |                          |
-  |<----------------- "register" signal via UDS ---------|
-  |                           |                          |
-  |--- SIGTERM -------------->|                          |
-  |                           |-- graceful shutdown ---->|
-  |<-- Wait() returns --------|                          |
-  |                           X                          |
-  |                                                      |
-  |<-- currentWorker = V2 --------------------------------|
+```mermaid
+  sequenceDiagram
+  participant Admin as Admin/Systemd
+  participant Master
+  participant V1 as Worker V1
+  participant V2 as Worker V2
+  Admin->>Master: SIGHUP
+  Master->>V1: Request FDs (via UDS)
+  V1-->>Master: FDs (via SCM_RIGHTS)
+  Master->>V2: Spawn (FDs in ExtraFiles)
+  V2-->>Master: "ready" signal (via UDS)
+  Master->>V1: SIGTERM
+  V1->>V1: Graceful Shutdown
+  V1-->>Master: Wait() returns
+  Note over Master,V2: currentWorker = V2
 ```
 
 ---
