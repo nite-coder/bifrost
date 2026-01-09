@@ -20,6 +20,7 @@ Bifrost 採用 **Master-Worker** 架構，提供穩定的 PID 和零停機熱更
 2. **廣泛兼容性**: 原生支持 Systemd (`Type=notify`)、Docker、Kubernetes。
 3. **無縫切換**: 確保 Worker 切換期間不丟失連接。
 4. **日誌統一**: 所有日誌經由 stdout/stderr 輸出，兼容各種日誌採集系統。
+5. **日誌輪轉**: 支持通過 `SIGUSR1` 信號觸發日誌文件重開 (Log Rotation)。
 
 ### 非功能目標
 1. **低侵入性**: Master 輕量，不參與實際的業務流量處理。
@@ -68,6 +69,7 @@ Bifrost 運行於前台模式，所有進程管理由外部工具負責：
 | :--- | :--- |
 | `SIGHUP` | 觸發熱更新 (Hot Reload) |
 | `SIGTERM` / `SIGINT` | 優雅關閉 (Graceful Shutdown) |
+| `SIGUSR1` | 重新開啟日誌文件 (Log Rotation) |
 
 ---
 
@@ -158,7 +160,39 @@ Master 和 Worker 的日誌全部輸出到 stdout/stderr：
 
 ---
 
-## 5. 驗證與測試策略 (Validation)
+## 5. 日誌輪轉 (Log Rotation)
+
+Bifrost 支持通過 `SIGUSR1` 信號來觸發日誌文件的重新開啟 (Reopen)，這對於配合 `logrotate` 等工具非常有用。
+
+### 信號傳遞機制
+1. 外部工具 (如 `logrotate`) 發送 `SIGUSR1` 給 **Master** 進程。
+2. **Master** 收到信號後：
+   - 自身重新開啟日誌文件 (若有配置 file output)。
+   - 將 `SIGUSR1` 轉發給當前活躍的 **Worker** 進程。
+3. **Worker** 收到信號後，重新開啟其日誌文件。
+
+### Logrotate 配置範例
+由於 Master 進程名稱會被固定設為 `bifrost-master`，我們可以直接使用 `pkill` 來發送信號，無需依賴 PID File：
+
+```bash
+/home/bifrost/logs/*.log {
+    daily
+    rotate 7
+    compress
+    missingok
+    notifempty
+    create 0640 nobody nogroup
+    sharedscripts
+    postrotate
+        # 精確匹配 process name 為 bifrost-master 的進程
+        pkill -USR1 -x bifrost-master || true
+    endscript
+}
+```
+
+---
+
+## 6. 驗證與測試策略 (Validation)
 
 ### Systemd 集成測試 (`Type=notify`)
 - 配置 `ExecStart=/usr/local/bin/bifrost -c config.yaml`。
@@ -187,7 +221,8 @@ wait $MASTER_PID
 ## 6. 注意事項 (Caveats)
 
 1. **信號轉發延遲**: Master 轉發信號給 Worker 存在微小延遲。
-2. **殭屍進程**: Master 必須正確調用 `Wait()`，否則退出的 Worker 會變成殭屍進程。
+2. **熱更新期間的信號**: 當熱更新 (Hot Reload) 正在進行且存在多個 Worker 時，`SIGUSR1` 僅會發送給「當前活跃」的 Worker (newWorker)，正在優雅退出的舊 Worker 將繼續寫入原有的日誌文件直到結束。
+3. **殭屍進程**: Master 必須正確調用 `Wait()`，否則退出的 Worker 會變成殭屍進程。
 3. **Windows 兼容性**: 此架構依賴 Unix 信號，Windows 不支持。
 
 ---

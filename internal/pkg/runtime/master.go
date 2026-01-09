@@ -155,7 +155,7 @@ func (m *Master) Run(ctx context.Context) error {
 
 	// Setup signal handling
 	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGINT)
+	signal.Notify(sigCh, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGINT, syscall.SIGUSR1)
 	defer signal.Stop(sigCh)
 
 	slog.Info("master started",
@@ -196,6 +196,20 @@ func (m *Master) Run(ctx context.Context) error {
 			case syscall.SIGTERM, syscall.SIGINT:
 				slog.Info("received shutdown signal", "signal", sig)
 				return m.Shutdown(ctx)
+
+			case syscall.SIGUSR1:
+				slog.Info("received SIGUSR1, forwarding to worker for log rotation")
+				// Note: Master's own log rotation is handled automatically by pkg/log
+				// which also listens for SIGUSR1 in a background goroutine.
+				m.mu.RLock()
+				worker := m.currentWorker
+				m.mu.RUnlock()
+
+				if worker != nil && worker.Process != nil {
+					if err := worker.Process.Signal(syscall.SIGUSR1); err != nil {
+						slog.Error("failed to forward SIGUSR1 to worker", "error", err, "workerPID", worker.Process.Pid)
+					}
+				}
 			}
 
 		case <-m.workerDoneCh:
@@ -331,7 +345,14 @@ func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File, keys []
 	// Set worker role via environment variable
 	// Note: Socket path is base64 encoded because Abstract Namespace contains NUL byte
 	socketPathEncoded := base64.StdEncoding.EncodeToString([]byte(m.controlPlane.SocketPath()))
-	cmd.Env = append(os.Environ(),
+
+	// If Env is nil, use current environment.
+	// This ensures we respect any Env set by mock execCommandContext while defaulting to system env.
+	if cmd.Env == nil {
+		cmd.Env = os.Environ()
+	}
+
+	cmd.Env = append(cmd.Env,
 		EnvBifrostRole+"="+RoleWorker,
 		"BIFROST_CONTROL_SOCKET="+socketPathEncoded,
 	)

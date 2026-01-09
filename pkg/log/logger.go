@@ -20,8 +20,9 @@ import (
 
 // fileWriter is a wrapper around os.File to support reopening the file on SIGUSR1.
 type fileWriter struct {
-	file *os.File
-	mu   sync.Mutex // Protects concurrent access to the file
+	file              *os.File
+	mu                sync.Mutex // Protects concurrent access to the file
+	redirectStdStream bool
 }
 
 // Write implements the io.Writer interface.
@@ -37,17 +38,33 @@ func (fw *fileWriter) reopen() error {
 	fw.mu.Lock()
 	defer fw.mu.Unlock()
 
-	// Close the current file
-	if fw.file != nil {
-		fw.file.Close()
-	}
-
-	// Reopen the file
-	file, err := os.OpenFile(fw.file.Name(), os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0644)
+	// Open the new file first to ensure we don't lose logging if open fails
+	// Open-Swap-Close pattern
+	newFile, err := os.OpenFile(fw.file.Name(), os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0644)
 	if err != nil {
 		return err
 	}
-	fw.file = file
+
+	oldFile := fw.file
+	fw.file = newFile
+
+	// Close the old file
+	if oldFile != nil {
+		oldFile.Close()
+	}
+
+	// Re-apply stdout/stderr redirection if enabled
+	if fw.redirectStdStream {
+		if runtime.GOOS != "windows" {
+			// Redirect both stdout and stderr to the new file
+			if err := unix.Dup2(int(fw.file.Fd()), int(os.Stdout.Fd())); err != nil {
+				return fmt.Errorf("failed to redirect stdout during rotation: %w", err)
+			}
+			if err := unix.Dup2(int(fw.file.Fd()), int(os.Stderr.Fd())); err != nil {
+				return fmt.Errorf("failed to redirect stderr during rotation: %w", err)
+			}
+		}
+	}
 
 	return nil
 }
@@ -107,20 +124,27 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 			return nil, err
 		}
 
+		shouldRedirect := !opts.DisableRedirectStdStream && (opts.Output != "stderr" && opts.Output != "stdout" && opts.Output != "")
+
 		// Wrap the file in a fileWriter to support reopening
 		fw := &fileWriter{
-			file: file,
+			file:              file,
+			redirectStdStream: shouldRedirect,
 		}
 		writer = fw
 
-		if !opts.DisableRedirectStdErr && (opts.Output != "stderr" && opts.Output != "") {
+		if shouldRedirect {
 			if runtime.GOOS == "windows" {
 				// Windows not support dup2
-				return nil, errors.New("stderr redirection not supported on Windows")
+				return nil, errors.New("stdout/stderr redirection not supported on Windows")
 			}
 			// Linux and macOS support unix.Dup2
-			err := unix.Dup2(int(file.Fd()), int(os.Stderr.Fd()))
-			if err != nil {
+			// Redirect stdout
+			if err := unix.Dup2(int(file.Fd()), int(os.Stdout.Fd())); err != nil {
+				return nil, fmt.Errorf("failed to redirect stdout: %w", err)
+			}
+			// Redirect stderr
+			if err := unix.Dup2(int(file.Fd()), int(os.Stderr.Fd())); err != nil {
 				return nil, fmt.Errorf("failed to redirect stderr: %w", err)
 			}
 		}

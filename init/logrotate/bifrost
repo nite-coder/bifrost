@@ -9,8 +9,8 @@
     create 0640 nobody nogroup
     sharedscripts
     postrotate
-        if [ -f /home/bifrost/logs/bifrost.pid ]; then
-                kill -USR1 `cat /home/bifrost/logs/bifrost.pid`
-        fi
+        # Send SIGUSR1 to bifrost-master to trigger log rotation
+        # usage of '|| true' ensures logrotate doesn't fail if the service is not running
+        pkill -USR1 -x bifrost-master || true
     endscript
 }

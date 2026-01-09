@@ -1,5 +1,24 @@
 # AGENTS.md
 
+## AI Interaction Guidelines & Rules
+
+> [!IMPORTANT]
+> **CRITICAL INSTRUCTIONS FOR AI AGENTS**
+> 1. **Language Consistency**: Communicate in the same language as the user. If the user speaks Traditional Chinese, ALL outputs MUST be in Traditional Chinese. This includes but is not limited to:
+>    - `Thinking` process and internal analysis.
+>    - `TaskName`, `TaskStatus`, and `TaskSummary` in the `task_boundary` tool.
+>    - All artifacts (`Task Lists`, `Implementation Plans`, `Walkthroughs`, `Report`).
+>    - All tool descriptions and summaries.
+> 2. **Deterministic Testing**: Prioritize using `assert.Eventually` over `time.Sleep` in unit tests. `time.Sleep` is strictly discouraged for synchronization.
+
+### Coding Standards
+- **Logging**: Use the `slog` package for all logging.
+- **Type Safety**: Prefer `any` over `interface{}`.
+- **Performance**: Avoid `fmt.Sprint`/`Sprintf` in hot paths; use `strconv` or direct concatenation.
+- **Testing flags**: Always use `go test -race ./...` to detect race conditions.
+- **Documentation**: Add comments for exported functions and structs.
+- **Code Language**: Use English for all code and comments.
+
 ## Project description
 
 Bifrost is a low-latency, high-throughput API gateway library written in Go. It is designed as an SDK/library rather than a standalone artifact, making it easy to integrate with existing Go services. Key features include:
@@ -52,13 +71,3 @@ bifrost/
 └── test/             # Integration and E2E tests
 ```
 
-## Project rules
-
-- Communicate in the same language as the user. Ensure that all outputs, including **Task Status**, **Implementation Plans**, and **Task Lists**, align with the language used by the user.
-- Use English to write code and comments.
-- Add comments for each function and struct to help developers understand their purpose.
-- Use the slog package for all logging purposes.
-- Prefer using the `any` keyword instead of `interface{}` for empty interfaces.
-- Avoid using `fmt.Sprint` or `fmt.Sprintf` for simple string concatenation in performance-critical code; use efficient alternatives like direct concatenation or the `strconv` package.
-- Always use the `-race` flag when running Go tests (e.g., `go test -race ./...`) to detect and prevent potential race conditions.
-- Prioritize using `assert.Eventually` over `time.Sleep` in unit tests to ensure tests are deterministic and efficient.
