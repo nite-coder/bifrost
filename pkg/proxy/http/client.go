@@ -1,16 +1,14 @@
 package http
 
 import (
+	"time"
+
 	"github.com/cloudwego/hertz/pkg/app/client"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	http2Config "github.com/hertz-contrib/http2/config"
 	"github.com/hertz-contrib/http2/factory"
-	"time"
 )
 
-func SetChunkedTransfer(enable bool) {
-	chunkedTransfer = enable
-}
 func DefaultClientOptions() []hzconfig.ClientOption {
 	options := []hzconfig.ClientOption{
 		client.WithNoDefaultUserAgentHeader(true),
@@ -22,9 +20,7 @@ func DefaultClientOptions() []hzconfig.ClientOption {
 		client.WithMaxIdleConnDuration(120 * time.Second),
 		client.WithKeepAlive(true),
 		client.WithMaxConnsPerHost(1024),
-	}
-	if chunkedTransfer {
-		options = append(options, client.WithResponseBodyStream(true))
+		client.WithResponseBodyStream(true),
 	}
 	return options
 }

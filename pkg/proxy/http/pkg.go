@@ -9,10 +9,9 @@ import (
 )
 
 var (
-	spaceByte       = []byte{byte(' ')}
-	https           = []byte("https")
-	trailersBytes   = []byte("trailers")
-	chunkedTransfer = false
+	spaceByte     = []byte{byte(' ')}
+	https         = []byte("https")
+	trailersBytes = []byte("trailers")
 )
 
 // IsASCIIPrint returns whether s is ASCII and printable according to

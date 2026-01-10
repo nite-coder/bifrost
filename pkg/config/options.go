@@ -29,7 +29,6 @@ type Options struct {
 	TimerResolution time.Duration               `yaml:"timer_resolution" json:"timer_resolution"`
 	SkipResolver    bool                        `yaml:"-" json:"-"`
 	Gopool          bool                        `yaml:"gopool" json:"gopool"`
-	Experiment      ExperimentOptions           `yaml:"experiment" json:"experiment"`
 }
 
 func (o *Options) UnmarshalYAML(value *yaml.Node) error {

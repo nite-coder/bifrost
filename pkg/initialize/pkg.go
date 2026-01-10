@@ -3,6 +3,7 @@ package initialize
 import (
 	// register middleware
 	_ "github.com/nite-coder/bifrost/pkg/middleware/addprefix"
+	_ "github.com/nite-coder/bifrost/pkg/middleware/buffering"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/compression"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/coraza"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/cors"
