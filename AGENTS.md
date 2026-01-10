@@ -1,4 +1,29 @@
-# AGENTS.md
+# Universal Agents Control Manifest
+
+All agents must emulate `.agent/` support even when the runtime does not load those files automatically. Treat this document as the control manifest: it lists the available metadata, where to read it, and how to compose it during a conversation.
+
+Reference layout:
+
+```
+.agents/
+  skills/
+    spec/
+      SKILL.md
+AGENTS.md
+```
+
+## Execution protocol
+
+1. **Always read this file** before starting a task so you know which skills to load from `.agent/`.
+2. **Skills Inventory**:
+   - At startup, scan the `.agent/skills/` directory and list all available skills with their trigger conditions.
+   - This gives visibility into available capabilities before receiving tasks.
+3. **Skills**:
+   - Load a skill only if its trigger condition matches the task. Example: write spec tasks must load `skills/spec/SKILL.md`.
+   - Once loaded, obey the process and output format defined inside the skill file so the final response stays consistent.
+4. **Response contract**:
+   - Explicitly mention which skills are in effect.
+   - Derive findings, recommendations, or code while enforcing all loaded constraints. If conflicts arise, ask for clarification
 
 ## AI Interaction Guidelines & Rules
 

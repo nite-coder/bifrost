@@ -22,7 +22,6 @@ import (
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/connector/redis"
 	"github.com/nite-coder/bifrost/pkg/log"
-	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
 )
@@ -109,8 +108,6 @@ func Run(mainOptions config.Options) (err error) {
 		return err
 	}
 
-	httpproxy.SetChunkedTransfer(mainOptions.Experiment.ChunkedTransfer)
-
 	bifrost, err := NewBifrost(mainOptions, false)
 	if err != nil {
 		slog.Error("failed to start bifrost", "error", err)
@@ -133,6 +130,7 @@ func Run(mainOptions config.Options) (err error) {
 		}
 
 		b, err := sonic.Marshal(mainOptions)
+
 		if err != nil {
 			return err
 		}

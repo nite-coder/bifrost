@@ -12,9 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `stdout` output option for `logging.output` configuration ([#95](https://github.com/nite-coder/bifrost/pull/95) by [0x5487](https://github.com/0x5487))
 - Introduce `RegisterTyped` for type-safe middleware registration with `mapstructure` integration ([#96](https://github.com/nite-coder/bifrost/pull/96) by [0x5487](https://github.com/0x5487))
 - Add `develop_balancer.md` guide for custom balancer development and update `develop_middleware.md` to reflect `RegisterTyped` usage ([#97](https://github.com/nite-coder/bifrost/pull/97) by [0x5487](https://github.com/0x5487))
+- Add `buffering` middleware to support buffered transfer mode ([#98](https://github.com/nite-coder/bifrost/pull/98) by [0x5487](https://github.com/0x5487))
+
 
 ### Refactor
 - Refactor all middlewares to use `RegisterTyped` for better type safety and simplified initialization ([#96](https://github.com/nite-coder/bifrost/pull/96) by [0x5487](https://github.com/0x5487))
+- Enable chunked transfer by default for HTTP proxy client and remove obsolete `SetChunkedTransfer` and `experiment.chunked_transfer` configuration ([#98](https://github.com/nite-coder/bifrost/pull/98) by [0x5487](https://github.com/0x5487))
+
 
 
 ## Security
