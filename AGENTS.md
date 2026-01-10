@@ -7,7 +7,7 @@ Reference layout:
 ```
 .agents/
   skills/
-    spec/
+    write-spec/
       SKILL.md
 AGENTS.md
 ```
@@ -19,7 +19,7 @@ AGENTS.md
    - At startup, scan the `.agent/skills/` directory and list all available skills with their trigger conditions.
    - This gives visibility into available capabilities before receiving tasks.
 3. **Skills**:
-   - Load a skill only if its trigger condition matches the task. Example: write spec tasks must load `skills/spec/SKILL.md`.
+   - Load a skill only if its trigger condition matches the task. Example: write spec tasks must load `skills/write-spec/SKILL.md`.
    - Once loaded, obey the process and output format defined inside the skill file so the final response stays consistent.
 4. **Response contract**:
    - Explicitly mention which skills are in effect.

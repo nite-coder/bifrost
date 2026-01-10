@@ -15,6 +15,7 @@ Provides guidance and automation for Golang testing tasks in the MCPSpy project.
 - Choose internal vs external package testing based on what needs to be tested
 - Test internal functions by placing test files in the same package (no `_test` suffix)
 - Avoid creating externally facing functions solely for testing purposes
+- Ensure that the code coverage for each package reaches at least 75%
 
 ## When to Use This Skill
 

@@ -13,6 +13,7 @@ You can also develop custom middlewares directly in native Golang.
 Currently supported middlewares are below.
 
 * [AddPrefix](#addprefix): Add a prefix to the request path.
+* [Buffering](#buffering): Buffer the request body and enforce maximum size.
 * [Compression](#compression): Compress the response body using gzip.
 * [Coraza](#coraza): A Web application firewall.
 * [Cors](#cors): A Middleware for Cross-Origin Resource Sharing.
@@ -54,6 +55,32 @@ params:
 | Field  | Type     | Default | Description                    |
 | ------ | -------- | ------- | ------------------------------ |
 | prefix | `string` |         | Add prefix to the request path |
+
+### Buffering
+
+The `buffering` middleware is used to read the entire request body into memory before forwarding it to the upstream service. This is useful for:
+
+1. Ensuring the upstream receives the request only after the full body is received (preventing slow body attacks).
+2. Enforcing a maximum request body size early in the request lifecycle.
+3. Enabling `Content-Length` forwarding instead of `Transfer-Encoding: chunked` for upstreams that do not support chunking.
+
+```yaml
+routes:
+  foo:
+    paths:
+      - /upload
+    service_id: upload_service
+    middlewares:
+      - type: buffering
+        params:
+          max_request_body_size: 10485760 # 10MB
+```
+
+params:
+
+| Field                 | Type    | Default | Description                                                                 |
+| --------------------- | ------- | ------- | --------------------------------------------------------------------------- |
+| max_request_body_size | `int64` | 4194304 | Maximum number of bytes for the request body. Returns 413 if exceeded. (4MB) |
 
 ### Compression
 
