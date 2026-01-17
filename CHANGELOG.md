@@ -8,24 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 
 ### Added
+
 - Add CodeWiki badge to README allowing users to analyze code via CodeWiki ([#92](https://github.com/nite-coder/bifrost/pull/92) by [0x5487](https://github.com/0x5487))
 - Add `stdout` output option for `logging.output` configuration ([#95](https://github.com/nite-coder/bifrost/pull/95) by [0x5487](https://github.com/0x5487))
 - Introduce `RegisterTyped` for type-safe middleware registration with `mapstructure` integration ([#96](https://github.com/nite-coder/bifrost/pull/96) by [0x5487](https://github.com/0x5487))
 - Add `develop_balancer.md` guide for custom balancer development and update `develop_middleware.md` to reflect `RegisterTyped` usage ([#97](https://github.com/nite-coder/bifrost/pull/97) by [0x5487](https://github.com/0x5487))
 - Add `buffering` middleware to support buffered transfer mode ([#98](https://github.com/nite-coder/bifrost/pull/98) by [0x5487](https://github.com/0x5487))
-
+- Add OpenSpec proposal for OpenTelemetry metrics with OTLP push mode support ([#99](https://github.com/nite-coder/bifrost/pull/99) by [0x5487](https://github.com/0x5487))
 
 ### Refactor
+
 - Refactor all middlewares to use `RegisterTyped` for better type safety and simplified initialization ([#96](https://github.com/nite-coder/bifrost/pull/96) by [0x5487](https://github.com/0x5487))
 - Enable chunked transfer by default for HTTP proxy client and remove obsolete `SetChunkedTransfer` and `experiment.chunked_transfer` configuration ([#98](https://github.com/nite-coder/bifrost/pull/98) by [0x5487](https://github.com/0x5487))
 
-
-
 ## Security
+
 - Fix path traversal and injection vulnerability caused by incorrect URL encoding. Ensure non-ASCII characters and special delimiters (e.g., `%3F`, `%2F`) are properly escaped when forwarding requests to upstream. ([#93](https://github.com/nite-coder/bifrost/pull/93) by [0x5487](https://github.com/0x5487))
 - Fix potential panic (DoS) in gRPC proxy when handling malformed payloads with declared length mismatch. ([#94](https://github.com/nite-coder/bifrost/pull/94) by [0x5487](https://github.com/0x5487))
 
 ## Fixed
+
 - Fix gateway bugs: nil pointer dereference when proxy unavailable, timeout configuration copy-paste errors, Watch error handling, and balancer nil logging. ([#80](https://github.com/nite-coder/bifrost/pull/80) by [0x5487](https://github.com/0x5487))
 - Fix upgrade order bug where WritePIDWithLock was called before Quit, causing lock contention. Add e2e upgrade tests and CI integration. ([#81](https://github.com/nite-coder/bifrost/pull/81) by [0x5487](https://github.com/0x5487))
 - Fix race condition in `pkg/zero` package and improve test coverage. ([#83](https://github.com/nite-coder/bifrost/pull/83) by [0x5487](https://github.com/0x5487))
@@ -43,7 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Standardize error messages by lowercasing strings to follow Go idioms and optimize string formatting by replacing `fmt.Sprintf` with string concatenation. ([#86](https://github.com/nite-coder/bifrost/pull/86) by [0x5487](https://github.com/0x5487))
 - Replace Unix socket with SIGHUP signal for upgrade mechanism to improve reliability. ([#87](https://github.com/nite-coder/bifrost/pull/87) by [0x5487](https://github.com/0x5487))
 - Switch systemd service from `Type=forking` to `Type=notify` and add `sd_notify` support for reliable hot reload. ([#88](https://github.com/nite-coder/bifrost/pull/88) by [0x5487](https://github.com/0x5487))
-
 
 ## [0.7.0] (2025-12-25)
 
