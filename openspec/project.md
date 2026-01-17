@@ -80,3 +80,42 @@ Key features:
 - **Kubernetes API**: Service discovery and configuration management
 - **etcd/Nacos**: Configuration center integration
 - **Redis**: Caching and rate limiting (optional)
+
+## Project Structure
+
+```
+bifrost/
+├── client/           # Client SDK for interacting with Bifrost
+├── config/           # Configuration files and examples
+├── docs/             # Documentation (configuration, middlewares, providers, etc.)
+├── examples/         # Example implementations and use cases
+├── init/             # Initialization scripts (systemd service files, etc.)
+├── internal/         # Internal packages (not for external use)
+│   └── pkg/          # Internal shared packages
+│       └── runtime/  # Process management (master/worker) and hot reload logic
+├── pkg/              # Public packages - core library code
+│   ├── balancer/     # Load balancing algorithms (round_robin, random, weighted, chash)
+│   ├── config/       # Configuration parsing and management
+│   ├── connector/    # Backend connection management
+│   ├── gateway/      # Core gateway logic and request handling
+│   ├── initialize/   # Initialization utilities
+│   ├── log/          # Logging utilities (slog-based)
+│   ├── middleware/   # Built-in middlewares (auth, cors, rate-limit, waf, etc.)
+│   ├── provider/     # Configuration providers (file, k8s, etcd, etc.)
+│   ├── proxy/        # HTTP/gRPC proxy implementation
+│   ├── resolver/     # Service discovery and DNS resolution
+│   ├── router/       # Request routing logic
+│   ├── timecache/    # Time caching utilities
+│   ├── tracer/       # Tracing implementations
+│   ├── tracing/      # OpenTelemetry integration
+│   └── variable/     # Variable handling for configuration
+├── proto/            # Protocol buffer definitions
+├── script/           # Build and utility scripts
+├── server/           # Server implementations
+│   ├── bifrost/      # Main Bifrost server binary
+│   ├── hertz/        # Hertz-based server implementation
+│   ├── openresty/    # OpenResty compatibility layer
+│   ├── standard/     # Standard library-based server
+│   └── testserver/   # Test server for development
+└── test/             # Integration and E2E tests
+```
