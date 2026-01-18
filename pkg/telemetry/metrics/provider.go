@@ -186,14 +186,13 @@ func createPrometheusExporter() (*promexp.Exporter, prom.Gatherer, error) {
 
 // createOTLPReader creates an OTLP exporter reader for push mode.
 func createOTLPReader(ctx context.Context, opts config.OTLPMetricsOptions, producer sdkmetric.Producer) (sdkmetric.Reader, error) {
-	protocol := strings.ToLower(opts.Protocol)
-	if protocol == "" {
-		protocol = "grpc"
+	if opts.Endpoint == "" {
+		opts.Endpoint = "localhost:4317"
 	}
 
-	interval := opts.Interval
-	if interval == 0 {
-		interval = 15 * time.Second
+	flush := opts.Flush
+	if flush == 0 {
+		flush = 15 * time.Second
 	}
 
 	timeout := opts.Timeout
@@ -204,8 +203,19 @@ func createOTLPReader(ctx context.Context, opts config.OTLPMetricsOptions, produ
 	var exporter sdkmetric.Exporter
 	var err error
 
-	switch protocol {
-	case "grpc":
+	opts.Endpoint = strings.ToLower(opts.Endpoint)
+
+	if strings.HasPrefix(opts.Endpoint, "https") || strings.HasPrefix(opts.Endpoint, "http") {
+		httpOpts := []otlpmetrichttp.Option{
+			otlpmetrichttp.WithEndpointURL(opts.Endpoint),
+			otlpmetrichttp.WithTimeout(timeout),
+		}
+		if opts.Insecure {
+			httpOpts = append(httpOpts, otlpmetrichttp.WithInsecure())
+		}
+		exporter, err = otlpmetrichttp.New(ctx, httpOpts...)
+	} else {
+		// grpc
 		grpcOpts := []otlpmetricgrpc.Option{
 			otlpmetricgrpc.WithEndpoint(opts.Endpoint),
 			otlpmetricgrpc.WithTimeout(timeout),
@@ -214,17 +224,6 @@ func createOTLPReader(ctx context.Context, opts config.OTLPMetricsOptions, produ
 			grpcOpts = append(grpcOpts, otlpmetricgrpc.WithTLSCredentials(insecure.NewCredentials()))
 		}
 		exporter, err = otlpmetricgrpc.New(ctx, grpcOpts...)
-	case "http":
-		httpOpts := []otlpmetrichttp.Option{
-			otlpmetrichttp.WithEndpoint(opts.Endpoint),
-			otlpmetrichttp.WithTimeout(timeout),
-		}
-		if opts.Insecure {
-			httpOpts = append(httpOpts, otlpmetrichttp.WithInsecure())
-		}
-		exporter, err = otlpmetrichttp.New(ctx, httpOpts...)
-	default:
-		return nil, fmt.Errorf("unsupported OTLP protocol: %s", protocol)
 	}
 
 	if err != nil {
@@ -232,7 +231,7 @@ func createOTLPReader(ctx context.Context, opts config.OTLPMetricsOptions, produ
 	}
 
 	reader := sdkmetric.NewPeriodicReader(exporter,
-		sdkmetric.WithInterval(interval),
+		sdkmetric.WithInterval(flush),
 		sdkmetric.WithProducer(producer),
 	)
 	return reader, nil

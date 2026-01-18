@@ -2,6 +2,7 @@ package metrics_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestNewProvider_WithPrometheusEnabled(t *testing.T) {
@@ -87,14 +90,15 @@ func TestNewProvider_WithCustomBuckets(t *testing.T) {
 // The provider initialization creates client which *might* try to connect depending on options.
 // But mostly OTLP exporter creation is non-blocking until first export unless configured otherwise.
 func TestNewProvider_OTLPCreation_GRPC(t *testing.T) {
-	t.Skip("Skipping OTLP test - requires external collector")
+	grpcEndpoint, _, cleanup := startOTelCollector(t)
+	defer cleanup()
+
 	opts := config.MetricsOptions{
 		OTLP: config.OTLPMetricsOptions{
 			Enabled:     true,
 			ServiceName: "test-service",
-			Endpoint:    "localhost:4317",
-			Protocol:    "grpc",
-			Interval:    100 * time.Millisecond,
+			Endpoint:    grpcEndpoint,
+			Flush:       100 * time.Millisecond,
 			Insecure:    true,
 		},
 	}
@@ -108,14 +112,15 @@ func TestNewProvider_OTLPCreation_GRPC(t *testing.T) {
 }
 
 func TestNewProvider_OTLPCreation_HTTP(t *testing.T) {
-	t.Skip("Skipping OTLP test - requires external collector")
+	_, httpEndpoint, cleanup := startOTelCollector(t)
+	defer cleanup()
+
 	opts := config.MetricsOptions{
 		OTLP: config.OTLPMetricsOptions{
 			Enabled:     true,
 			ServiceName: "test-service-http",
-			Endpoint:    "localhost:4318",
-			Protocol:    "http",
-			Interval:    100 * time.Millisecond,
+			Endpoint:    httpEndpoint,
+			Flush:       100 * time.Millisecond,
 			Insecure:    true,
 		},
 	}
@@ -129,7 +134,9 @@ func TestNewProvider_OTLPCreation_HTTP(t *testing.T) {
 }
 
 func TestNewProvider_BothExportersEnabled(t *testing.T) {
-	t.Skip("Skipping OTLP test - requires external collector")
+	grpcEndpoint, _, cleanup := startOTelCollector(t)
+	defer cleanup()
+
 	opts := config.MetricsOptions{
 		Prometheus: config.PrometheusOptions{
 			Enabled:  true,
@@ -139,9 +146,8 @@ func TestNewProvider_BothExportersEnabled(t *testing.T) {
 		OTLP: config.OTLPMetricsOptions{
 			Enabled:     true,
 			ServiceName: "test-service",
-			Endpoint:    "localhost:4317",
-			Protocol:    "grpc",
-			Interval:    100 * time.Millisecond,
+			Endpoint:    grpcEndpoint,
+			Flush:       100 * time.Millisecond,
 			Insecure:    true,
 		},
 	}
@@ -155,4 +161,47 @@ func TestNewProvider_BothExportersEnabled(t *testing.T) {
 
 	err = provider.Shutdown(context.Background())
 	assert.NoError(t, err)
+}
+
+func startOTelCollector(t *testing.T) (grpcEndpoint string, httpEndpoint string, cleanup func()) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	ctx := context.Background()
+
+	req := testcontainers.ContainerRequest{
+		Image:        "otel/opentelemetry-collector-contrib:0.114.0",
+		ExposedPorts: []string{"4317/tcp", "4318/tcp"},
+		WaitingFor:   wait.ForLog("Everything is ready. Begin running and processing data."),
+	}
+
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		t.Fatalf("failed to start otel collector: %s", err)
+	}
+
+	grpcPort, err := container.MappedPort(ctx, "4317")
+	if err != nil {
+		t.Fatal(err)
+	}
+	httpPort, err := container.MappedPort(ctx, "4318")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	host, err := container.Host(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	grpcEndpoint = fmt.Sprintf("%s:%s", host, grpcPort.Port())
+	httpEndpoint = fmt.Sprintf("http://%s:%s", host, httpPort.Port())
+
+	return grpcEndpoint, httpEndpoint, func() {
+		_ = container.Terminate(ctx)
+	}
 }

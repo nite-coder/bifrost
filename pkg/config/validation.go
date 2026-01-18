@@ -575,16 +575,6 @@ func validateMetrics(options Options, isFullMode bool) error {
 			structure := []string{"metrics", "otlp", "endpoint"}
 			return newInvalidConfig(structure, "", msg)
 		}
-
-		protocol := strings.ToLower(options.Metrics.OTLP.Protocol)
-		switch protocol {
-		case "", "grpc", "http":
-			// valid protocols
-		default:
-			msg := fmt.Sprintf("unsupported protocol '%s' for OTLP metrics; must be 'grpc' or 'http'", options.Metrics.OTLP.Protocol)
-			structure := []string{"metrics", "otlp", "protocol"}
-			return newInvalidConfig(structure, options.Metrics.OTLP.Protocol, msg)
-		}
 	}
 
 	return nil

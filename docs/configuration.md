@@ -130,8 +130,7 @@ metrics:
     enabled: false
     service_name: "bifrost"
     endpoint: "otel-collector:4317"
-    protocol: "grpc"
-    interval: 15s
+    flush: 15s
     timeout: 10s
     insecure: false
 ```
@@ -152,8 +151,7 @@ metrics:
 | otlp.enabled      | `bool`          | `false` | Enables OTLP metrics export                                    |
 | otlp.service_name | `string`        |         | OpenTelemetry resource service.name attribute                  |
 | otlp.endpoint     | `string`        |         | OTLP collector endpoint (e.g., `otel-collector:4317`)          |
-| otlp.protocol     | `string`        | `grpc`  | Export protocol; supports `grpc` or `http`                     |
-| otlp.interval     | `time.Duration` | `15s`   | Push interval for metrics export                               |
+| otlp.flush        | `time.Duration` | `15s`   | Push interval for metrics export                               |
 | otlp.timeout      | `time.Duration` | `10s`   | Timeout for export operations                                  |
 | otlp.insecure     | `bool`          | `false` | If true, uses insecure connection (no TLS)                     |
 
@@ -182,7 +180,7 @@ tracing:
 | enabled       | `bool`          | `false`                   | Enables opentelemetry tracing support                                                                                                                               |
 | service_name  | `string`        | `bifrsot`                 | The service name of the gateway                                                                                                                                     |
 | propagators   | `[]string`      | `tracecontext`, `baggage` | The supported propagators are: `tracecontext`, `baggage`, `b3`, `jaeger`                                                                                            |
-| endpoint      | `string`        | `localhost:4318`          | The address and port of the otel collector. If the endpoint starts with `http` or `https`, it will use the HTTP protocol. Otherwise, it will use the gRPC protocol. |
+| endpoint      | `string`        | `localhost:4317`          | The address and port of the otel collector. If the endpoint starts with `http` or `https`, it will use the HTTP protocol. Otherwise, it will use the gRPC protocol. |
 | insecure      | `bool`          | `false`                   | Certificate verification                                                                                                                                            |
 | sampling_rate | `float64`       | `1.0`                     | A given fraction of traces. Fractions >= 1 will always sample. Fractions < 0 are treated as zero.                                                                   |
 | batch_size    | `int64`         | `100`                     | Maximum number of spans to be sent in a single batch export                                                                                                         |

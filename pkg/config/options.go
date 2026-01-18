@@ -144,8 +144,7 @@ type MetricsOptions struct {
 type OTLPMetricsOptions struct {
 	ServiceName string        `yaml:"service_name" json:"service_name"`
 	Endpoint    string        `yaml:"endpoint" json:"endpoint"`
-	Protocol    string        `yaml:"protocol" json:"protocol"` // grpc | http
-	Interval    time.Duration `yaml:"interval" json:"interval"`
+	Flush       time.Duration `yaml:"flush" json:"flush"`
 	Timeout     time.Duration `yaml:"timeout" json:"timeout"`
 	Insecure    bool          `yaml:"insecure" json:"insecure"`
 	Enabled     bool          `yaml:"enabled" json:"enabled"`
