@@ -6,8 +6,8 @@ Bifrost currently uses `prometheus/client_golang` directly for metrics collectio
 
 **Goals:**
 
-- Unified metrics system using OpenTelemetry Metrics API
-- Support simultaneous push (OTLP) and pull (Prometheus) export modes
+- Unified metrics system supporting both Push (OTLP) and Pull (Prometheus) modes simultaneously
+- **Dual SDK support**: Users can choose either Prometheus SDK or OTel SDK for custom metrics
 - Collect metrics from existing Prometheus client registrations (plugin compatibility)
 - Prometheus text format for pull mode
 - Clean configuration structure
