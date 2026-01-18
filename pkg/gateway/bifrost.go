@@ -15,21 +15,22 @@ import (
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/resolver"
+	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/tracer/accesslog"
-	"github.com/nite-coder/bifrost/pkg/tracer/prometheus"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 type Bifrost struct {
-	tracerProvider *sdktrace.TracerProvider
-	options        *config.Options
-	resolver       *resolver.Resolver
-	runtime        *runtime.ZeroDownTime
-	middlewares    map[string]app.HandlerFunc
-	services       map[string]*Service
-	httpServers    map[string]*HTTPServer
-	state          uint32
+	tracerProvider  *sdktrace.TracerProvider
+	metricsProvider *metrics.Provider
+	options         *config.Options
+	resolver        *resolver.Resolver
+	runtime         *runtime.ZeroDownTime
+	middlewares     map[string]app.HandlerFunc
+	services        map[string]*Service
+	httpServers     map[string]*HTTPServer
+	state           uint32
 }
 
 // Run starts all HTTP servers in the Bifrost instance. The last server is started
@@ -117,6 +118,10 @@ func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 		_ = b.tracerProvider.Shutdown(ctx)
 	}
 
+	if b.metricsProvider != nil {
+		_ = b.metricsProvider.Shutdown(ctx)
+	}
+
 	return b.runtime.Close(ctx)
 }
 
@@ -157,13 +162,24 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	}
 	bifrost.services = services
 	tracers := []tracer.Tracer{}
-	// prometheus
-	if mainOptions.Metrics.Prometheus.Enabled && !isReload {
-		promOpts := []prometheus.Option{}
-		if len(mainOptions.Metrics.Prometheus.Buckets) > 0 {
-			promOpts = append(promOpts, prometheus.WithHistogramBuckets(mainOptions.Metrics.Prometheus.Buckets))
+	// metrics (OTel with Prometheus and/or OTLP exporters)
+	if (mainOptions.Metrics.Prometheus.Enabled || mainOptions.Metrics.OTLP.Enabled) && !isReload {
+		metricsProvider, err := metrics.NewProvider(context.Background(), mainOptions.Metrics)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create metrics provider: %w", err)
 		}
-		promTracer := prometheus.NewTracer(promOpts...)
+		bifrost.metricsProvider = metricsProvider
+
+		// Phase 1: Keep using legacy Prometheus tracer for core metrics
+		// This ensures all existing metrics (request count, latency) are recorded
+		// to the DefaultRegistry as before.
+		// Since our Provider uses a Bridge (for Push) and MergedGatherer (for Pull)
+		// that both read from DefaultGatherer, these metrics will be visible everywhere.
+		promOpts := []metrics.Option{}
+		if len(mainOptions.Metrics.Prometheus.Buckets) > 0 {
+			promOpts = append(promOpts, metrics.WithHistogramBuckets(mainOptions.Metrics.Prometheus.Buckets))
+		}
+		promTracer := metrics.NewTracer(promOpts...)
 		tracers = append(tracers, promTracer)
 	}
 	// access log

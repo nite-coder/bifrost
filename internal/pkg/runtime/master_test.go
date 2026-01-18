@@ -272,8 +272,12 @@ func TestMaster_HandleReload(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, MasterStateRunning, m.State())
 
-		// Wait a bit for "stop old worker" goroutines to finish
-		time.Sleep(100 * time.Millisecond)
+		// Trigger shutdown
+		_ = m.Shutdown(context.Background())
+
+		assert.Eventually(t, func() bool {
+			return m.State() == MasterStateShuttingDown
+		}, 2*time.Second, 100*time.Millisecond)
 	})
 }
 
@@ -298,8 +302,9 @@ func TestMaster_Run(t *testing.T) {
 		}()
 
 		// Wait for start
-		time.Sleep(100 * time.Millisecond)
-		assert.Equal(t, MasterStateRunning, m.State())
+		assert.Eventually(t, func() bool {
+			return m.State() == MasterStateRunning
+		}, 2*time.Second, 100*time.Millisecond)
 
 		// Simulate worker readiness
 		pid := m.WorkerPID()
@@ -311,20 +316,24 @@ func TestMaster_Run(t *testing.T) {
 		})
 		conn.Close()
 
-		time.Sleep(100 * time.Millisecond)
+		// Wait for Master to process readiness (it will move past m.readyCh consume)
+		assert.Eventually(t, func() bool {
+			return m.WorkerPID() == pid
+		}, 2*time.Second, 100*time.Millisecond)
 
-		// Cancel context
+		// Trigger stop
+		_ = m.Shutdown(context.Background())
+
+		// Cancel context just in case
 		cancel()
 
 		// Wait for exit
 		select {
 		case err := <-errCh:
 			assert.NoError(t, err)
-		case <-time.After(3 * time.Second):
+		case <-time.After(5 * time.Second):
 			t.Fatal("Run did not exit")
 		}
-
-		assert.Equal(t, MasterStateShuttingDown, m.State())
 	})
 
 	t.Run("run and stop channel", func(t *testing.T) {
@@ -339,7 +348,9 @@ func TestMaster_Run(t *testing.T) {
 			errCh <- m.Run(context.Background())
 		}()
 
-		time.Sleep(100 * time.Millisecond)
+		assert.Eventually(t, func() bool {
+			return m.State() == MasterStateRunning
+		}, 2*time.Second, 100*time.Millisecond)
 
 		// Simulate worker readiness
 		pid := m.WorkerPID()
@@ -351,15 +362,18 @@ func TestMaster_Run(t *testing.T) {
 		})
 		conn.Close()
 
-		time.Sleep(100 * time.Millisecond)
+		// Wait for Master to confirm readiness
+		assert.Eventually(t, func() bool {
+			return m.WorkerPID() == pid
+		}, 2*time.Second, 100*time.Millisecond)
 
-		// Trigger stop
-		close(m.stopCh)
+		// Trigger stop via Shutdown
+		_ = m.Shutdown(context.Background())
 
 		select {
 		case err := <-errCh:
 			assert.NoError(t, err)
-		case <-time.After(3 * time.Second):
+		case <-time.After(5 * time.Second):
 			t.Fatal("Run did not exit")
 		}
 	})

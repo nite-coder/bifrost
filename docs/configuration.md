@@ -86,7 +86,6 @@ resolver:
 | hosts_file | `string`   | `/etc/hosts`             | Path of hosts file                                                     |
 | order      | `[]string` | `["last", "a", "cname"]` | Order of dns resolution                                                |
 
-
 ## providers
 
 Please refer to [providers.md](providers.md)
@@ -113,18 +112,31 @@ logging:
 
 ## metrics
 
-Monitoring indicators; currently supports `prometheus`.
+Monitoring indicators; supports both `prometheus` (pull mode) and `otlp` (push mode). Both modes can be enabled simultaneously.
 
 Example:
 
 ```yaml
 metrics:
+  # Pull mode - Prometheus format endpoint
   prometheus:
     enabled: true
     server_id: "apiv1"
     path: "/metrics"
     buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+  
+  # Push mode - OTLP exporter
+  otlp:
+    enabled: false
+    service_name: "bifrost"
+    endpoint: "otel-collector:4317"
+    protocol: "grpc"
+    interval: 15s
+    timeout: 10s
+    insecure: false
 ```
+
+### Prometheus (Pull Mode)
 
 | Field                | Type        | Default                                                                       | Description                    |
 | -------------------- | ----------- | ----------------------------------------------------------------------------- | ------------------------------ |
@@ -132,6 +144,18 @@ metrics:
 | prometheus.server_id | `string`    |                                                                               | Server  used to expose metrics |
 | prometheus.path      | `string`    | `/metrics`                                                                    | set the metric                 |
 | prometheus.buckets   | `[]float64` | `0.005`, `0.01`, `0.025`, `0.05`, `0.1`, `0.25`, `0.5`, `1`, `2.5`, `5`, `10` | Latency bucket levels          |
+
+### OTLP (Push Mode)
+
+| Field             | Type            | Default | Description                                                    |
+| ----------------- | --------------- | ------- | -------------------------------------------------------------- |
+| otlp.enabled      | `bool`          | `false` | Enables OTLP metrics export                                    |
+| otlp.service_name | `string`        |         | OpenTelemetry resource service.name attribute                  |
+| otlp.endpoint     | `string`        |         | OTLP collector endpoint (e.g., `otel-collector:4317`)          |
+| otlp.protocol     | `string`        | `grpc`  | Export protocol; supports `grpc` or `http`                     |
+| otlp.interval     | `time.Duration` | `15s`   | Push interval for metrics export                               |
+| otlp.timeout      | `time.Duration` | `10s`   | Timeout for export operations                                  |
+| otlp.insecure     | `bool`          | `false` | If true, uses insecure connection (no TLS)                     |
 
 ## tracing
 

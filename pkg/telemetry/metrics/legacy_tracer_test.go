@@ -1,4 +1,4 @@
-package prometheus
+package metrics
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-func TestPromethusTracer(t *testing.T) {
+func TestTracer(t *testing.T) {
 
 	promOpts := []Option{}
 	promOpts = append(promOpts, WithHistogramBuckets(defaultBuckets))
@@ -28,7 +28,9 @@ func TestPromethusTracer(t *testing.T) {
 		server.WithTracer(promTracer),
 	)
 
-	h.Use(NewMetricMiddleware("/metrics").ServeHTTP)
+	// Since we are testing the tracer with the default registry,
+	// we use a simple middleware that serves from DefaultGatherer
+	h.Use(NewMetricMiddleware("/metrics", nil).ServeHTTP)
 
 	h.GET("/test_get", func(c context.Context, ctx *app.RequestContext) {
 		ctx.String(200, "hello get")

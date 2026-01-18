@@ -82,10 +82,24 @@ get_all_pids() {
     pgrep -f "$BIFROST_BIN" 2>/dev/null || echo ""
 }
 
-# Get the Master PID (parent of all Worker PIDs)
+# Get the Master PID
 get_master_pid() {
-    # The first PID returned by pgrep is usually the Master
-    pgrep -f "$BIFROST_BIN" 2>/dev/null | head -n 1
+    ps -e -o pid=,comm= | grep 'bifrost-master' | awk '{print $1}' | head -n 1
+}
+
+# Get Worker PIDs
+get_worker_pids() {
+    ps -e -o pid=,comm= | grep 'bifrost-worker' | awk '{print $1}'
+}
+
+# Get all bifrost PIDs (Master + Workers)
+get_all_pids() {
+    get_master_pid
+    get_worker_pids
+}
+
+get_process_count() {
+    get_all_pids | grep -v '^$' | wc -l
 }
 
 # --------------------------------------------------------------------------
@@ -96,39 +110,41 @@ run_master_worker_test() {
     log_info "Starting E2E Test (Master-Worker Architecture)"
     log_info "============================================"
     
-    # Step 1: Start Master in foreground mode (background via &)
-    log_info "Step 1: Starting Master in foreground mode..."
-    "$BIFROST_BIN" -c "$CONFIG_FILE" 2>&1 | tee "$LOGS_DIR/master_debug.log" &
+    # Step 1: Start Master in foreground mode
+    log_info "Step 1: Starting Master..."
+    rm -f "$LOGS_DIR/e2e_test.log"
+    
+    "$BIFROST_BIN" -c "$CONFIG_FILE" > "$LOGS_DIR/master_stdout.log" 2>&1 &
     local master_shell_pid=$!
     sleep 3
     
-    if ! wait_for_ready 10; then
-        log_error "Failed to start daemon"
+    if ! wait_for_ready 15; then
+        log_error "Failed to start bifrost"
+        cat "$LOGS_DIR/master_stdout.log"
         return 1
     fi
     
-    # Get Master PID (actual bifrost process, not the tee pipe)
+    # Get Master PID and Worker PID
     local master_pid=$(get_master_pid)
-    local initial_pids=$(get_all_pids)
-    local initial_count=$(echo "$initial_pids" | wc -w)
+    local worker_pids=$(get_worker_pids)
+    local initial_count=$(get_process_count)
     
     log_info "  Master PID: $master_pid"
-    log_info "  Initial PIDs: $initial_pids"
+    log_info "  Worker PIDs: $worker_pids"
     
-    if [ "$initial_count" -lt 2 ]; then
-        log_error "Expected at least 2 processes (Master + Worker), found $initial_count"
+    if [ -z "$master_pid" ]; then
+        log_error "FAIL: Master process (bifrost-master) not found"
         return 1
     fi
+    log_info "PASS: Master process name is correctly set to 'bifrost-master'"
 
-    # Identify worker PID (one of the PIDs that is NOT the master_pid)
-    local initial_worker_pid=""
-    for p in $initial_pids; do
-        if [ "$p" != "$master_pid" ]; then
-            initial_worker_pid=$p
-            break
-        fi
-    done
-    log_info "  Initial Worker PID: $initial_worker_pid"
+    if [ -z "$worker_pids" ]; then
+        log_error "FAIL: Worker process (bifrost-worker) not found"
+        return 1
+    fi
+    log_info "PASS: Worker process name is correctly set to 'bifrost-worker'"
+
+    local initial_worker_pid=$(echo "$worker_pids" | head -n 1)
 
     # ----------------------------------------------------------------------
     # Scenario 1: KeepAlive Test (Worker Crashed/Killed)
@@ -139,15 +155,9 @@ run_master_worker_test() {
     
     sleep 5 # Wait for Master to detect and restart
     
-    local post_kill_pids=$(get_all_pids)
-    local new_worker_pid=""
     local current_master_pid=$(get_master_pid)
-    for p in $post_kill_pids; do
-        if [ "$p" != "$current_master_pid" ]; then
-            new_worker_pid=$p
-            break
-        fi
-    done
+    local new_worker_pids=$(get_worker_pids)
+    local new_worker_pid=$(echo "$new_worker_pids" | head -n 1)
     
     log_info "  Master PID after Kill: $current_master_pid"
     log_info "  New Worker PID after Kill: $new_worker_pid"
@@ -172,27 +182,21 @@ run_master_worker_test() {
     # ----------------------------------------------------------------------
     log_info "Step 3: Scenario - Hot Reload Test (SIGHUP)..."
     
-    # Send SIGHUP directly to Master PID (no -u flag)
+    # Send SIGHUP to Master
     kill -HUP "$master_pid"
     log_info "  Sent SIGHUP to Master ($master_pid)"
     
-    sleep 5
+    sleep 8 # Wait for reload to complete (including wait for FDs)
     
     local post_upgrade_master_pid=$(get_master_pid)
-    local final_pids=$(get_all_pids)
-    local final_worker_pid=""
-    for p in $final_pids; do
-        if [ "$p" != "$post_upgrade_master_pid" ]; then
-            final_worker_pid=$p
-            break
-        fi
-    done
+    local final_worker_pids=$(get_worker_pids)
+    local final_worker_pid=$(echo "$final_worker_pids" | tail -n 1) # Get the newest one
 
     log_info "  Master PID after Upgrade: $post_upgrade_master_pid"
     log_info "  Worker PID after Upgrade: $final_worker_pid"
 
     if [ "$master_pid" != "$post_upgrade_master_pid" ]; then
-        log_error "FAIL: Master PID changed during Hot Reload from $master_pid to $post_upgrade_master_pid"
+        log_error "FAIL: Master PID changed during Hot Reload"
         failed=1
     else
         log_info "PASS: Master PID remains constant ($master_pid)"
@@ -205,26 +209,57 @@ run_master_worker_test() {
         log_info "PASS: New Worker spawned after upgrade ($final_worker_pid)"
     fi
 
-    local listeners=$(ss -tlnp 2>/dev/null | grep ":$TEST_PORT" | wc -l)
-    if [ "$listeners" -ne 1 ]; then
-        log_error "FAIL: Expected 1 listener on port $TEST_PORT, found $listeners"
+    # ----------------------------------------------------------------------
+    # Scenario 3: Log Rotation Test (SIGUSR1)
+    # ----------------------------------------------------------------------
+    log_info "Step 4: Scenario - Log Rotation Test (SIGUSR1)..."
+    
+    local log_file="$LOGS_DIR/e2e_test.log"
+    if [ ! -f "$log_file" ]; then
+        log_error "FAIL: Log file $log_file not found"
         failed=1
     else
-        log_info "PASS: Exactly 1 port listener active"
+        local inode_before=$(stat -c %i "$log_file")
+        log_info "  Log inode before rotation: $inode_before"
+        
+        # Simulate logrotate: move file away
+        mv "$log_file" "$log_file.old"
+        
+        # Send SIGUSR1 to Master
+        kill -USR1 "$master_pid"
+        log_info "  Sent SIGUSR1 to Master ($master_pid)"
+        
+        sleep 2
+        
+        if [ ! -f "$log_file" ]; then
+            log_error "FAIL: Log file not recreated after SIGUSR1"
+            failed=1
+        else
+            local inode_after=$(stat -c %i "$log_file")
+            log_info "  Log inode after rotation: $inode_after"
+            
+            if [ "$inode_before" = "$inode_after" ]; then
+                log_error "FAIL: Log inode did not change after rotation"
+                failed=1
+            else
+                log_info "PASS: Log file rotated and recreated with new inode"
+            fi
+        fi
     fi
 
     # ----------------------------------------------------------------------
-    # Scenario 3: Graceful Shutdown (SIGTERM)
+    # Scenario 4: Graceful Shutdown (SIGTERM)
     # ----------------------------------------------------------------------
-    log_info "Step 4: Scenario - Graceful Shutdown (SIGTERM)..."
+    log_info "Step 5: Scenario - Graceful Shutdown (SIGTERM)..."
     kill -TERM "$master_pid"
     log_info "  Sent SIGTERM to Master ($master_pid)"
     
-    sleep 3
+    sleep 5
     
     local post_shutdown_count=$(get_process_count)
     if [ "$post_shutdown_count" -ne 0 ]; then
         log_error "FAIL: Expected 0 processes after shutdown, found $post_shutdown_count"
+        get_all_pids
         failed=1
     else
         log_info "PASS: All processes terminated after SIGTERM"

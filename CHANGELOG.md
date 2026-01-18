@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `develop_balancer.md` guide for custom balancer development and update `develop_middleware.md` to reflect `RegisterTyped` usage ([#97](https://github.com/nite-coder/bifrost/pull/97) by [0x5487](https://github.com/0x5487))
 - Add `buffering` middleware to support buffered transfer mode ([#98](https://github.com/nite-coder/bifrost/pull/98) by [0x5487](https://github.com/0x5487))
 - Add OpenSpec proposal for OpenTelemetry metrics with OTLP push mode support ([#99](https://github.com/nite-coder/bifrost/pull/99) by [0x5487](https://github.com/0x5487))
+- **Metrics refactor**: Add OTLP push mode support alongside existing Prometheus pull mode. Both modes can be enabled simultaneously. New `metrics.otlp` configuration section with `service_name`, `endpoint`, `protocol`, `interval`, `timeout`, and `insecure` options. Created new `pkg/telemetry/metrics/` package using OpenTelemetry Metrics SDK with Prometheus bridge for backward compatibility with plugin metrics.
 
 ### Refactor
 

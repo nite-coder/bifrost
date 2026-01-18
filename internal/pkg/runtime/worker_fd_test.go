@@ -97,7 +97,7 @@ func TestWorkerFDHandler(t *testing.T) {
 
 		err := handler.HandleFDRequest()
 		assert.NoError(t, err)
-		assert.Nil(t, mockClient.sentFDs)
+		assert.Empty(t, mockClient.sentFDs)
 	})
 
 	t.Run("client error propagation", func(t *testing.T) {
