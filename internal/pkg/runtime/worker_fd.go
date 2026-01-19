@@ -85,7 +85,6 @@ func (h *WorkerFDHandler) HandleFDRequest() error {
 
 	if len(files) == 0 {
 		slog.Warn("no listener FDs to transfer")
-		return nil
 	}
 
 	slog.Info("sending FDs to Master", "count", len(files))

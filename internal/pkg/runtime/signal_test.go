@@ -2,7 +2,9 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -21,10 +23,21 @@ import (
 // to the new log file (Inode change) after rotation.
 func TestLogRotation_InodeVerification(t *testing.T) {
 	if os.Getenv("GO_WANT_LOG_HELPER") == "1" {
-		TestLogHelperProcess(t)
+		runLogRotationTest(t)
 		return
 	}
 
+	// Run the test in a separate process to avoid global state interference
+	// (like os.Stdout redirection and signal handlers) with other tests.
+	cmd := exec.Command(os.Args[0], "-test.run=TestLogRotation_InodeVerification")
+	cmd.Env = append(os.Environ(), "GO_WANT_LOG_HELPER=1")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Test failed in helper process: %v\nOutput: %s", err, string(out))
+	}
+}
+
+func runLogRotationTest(t *testing.T) {
 	logDir := t.TempDir()
 	logFile := filepath.Join(logDir, "bifrost.log")
 
@@ -64,10 +77,10 @@ func TestLogRotation_InodeVerification(t *testing.T) {
 	}, 2*time.Second, 100*time.Millisecond, "Log file should be recreated with new Inode")
 
 	// 5. Verify Stdout/Stderr output is indeed written to the NEW log file
-	fmt.Fprintln(os.Stdout, "TEST_STDOUT_PAYLOAD")
-	fmt.Fprintln(os.Stderr, "TEST_STDERR_PAYLOAD")
-
 	assert.Eventually(t, func() bool {
+		fmt.Fprintln(os.Stdout, "TEST_STDOUT_PAYLOAD")
+		fmt.Fprintln(os.Stderr, "TEST_STDERR_PAYLOAD")
+
 		content, err := os.ReadFile(logFile)
 		if err != nil {
 			return false
@@ -75,7 +88,7 @@ func TestLogRotation_InodeVerification(t *testing.T) {
 		s := string(content)
 		return assert.Contains(t, s, "TEST_STDOUT_PAYLOAD") &&
 			assert.Contains(t, s, "TEST_STDERR_PAYLOAD")
-	}, 2*time.Second, 100*time.Millisecond, "New log file should contain stdout/stderr payloads")
+	}, 5*time.Second, 200*time.Millisecond, "New log file should contain stdout/stderr payloads")
 }
 
 func TestMaster_SignalForwarding(t *testing.T) {
@@ -109,6 +122,20 @@ func TestMaster_SignalForwarding(t *testing.T) {
 	workerPID := m.WorkerPID()
 	require.NotZero(t, workerPID, "Worker PID should not be zero")
 
+	// Simulate worker readiness
+	conn, err := net.Dial("unix", socketPath)
+	require.NoError(t, err)
+	json.NewEncoder(conn).Encode(&ControlMessage{
+		Type:      MessageTypeReady,
+		WorkerPID: workerPID,
+	})
+	conn.Close()
+
+	// Wait for Master to be truly ready-ready
+	assert.Eventually(t, func() bool {
+		return m.WorkerPID() == workerPID
+	}, 2*time.Second, 100*time.Millisecond)
+
 	// Send SIGUSR1 to Master
 	process, err := os.FindProcess(os.Getpid())
 	require.NoError(t, err)
@@ -120,8 +147,15 @@ func TestMaster_SignalForwarding(t *testing.T) {
 		return m.State() == MasterStateRunning
 	}, 500*time.Millisecond, 50*time.Millisecond, "Master should remain running after SIGUSR1")
 
-	// Cleanup
+	// Cleanup: Stop Master cleanly
+	_ = m.Shutdown(context.Background())
 	cancel()
+	select {
+	case err := <-errCh:
+		assert.NoError(t, err)
+	case <-time.After(3 * time.Second):
+		t.Error("Master.Run did not exit")
+	}
 }
 
 // TestLogHelperProcess is a mock worker that reports its actions

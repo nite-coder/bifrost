@@ -137,7 +137,17 @@ type K8SProviderOptions struct {
 	Enabled   bool   `yaml:"enabled" json:"enabled"`
 }
 type MetricsOptions struct {
-	Prometheus PrometheusOptions `yaml:"prometheus" json:"prometheus"`
+	Prometheus PrometheusOptions    `yaml:"prometheus" json:"prometheus"`
+	OTLP       OTLPMetricsOptions   `yaml:"otlp" json:"otlp"`
+}
+
+type OTLPMetricsOptions struct {
+	ServiceName string        `yaml:"service_name" json:"service_name"`
+	Endpoint    string        `yaml:"endpoint" json:"endpoint"`
+	Flush       time.Duration `yaml:"flush" json:"flush"`
+	Timeout     time.Duration `yaml:"timeout" json:"timeout"`
+	Insecure    bool          `yaml:"insecure" json:"insecure"`
+	Enabled     bool          `yaml:"enabled" json:"enabled"`
 }
 type LoggingOtions struct {
 	Level                    string `yaml:"level" json:"level"`

@@ -4,7 +4,7 @@ watch: false
 logging:
   handler: text
   level: info
-  output: stderr
+  output: "logs/e2e_test.log"
 
 servers:
   test_server:

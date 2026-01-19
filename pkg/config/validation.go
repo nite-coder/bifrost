@@ -553,15 +553,27 @@ func validateMetrics(options Options, isFullMode bool) error {
 			return errors.New("server_id cannot be empty for Prometheus")
 		}
 
-		if !isFullMode {
-			return nil
+		if isFullMode {
+			_, found := options.Servers[options.Metrics.Prometheus.ServerID]
+			if !found {
+				msg := "server_id '" + options.Metrics.Prometheus.ServerID + "' not found for prometheus"
+				structure := []string{"metrics", "prometheus", "server_id"}
+				return newInvalidConfig(structure, options.Metrics.Prometheus.ServerID, msg)
+			}
+		}
+	}
+
+	if options.Metrics.OTLP.Enabled {
+		if options.Metrics.OTLP.ServiceName == "" {
+			msg := "service_name cannot be empty for OTLP metrics"
+			structure := []string{"metrics", "otlp", "service_name"}
+			return newInvalidConfig(structure, "", msg)
 		}
 
-		_, found := options.Servers[options.Metrics.Prometheus.ServerID]
-		if !found {
-			msg := "server_id '" + options.Metrics.Prometheus.ServerID + "' not found for prometheus"
-			structure := []string{"metrics", "prometheus", "server_id"}
-			return newInvalidConfig(structure, options.Metrics.Prometheus.ServerID, msg)
+		if options.Metrics.OTLP.Endpoint == "" {
+			msg := "endpoint cannot be empty for OTLP metrics"
+			structure := []string{"metrics", "otlp", "endpoint"}
+			return newInvalidConfig(structure, "", msg)
 		}
 	}
 

@@ -7,7 +7,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
-	"github.com/nite-coder/bifrost/pkg/tracer/prometheus"
+	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
@@ -82,8 +82,8 @@ func newEngine(bifrost *Bifrost, serverOptions config.ServerOptions) (*Engine, e
 	}
 
 	// set prom metric middleware
-	if bifrost.options.Metrics.Prometheus.Enabled && serverOptions.ID == bifrost.options.Metrics.Prometheus.ServerID {
-		m := prometheus.NewMetricMiddleware(bifrost.options.Metrics.Prometheus.Path)
+	if (bifrost.options.Metrics.Prometheus.Enabled || bifrost.options.Metrics.OTLP.Enabled) && serverOptions.ID == bifrost.options.Metrics.Prometheus.ServerID {
+		m := metrics.NewMetricMiddleware(bifrost.options.Metrics.Prometheus.Path, bifrost.metricsProvider)
 		engine.Use(m.ServeHTTP)
 	}
 

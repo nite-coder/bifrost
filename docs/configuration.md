@@ -86,7 +86,6 @@ resolver:
 | hosts_file | `string`   | `/etc/hosts`             | Path of hosts file                                                     |
 | order      | `[]string` | `["last", "a", "cname"]` | Order of dns resolution                                                |
 
-
 ## providers
 
 Please refer to [providers.md](providers.md)
@@ -113,18 +112,30 @@ logging:
 
 ## metrics
 
-Monitoring indicators; currently supports `prometheus`.
+Monitoring indicators; supports both `prometheus` (pull mode) and `otlp` (push mode). Both modes can be enabled simultaneously.
 
 Example:
 
 ```yaml
 metrics:
+  # Pull mode - Prometheus format endpoint
   prometheus:
     enabled: true
     server_id: "apiv1"
     path: "/metrics"
     buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+  
+  # Push mode - OTLP exporter
+  otlp:
+    enabled: false
+    service_name: "bifrost"
+    endpoint: "otel-collector:4317"
+    flush: 15s
+    timeout: 10s
+    insecure: false
 ```
+
+### Prometheus (Pull Mode)
 
 | Field                | Type        | Default                                                                       | Description                    |
 | -------------------- | ----------- | ----------------------------------------------------------------------------- | ------------------------------ |
@@ -132,6 +143,17 @@ metrics:
 | prometheus.server_id | `string`    |                                                                               | Server  used to expose metrics |
 | prometheus.path      | `string`    | `/metrics`                                                                    | set the metric                 |
 | prometheus.buckets   | `[]float64` | `0.005`, `0.01`, `0.025`, `0.05`, `0.1`, `0.25`, `0.5`, `1`, `2.5`, `5`, `10` | Latency bucket levels          |
+
+### OTLP (Push Mode)
+
+| Field             | Type            | Default | Description                                                    |
+| ----------------- | --------------- | ------- | -------------------------------------------------------------- |
+| otlp.enabled      | `bool`          | `false` | Enables OTLP metrics export                                    |
+| otlp.service_name | `string`        |         | OpenTelemetry resource service.name attribute                  |
+| otlp.endpoint     | `string`        |         | OTLP collector endpoint (e.g., `otel-collector:4317`)          |
+| otlp.flush        | `time.Duration` | `15s`   | Push interval for metrics export                               |
+| otlp.timeout      | `time.Duration` | `10s`   | Timeout for export operations                                  |
+| otlp.insecure     | `bool`          | `false` | If true, uses insecure connection (no TLS)                     |
 
 ## tracing
 
@@ -158,7 +180,7 @@ tracing:
 | enabled       | `bool`          | `false`                   | Enables opentelemetry tracing support                                                                                                                               |
 | service_name  | `string`        | `bifrsot`                 | The service name of the gateway                                                                                                                                     |
 | propagators   | `[]string`      | `tracecontext`, `baggage` | The supported propagators are: `tracecontext`, `baggage`, `b3`, `jaeger`                                                                                            |
-| endpoint      | `string`        | `localhost:4318`          | The address and port of the otel collector. If the endpoint starts with `http` or `https`, it will use the HTTP protocol. Otherwise, it will use the gRPC protocol. |
+| endpoint      | `string`        | `localhost:4317`          | The address and port of the otel collector. If the endpoint starts with `http` or `https`, it will use the HTTP protocol. Otherwise, it will use the gRPC protocol. |
 | insecure      | `bool`          | `false`                   | Certificate verification                                                                                                                                            |
 | sampling_rate | `float64`       | `1.0`                     | A given fraction of traces. Fractions >= 1 will always sample. Fractions < 0 are treated as zero.                                                                   |
 | batch_size    | `int64`         | `100`                     | Maximum number of spans to be sent in a single batch export                                                                                                         |
