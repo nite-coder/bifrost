@@ -31,11 +31,11 @@
 ## 5. Testing
 
 - [x] 5.1 Write unit tests for `pkg/telemetry/metrics/provider.go`
-
 - [x] 5.3 Write integration test for Prometheus endpoint output (**verify no 500 errors**)
 - [x] 5.4 Test plugin compatibility - verify prometheus client metrics appear in Pull output
 - [x] 5.5 Test dual SDK - verify OTel SDK metrics appear in both Pull and Push
 - [x] 5.6 Run full release validation: `make release` (Unit/Integration PASS; E2E pending separate investigation)
+- [x] 5.7 Verify OTel metrics conversion to Prometheus format in `/metrics` endpoint
 
 ## Phase 1 Summary (Hybrid Strategy)
 
