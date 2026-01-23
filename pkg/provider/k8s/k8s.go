@@ -212,3 +212,7 @@ func isEndpointSliceReady(endpointSlice *discoveryv1.EndpointSlice) bool {
 
 	return len(endpointSlice.Ports) != 0
 }
+
+func (k *K8sDiscovery) Close() error {
+	return nil
+}

@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -36,6 +37,7 @@ import (
 
 var (
 	httpServerOpenConnections *prom.GaugeVec
+	initLoggerOnce            sync.Once
 )
 
 func init() {
@@ -205,10 +207,12 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 	}
 	switcher := newSwitcher(engine)
 	// hertz server
-	logger := hertzslog.NewLogger(hertzslog.WithOutput(io.Discard))
-	hlog.SetLevel(hlog.LevelError)
-	hlog.SetLogger(logger)
-	hlog.SetSilentMode(true)
+	initLoggerOnce.Do(func() {
+		logger := hertzslog.NewLogger(hertzslog.WithOutput(io.Discard))
+		hlog.SetLevel(hlog.LevelError)
+		hlog.SetLogger(logger)
+		hlog.SetSilentMode(true)
+	})
 	hzOpts = append(hzOpts, engine.hzOptions...)
 	for _, tracer := range tracers {
 		hzOpts = append(hzOpts, server.WithTracer(tracer))

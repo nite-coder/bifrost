@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/miekg/dns"
-	"github.com/nite-coder/bifrost/internal/pkg/safety"
-	"github.com/nite-coder/bifrost/pkg/provider"
 	"log/slog"
 	"net"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/miekg/dns"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
+	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
 var (
@@ -86,13 +87,26 @@ func (d *DNSServiceDiscovery) GetInstances(ctx context.Context, options provider
 func (d *DNSServiceDiscovery) Watch(ctx context.Context, options provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
 	ch := make(chan []provider.Instancer, 1)
 	go safety.Go(ctx, func() {
+		defer close(ch)
 		if d.ticker != nil {
-			for range d.ticker.C {
-				ch <- nil
+			for {
+				select {
+				case <-d.ticker.C:
+					ch <- nil
+				case <-ctx.Done():
+					return
+				}
 			}
 		}
 	})
 	return ch, nil
+}
+
+func (d *DNSServiceDiscovery) Close() error {
+	if d.ticker != nil {
+		d.ticker.Stop()
+	}
+	return nil
 }
 func (d *DNSServiceDiscovery) Lookup(ctx context.Context, host string) ([]string, error) {
 	if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]" {

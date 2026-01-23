@@ -125,6 +125,16 @@ func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 	return b.runtime.Close(ctx)
 }
 
+func (b *Bifrost) Close() error {
+	for _, service := range b.services {
+		_ = service.Close()
+	}
+	if b.resolver != nil {
+		b.resolver.Close()
+	}
+	return nil
+}
+
 // NewBifrost creates a new instance of Bifrost.
 //
 // It takes in two parameters: mainOptions of type config.Options and isReload of type bool.

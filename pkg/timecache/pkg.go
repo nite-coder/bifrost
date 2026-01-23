@@ -10,6 +10,10 @@ var (
 )
 
 func Set(timeCache *TimeCache) {
+	val, ok := cache.Load().(*TimeCache)
+	if ok && val != nil {
+		val.Close()
+	}
 	cache.Store(timeCache)
 }
 

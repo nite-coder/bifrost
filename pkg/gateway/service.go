@@ -32,6 +32,13 @@ type Service struct {
 	middlewares     []app.HandlerFunc
 }
 
+func (s *Service) Close() error {
+	for _, upstream := range s.upstreams {
+		_ = upstream.Close()
+	}
+	return nil
+}
+
 func loadServices(bifrost *Bifrost) (map[string]*Service, error) {
 	services := make(map[string]*Service)
 	var wg sync.WaitGroup

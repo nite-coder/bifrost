@@ -27,6 +27,12 @@ type Resolver struct {
 	dnsCache   *cache.Cache[string, []string]
 }
 
+func (r *Resolver) Close() {
+	if r.dnsCache != nil {
+		r.dnsCache.StopCleanup()
+	}
+}
+
 type Options struct {
 	// dns server for querying
 	Servers   []string
@@ -41,199 +47,199 @@ func NewResolver(option Options) (*Resolver, error) {
 		option.Order = []string{"last", "a", "cname"}
 	}
 
-	    if len(option.Servers) == 0 {
-			servers := GetDNSServers()
-	
-			if len(servers) == 0 {
-				return nil, fmt.Errorf("DNS: %w; cannot find DNS servers", ErrNotFound)
-			}
-	
-			for _, server := range servers {
-				option.Servers = append(option.Servers, server.String())
-			}
+	if len(option.Servers) == 0 {
+		servers := GetDNSServers()
+
+		if len(servers) == 0 {
+			return nil, fmt.Errorf("DNS: %w; cannot find DNS servers", ErrNotFound)
 		}
-	
-		newServers := make([]string, 0)
-		for _, server := range option.Servers {
-			server = strings.TrimSpace(server)
-	
-			if len(server) == 0 {
-				continue
-			}
-	
-			targetHost, targetPort, err := net.SplitHostPort(server)
-			if err != nil {
-				targetHost = server
-			}
-	
-			if len(targetPort) == 0 {
-				targetPort = "53"
-			}
-	
-			targetHost = net.JoinHostPort(targetHost, targetPort)
-			newServers = append(newServers, targetHost)
+
+		for _, server := range servers {
+			option.Servers = append(option.Servers, server.String())
 		}
-		option.Servers = newServers
-	
-		if !option.SkipTest {
-			validServers, err := ValidateDNSServer(option.Servers)
-			if err != nil {
-				return nil, err
-			}
-			option.Servers = validServers
-		}
-	
-		client := &dns.Client{
-			Timeout: option.Timeout,
-		}
-	
-		r := &Resolver{
-			options:    &option,
-			client:     client,
-			hostsCache: make(map[string][]string),
-			dnsCache:   cache.NewCache[string, []string](5 * time.Minute),
-		}
-	
-		if err := r.loadHostsFile(); err != nil {
-			return nil, fmt.Errorf("DNS: failed to load hosts file: %w", err)
-		}
-	
-		return r, nil
 	}
-	
-	func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]string) ([]string, error) {
-		if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]" {
-			return []string{"127.0.0.1"}, nil
+
+	newServers := make([]string, 0)
+	for _, server := range option.Servers {
+		server = strings.TrimSpace(server)
+
+		if len(server) == 0 {
+			continue
 		}
-	
-		ip := net.ParseIP(host)
-		if ip != nil {
-			return []string{ip.String()}, nil
+
+		targetHost, targetPort, err := net.SplitHostPort(server)
+		if err != nil {
+			targetHost = server
 		}
-	
-		// remove last dot
-		host = strings.TrimSuffix(host, ".")
-	
-		// First, check the hosts cache
-		if len(r.hostsCache) > 0 {
-			if ips, ok := r.hostsCache[host]; ok && len(ips) > 0 {
+
+		if len(targetPort) == 0 {
+			targetPort = "53"
+		}
+
+		targetHost = net.JoinHostPort(targetHost, targetPort)
+		newServers = append(newServers, targetHost)
+	}
+	option.Servers = newServers
+
+	if !option.SkipTest {
+		validServers, err := ValidateDNSServer(option.Servers)
+		if err != nil {
+			return nil, err
+		}
+		option.Servers = validServers
+	}
+
+	client := &dns.Client{
+		Timeout: option.Timeout,
+	}
+
+	r := &Resolver{
+		options:    &option,
+		client:     client,
+		hostsCache: make(map[string][]string),
+		dnsCache:   cache.NewCache[string, []string](5 * time.Minute),
+	}
+
+	if err := r.loadHostsFile(); err != nil {
+		return nil, fmt.Errorf("DNS: failed to load hosts file: %w", err)
+	}
+
+	return r, nil
+}
+
+func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]string) ([]string, error) {
+	if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]" {
+		return []string{"127.0.0.1"}, nil
+	}
+
+	ip := net.ParseIP(host)
+	if ip != nil {
+		return []string{ip.String()}, nil
+	}
+
+	// remove last dot
+	host = strings.TrimSuffix(host, ".")
+
+	// First, check the hosts cache
+	if len(r.hostsCache) > 0 {
+		if ips, ok := r.hostsCache[host]; ok && len(ips) > 0 {
+			return ips, nil
+		}
+	}
+
+	if len(queryOrder) == 0 {
+		queryOrder = [][]string{r.options.Order}
+	}
+
+	for _, order := range queryOrder[0] {
+		order = strings.TrimSpace(order)
+		switch strings.ToLower(order) {
+		case "last":
+			if ips, ok := r.dnsCache.Get(host); ok {
 				return ips, nil
 			}
-		}
-	
-		if len(queryOrder) == 0 {
-			queryOrder = [][]string{r.options.Order}
-		}
-	
-		for _, order := range queryOrder[0] {
-			order = strings.TrimSpace(order)
-			switch strings.ToLower(order) {
-			case "last":
-				if ips, ok := r.dnsCache.Get(host); ok {
-					return ips, nil
+		case "a":
+			// A record
+			var ips []string
+			var minTTL uint32 = 0
+
+			m := new(dns.Msg)
+			m.SetQuestion(dns.Fqdn(host), dns.TypeA)
+
+			for _, server := range r.options.Servers {
+				in, _, err := r.client.ExchangeContext(ctx, m, server)
+				if err != nil {
+					slog.Debug("dns: failed to resolve A record", "host", host, "server", server, "error", err)
+					continue
 				}
-			case "a":
-				// A record
-				var ips []string
-				var minTTL uint32 = 0
-	
-				m := new(dns.Msg)
-				m.SetQuestion(dns.Fqdn(host), dns.TypeA)
-	
-				for _, server := range r.options.Servers {
-					in, _, err := r.client.ExchangeContext(ctx, m, server)
-					if err != nil {
-						slog.Debug("dns: failed to resolve A record", "host", host, "server", server, "error", err)
-						continue
-					}
-	
-					for _, answer := range in.Answer {
-						if a, ok := answer.(*dns.A); ok {
-							ips = append(ips, a.A.String())
-	
-							if minTTL == 0 || a.Hdr.Ttl < minTTL {
-								minTTL = a.Hdr.Ttl
-							}
+
+				for _, answer := range in.Answer {
+					if a, ok := answer.(*dns.A); ok {
+						ips = append(ips, a.A.String())
+
+						if minTTL == 0 || a.Hdr.Ttl < minTTL {
+							minTTL = a.Hdr.Ttl
 						}
 					}
-	
-					if len(ips) == 0 {
-						continue
-					}
-	
-					ttlDuration := time.Duration(minTTL) * time.Second
-					r.dnsCache.PutWithTTL(host, ips, ttlDuration)
-					break
 				}
-	
-				if len(ips) > 0 {
-					ips = slices.Compact(ips)
-					return ips, nil
+
+				if len(ips) == 0 {
+					continue
 				}
-			case "cname":
-				// CNAME record
-				var ips []string
-				var minTTL uint32 = 0
-	
-				m := new(dns.Msg)
-				m.SetQuestion(dns.Fqdn(host), dns.TypeCNAME)
-	
-				for _, server := range r.options.Servers {
-					in, _, err := r.client.ExchangeContext(ctx, m, server)
-					if err != nil {
-						slog.Debug("dns: failed to resolve CNAME record", "host", host, "server", server, "error", err)
-						continue
-					}
-	
-					for _, answer := range in.Answer {
-						if cname, ok := answer.(*dns.CNAME); ok {
-							resolvedIPs, err := r.Lookup(ctx, cname.Target, []string{"a"})
-							if err != nil {
-								slog.Debug("dns: failed to resolve CNAME record", "host", cname.String(), "server", server, "error", err)
-								continue
-							}
-	
-							ips = append(ips, resolvedIPs...)
-	
-							if minTTL == 0 || cname.Hdr.Ttl < minTTL {
-								minTTL = cname.Hdr.Ttl
-							}
-						}
-					}
-	
-					if len(ips) == 0 {
-						continue
-					}
-	
-					ttlDuration := time.Duration(minTTL) * time.Second
-					r.dnsCache.PutWithTTL(host, ips, ttlDuration)
-				}
-	
-				if len(ips) > 0 {
-					ips = slices.Compact(ips)
-					return ips, nil
-				}
-			default:
-				return nil, fmt.Errorf("DNS: unknown order '%s'", order)
+
+				ttlDuration := time.Duration(minTTL) * time.Second
+				r.dnsCache.PutWithTTL(host, ips, ttlDuration)
+				break
 			}
-	
+
+			if len(ips) > 0 {
+				ips = slices.Compact(ips)
+				return ips, nil
+			}
+		case "cname":
+			// CNAME record
+			var ips []string
+			var minTTL uint32 = 0
+
+			m := new(dns.Msg)
+			m.SetQuestion(dns.Fqdn(host), dns.TypeCNAME)
+
+			for _, server := range r.options.Servers {
+				in, _, err := r.client.ExchangeContext(ctx, m, server)
+				if err != nil {
+					slog.Debug("dns: failed to resolve CNAME record", "host", host, "server", server, "error", err)
+					continue
+				}
+
+				for _, answer := range in.Answer {
+					if cname, ok := answer.(*dns.CNAME); ok {
+						resolvedIPs, err := r.Lookup(ctx, cname.Target, []string{"a"})
+						if err != nil {
+							slog.Debug("dns: failed to resolve CNAME record", "host", cname.String(), "server", server, "error", err)
+							continue
+						}
+
+						ips = append(ips, resolvedIPs...)
+
+						if minTTL == 0 || cname.Hdr.Ttl < minTTL {
+							minTTL = cname.Hdr.Ttl
+						}
+					}
+				}
+
+				if len(ips) == 0 {
+					continue
+				}
+
+				ttlDuration := time.Duration(minTTL) * time.Second
+				r.dnsCache.PutWithTTL(host, ips, ttlDuration)
+			}
+
+			if len(ips) > 0 {
+				ips = slices.Compact(ips)
+				return ips, nil
+			}
+		default:
+			return nil, fmt.Errorf("DNS: unknown order '%s'", order)
 		}
-	
-		return nil, fmt.Errorf("DNS: %w; cannot resolve '%s'", ErrNotFound, host)
+
 	}
-	
-	func (r *Resolver) loadHostsFile() error {
-		if len(r.options.Hostsfile) == 0 {
-			if _, err := os.Stat("/etc/hosts"); errors.Is(err, os.ErrNotExist) {
-				return nil
-			}
-	
-			r.options.Hostsfile = "/etc/hosts"
+
+	return nil, fmt.Errorf("DNS: %w; cannot resolve '%s'", ErrNotFound, host)
+}
+
+func (r *Resolver) loadHostsFile() error {
+	if len(r.options.Hostsfile) == 0 {
+		if _, err := os.Stat("/etc/hosts"); errors.Is(err, os.ErrNotExist) {
+			return nil
 		}
-	
-		if _, err := os.Stat(r.options.Hostsfile); errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("DNS: hosts file '%s' not found", r.options.Hostsfile)
-		}
+
+		r.options.Hostsfile = "/etc/hosts"
+	}
+
+	if _, err := os.Stat(r.options.Hostsfile); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("DNS: hosts file '%s' not found", r.options.Hostsfile)
+	}
 	file, err := os.Open(r.options.Hostsfile)
 	if err != nil {
 		return err

@@ -53,6 +53,17 @@ type Upstream struct {
 	options        *config.UpstreamOptions
 	serviceOptions *config.ServiceOptions
 	watchOnce      sync.Once
+	cancel         context.CancelFunc
+}
+
+func (u *Upstream) Close() error {
+	if u.cancel != nil {
+		u.cancel()
+	}
+	if u.discovery != nil {
+		return u.discovery.Close()
+	}
+	return nil
 }
 
 func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstreamOptions config.UpstreamOptions) (*Upstream, error) {
@@ -351,7 +362,9 @@ func (u *Upstream) watch() {
 		options := provider.GetInstanceOptions{
 			Name: u.options.Discovery.Name,
 		}
-		watchCh, err := u.discovery.Watch(context.Background(), options)
+		ctx, cancel := context.WithCancel(context.Background())
+		u.cancel = cancel
+		watchCh, err := u.discovery.Watch(ctx, options)
 		if err != nil {
 			slog.Error("failed to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
 			return
