@@ -69,3 +69,7 @@ func (d *ResolverDiscovery) GetInstances(ctx context.Context, options provider.G
 func (d *ResolverDiscovery) Watch(ctx context.Context, options provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
 	return nil, nil
 }
+
+func (d *ResolverDiscovery) Close() error {
+	return nil
+}

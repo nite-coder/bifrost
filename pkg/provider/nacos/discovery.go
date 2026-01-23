@@ -18,6 +18,8 @@ import (
 type NacosServiceDiscovery struct {
 	client  naming_client.INamingClient
 	options *Options
+	stopCh  chan struct{}
+	watchCh chan []provider.Instancer
 }
 
 func NewNacosServiceDiscovery(options Options) (*NacosServiceDiscovery, error) {
@@ -118,6 +120,8 @@ func (d *NacosServiceDiscovery) GetInstances(ctx context.Context, options provid
 
 func (d *NacosServiceDiscovery) Watch(ctx context.Context, options provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
 	ch := make(chan []provider.Instancer, 1)
+	d.watchCh = ch
+	d.stopCh = make(chan struct{})
 
 	err := d.client.Subscribe(&vo.SubscribeParam{
 		ServiceName: options.Name,
@@ -128,7 +132,11 @@ func (d *NacosServiceDiscovery) Watch(ctx context.Context, options provider.GetI
 			}
 
 			instances := ToProviderInstance(nacosInstances)
-			ch <- instances
+			// Non-blocking send to prevent goroutine blocking when channel is full or closed
+			select {
+			case ch <- instances:
+			default:
+			}
 		},
 	})
 
@@ -137,4 +145,15 @@ func (d *NacosServiceDiscovery) Watch(ctx context.Context, options provider.GetI
 	}
 
 	return ch, nil
+}
+
+func (d *NacosServiceDiscovery) Close() error {
+	if d.stopCh != nil {
+		close(d.stopCh)
+	}
+	d.client.CloseClient()
+	if d.watchCh != nil {
+		close(d.watchCh)
+	}
+	return nil
 }

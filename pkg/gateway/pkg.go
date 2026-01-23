@@ -168,9 +168,22 @@ func Run(mainOptions config.Options) (err error) {
 			newHTTPServer, found := newBifrost.httpServers[id]
 			if found && httpServer.Bind() == newHTTPServer.Bind() {
 				httpServer.SetEngine(newHTTPServer.Engine())
-				isReloaded = true
 				_ = newHTTPServer.Shutdown(ctx)
+				isReloaded = true
 			}
+		}
+
+		if oldBifrost != nil {
+			_ = oldBifrost.Close()
+
+			// Update oldBifrost with new resources to prevent leak in next reload
+			// and to ensure GetBifrost() returns correct data
+			oldBifrost.services = newBifrost.services
+			oldBifrost.resolver = newBifrost.resolver
+			oldBifrost.middlewares = newBifrost.middlewares
+			oldBifrost.options = newBifrost.options
+			// Note: tracer/metrics providers are not updated here as they are not re-created on reload
+			// or are handled differently (tracer created but maybe not easily swappable without restart)
 		}
 
 		slog.Log(ctx, log.LevelNotice, "bifrost is reloaded successfully", "isReloaded", isReloaded)

@@ -11,6 +11,7 @@ import (
 type TimeCache struct {
 	t        atomic.Value
 	interval time.Duration
+	stopCh   chan struct{}
 }
 
 // New returns a new TimeCache instance with the specified interval.
@@ -27,6 +28,7 @@ func New(interval time.Duration) *TimeCache {
 
 	tc := &TimeCache{
 		interval: interval,
+		stopCh:   make(chan struct{}),
 	}
 
 	tc.t.Store(time.Now())
@@ -42,9 +44,20 @@ func (tc *TimeCache) Now() time.Time {
 	return tc.t.Load().(time.Time)
 }
 
+func (tc *TimeCache) Close() {
+	close(tc.stopCh)
+}
+
 func (tc *TimeCache) refresh() {
-	ticker := time.NewTicker(tc.interval)
-	for range ticker.C {
-		tc.t.Store(time.Now())
+	ticker := time.NewTicker(tc.interval) 
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			tc.t.Store(time.Now())
+		case <-tc.stopCh:
+			return
+		}
 	}
 }

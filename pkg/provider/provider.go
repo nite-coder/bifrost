@@ -18,6 +18,7 @@ type GetInstanceOptions struct {
 type ServiceDiscovery interface {
 	GetInstances(ctx context.Context, options GetInstanceOptions) ([]Instancer, error)
 	Watch(ctx context.Context, options GetInstanceOptions) (<-chan []Instancer, error)
+	Close() error
 }
 type Instancer interface {
 	Address() net.Addr

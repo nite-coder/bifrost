@@ -276,6 +276,10 @@ func (m *mockErrorDiscovery) Watch(ctx context.Context, opts provider.GetInstanc
 	return nil, assert.AnError
 }
 
+func (m *mockErrorDiscovery) Close() error {
+	return nil
+}
+
 // TestWatchErrorHandling verifies that watch() returns early when Watch() fails
 func TestWatchErrorHandling(t *testing.T) {
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
