@@ -20,4 +20,5 @@ type Proxy interface {
 	ServeHTTP(c context.Context, ctx *app.RequestContext)
 	Tag(key string) (value string, exist bool)
 	Tags() map[string]string
+	Close() error
 }

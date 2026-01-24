@@ -60,6 +60,16 @@ func (u *Upstream) Close() error {
 	if u.cancel != nil {
 		u.cancel()
 	}
+
+	// Close all proxies in the balancer
+	if b := u.Balancer(); b != nil {
+		for _, p := range b.Proxies() {
+			if p != nil {
+				_ = p.Close()
+			}
+		}
+	}
+
 	if u.discovery != nil {
 		return u.discovery.Close()
 	}
@@ -341,6 +351,13 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	for hash, newProxy := range newProxyHashes {
 		if _, found := oldProxyHashes[hash]; !found {
 			updatedProxies = append(updatedProxies, newProxy)
+		}
+	}
+
+	// Close old proxies that are no longer used
+	for hash, oldProxy := range oldProxyHashes {
+		if _, found := newProxyHashes[hash]; !found {
+			_ = oldProxy.Close()
 		}
 	}
 
