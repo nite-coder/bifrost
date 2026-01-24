@@ -101,9 +101,10 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 	if bifrost.options.Metrics.Prometheus.Enabled {
 		go safety.Go(context.Background(), func() {
 			ticker := time.NewTicker(time.Second * 10)
+			defer ticker.Stop()
 			for range ticker.C {
 				if !httpServer.isActive.Load() {
-					break
+					return
 				}
 				labels := make(prom.Labels)
 				labels["server_id"] = serverOptions.ID

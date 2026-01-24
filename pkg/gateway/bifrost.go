@@ -58,6 +58,7 @@ func (b *Bifrost) ZeroDownTime() *runtime.ZeroDownTime {
 func (b *Bifrost) Shutdown(ctx context.Context) error {
 	return b.shutdown(ctx, false)
 }
+
 func (b *Bifrost) ShutdownNow(ctx context.Context) error {
 	return b.shutdown(ctx, true)
 }
@@ -114,6 +115,8 @@ func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 	}
 	waitTimeout(wg, maxTimeout)
 
+	_ = b.Close()
+
 	if b.tracerProvider != nil {
 		_ = b.tracerProvider.Shutdown(ctx)
 	}
@@ -129,9 +132,11 @@ func (b *Bifrost) Close() error {
 	for _, service := range b.services {
 		_ = service.Close()
 	}
+
 	if b.resolver != nil {
 		b.resolver.Close()
 	}
+
 	return nil
 }
 
@@ -141,7 +146,7 @@ func (b *Bifrost) Close() error {
 // The mainOptions parameter contains the main configuration options for the Bifrost instance.
 // The isReload parameter indicates whether the function is being called during a reload operation.
 // The function returns a pointer to Bifrost and an error.
-func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
+func NewBifrost(mainOptions config.Options, isReload bool) (bifrost *Bifrost, err error) {
 	tCache := timecache.New(mainOptions.TimerResolution)
 	timecache.Set(tCache)
 
@@ -154,11 +159,22 @@ func NewBifrost(mainOptions config.Options, isReload bool) (*Bifrost, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	defer func() {
+		if err != nil {
+			if bifrost != nil {
+				_ = bifrost.ShutdownNow(context.Background())
+			} else if dnsResolver != nil {
+				dnsResolver.Close()
+			}
+		}
+	}()
+
 	middlewares, err := loadMiddlewares(mainOptions.Middlewares)
 	if err != nil {
 		return nil, err
 	}
-	bifrost := &Bifrost{
+	bifrost = &Bifrost{
 		options:     &mainOptions,
 		middlewares: middlewares,
 		resolver:    dnsResolver,

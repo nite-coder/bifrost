@@ -369,7 +369,12 @@ func (u *Upstream) watch() {
 			slog.Error("failed to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
 			return
 		}
-		go safety.Go(context.Background(), func() {
+
+		if watchCh == nil {
+			return
+		}
+
+		go safety.Go(ctx, func() {
 			for instances := range watchCh {
 				err := u.refreshProxies(instances)
 				if err != nil {
@@ -411,6 +416,10 @@ func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[str
 
 	for err := range errCh {
 		if err != nil {
+			// cleanup
+			for _, upstream := range upstreams {
+				_ = upstream.Close()
+			}
 			return nil, err // Return the first error encountered
 		}
 	}

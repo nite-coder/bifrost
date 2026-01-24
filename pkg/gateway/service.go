@@ -36,6 +36,20 @@ func (s *Service) Close() error {
 	for _, upstream := range s.upstreams {
 		_ = upstream.Close()
 	}
+
+	if s.upstream != nil {
+		found := false
+		for _, u := range s.upstreams {
+			if u == s.upstream {
+				found = true
+				break
+			}
+		}
+		if !found {
+			_ = s.upstream.Close()
+		}
+	}
+
 	return nil
 }
 
@@ -80,6 +94,10 @@ func loadServices(bifrost *Bifrost) (map[string]*Service, error) {
 
 	for err := range errCh {
 		if err != nil {
+			// cleanup
+			for _, svc := range services {
+				_ = svc.Close()
+			}
 			return nil, err // Return the first error encountered
 		}
 	}
