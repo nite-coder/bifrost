@@ -54,7 +54,6 @@ const (
 	UpstreamRequestURI          = "$upstream.request.uri"
 	UpstreamRequestProtocol     = "$upstream.request.protocol"
 	UpstreamDuration            = "$upstream.duration"
-	UpstreamConnAcquisitionTime = "$upstream.conn_acquisition_time"
 	UpstreamResponoseStatusCode = "$upstream.response.status_code"
 	Allow                       = "$allow"
 	ClientIP                    = "$client_ip"

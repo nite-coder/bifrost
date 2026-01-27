@@ -46,7 +46,7 @@ The currently supports the following directives:
 | `$upstream.request.protocol`      | Upstream request protocol                                                                                               | `HTTP/1.1`                              |
 | `$upstream.response.status_code`  | Upstream response status code                                                                                           | `200`                                   |
 | `$upstream.duration`              | Time taken to process the upstream request (use timecache)                                                              | `0.125`                                 |
-| `$upstream.conn_acquisition_time` | Time taken to get the upstream connection                                                                               | `0.125`                                 |
+
 | `$grpc.status_code`               | GRPC STATUS CODE returned by the upstream target                                                                        | `0`                                     |
 | `$grpc.messaage`                  | GRPC Message returned by the upstream target                                                                            | `OK`                                    |
 | `$env.<key>`                      | Allow to get value from environment variables                                                                           | `$env.your_pass`                        |
