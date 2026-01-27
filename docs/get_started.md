@@ -40,33 +40,32 @@ Forward all HTTP requests to the backend upstream services. With two upstream se
         - target: "127.0.0.1:8000"
   ```
 
-2. Create a `main.go` file.
+1. Create a `main.go` file.
 
  ```Go
 package main
 
 import (
-	"os"
+ "os"
 
-	"github.com/nite-coder/bifrost"
+ "github.com/nite-coder/bifrost"
 )
 
 func main() {
-	err := bifrost.Run()
-	if err != nil {
-		os.Exit(1)
-	}
+ err := bifrost.Run()
+ if err != nil {
+  os.Exit(1)
+ }
 }
  ```
 
-3. Modify your `go.mod` by adding the following two lines.
+1. Modify your `go.mod` by adding the following line.
 
 ```sh
-replace github.com/cloudwego/hertz => github.com/nite-coder/hertz v0.10.1
 replace github.com/hertz-contrib/http2 => github.com/nite-coder/http2 v0.1.8
 ```
 
-4. Run
+1. Run
 
  ```shell
  go run .
@@ -92,4 +91,3 @@ BIFROST_SINGLE_PROCESS=true go run .
 ```
 
 This mode skips the process management logic and runs the gateway directly in your current process, making it ideal for development and debugging.
-

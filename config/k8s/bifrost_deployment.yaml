@@ -63,8 +63,7 @@ data:
           "upstream_status":"$upstream.response.status_code",
           "status":"$http.response.status_code",
           "user_id": $var.user_id,
-          "duration":"$http.request.duration",
-          "conn_acquisition_time":"$upstream.conn_acquisition_time"}
+          "duration":"$http.request.duration"}
 
     servers:
       apiv1:
