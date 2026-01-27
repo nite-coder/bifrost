@@ -12,6 +12,7 @@ import (
 	"github.com/hertz-contrib/http2/factory"
 	"github.com/nite-coder/bifrost/proto"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -142,7 +143,7 @@ func TestGRPCProxy(t *testing.T) {
 			grpc.Header(&header),
 			grpc.Trailer(&trailer))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "Hello Bifrost", resp.Message)
 		assert.Equal(t, "bifrost", header["server-name"][0])
 	})

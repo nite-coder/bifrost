@@ -8,11 +8,11 @@ tool (
 )
 
 require (
-	github.com/bytedance/sonic v1.14.0
-	github.com/cloudwego/gjson v0.1.0
-	github.com/cloudwego/gopkg v0.1.5
-	github.com/cloudwego/hertz v0.10.1
-	github.com/cloudwego/netpoll v0.7.1
+	github.com/bytedance/sonic v1.15.0
+	github.com/cloudwego/gjson v0.1.1
+	github.com/cloudwego/gopkg v0.1.8
+	github.com/cloudwego/hertz v0.10.4
+	github.com/cloudwego/netpoll v0.7.2
 	github.com/corazawaf/coraza-coreruleset/v4 v4.20.0
 	github.com/corazawaf/coraza/v3 v3.3.3
 	github.com/coreos/go-systemd/v22 v22.6.0
@@ -124,8 +124,8 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/butuzov/ireturn v0.4.0 // indirect
 	github.com/butuzov/mirror v1.3.0 // indirect
-	github.com/bytedance/gopkg v0.1.2 // indirect
-	github.com/bytedance/sonic/loader v0.3.0 // indirect
+	github.com/bytedance/gopkg v0.1.3 // indirect
+	github.com/bytedance/sonic/loader v0.5.0 // indirect
 	github.com/catenacyber/perfsprint v0.10.1 // indirect
 	github.com/ccojocar/zxcvbn-go v1.0.4 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
@@ -139,7 +139,7 @@ require (
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/ckaznocha/intrange v0.3.1 // indirect
 	github.com/clbanning/mxj/v2 v2.5.5 // indirect
-	github.com/cloudwego/base64x v0.1.5 // indirect
+	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
@@ -230,7 +230,7 @@ require (
 	github.com/kisielk/errcheck v1.9.0 // indirect
 	github.com/kkHAIKE/contextcheck v1.1.6 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.9 // indirect
 	github.com/kulti/thelper v0.7.1 // indirect
 	github.com/kunwardeep/paralleltest v1.0.15 // indirect
 	github.com/lasiar/canonicalheader v1.1.2 // indirect
@@ -275,7 +275,6 @@ require (
 	github.com/nishanths/exhaustive v0.12.0 // indirect
 	github.com/nishanths/predeclared v0.2.2 // indirect
 	github.com/nunnatsa/ginkgolinter v0.21.2 // indirect
-	github.com/nyaruka/phonenumbers v1.4.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/orcaman/concurrent-map v0.0.0-20210501183033-44dafcb38ecc // indirect
@@ -388,7 +387,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace (
-	github.com/cloudwego/hertz v0.10.1 => github.com/nite-coder/hertz v0.10.1
-	github.com/hertz-contrib/http2 v0.1.8 => github.com/nite-coder/http2 v0.1.8
-)
+replace github.com/hertz-contrib/http2 => github.com/nite-coder/http2 v0.1.8
