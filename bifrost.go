@@ -186,8 +186,17 @@ func runMasterMode(mainOptions config.Options) error {
 
 	slog.Debug("starting in Master-Worker mode", "pid", os.Getpid())
 
+	// Check for necessary privileges if User/Group is configured
+	if mainOptions.User != "" || mainOptions.Group != "" {
+		if os.Geteuid() != 0 {
+			return fmt.Errorf("need root privileges to switch user/group: please run as root or remove user/group from configuration")
+		}
+	}
+
 	masterOpts := &runtime.MasterOptions{
 		ConfigPath: mainOptions.ConfigPath(),
+		User:       mainOptions.User,
+		Group:      mainOptions.Group,
 	}
 
 	master := runtime.NewMaster(masterOpts)
