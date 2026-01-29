@@ -18,7 +18,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/cloudwego/hertz/pkg/protocol/http1/resp"
-	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/websocket"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
@@ -81,8 +80,6 @@ func main() {
 	hlog.SetLevel(hlog.LevelError)
 	hlog.SetLogger(logger)
 	hlog.SetSilentMode(true)
-
-	h.AddProtocol("h2", factory.NewServerFactory())
 
 	h.POST("/", echoHandler)
 	h.Any("/spot/order", placeOrderHandler)

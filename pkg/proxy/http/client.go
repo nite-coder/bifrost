@@ -5,8 +5,6 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app/client"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
-	http2Config "github.com/hertz-contrib/http2/config"
-	"github.com/hertz-contrib/http2/factory"
 )
 
 func DefaultClientOptions() []hzconfig.ClientOption {
@@ -36,7 +34,7 @@ func NewClient(opts ClientOptions) (*client.Client, error) {
 		return nil, err
 	}
 	if opts.IsHTTP2 {
-		c.SetClientFactory(factory.NewClientFactory(http2Config.WithAllowHTTP(true)))
+		c.SetClientFactory(NewClientFactory())
 	}
 	return c, nil
 }

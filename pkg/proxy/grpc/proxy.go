@@ -275,10 +275,6 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	c.Set(variable.GRPCStatusCode, codes.OK)
 
-	// If there is no trailer, set the grpc-status header to 0
-	if trailer.Len() == 0 {
-		_ = c.Response.Header.Trailer().Set("grpc-status", "0")
-	}
 	// Build the http frame
 	frame := make([]byte, len(respBody)+5)
 	// Set the first byte to 0, indicating no compression
@@ -294,12 +290,16 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	binary.BigEndian.PutUint32(frame[1:5], uint32(val))
 	// Copy the response body to the frame
 	copy(frame[5:], respBody)
+
 	// Iterate over the header and trailer metadata and add them to the response headers
 	for k, v := range header {
 		for _, vv := range v {
 			c.Response.Header.Add(k, vv)
 		}
 	}
+
+	// Always ensure grpc-status is present in trailers
+	_ = c.Response.Header.Trailer().Set("grpc-status", "0")
 	for k, v := range trailer {
 		for _, vv := range v {
 			_ = c.Response.Header.Trailer().Set(k, vv)
