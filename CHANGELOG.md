@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Fixed
 
 - Fixed goroutine leak during hot reload by properly closing `TimeCache`, `Resolver`, and `Upstream` resources ([#102](https://github.com/nite-coder/bifrost/pull/102) by [0x5487](https://github.com/0x5487))
+- Fixed worker processes not starting with the configured user and group ([#104](https://github.com/nite-coder/bifrost/pull/104) by [0x5487](https://github.com/0x5487))
 
 ## Changed
 

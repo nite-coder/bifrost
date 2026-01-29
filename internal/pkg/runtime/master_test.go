@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"os/user"
 	"path/filepath"
 	"syscall"
 	"testing"
@@ -197,6 +198,126 @@ func TestMaster_SpawnWorker(t *testing.T) {
 		cmd, err := m.spawnWorker(context.Background(), nil, nil)
 		assert.Error(t, err)
 		assert.Nil(t, cmd)
+	})
+}
+
+func TestMaster_SpawnWorker_UserGroup(t *testing.T) {
+	// Swap execCommandContext
+	oldExec := execCommandContext
+	execCommandContext = fakeExecCommandContext
+	defer func() { execCommandContext = oldExec }()
+
+	// Swap startCommand
+	oldStart := startCommand
+	startCommand = func(cmd *exec.Cmd) error {
+		if cmd.Process == nil {
+			cmd.Process = &os.Process{Pid: 12345}
+		}
+		return nil
+	}
+	defer func() { startCommand = oldStart }()
+
+	// Mock User/Group lookup
+	oldLookupUser := lookupUser
+	oldLookupGroup := lookupGroup
+	defer func() {
+		lookupUser = oldLookupUser
+		lookupGroup = oldLookupGroup
+	}()
+
+	mockUsers := map[string]*user.User{
+		"testuser":  {Uid: "1001", Gid: "1001"},
+		"otheruser": {Uid: "1002", Gid: "1002"},
+	}
+	mockGroups := map[string]*user.Group{
+		"testgroup":  {Gid: "2001"},
+		"othergroup": {Gid: "2002"},
+	}
+
+	lookupUser = func(username string) (*user.User, error) {
+		if u, ok := mockUsers[username]; ok {
+			return u, nil
+		}
+		return nil, user.UnknownUserError(username)
+	}
+
+	lookupGroup = func(name string) (*user.Group, error) {
+		if g, ok := mockGroups[name]; ok {
+			return g, nil
+		}
+		return nil, user.UnknownGroupError(name)
+	}
+
+	t.Run("user only (use primary group)", func(t *testing.T) {
+		m := NewMaster(&MasterOptions{
+			Binary: "test",
+			User:   "testuser",
+		})
+		m.controlPlane = NewControlPlane(nil)
+
+		cmd, err := m.spawnWorker(context.Background(), nil, nil)
+		require.NoError(t, err)
+		require.NotNil(t, cmd.SysProcAttr)
+		require.NotNil(t, cmd.SysProcAttr.Credential)
+		assert.Equal(t, uint32(1001), cmd.SysProcAttr.Credential.Uid)
+		assert.Equal(t, uint32(1001), cmd.SysProcAttr.Credential.Gid)
+	})
+
+	t.Run("group only (keep current uid, change gid)", func(t *testing.T) {
+		m := NewMaster(&MasterOptions{
+			Binary: "test",
+			Group:  "testgroup",
+		})
+		m.controlPlane = NewControlPlane(nil)
+
+		currentUID := os.Getuid()
+		cmd, err := m.spawnWorker(context.Background(), nil, nil)
+		require.NoError(t, err)
+		require.NotNil(t, cmd.SysProcAttr)
+		require.NotNil(t, cmd.SysProcAttr.Credential)
+		assert.Equal(t, uint32(currentUID), cmd.SysProcAttr.Credential.Uid)
+		assert.Equal(t, uint32(2001), cmd.SysProcAttr.Credential.Gid)
+	})
+
+	t.Run("user and group", func(t *testing.T) {
+		m := NewMaster(&MasterOptions{
+			Binary: "test",
+			User:   "testuser",
+			Group:  "testgroup",
+		})
+		m.controlPlane = NewControlPlane(nil)
+
+		cmd, err := m.spawnWorker(context.Background(), nil, nil)
+		require.NoError(t, err)
+		require.NotNil(t, cmd.SysProcAttr)
+		require.NotNil(t, cmd.SysProcAttr.Credential)
+		assert.Equal(t, uint32(1001), cmd.SysProcAttr.Credential.Uid)
+		assert.Equal(t, uint32(2001), cmd.SysProcAttr.Credential.Gid)
+	})
+
+	t.Run("neither (inherit)", func(t *testing.T) {
+		m := NewMaster(&MasterOptions{
+			Binary: "test",
+		})
+		m.controlPlane = NewControlPlane(nil)
+
+		cmd, err := m.spawnWorker(context.Background(), nil, nil)
+		require.NoError(t, err)
+		// Assuming default behavior is nil SysProcAttr or nil Credential if not set
+		if cmd.SysProcAttr != nil {
+			assert.Nil(t, cmd.SysProcAttr.Credential)
+		}
+	})
+
+	t.Run("invalid user", func(t *testing.T) {
+		m := NewMaster(&MasterOptions{
+			Binary: "test",
+			User:   "invalid",
+		})
+		m.controlPlane = NewControlPlane(nil)
+
+		_, err := m.spawnWorker(context.Background(), nil, nil)
+		assert.Error(t, err)
 	})
 }
 

@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"os/user"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -17,10 +19,22 @@ import (
 
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/log"
+	"github.com/nite-coder/blackbear/pkg/cast"
+)
+
+// Allow mocking for tests
+var (
+	lookupUser  = user.Lookup
+	lookupGroup = user.LookupGroup
 )
 
 // execCommandContext allows mocking exec.CommandContext in tests.
 var execCommandContext = exec.CommandContext
+
+// startCommand allows mocking cmd.Start in tests.
+var startCommand = func(cmd *exec.Cmd) error {
+	return cmd.Start()
+}
 
 // Environment variable used to identify worker processes.
 const EnvBifrostRole = "BIFROST_ROLE"
@@ -70,6 +84,10 @@ type MasterOptions struct {
 	GracefulTimeout time.Duration
 	// KeepAlive is the KeepAlive strategy configuration.
 	KeepAlive *KeepAliveOptions
+	// User to run worker as
+	User string
+	// Group to run worker as
+	Group string
 }
 
 // Master manages the lifecycle of Worker processes.
@@ -342,6 +360,69 @@ func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File, keys []
 
 	cmd := execCommandContext(ctx, m.options.Binary, args...)
 
+	// Handle User/Group switching
+	if m.options.User != "" || m.options.Group != "" {
+		sysProcAttr := &syscall.SysProcAttr{}
+		if cmd.SysProcAttr != nil {
+			sysProcAttr = cmd.SysProcAttr
+		}
+
+		uid, err := cast.ToUint32(os.Getuid())
+		if err != nil {
+			return nil, fmt.Errorf("failed to cast uid: %w", err)
+		}
+		gid, err := cast.ToUint32(os.Getgid())
+		if err != nil {
+			return nil, fmt.Errorf("failed to cast gid: %w", err)
+		}
+		foundUser := false
+
+		if m.options.User != "" {
+			u, err := lookupUser(m.options.User)
+			if err != nil {
+				return nil, fmt.Errorf("failed to lookup user '%s': %w", m.options.User, err)
+			}
+			u64, err := strconv.ParseUint(u.Uid, 10, 32)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse uid '%s': %w", u.Uid, err)
+			}
+			uid = uint32(u64)
+
+			// If group is not specified, use user's primary group
+			if m.options.Group == "" {
+				g64, err := strconv.ParseUint(u.Gid, 10, 32)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse gid '%s': %w", u.Gid, err)
+				}
+				gid = uint32(g64)
+			}
+			foundUser = true
+		}
+
+		if m.options.Group != "" {
+			g, err := lookupGroup(m.options.Group)
+			if err != nil {
+				return nil, fmt.Errorf("failed to lookup group '%s': %w", m.options.Group, err)
+			}
+			g64, err := strconv.ParseUint(g.Gid, 10, 32)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse gid '%s': %w", g.Gid, err)
+			}
+			gid = uint32(g64)
+		}
+
+		// Only set Credential if something actually changed from current process
+		// or if we explicitly found a user (even if UID matches, might want to enforce)
+		if foundUser || m.options.Group != "" {
+			sysProcAttr.Credential = &syscall.Credential{
+				Uid: uid,
+				Gid: gid,
+			}
+			cmd.SysProcAttr = sysProcAttr
+			slog.Info("configured worker credentials", "uid", uid, "gid", gid)
+		}
+	}
+
 	// Set worker role via environment variable
 	// Note: Socket path is base64 encoded because Abstract Namespace contains NUL byte
 	socketPathEncoded := base64.StdEncoding.EncodeToString([]byte(m.controlPlane.SocketPath()))
@@ -376,7 +457,7 @@ func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File, keys []
 		}
 	}
 
-	if err := cmd.Start(); err != nil {
+	if err := startCommand(cmd); err != nil {
 		return nil, fmt.Errorf("failed to start worker: %w", err)
 	}
 
