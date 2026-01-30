@@ -25,8 +25,21 @@ type testGrpcServer struct {
 }
 
 func (s *testGrpcServer) SayHello(ctx context.Context, in *proto.HelloRequest) (*proto.HelloReply, error) {
-	// Send a header
-	_ = grpc.SendHeader(ctx, metadata.Pairs("server-name", "bifrost-stdlib"))
+	// Verify Metadata from Client
+	md, ok := metadata.FromIncomingContext(ctx)
+	headerMD := metadata.Pairs("server-name", "bifrost-stdlib")
+
+	if ok {
+		userIDs := md.Get("user_id")
+		if len(userIDs) > 0 && userIDs[0] == "12345" {
+			// If expected user_id is found, send back a verified signal in header
+			headerMD.Set("x-user-verified", "true")
+		}
+	}
+
+	// Send all headers at once
+	_ = grpc.SendHeader(ctx, headerMD)
+
 	// Send a trailer
 	_ = grpc.SetTrailer(ctx, metadata.Pairs("trailer-key", "trailer-val"))
 
@@ -97,9 +110,12 @@ func TestStdlibServer_GRPC_Integration(t *testing.T) {
 
 	client := proto.NewGreeterClient(conn)
 
-	// 5. Make Request
+	// 5. Make Request with Metadata
+	md := metadata.Pairs("user_id", "12345")
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+
 	var header, trailer metadata.MD
-	resp, err := client.SayHello(context.Background(), &proto.HelloRequest{Name: "World"},
+	resp, err := client.SayHello(ctx, &proto.HelloRequest{Name: "World"},
 		grpc.Header(&header), grpc.Trailer(&trailer))
 
 	require.NoError(t, err, "gRPC call failed")
@@ -111,6 +127,12 @@ func TestStdlibServer_GRPC_Integration(t *testing.T) {
 	values := header.Get("server-name")
 	if assert.NotEmpty(t, values) {
 		assert.Equal(t, "bifrost-stdlib", values[0])
+	}
+
+	// Verify if Upstream received user_id and returned x-user-verified
+	verified := header.Get("x-user-verified")
+	if assert.NotEmpty(t, verified) {
+		assert.Equal(t, "true", verified[0])
 	}
 
 	// Check Trailers (Critical for this migration)
