@@ -280,7 +280,7 @@ func Run(mainOptions config.Options) (err error) {
 
 func shutdown(ctx context.Context, now bool) error {
 	bifrost := GetBifrost()
-	if defaultBifrost != nil {
+	if bifrost != nil {
 		var err error
 
 		if now {

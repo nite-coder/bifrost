@@ -1,6 +1,7 @@
 package http
 
 import (
+	"crypto/tls"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/client"
@@ -29,12 +30,26 @@ type ClientOptions struct {
 }
 
 func NewClient(opts ClientOptions) (*client.Client, error) {
-	c, err := client.NewClient(opts.HZOptions...)
+	var tlsConfig *tls.Config
+	wrappedOptions := make([]hzconfig.ClientOption, len(opts.HZOptions))
+	for i, opt := range opts.HZOptions {
+		copyOpt := opt
+		wrappedOptions[i] = hzconfig.ClientOption{
+			F: func(o *hzconfig.ClientOptions) {
+				copyOpt.F(o)
+				if o.TLSConfig != nil {
+					tlsConfig = o.TLSConfig
+				}
+			},
+		}
+	}
+
+	c, err := client.NewClient(wrappedOptions...)
 	if err != nil {
 		return nil, err
 	}
 	if opts.IsHTTP2 {
-		c.SetClientFactory(NewClientFactory())
+		c.SetClientFactory(NewClientFactory(tlsConfig))
 	}
 	return c, nil
 }

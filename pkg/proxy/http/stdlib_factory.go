@@ -15,20 +15,21 @@ import (
 
 // stdlibFactory implements suite.ClientFactory
 type stdlibFactory struct {
+	tlsConfig *tls.Config
 }
 
 // NewClientFactory creates a new stdlibFactory
-func NewClientFactory() suite.ClientFactory {
-	return &stdlibFactory{}
+func NewClientFactory(tlsConfig *tls.Config) suite.ClientFactory {
+	return &stdlibFactory{
+		tlsConfig: tlsConfig,
+	}
 }
 
 func (f *stdlibFactory) NewHostClient() (hclient.HostClient, error) {
 	return &stdlibHostClient{
 		client: &http.Client{
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true, // #nosec G402
-				},
+				TLSClientConfig:   f.tlsConfig,
 				ForceAttemptHTTP2: true,
 			},
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -46,6 +47,11 @@ type stdlibHostClient struct {
 func (c *stdlibHostClient) SetClientConfig(o *config.ClientOptions) {
 	if o != nil {
 		c.client.Timeout = o.ReadTimeout
+		if o.TLSConfig != nil {
+			if t, ok := c.client.Transport.(*http.Transport); ok {
+				t.TLSClientConfig = o.TLSConfig
+			}
+		}
 	}
 }
 

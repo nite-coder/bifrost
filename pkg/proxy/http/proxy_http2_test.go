@@ -50,7 +50,17 @@ func TestProxy_HTTP2_Basic(t *testing.T) {
 		Weight:   1,
 	}
 
-	proxy, err := New(proxyOptions, nil)
+	// Create a client with native TLS config
+	clientOpts := ClientOptions{
+		IsHTTP2: true,
+		HZOptions: append(DefaultClientOptions(),
+			client.WithTLSConfig(&tls.Config{InsecureSkipVerify: true}),
+		),
+	}
+	hClient, err := NewClient(clientOpts)
+	assert.NoError(t, err)
+
+	proxy, err := New(proxyOptions, hClient)
 	assert.NoError(t, err)
 
 	r.GET("/backend", proxy.ServeHTTP)
@@ -100,7 +110,17 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 		Weight:   1,
 	}
 
-	proxy, err := New(proxyOptions, nil)
+	// Create a client with native TLS config
+	clientOpts := ClientOptions{
+		IsHTTP2: true,
+		HZOptions: append(DefaultClientOptions(),
+			client.WithTLSConfig(&tls.Config{InsecureSkipVerify: true}),
+		),
+	}
+	hClient, err := NewClient(clientOpts)
+	assert.NoError(t, err)
+
+	proxy, err := New(proxyOptions, hClient)
 	assert.NoError(t, err)
 
 	r.POST("/grpc", proxy.ServeHTTP)
@@ -168,4 +188,31 @@ func TestH2UpstreamBaseline(t *testing.T) {
 
 	_, _ = io.ReadAll(resp.Body)
 	assert.Equal(t, "trailers-ready", resp.Trailer.Get("X-Trailer"))
+}
+
+func TestProxy_HTTP2_Timeout(t *testing.T) {
+	ts, url := setupHTTP2Server(t, func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(200 * time.Millisecond) // Longer than client timeout
+		w.WriteHeader(http.StatusOK)
+	})
+	defer ts.Close()
+
+	clientOpts := ClientOptions{
+		IsHTTP2: true,
+		HZOptions: append(DefaultClientOptions(),
+			client.WithTLSConfig(&tls.Config{InsecureSkipVerify: true}),
+		),
+	}
+	hClient, err := NewClient(clientOpts)
+	assert.NoError(t, err)
+
+	req := protocol.AcquireRequest()
+	resp := protocol.AcquireResponse()
+	req.SetRequestURI(url)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	err = hClient.Do(ctx, req, resp)
+	assert.Error(t, err)
 }

@@ -72,10 +72,10 @@ func (b *HertzBridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.Add("Trailer", name)
 	}
 
-	// For non-gRPC and non-streaming responses, set Content-Length if body is present
+	// For non-gRPC responses, set Content-Length if body is present in buffer
 	isGRPC := strings.HasPrefix(h.Get("Content-Type"), "application/grpc")
 	body := c.Response.Body()
-	if !isGRPC && c.Response.BodyStream() == nil && len(body) > 0 {
+	if !isGRPC && len(body) > 0 {
 		h.Set("Content-Length", strconv.Itoa(len(body)))
 	}
 
