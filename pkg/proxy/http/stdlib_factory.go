@@ -6,11 +6,11 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/cloudwego/hertz/pkg/common/adaptor"
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	hclient "github.com/cloudwego/hertz/pkg/protocol/client"
 	"github.com/cloudwego/hertz/pkg/protocol/suite"
+	"github.com/nite-coder/bifrost/internal/pkg/hzadaptor"
 )
 
 // stdlibFactory implements suite.ClientFactory
@@ -57,14 +57,10 @@ func (c *stdlibHostClient) SetClientConfig(o *config.ClientOptions) {
 
 func (c *stdlibHostClient) Do(ctx context.Context, req *protocol.Request, resp *protocol.Response) error {
 	// 1. Convert Hertz Request to net/http Request
-	// nolint:staticcheck // Hertz doesn't provide a non-deprecated way to convert to http.Request for client use yet
-	stdReq, err := adaptor.GetCompatRequest(req)
+	stdReq, err := hzadaptor.ToHTTPRequest(ctx, req)
 	if err != nil {
 		return err
 	}
-
-	// Ensure Context is passed
-	stdReq = stdReq.WithContext(ctx)
 
 	// 2. Execute Request
 	stdResp, err := c.client.Do(stdReq)
