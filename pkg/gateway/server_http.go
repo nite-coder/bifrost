@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
 	"runtime"
 	"sync"
@@ -23,8 +24,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
 	hznetpoll "github.com/cloudwego/hertz/pkg/network/netpoll"
 	"github.com/cloudwego/netpoll"
-	configHTTP2 "github.com/hertz-contrib/http2/config"
-	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/pprof"
 	bifrostRuntime "github.com/nite-coder/bifrost/internal/pkg/runtime"
@@ -55,6 +54,8 @@ type HTTPServer struct {
 	options          *config.ServerOptions
 	switcher         *switcher
 	server           *server.Hertz
+	stdlibServer     *http.Server
+	listener         net.Listener
 	totalConnections atomic.Int64
 	isActive         atomic.Bool
 }
@@ -179,7 +180,10 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 				return nil, err
 			}
 		}
-		hzOpts = append(hzOpts, server.WithListener(listener))
+		if !serverOptions.HTTP2 {
+			hzOpts = append(hzOpts, server.WithListener(listener))
+		}
+		httpServer.listener = listener
 	}
 	if serverOptions.Timeout.KeepAlive > 0 {
 		hzOpts = append(hzOpts, server.WithKeepAliveTimeout(serverOptions.Timeout.KeepAlive))
@@ -217,9 +221,6 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 	hzOpts = append(hzOpts, engine.hzOptions...)
 	for _, tracer := range tracers {
 		hzOpts = append(hzOpts, server.WithTracer(tracer))
-	}
-	if serverOptions.HTTP2 && (len(serverOptions.TLS.CertPEM) == 0 || len(serverOptions.TLS.KeyPEM) == 0) {
-		hzOpts = append(hzOpts, server.WithH2C(true))
 	}
 	var tlsConfig *tls.Config
 	if len(serverOptions.TLS.CertPEM) > 0 || len(serverOptions.TLS.KeyPEM) > 0 {
@@ -278,19 +279,7 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 		h.SetClientIPFunc(app.ClientIPWithOption(clientIPOptions))
 	}
 	if serverOptions.HTTP2 {
-		http2opts := []configHTTP2.Option{}
-		if serverOptions.Timeout.Idle > 0 {
-			http2opts = append(http2opts, configHTTP2.WithIdleTimeout(serverOptions.Timeout.Idle))
-		}
-		if serverOptions.Timeout.Read > 0 {
-			http2opts = append(http2opts, configHTTP2.WithReadTimeout(serverOptions.Timeout.Read))
-		}
-		if len(serverOptions.TLS.CertPEM) > 0 || len(serverOptions.TLS.KeyPEM) > 0 {
-			h.AddProtocol("h2", factory.NewServerFactory(http2opts...))
-			tlsConfig.NextProtos = append(tlsConfig.NextProtos, "h2")
-		} else {
-			h.AddProtocol("h2", factory.NewServerFactory(http2opts...))
-		}
+		httpServer.stdlibServer = NewStdlibServer(h, &serverOptions, tlsConfig)
 	}
 	h.OnShutdown = append(h.OnShutdown, func(ctx context.Context) {
 		for _, tracer := range tracers {
@@ -309,11 +298,26 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 }
 func (s *HTTPServer) Run() {
 	slog.Info("starting server", "id", s.options.ID, "bind", s.options.Bind, "transporter", s.server.GetTransporterName())
-	_ = s.server.Run()
+	if s.stdlibServer != nil {
+		l := s.listener
+		if s.stdlibServer.TLSConfig != nil {
+			l = tls.NewListener(l, s.stdlibServer.TLSConfig)
+		}
+		_ = s.stdlibServer.Serve(l)
+	} else {
+		_ = s.server.Run()
+	}
 }
 func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	s.isActive.Store(false)
-	return s.server.Shutdown(ctx)
+	var err error
+	if s.stdlibServer != nil {
+		err = s.stdlibServer.Shutdown(ctx)
+		_ = s.server.Shutdown(ctx) // Ensure Hertz internals stop
+	} else {
+		err = s.server.Shutdown(ctx)
+	}
+	return err
 }
 func (s *HTTPServer) Bind() string {
 	return s.options.Bind

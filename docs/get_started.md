@@ -59,12 +59,6 @@ func main() {
 }
  ```
 
-1. Modify your `go.mod` by adding the following line.
-
-```sh
-replace github.com/hertz-contrib/http2 => github.com/nite-coder/http2 v0.1.8
-```
-
 1. Run
 
  ```shell

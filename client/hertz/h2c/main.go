@@ -9,18 +9,20 @@ import (
 
 	model "github.com/nite-coder/bifrost/proto"
 
-	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	"github.com/hertz-contrib/http2/config"
-	"github.com/hertz-contrib/http2/factory"
+	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 	"google.golang.org/protobuf/proto"
 )
 
 func main() {
 
-	c, _ := client.NewClient()
-	c.SetClientFactory(factory.NewClientFactory(config.WithAllowHTTP(true)))
+	c, err := httpproxy.NewClient(httpproxy.ClientOptions{
+		IsHTTP2: true,
+	})
+	if err != nil {
+		log.Fatalf("failed to create client: %v", err)
+	}
 
 	reqMsg := model.HelloRequest{Name: "hertz"}
 	data, err := proto.Marshal(&reqMsg)

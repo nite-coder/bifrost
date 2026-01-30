@@ -22,8 +22,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
-	configHTTP2 "github.com/hertz-contrib/http2/config"
-	"github.com/hertz-contrib/http2/factory"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 )
 
@@ -115,9 +113,6 @@ func runWorker() error {
 	}
 
 	h := server.New(hzOpts...)
-
-	http2opts := []configHTTP2.Option{}
-	h.AddProtocol("h2", factory.NewServerFactory(http2opts...))
 
 	opts := httpproxy.Options{
 		Target:   "http://localhost:8000",

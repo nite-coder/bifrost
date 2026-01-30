@@ -4,12 +4,13 @@ import (
 	"context"
 	"log"
 	"net"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/hertz-contrib/http2/factory"
+	"github.com/cloudwego/hertz/pkg/common/adaptor"
 	"github.com/nite-coder/bifrost/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -105,10 +106,45 @@ func TestGRPCProxy(t *testing.T) {
 		server.WithStreamBody(true),
 		server.WithExitWaitTime(1*time.Second),
 	)
-	httpServer.AddProtocol("h2", factory.NewServerFactory())
 	httpServer.Use(proxy.ServeHTTP)
+	hsrv := &http.Server{
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			c := app.NewContext(0)
+			if err := adaptor.CopyToHertzRequest(r, &c.Request); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			httpServer.ServeHTTP(context.Background(), c)
+			c.Response.Header.VisitAll(func(k, v []byte) {
+				w.Header().Add(string(k), string(v))
+			})
 
-	go httpServer.Spin()
+			// Handle Trailers
+			trailers := c.Response.Header.Trailer()
+			trailers.VisitAll(func(k, v []byte) {
+				w.Header().Add("Trailer", string(k))
+			})
+
+			w.WriteHeader(c.Response.StatusCode())
+			_, _ = w.Write(c.Response.Body())
+
+			// Write Trailer values
+			trailers.VisitAll(func(k, v []byte) {
+				if len(v) > 0 {
+					w.Header().Set(string(k), string(v))
+				}
+			})
+		}),
+		Protocols: &http.Protocols{},
+	}
+	hsrv.Protocols.SetHTTP1(true)
+	hsrv.Protocols.SetHTTP2(true)
+	hsrv.Protocols.SetUnencryptedHTTP2(true)
+
+	ln, err := net.Listen("tcp", "127.0.0.1:8001")
+	require.NoError(t, err)
+
+	go hsrv.Serve(ln)
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", "127.0.0.1:8001", 100*time.Millisecond)
 		if err == nil {

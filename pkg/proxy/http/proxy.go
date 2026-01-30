@@ -120,7 +120,7 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 	}
 	if client == nil {
 		clientOptions := ClientOptions{
-			IsHTTP2:   false,
+			IsHTTP2:   opts.Protocol == config.ProtocolHTTP2,
 			HZOptions: DefaultClientOptions(),
 		}
 		client, err = NewClient(clientOptions)
