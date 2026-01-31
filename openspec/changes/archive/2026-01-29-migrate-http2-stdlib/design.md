@@ -1,68 +1,70 @@
+# Design - Migrate HTTP/2 Server to Go Stdlib
+
 ## Context
 
-Bifrost 是一個高效能 API Gateway，使用 Hertz 作為 HTTP/1 Server。當前透過 `hertz-contrib/http2` (fork 版本 `nite-coder/http2`) 支援 HTTP/2，但該套件已停止維護。
+Bifrost is a high-performance API Gateway using Hertz as the HTTP/1 server. It currently supports HTTP/2 through `hertz-contrib/http2` (fork version `nite-coder/http2`), but this package is no longer maintained.
 
-**現況**:
+**Current Status:**
 
-- Hertz + netpoll 提供極低延遲的 HTTP/1 處理
-- HTTP/2 依賴不維護的 fork
-- Go 1.25.4 已內建原生 HTTP/2 支援 (Go 1.24+)
+- Hertz + netpoll provide extremely low latency for HTTP/1 processing.
+- HTTP/2 depends on an unmaintained fork.
+- Go 1.25.4 (Go 1.24+) has built-in native HTTP/2 support.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- 移除 `hertz-contrib/http2` 依賴，使用 Go 標準庫
-- HTTP/1 only 模式維持零額外開銷
-- 統一使用 Hertz handler chain (所有 middleware 不變)
-- 架構可擴展支援 HTTP/3
+- Remove `hertz-contrib/http2` dependency and use the Go standard library.
+- Maintain zero extra overhead for HTTP/1 only mode.
+- Use the uniform Hertz handler chain (all middleware remains the same).
+- Scalable architecture to support HTTP/3.
 
 **Non-Goals:**
 
-- 本次不實現 HTTP/3 (僅確保架構可擴展)
-- 不改變用戶配置格式
-- 不修改 Hertz 核心程式碼
-- **不修改 Hertz Client HTTP/2** - Client 端繼續使用 `hertz-contrib/http2`
+- Do not implement HTTP/3 in this change (only ensure the architecture is extensible).
+- Do not change the user configuration format.
+- Do not modify core Hertz code.
+- **Do not modify Hertz Client HTTP/2** - The client side continues to use `hertz-contrib/http2`.
 
 ## Decisions
 
-### 1. 混合式 Server 架構
+### 1. Hybrid Server Architecture
 
-**決策**: 根據配置動態選擇 Server 類型
+**Decision**: Dynamically select the server type based on configuration.
 
-| 配置 | Server | 理由 |
-|------|--------|------|
-| `http2: false` | Hertz | 保持最佳 HTTP/1 性能 |
-| `http2: true` | Go stdlib | 使用原生 HTTP/2 支援 |
+| Configuration | Server | Reason |
+|---------------|--------|--------|
+| `http2: false` | Hertz | Maintain optimal HTTP/1 performance |
+| `http2: true` | Go stdlib | Use native HTTP/2 support |
 
-**替代方案考慮**:
+**Alternatives Considered**:
 
-- ❌ 全部使用 Go stdlib: HTTP/1 會失去 Hertz/netpoll 性能優勢
-- ❌ 維護 http2 fork: 長期維護成本高
+- ❌ Use Go stdlib for everything: HTTP/1 would lose the Hertz/netpoll performance advantage.
+- ❌ Maintain the http2 fork: High long-term maintenance cost.
 
-### 2. Bridge 實現方式
+### 2. Bridge Implementation
 
-**決策**: 使用 `adaptor.CopyToHertzRequest` + 自定義 Response 寫回
+**Decision**: Use `adaptor.CopyToHertzRequest` + custom response write-back.
 
 ```go
 func (b *hertzBridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     reqCtx := pool.Get().(*app.RequestContext)
     defer pool.Put(reqCtx)
     
-    adaptor.CopyToHertzRequest(r, &reqCtx.Request)  // 官方 adaptor
+    adaptor.CopyToHertzRequest(r, &reqCtx.Request)  // Official adaptor
     engine.ServeHTTP(ctx, reqCtx)                   // Hertz handler chain
-    writeResponse(w, reqCtx)                        // 自定義寫回
+    writeResponse(w, reqCtx)                        // Custom write-back
 }
 ```
 
-**理由**:
+**Reason**:
 
-- Request 方向使用官方 adaptor，減少維護
-- Response 方向需自定義 (Hertz adaptor 無反向函數)
+- Use the official adaptor for the request direction to reduce maintenance.
+- Custom implementation needed for the response direction (Hertz adaptor lacks a reverse function).
 
-### 3. HTTP/2 協議配置
+### 3. HTTP/2 Protocol Configuration
 
-**決策**: 使用 Go 1.24+ 的 `http.Server.Protocols`
+**Decision**: Use Go 1.24+ `http.Server.Protocols`.
 
 ```go
 var protocols http.Protocols
@@ -76,101 +78,101 @@ server := &http.Server{
 }
 ```
 
-**理由**: 純標準庫，無需 `golang.org/x/net/http2`
+**Reason**: Pure standard library, no need for `golang.org/x/net/http2`.
 
 ## Risks / Trade-offs
 
 | Risk | Impact | Mitigation |
 | ---- | ------ | ---------- |
-| HTTP/2 橋接延遲 (+30-60μs) | 中 | 僅影響 HTTP/2 模式; HTTP/1 用戶無影響 |
-| Response 寫回邏輯需自行維護 | 低 | 邏輯簡單，僅 header 複製 + body 寫入 |
-| Breaking change for http2 users | 中 | 文檔說明遷移步驟 |
-| gRPC Proxy 相容性 | 高 | 必須測試驗證 gRPC 請求能正確通過 Bridge |
+| HTTP/2 bridging latency (+30-60μs) | Medium | Only affects HTTP/2 mode; no impact on HTTP/1 users. |
+| Response write-back logic needs manual maintenance | Low | Simple logic, just header copying + body writing. |
+| Breaking change for http2 users | Medium | Document migration steps. |
+| gRPC Proxy compatibility | High | Must verify through tests that gRPC requests correctly pass through the bridge. |
 
 ## Verification Requirements
 
-### gRPC Proxy 測試
+### gRPC Proxy Testing
 
-必須驗證以下場景:
+Must verify the following scenarios:
 
-1. **gRPC Unary 請求**: 單一請求/回應 (Streaming 不支援)
-2. **gRPC Headers**: 確保 `content-type: application/grpc` 正確傳遞
-3. **gRPC Trailers**: 確保 trailer headers (`grpc-status`, `grpc-message`) 正確處理
-4. **現有測試**: `pkg/proxy/grpc/proxy_test.go` 必須全部通過
+1. **gRPC Unary Request**: Single request/response (Streaming not supported).
+2. **gRPC Headers**: Ensure `content-type: application/grpc` is correctly passed.
+3. **gRPC Trailers**: Ensure trailer headers (`grpc-status`, `grpc-message`) are correctly handled.
+4. **Existing Tests**: `pkg/proxy/grpc/proxy_test.go` must all pass.
 
 ## Architecture
 
 ```
-         ┌─────────────┐
-         │ Config      │
-         │ http2: ?    │
-         └──────┬──────┘
-                │
-     ┌──────────┴──────────┐
-     │ http2: false        │ http2: true
-     ▼                     ▼
-┌─────────┐         ┌────────────────┐
-│ Hertz   │         │ net/http.Server│
-│ Server  │         │ (HTTP/1+HTTP/2)│
-│         │         └───────┬────────┘
-│         │                 │
-│ Engine ◄├─────────────────┤ hertzBridge
-│         │                 │
-└─────────┘         ┌───────┴────────┐
-                    │ adaptor.Copy   │
-                    │ ToHertzRequest │
-                    └────────────────┘
+          ┌─────────────┐
+          │ Config      │
+          │ http2: ?    │
+          └──────┬──────┘
+                 │
+      ┌──────────┴──────────┐
+      │ http2: false        │ http2: true
+      ▼                     ▼
+ ┌─────────┐         ┌────────────────┐
+ │ Hertz   │         │ net/http.Server│
+ │ Server  │         │ (HTTP/1+HTTP/2)│
+ │         │         └───────┬────────┘
+ │         │                 │
+ │ Engine ◄├─────────────────┤ hertzBridge
+ │         │                 │
+ └─────────┘         ┌───────┴────────┐
+                     │ adaptor.Copy   │
+                     │ ToHertzRequest │
+                     └────────────────┘
 ```
 
 ## Impact Analysis
 
-### gRPC Proxy ✅ 不受影響
+### gRPC Proxy ✅ Unaffected
 
-gRPC Proxy (`pkg/proxy/grpc/proxy.go`) 使用 `google.golang.org/grpc` client 連接上游:
+The gRPC Proxy (`pkg/proxy/grpc/proxy.go`) uses the `google.golang.org/grpc` client to connect upstream:
 
 ```go
 client, err := grpc.NewClient(addr.Host, grpcOptions...)
 ```
 
-**工作流程**:
+**Workflow**:
 
-1. HTTP/2 Server 接收 gRPC 請求
-2. Bridge 將 `http.Request` 轉為 Hertz `RequestContext`
-3. gRPC Proxy handler 從 `RequestContext` 提取 gRPC 資料
-4. 使用 `grpc.Client` 轉發到上游
+1. HTTP/2 Server receives a gRPC request.
+2. The bridge converts the `http.Request` to a Hertz `RequestContext`.
+3. The gRPC Proxy handler extracts gRPC data from the `RequestContext`.
+4. Forwarded to upstream using `grpc.Client`.
 
-結論: 只要 Bridge 正確傳遞 HTTP/2 headers (包括 gRPC 專用的 `content-type: application/grpc`)，gRPC Proxy 無需修改。
+Conclusion: As long as the bridge correctly passes HTTP/2 headers (including the gRPC-specific `content-type: application/grpc`), the gRPC Proxy requires no modification.
 
-### Hertz Client HTTP/2 ⚠️ 保持不變
+### Hertz Client HTTP/2 ⚠️ Remains Unchanged
 
-HTTP Client (`pkg/proxy/http/client.go`) 往上游發送仍使用 `hertz-contrib/http2`:
+The HTTP Client (`pkg/proxy/http/client.go`) sending upstream still uses `hertz-contrib/http2`:
 
 ```go
 c.SetClientFactory(factory.NewClientFactory(http2Config.WithAllowHTTP(true)))
 ```
 
-**決策**: 本次 (Phase 1) 只遷移 Server 端，Client 端繼續使用 `hertz-contrib/http2`。
+**Decision**: In this change (Phase 1), only the server side is migrated; the client side continues to use `hertz-contrib/http2`.
 
-**Phase 2 規劃**: 創建自己的 HTTP/2 ClientFactory
+**Phase 2 Plan**: Create a custom HTTP/2 ClientFactory.
 
 ```go
-// 未來實現方向
+// Future implementation direction
 type StdlibHTTP2ClientFactory struct {}
 
 func (f *StdlibHTTP2ClientFactory) NewHostClient() (client.HostClient, error) {
-    // 使用 Go stdlib http.Transport + HTTP/2
-    // 包裝成 Hertz HostClient 介面
+    // Use Go stdlib http.Transport + HTTP/2
+    // Wrap into Hertz HostClient interface
 }
 ```
 
-**理由**:
+**Reason**:
 
-- 分離關注點，降低風險
-- Client 需求與 Server 不同
-- 保留 Hertz Client 性能優勢，僅替換 HTTP/2 協議層
+- Separation of concerns, reducing risk.
+- Client requirements differ from server requirements.
+- Maintain the Hertz Client performance advantage, only replacing the HTTP/2 protocol layer.
 
 ## Open Questions
 
-1. ~~是否需要 h2c 支援?~~ → 是，使用 `SetUnencryptedHTTP2(true)`
-2. HTTP/2 配置參數是否暴露給用戶? → 建議暴露 `max_concurrent_streams` 等基本參數
-3. ~~Client HTTP/2 如何處理?~~ → Phase 2 創建自己的 HTTP/2 ClientFactory
+1. ~~Is h2c support required?~~ → Yes, via `SetUnencryptedHTTP2(true)`.
+2. Should HTTP/2 parameters be exposed to users? → Recommended to expose basic parameters like `max_concurrent_streams`.
+3. ~~How to handle Client HTTP/2?~~ → Phase 2 will create a custom HTTP/2 ClientFactory.

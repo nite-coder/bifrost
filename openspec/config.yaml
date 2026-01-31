@@ -1,0 +1,24 @@
+schema: spec-driven
+
+# Project context
+# Injected into every planning request.
+context: |
+  Bifrost: high-performance Go API gateway library/SDK (not standalone).
+  Tech: Go 1.24+, Hertz, gRPC, Prometheus, OpenTelemetry.
+  Domain: Servers, Routes, Services, Upstreams (Nginx-like concepts).
+  Arch: Master/Worker process model with graceful Hot Reload.
+  Conventions:
+    - Use `slog` for logging.
+    - All code/comments in English.
+    - Testify: `require` (critical), `assert` (rest), `assert.Eventually` (sync).
+    - Middleware: use `RegisterTyped` for type-safety.
+
+# Per-artifact rules
+rules:
+  all:
+    - All documentation and OpenSpec artifacts must be written in English.
+  proposal:
+    - Prioritize performance and low latency constraints.
+    - Middlewares must be pluggable and extensible.
+  release:
+    - `make release` ensures build, lint, and all tests pass.

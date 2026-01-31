@@ -1,3 +1,5 @@
+# Design - Refactor Metrics to Support OTel Push/Pull Mode
+
 ## Context
 
 Bifrost currently uses `prometheus/client_golang` directly for metrics collection with only pull mode support. Users need both push and pull modes, and existing plugins already use Prometheus client SDK. The challenge is to unify metrics while maintaining backward compatibility with plugin-registered metrics.
@@ -58,7 +60,7 @@ Bifrost currently uses `prometheus/client_golang` directly for metrics collectio
              │    ▼                                       │
              │  ┌────────────────────┐                    │
              │  │   Prometheus       │                    │
-             │  │   Bridge           │ ← Prom→OTel 轉換   │
+             │  │   Bridge           │ ← Prom→OTel Conversion
              │  │   (Producer)       │                    │
              │  └─────────┬──────────┘                    │
              │            │                               │
