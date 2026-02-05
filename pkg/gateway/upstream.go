@@ -28,6 +28,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
+	"github.com/nite-coder/bifrost/pkg/variable"
 	prom "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -103,9 +104,11 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 		if !bifrost.options.Providers.Nacos.Discovery.Enabled {
 			return nil, fmt.Errorf("nacos discovery provider is disabled for upstream ID: %s", upstreamOptions.ID)
 		}
+
+		password := variable.GetString(bifrost.options.Providers.Nacos.Discovery.Password, nil)
 		options := nacos.Options{
 			Username:    bifrost.options.Providers.Nacos.Discovery.Username,
-			Password:    bifrost.options.Providers.Nacos.Discovery.Password,
+			Password:    password,
 			NamespaceID: bifrost.options.Providers.Nacos.Discovery.NamespaceID,
 			Prefix:      bifrost.options.Providers.Nacos.Discovery.Prefix,
 			CacheDir:    bifrost.options.Providers.Nacos.Discovery.CacheDir,
