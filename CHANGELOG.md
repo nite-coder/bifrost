@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bump `hertz` to v0.10.4 ([#103](https://github.com/nite-coder/bifrost/pull/103) by [0x5487](https://github.com/0x5487))
 - Remove `$upstream.conn_acquisition_time` directive logic to fix compatibility issues with upstream hertz ([#103](https://github.com/nite-coder/bifrost/pull/103) by [0x5487](https://github.com/0x5487))
 - Migrate HTTP2 client/server to stdlib and remove hertz http2 package ([#105](https://github.com/nite-coder/bifrost/pull/105) by [0x5487](https://github.com/0x5487))
+- Use `variable.GetString` for Nacos password configuration to support environment variables ([#106](https://github.com/nite-coder/bifrost/pull/106) by [0x5487](https://github.com/0x5487))
 
 ## [0.8.0] (2026-01-21)
 
