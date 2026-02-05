@@ -13,6 +13,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider/file"
 	"github.com/nite-coder/bifrost/pkg/provider/nacos"
 	"github.com/nite-coder/bifrost/pkg/resolver"
+	"github.com/nite-coder/bifrost/pkg/variable"
 
 	"gopkg.in/yaml.v3"
 )
@@ -142,10 +143,12 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 	// nacos provider
 	if mainOptions.Providers.Nacos.Config.Enabled {
 
+		password := variable.GetString(mainOptions.Providers.Nacos.Config.Password, nil)
+
 		nacosConfigOptions := nacos.Options{
 			NamespaceID: mainOptions.Providers.Nacos.Config.NamespaceID,
 			Username:    mainOptions.Providers.Nacos.Config.Username,
-			Password:    mainOptions.Providers.Nacos.Config.Password,
+			Password:    password,
 			Prefix:      mainOptions.Providers.Nacos.Config.Prefix,
 			LogDir:      mainOptions.Providers.Nacos.Config.LogDir,
 			LogLevel:    mainOptions.Providers.Nacos.Config.LogLevel,
