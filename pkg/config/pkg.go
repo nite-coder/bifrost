@@ -143,11 +143,19 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 	// nacos provider
 	if mainOptions.Providers.Nacos.Config.Enabled {
 
-		password := variable.GetString(mainOptions.Providers.Nacos.Config.Password, nil)
+		username := mainOptions.Providers.Nacos.Config.Username
+		if variable.IsDirective(username) {
+			username = variable.GetString(username, nil)
+		}
+
+		password := mainOptions.Providers.Nacos.Config.Password
+		if variable.IsDirective(password) {
+			password = variable.GetString(password, nil)
+		}
 
 		nacosConfigOptions := nacos.Options{
 			NamespaceID: mainOptions.Providers.Nacos.Config.NamespaceID,
-			Username:    mainOptions.Providers.Nacos.Config.Username,
+			Username:    username,
 			Password:    password,
 			Prefix:      mainOptions.Providers.Nacos.Config.Prefix,
 			LogDir:      mainOptions.Providers.Nacos.Config.LogDir,

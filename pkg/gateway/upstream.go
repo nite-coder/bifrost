@@ -105,9 +105,18 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 			return nil, fmt.Errorf("nacos discovery provider is disabled for upstream ID: %s", upstreamOptions.ID)
 		}
 
-		password := variable.GetString(bifrost.options.Providers.Nacos.Discovery.Password, nil)
+		username := bifrost.options.Providers.Nacos.Discovery.Username
+		if variable.IsDirective(bifrost.options.Providers.Nacos.Discovery.Username) {
+			username = variable.GetString(bifrost.options.Providers.Nacos.Discovery.Username, nil)
+		}
+
+		password := bifrost.options.Providers.Nacos.Discovery.Password
+		if variable.IsDirective(bifrost.options.Providers.Nacos.Discovery.Password) {
+			password = variable.GetString(bifrost.options.Providers.Nacos.Discovery.Password, nil)
+		}
+
 		options := nacos.Options{
-			Username:    bifrost.options.Providers.Nacos.Discovery.Username,
+			Username:    username,
 			Password:    password,
 			NamespaceID: bifrost.options.Providers.Nacos.Discovery.NamespaceID,
 			Prefix:      bifrost.options.Providers.Nacos.Discovery.Prefix,

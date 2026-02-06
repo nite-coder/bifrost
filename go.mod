@@ -10,7 +10,7 @@ tool (
 require (
 	github.com/bytedance/sonic v1.15.0
 	github.com/cloudwego/gjson v0.1.1
-	github.com/cloudwego/gopkg v0.1.8
+	github.com/cloudwego/gopkg v0.1.9
 	github.com/cloudwego/hertz v0.10.4
 	github.com/cloudwego/netpoll v0.7.2
 	github.com/corazawaf/coraza-coreruleset/v4 v4.20.0

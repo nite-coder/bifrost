@@ -15,6 +15,8 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
+var newNamingClientFunc = clients.NewNamingClient
+
 type NacosServiceDiscovery struct {
 	client  naming_client.INamingClient
 	options *Options
@@ -83,7 +85,7 @@ func NewNacosServiceDiscovery(options Options) (*NacosServiceDiscovery, error) {
 		constant.WithPassword(options.Password),
 	)
 
-	client, err := clients.NewNamingClient(
+	client, err := newNamingClientFunc(
 		vo.NacosClientParam{
 			ClientConfig:  &configConfig,
 			ServerConfigs: serverConfigs,
@@ -91,6 +93,16 @@ func NewNacosServiceDiscovery(options Options) (*NacosServiceDiscovery, error) {
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	// check connection
+	_, err = client.GetAllServicesInfo(vo.GetAllServiceInfoParam{
+		NameSpace: options.NamespaceID,
+		PageNo:    1,
+		PageSize:  1,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify nacos connection: %w", err)
 	}
 
 	return &NacosServiceDiscovery{
