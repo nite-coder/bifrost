@@ -10,6 +10,7 @@ import (
 )
 
 func TestRequestTermination(t *testing.T) {
+	_ = Init()
 	h := middleware.Factory("request_termination")
 
 	params := map[string]any{

@@ -151,6 +151,7 @@ func TestIPRestriction(t *testing.T) {
 }
 
 func TestNewMiddleware(t *testing.T) {
+	_ = Init()
 	h := middleware.Factory("ip_restriction")
 
 	params := map[string]any{

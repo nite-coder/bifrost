@@ -15,8 +15,8 @@ type Config struct {
 	Prefix string `mapstructure:"prefix"`
 }
 
-func init() {
-	_ = middleware.RegisterTyped([]string{"add_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"add_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
 		if cfg.Prefix == "" {
 			return nil, errors.New("prefix is required and must be a string")
 		}

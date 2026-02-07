@@ -1,4 +1,4 @@
-package coroza
+package coraza
 
 import (
 	"context"
@@ -185,7 +185,7 @@ func (m *CorazaMiddleware) log(ctx context.Context, c *app.RequestContext, tx ty
 		}
 	}
 }
-func init() {
+func Init() error {
 	bifrostWAFCoreRulesetHits = prom.NewCounterVec(
 		prom.CounterOpts{
 			Name: "bifrost_waf_core_ruleset_hits",
@@ -194,7 +194,7 @@ func init() {
 		[]string{"server_id", "method", "path", "rule_id", "client_ip"},
 	)
 	prom.MustRegister(bifrostWAFCoreRulesetHits)
-	_ = middleware.RegisterTyped([]string{"coraza"}, func(options Options) (app.HandlerFunc, error) {
+	return middleware.RegisterTyped([]string{"coraza"}, func(options Options) (app.HandlerFunc, error) {
 		m, err := NewMiddleware(options)
 		if err != nil {
 			return nil, err

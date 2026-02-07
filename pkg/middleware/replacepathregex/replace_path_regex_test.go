@@ -10,6 +10,7 @@ import (
 )
 
 func TestReplacePathRegexMiddleware(t *testing.T) {
+	_ = Init()
 	tests := []struct {
 		name             string
 		regex            string

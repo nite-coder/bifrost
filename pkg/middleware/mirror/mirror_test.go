@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
+	"github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/middleware"
@@ -15,6 +15,8 @@ import (
 )
 
 func TestMirror(t *testing.T) {
+	_ = Init()
+	_ = roundrobin.Init()
 	options := config.NewOptions()
 
 	// setup service

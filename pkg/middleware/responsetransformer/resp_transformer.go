@@ -66,8 +66,8 @@ func (m *ResponseTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.
 		}
 	}
 }
-func init() {
-	_ = middleware.RegisterTyped([]string{"response_transformer"}, func(opts Options) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"response_transformer"}, func(opts Options) (app.HandlerFunc, error) {
 		m := NewMiddleware(opts)
 		return m.ServeHTTP, nil
 	})

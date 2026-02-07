@@ -14,8 +14,8 @@ type Config struct {
 	Path string `mapstructure:"path"`
 }
 
-func init() {
-	_ = middleware.RegisterTyped([]string{"replace_path"}, func(cfg Config) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"replace_path"}, func(cfg Config) (app.HandlerFunc, error) {
 		if cfg.Path == "" {
 			return nil, errors.New("path field is not set")
 		}

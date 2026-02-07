@@ -48,6 +48,7 @@ func TestSplitter(t *testing.T) {
 }
 
 func TestFactory_Errors(t *testing.T) {
+	_ = Init()
 	h := middleware.Factory("traffic_splitter")
 
 	tests := []struct {

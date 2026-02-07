@@ -103,8 +103,8 @@ func (m *RequestTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.R
 		}
 	}
 }
-func init() {
-	_ = middleware.RegisterTyped([]string{"request_transformer"}, func(opts Options) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"request_transformer"}, func(opts Options) (app.HandlerFunc, error) {
 		m := NewMiddleware(opts)
 		return m.ServeHTTP, nil
 	})

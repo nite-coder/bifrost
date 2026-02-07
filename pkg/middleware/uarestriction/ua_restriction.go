@@ -92,8 +92,8 @@ func (m *UARestriction) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 }
-func init() {
-	_ = middleware.RegisterTyped([]string{"ua_restriction"}, func(option Options) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"ua_restriction"}, func(option Options) (app.HandlerFunc, error) {
 		m, err := NewMiddleware(option)
 		if err != nil {
 			return nil, err

@@ -10,6 +10,7 @@ import (
 )
 
 func TestStripMiddleware(t *testing.T) {
+	_ = Init()
 	h := middleware.Factory("strip_prefix")
 
 	params := map[string]any{

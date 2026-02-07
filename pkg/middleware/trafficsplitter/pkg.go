@@ -16,8 +16,8 @@ var getRandomNumber = func(max int64) (int64, error) {
 	return n.Int64(), nil
 }
 
-func init() {
-	_ = middleware.RegisterTyped([]string{"traffic_splitter"}, func(opts Options) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"traffic_splitter"}, func(opts Options) (app.HandlerFunc, error) {
 		m := NewMiddleware(&opts)
 		return m.ServeHTTP, nil
 	})

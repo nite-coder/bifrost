@@ -10,6 +10,7 @@ import (
 )
 
 func TestAddPrefixMiddleware(t *testing.T) {
+	_ = Init()
 	h := middleware.Factory("add_prefix")
 
 	params := map[string]any{

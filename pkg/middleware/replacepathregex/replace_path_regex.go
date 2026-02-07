@@ -14,8 +14,8 @@ type Config struct {
 	Replacement string `mapstructure:"replacement"`
 }
 
-func init() {
-	_ = middleware.RegisterTyped([]string{"replace_path_regex"}, func(cfg Config) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"replace_path_regex"}, func(cfg Config) (app.HandlerFunc, error) {
 		if cfg.Regex == "" {
 			return nil, errors.New("regex field is not set")
 		}

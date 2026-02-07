@@ -41,8 +41,8 @@ func (m *RequestTerminationMiddleware) ServeHTTP(ctx context.Context, c *app.Req
 	c.Abort()
 }
 
-func init() {
-	_ = middleware.RegisterTyped([]string{"request_termination"}, func(opts Options) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"request_termination"}, func(opts Options) (app.HandlerFunc, error) {
 		if opts.StatusCode == 0 {
 			return nil, errors.New("request_termination: status_code cannot be empty")
 		}
