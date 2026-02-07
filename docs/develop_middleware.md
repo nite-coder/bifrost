@@ -58,11 +58,14 @@ func (m *AddPrefixMiddleware) ServeHTTP(c context.Context, ctx *app.RequestConte
 
 Use `middleware.RegisterTyped[T]` to register your middleware. This helper function automatically handles the decoding of the configuration map into your struct `T`.
 
+We recommend creating an `Init()` function in your middleware package to handle registration.
+
 ```go
 package main
 
 import (
 	"log/slog"
+	"os"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -70,11 +73,11 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
-func registerMiddlewares() error {
+func Init() error {
 	// RegisterTyped handles the complexity of mapstructure decoding for you.
 	// 1. Define the config struct type as the generic parameter.
 	// 2. The callback function receives the decoded config struct.
-	err := middleware.RegisterTyped([]string{"add_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
+	return middleware.RegisterTyped([]string{"add_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
 		// You can perform validation on the decoded config here
 		if cfg.Prefix == "" {
 			// Return error if validation fails
@@ -84,12 +87,11 @@ func registerMiddlewares() error {
 		m := NewMiddleware(cfg.Prefix)
 		return m.ServeHTTP, nil
 	})
-
-	return err
 }
 
 func main() {
-	if err := registerMiddlewares(); err != nil {
+	// Explicitly initialize the middleware
+	if err := Init(); err != nil {
 		panic(err)
 	}
 
@@ -112,9 +114,11 @@ func main() {
 If your middleware doesn't require any configuration, you can use `struct{}` as the configuration type.
 
 ```go
-_ = middleware.RegisterTyped([]string{"simple"}, func(_ struct{}) (app.HandlerFunc, error) {
-    return NewMiddleware().ServeHTTP, nil
-})
+func Init() error {
+	return middleware.RegisterTyped([]string{"simple"}, func(_ struct{}) (app.HandlerFunc, error) {
+		return NewMiddleware().ServeHTTP, nil
+	})
+}
 ```
 
 ## Configuring Middleware

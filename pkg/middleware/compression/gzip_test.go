@@ -23,6 +23,7 @@ func newRequestContext(method, path string, headers map[string]string, body []by
 }
 
 func TestCompressesResponse(t *testing.T) {
+	_ = Init()
 	h := middleware.Factory("compression")
 	mw, err := h(nil)
 	assert.NoError(t, err)

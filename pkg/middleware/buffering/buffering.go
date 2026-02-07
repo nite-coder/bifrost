@@ -48,8 +48,8 @@ func (m *BufferingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestConte
 	c.Next(ctx)
 }
 
-func init() {
-	_ = middleware.RegisterTyped([]string{"buffering"}, func(cfg Config) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"buffering"}, func(cfg Config) (app.HandlerFunc, error) {
 		m := NewMiddleware(cfg)
 		return m.ServeHTTP, nil
 	})

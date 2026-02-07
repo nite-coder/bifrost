@@ -11,6 +11,7 @@ import (
 )
 
 func TestSetVarsMiddleware(t *testing.T) {
+	_ = Init()
 	h := middleware.Factory("setvars")
 
 	params := []any{

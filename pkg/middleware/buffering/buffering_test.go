@@ -28,6 +28,7 @@ func TestNewMiddleware(t *testing.T) {
 }
 
 func TestBufferingMiddleware(t *testing.T) {
+	_ = Init()
 	newTestRouter := func(cfg Config) *route.Engine {
 		router := route.NewEngine(config.NewOptions([]config.Option{}))
 		m := NewMiddleware(cfg)

@@ -9,8 +9,8 @@ import (
 	"github.com/nite-coder/bifrost/pkg/proxy"
 )
 
-func init() {
-	_ = balancer.Register([]string{"round_robin"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
+func Init() error {
+	return balancer.Register([]string{"round_robin"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
 		b := NewBalancer(proxies)
 		return b, nil
 	})

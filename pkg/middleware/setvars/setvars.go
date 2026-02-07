@@ -10,8 +10,8 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
-func init() {
-	_ = middleware.RegisterTyped([]string{"setvars"}, func(options []*Options) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"setvars"}, func(options []*Options) (app.HandlerFunc, error) {
 		if len(options) == 0 {
 			return nil, errors.New("setvars middleware params is invalid")
 		}

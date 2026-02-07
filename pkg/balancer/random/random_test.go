@@ -13,6 +13,7 @@ import (
 )
 
 func TestRandom(t *testing.T) {
+	_ = Init()
 	proxyOptions1 := httpproxy.Options{
 		Target:      "http://backend1",
 		Protocol:    config.ProtocolHTTP,

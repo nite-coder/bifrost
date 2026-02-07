@@ -176,8 +176,8 @@ func NewMiddleware(config Config) app.HandlerFunc {
 		cors.applyCors(c)
 	}
 }
-func init() {
-	_ = middleware.RegisterTyped([]string{"cors"}, func(cfg Config) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"cors"}, func(cfg Config) (app.HandlerFunc, error) {
 		// Validates if the config is valid or considered empty/invalid which implies default
 		if err := cfg.Validate(); err != nil {
 			// Check if it's the specific "conflict settings: all origins disabled" error which happens when config is empty

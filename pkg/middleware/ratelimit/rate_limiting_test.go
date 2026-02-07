@@ -11,6 +11,7 @@ import (
 )
 
 func TestRateLimitMiddleware(t *testing.T) {
+	_ = Init()
 	h := middleware.Factory("rate_limit")
 
 	params := map[string]any{

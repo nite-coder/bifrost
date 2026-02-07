@@ -10,6 +10,7 @@ import (
 )
 
 func TestRemove(t *testing.T) {
+	_ = Init()
 	h := middleware.Factory("response_transformer")
 
 	params := map[string]any{

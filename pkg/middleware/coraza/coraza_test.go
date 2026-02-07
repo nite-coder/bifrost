@@ -1,4 +1,4 @@
-package coroza
+package coraza
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 )
 
 func TestCorazaMiddleware_ServeHTTP(t *testing.T) {
+	_ = Init()
 	tests := []struct {
 		name     string
 		path     string

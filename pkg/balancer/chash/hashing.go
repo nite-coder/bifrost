@@ -18,8 +18,8 @@ const (
 	defaultReplicas = 256
 )
 
-func init() {
-	_ = balancer.Register([]string{"hashing", "chash"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
+func Init() error {
+	return balancer.Register([]string{"hashing", "chash"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
 		if params == nil {
 			return nil, errors.New("params cannot be empty")
 		}

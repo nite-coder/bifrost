@@ -13,8 +13,8 @@ type Config struct {
 	Prefixes []string `mapstructure:"prefixes"`
 }
 
-func init() {
-	_ = middleware.RegisterTyped([]string{"strip_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"strip_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
 		if len(cfg.Prefixes) == 0 {
 			return nil, errors.New("prefixes parameter is missing or invalid")
 		}

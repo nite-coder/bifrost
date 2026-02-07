@@ -4,13 +4,14 @@ import (
 	"os"
 	"testing"
 
-	_ "github.com/nite-coder/bifrost/pkg/middleware/cors"
+	"github.com/nite-coder/bifrost/pkg/middleware/cors"
 	"github.com/nite-coder/bifrost/pkg/resolver"
 	"github.com/nite-coder/bifrost/pkg/router"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
+	_ = cors.Init()
 	dnsResolver, _ = resolver.NewResolver(resolver.Options{})
 	exitCode := m.Run()
 	os.Exit(exitCode)

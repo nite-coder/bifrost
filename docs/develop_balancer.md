@@ -82,8 +82,8 @@ func (b *RandomBalancer) Select(ctx context.Context, hzCtx *app.RequestContext) 
 You need to register your balancer implementation with Bifrost so it can be used in the configuration. Use `balancer.Register` in your `init()` function or main startup logic.
 
 ```go
-func init() {
-    balancer.Register([]string{"my_random", "custom_random"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
+func Init() error {
+    return balancer.Register([]string{"my_random", "custom_random"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
         // You can parse `params` here if your balancer needs configuration
         return NewBalancer(proxies), nil
     })
@@ -114,12 +114,14 @@ type Config struct {
     Seed int64 `mapstructure:"seed"`
 }
 
-balancer.Register([]string{"seeded_random"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
-    var cfg Config
-    // ... decode params into cfg ...
-    
-    return NewSeededBalancer(proxies, cfg.Seed), nil
-})
+func Init() error {
+	return balancer.Register([]string{"seeded_random"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
+		var cfg Config
+		// ... decode params into cfg ...
+		
+		return NewSeededBalancer(proxies, cfg.Seed), nil
+	})
+}
 ```
 
 And in `config.yaml`:

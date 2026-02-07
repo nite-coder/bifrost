@@ -106,8 +106,8 @@ func (m *IPRestriction) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 }
-func init() {
-	_ = middleware.RegisterTyped([]string{"ip_restriction"}, func(option Options) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"ip_restriction"}, func(option Options) (app.HandlerFunc, error) {
 		m, err := NewMiddleware(option)
 		if err != nil {
 			return nil, err

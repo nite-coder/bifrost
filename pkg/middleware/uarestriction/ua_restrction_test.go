@@ -112,7 +112,14 @@ func TestUARestriction(t *testing.T) {
 }
 
 func TestNewMiddleware(t *testing.T) {
+	initErr := Init()
+	// Ignore "already exists" error in case tests run in parallel or order matters
+	if initErr != nil && initErr.Error() != "middleware handler 'ua_restriction' already exists" {
+		assert.NoError(t, initErr)
+	}
+
 	h := middleware.Factory("ua_restriction")
+	assert.NotNil(t, h)
 
 	params := map[string]any{
 		"bypass_missing":              true,

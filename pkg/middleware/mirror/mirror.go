@@ -12,8 +12,8 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
-func init() {
-	_ = middleware.RegisterTyped([]string{"mirror"}, func(opts Options) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"mirror"}, func(opts Options) (app.HandlerFunc, error) {
 		if opts.ServiceID == "" {
 			return nil, errors.New("mirror: service_ID cannot be empty")
 		}

@@ -10,6 +10,7 @@ import (
 )
 
 func TestReplacePath(t *testing.T) {
+	_ = Init()
 	h := middleware.Factory("replace_path")
 
 	params := map[string]any{

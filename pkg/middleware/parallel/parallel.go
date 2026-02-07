@@ -46,8 +46,8 @@ func (m *ParallelMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContex
 		c.Abort()
 	}
 }
-func init() {
-	_ = middleware.RegisterTyped([]string{"parallel"}, func(middlewareOptions []*config.MiddlwareOptions) (app.HandlerFunc, error) {
+func Init() error {
+	return middleware.RegisterTyped([]string{"parallel"}, func(middlewareOptions []*config.MiddlwareOptions) (app.HandlerFunc, error) {
 		if len(middlewareOptions) == 0 {
 			return nil, errors.New("parallel middleware params is empty or invalid")
 		}

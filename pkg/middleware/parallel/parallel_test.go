@@ -7,12 +7,14 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/middleware"
-	_ "github.com/nite-coder/bifrost/pkg/middleware/setvars"
+	"github.com/nite-coder/bifrost/pkg/middleware/setvars"
 	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestParallelMiddleware(t *testing.T) {
+	_ = Init()
+	_ = setvars.Init()
 	h := middleware.Factory("parallel")
 
 	params := []any{
