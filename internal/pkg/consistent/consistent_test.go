@@ -309,6 +309,35 @@ func TestVirtualNodeDistribution(t *testing.T) {
 	}
 }
 
+// TestGetN tests retrieving multiple nodes for failover.
+func TestGetN(t *testing.T) {
+	ring := New()
+	_ = ring.Add("node1")
+	_ = ring.Add("node2")
+	_ = ring.Add("node3")
+
+	// Get 2 nodes
+	nodes, err := ring.GetN("user123", 2)
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(nodes))
+	assert.NotEqual(t, nodes[0], nodes[1])
+
+	// Get more nodes than exist
+	nodes, err = ring.GetN("user123", 5)
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(nodes))
+
+	// Verify order is clockwise on the ring
+	// If we start from some point, GetN must return unique nodes in the order they appear
+	key := "test-failover"
+	n3, _ := ring.GetN(key, 3)
+	assert.Equal(t, 3, len(n3))
+
+	// The first node in GetN(key, 3) must be the same as Get(key)
+	first, _ := ring.Get(key)
+	assert.Equal(t, first, n3[0])
+}
+
 // TestConcurrency tests concurrent operations on the ring.
 func TestConcurrency(t *testing.T) {
 	ring := New()

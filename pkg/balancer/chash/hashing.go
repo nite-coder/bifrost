@@ -29,13 +29,6 @@ func Init() error {
 			if !ok {
 				return nil, errors.New("hash_on is required and must be a string")
 			}
-
-			// Optional: allow configuring virtual node count
-			if r, ok := val["replicas"].(int); ok {
-				replicas = r
-			} else if r, ok := val["replicas"].(float64); ok {
-				replicas = int(r)
-			}
 		}
 
 		b := NewBalancer(proxies, hashon, replicas)
@@ -108,10 +101,13 @@ func (b *HashingBalancer) Select(ctx context.Context, c *app.RequestContext) (pr
 		return targetProxy, nil
 	}
 
-	// If the primary proxy is unavailable, try other nodes
-	// This provides failover capability
-	allNodes := b.ring.Nodes()
-	for _, nodeID := range allNodes {
+	// If the primary proxy is unavailable, try other nodes in clockwise order on the ring
+	candidates, err := b.ring.GetN(val, len(b.proxies))
+	if err != nil {
+		return nil, balancer.ErrNotAvailable
+	}
+
+	for _, nodeID := range candidates {
 		p, ok := b.nodeMap[nodeID]
 		if ok && p.IsAvailable() {
 			return p, nil

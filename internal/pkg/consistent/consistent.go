@@ -165,6 +165,53 @@ func (c *Consistent) Get(key string) (string, error) {
 	return c.ring[c.sortedNodes[idx]], nil
 }
 
+// GetN returns the top N unique physical nodes in clockwise order starting from the hash of the key.
+// This is used for consistent failover - if the first node is unavailable, the next nodes on the ring are used.
+// Returns ErrEmptyRing if the ring is empty.
+func (c *Consistent) GetN(key string, n int) ([]string, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if len(c.sortedNodes) == 0 {
+		return nil, ErrEmptyRing
+	}
+
+	if n <= 0 {
+		return nil, nil
+	}
+
+	// Cannot return more nodes than existing physical nodes
+	if n > len(c.nodes) {
+		n = len(c.nodes)
+	}
+
+	hash := c.hashFunc([]byte(key))
+
+	// Binary search to find the start point
+	idx, _ := slices.BinarySearch(c.sortedNodes, hash)
+	if idx >= len(c.sortedNodes) {
+		idx = 0
+	}
+
+	res := make([]string, 0, n)
+	seen := make(map[string]bool)
+
+	// Traverse the ring clockwise to find unique physical nodes
+	for i := 0; i < len(c.sortedNodes); i++ {
+		currIdx := (idx + i) % len(c.sortedNodes)
+		nodeID := c.ring[c.sortedNodes[currIdx]]
+		if !seen[nodeID] {
+			res = append(res, nodeID)
+			seen[nodeID] = true
+			if len(res) == n {
+				break
+			}
+		}
+	}
+
+	return res, nil
+}
+
 // Nodes returns a list of all physical nodes in the ring.
 func (c *Consistent) Nodes() []string {
 	c.mu.RLock()

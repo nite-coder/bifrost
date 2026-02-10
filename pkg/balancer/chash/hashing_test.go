@@ -12,6 +12,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHashing(t *testing.T) {
@@ -246,5 +247,39 @@ func TestHashing(t *testing.T) {
 		// Tolerance: allow some deviation due to hashing distribution, but should be close to 2.0
 		assert.Greater(t, ratio, 1.8, "h1 should receive about 2x traffic of h2")
 		assert.Less(t, ratio, 2.2, "h1 should receive about 2x traffic of h2")
+	})
+
+	t.Run("consistent failover order", func(t *testing.T) {
+		p1, _ := httpproxy.New(httpproxy.Options{Target: "http://h1", MaxFails: 1, FailTimeout: 10 * time.Minute}, nil)
+		p2, _ := httpproxy.New(httpproxy.Options{Target: "http://h2", MaxFails: 1, FailTimeout: 10 * time.Minute}, nil)
+		p3, _ := httpproxy.New(httpproxy.Options{Target: "http://h3", MaxFails: 1, FailTimeout: 10 * time.Minute}, nil)
+		proxies := []proxy.Proxy{p1, p2, p3}
+
+		b := NewBalancer(proxies, "$var.uid", 160)
+		key := "failover-key"
+		hzctx := app.NewContext(0)
+		hzctx.Set("uid", key)
+
+		// 1. Get the candidate order from the ring
+		candidates, err := b.ring.GetN(key, 3)
+		require.NoError(t, err)
+		require.Equal(t, 3, len(candidates))
+
+		// 2. Initial selection should be the first candidate
+		p, err := b.Select(context.Background(), hzctx)
+		require.NoError(t, err)
+		assert.Equal(t, candidates[0], p.ID(), "Should pick the first candidate on the ring")
+
+		// 3. Fail the first candidate, should pick the second one from the ring in clockwise order
+		_ = b.nodeMap[candidates[0]].AddFailedCount(1)
+		p, err = b.Select(context.Background(), hzctx)
+		require.NoError(t, err)
+		assert.Equal(t, candidates[1], p.ID(), "Failover should pick the second candidate on the ring")
+
+		// 4. Fail the second candidate, should pick the third one from the ring
+		_ = b.nodeMap[candidates[1]].AddFailedCount(1)
+		p, err = b.Select(context.Background(), hzctx)
+		require.NoError(t, err)
+		assert.Equal(t, candidates[2], p.ID(), "Failover should pick the third candidate on the ring")
 	})
 }
