@@ -3,6 +3,7 @@ package chash
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/nite-coder/bifrost/internal/pkg/consistent"
@@ -56,6 +57,17 @@ func NewBalancer(proxies []proxy.Proxy, hashon string, replicas int) *HashingBal
 	}
 
 	// Add all proxies to the consistent hash ring with weight-based replicas
+	// Sort proxies by target to ensure deterministic ring construction
+	slices.SortFunc(proxies, func(a, b proxy.Proxy) int {
+		if a.Target() < b.Target() {
+			return -1
+		}
+		if a.Target() > b.Target() {
+			return 1
+		}
+		return 0
+	})
+
 	for _, p := range proxies {
 		weight := int(p.Weight())
 		if weight <= 0 {
@@ -63,8 +75,8 @@ func NewBalancer(proxies []proxy.Proxy, hashon string, replicas int) *HashingBal
 		}
 
 		// Use AddWithReplicas to scale virtual nodes based on weight
-		_ = b.ring.AddWithReplicas(p.ID(), replicas*weight)
-		b.nodeMap[p.ID()] = p
+		_ = b.ring.AddWithReplicas(p.Target(), replicas*weight)
+		b.nodeMap[p.Target()] = p
 	}
 
 	return b
@@ -84,35 +96,20 @@ func (b *HashingBalancer) Select(ctx context.Context, c *app.RequestContext) (pr
 
 	val := variable.GetString(b.hashon, c)
 
-	// Get the node from the consistent hash ring
-	nodeID, err := b.ring.Get(val)
-	if err != nil {
-		return nil, balancer.ErrNotAvailable
-	}
-
-	// Get the proxy for this node
-	targetProxy, ok := b.nodeMap[nodeID]
-	if !ok {
-		return nil, balancer.ErrNotAvailable
-	}
-
-	// If the proxy is available, return it
-	if targetProxy.IsAvailable() {
-		return targetProxy, nil
-	}
-
-	// If the primary proxy is unavailable, try other nodes in clockwise order on the ring
+	// Get all possible candidates from the consistent hash ring in clockwise order
 	candidates, err := b.ring.GetN(val, len(b.proxies))
 	if err != nil {
+		// If GetN returns an error, it means no nodes are available in the ring.
 		return nil, balancer.ErrNotAvailable
 	}
 
 	for _, nodeID := range candidates {
 		p, ok := b.nodeMap[nodeID]
 		if ok && p.IsAvailable() {
-			return p, nil
+			return p, nil // Found an available proxy
 		}
 	}
 
+	// No available proxy found among all candidates
 	return nil, balancer.ErrNotAvailable
 }
