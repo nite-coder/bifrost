@@ -12,6 +12,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHashing(t *testing.T) {
@@ -71,7 +72,7 @@ func TestHashing(t *testing.T) {
 	})
 
 	t.Run("concurrency", func(t *testing.T) {
-		b := NewBalancer(proxies, "$var.uid")
+		b := NewBalancer(proxies, "$var.uid", defaultReplicas)
 		ctx := context.Background()
 
 		// Run 100 goroutines to call Select concurrently
@@ -96,7 +97,7 @@ func TestHashing(t *testing.T) {
 		keys := []string{"key1", "key2", "key3"}
 
 		for _, key := range keys {
-			b := NewBalancer(proxies, "$var.uid")
+			b := NewBalancer(proxies, "$var.uid", defaultReplicas)
 			hzctx := app.NewContext(0)
 			hzctx.Set("uid", key)
 			proxy, err := b.Select(context.Background(), hzctx)
@@ -114,7 +115,7 @@ func TestHashing(t *testing.T) {
 		keys := []string{"key1", "key2", "key3"}
 
 		for _, key := range keys {
-			b := NewBalancer(proxies, "$var.uid")
+			b := NewBalancer(proxies, "$var.uid", defaultReplicas)
 			hzctx := app.NewContext(0)
 			hzctx.Set("uid", key)
 			proxy, err := b.Select(context.Background(), hzctx)
@@ -144,12 +145,12 @@ func TestHashing(t *testing.T) {
 	})
 
 	t.Run("proxies getter", func(t *testing.T) {
-		b := NewBalancer(proxies, "$var.uid")
+		b := NewBalancer(proxies, "$var.uid", defaultReplicas)
 		assert.Equal(t, 3, len(b.Proxies()))
 	})
 
 	t.Run("nil proxies", func(t *testing.T) {
-		b := NewBalancer(nil, "$var.uid")
+		b := NewBalancer(nil, "$var.uid", defaultReplicas)
 		p, err := b.Select(context.Background(), nil)
 		assert.ErrorIs(t, err, balancer.ErrNotAvailable)
 		assert.Nil(t, p)
@@ -165,7 +166,7 @@ func TestHashing(t *testing.T) {
 		p1, _ := httpproxy.New(p1Options, nil)
 		_ = p1.AddFailedCount(1)
 
-		b := NewBalancer([]proxy.Proxy{p1}, "$var.uid")
+		b := NewBalancer([]proxy.Proxy{p1}, "$var.uid", defaultReplicas)
 		p, err := b.Select(context.Background(), nil)
 		assert.ErrorIs(t, err, balancer.ErrNotAvailable)
 		assert.Nil(t, p)
@@ -178,7 +179,7 @@ func TestHashing(t *testing.T) {
 		p3, _ := httpproxy.New(httpproxy.Options{Target: "http://h3"}, nil)
 		proxies := []proxy.Proxy{p1, p2, p3}
 
-		b := NewBalancer(proxies, "$var.uid")
+		b := NewBalancer(proxies, "$var.uid", defaultReplicas)
 
 		// 2. Map 1000 keys and record their assignments
 		assignments := make(map[int]string)
@@ -211,5 +212,100 @@ func TestHashing(t *testing.T) {
 
 		assert.Equal(t, 0, changedOnAliveNodes)
 		t.Logf("Redistribution count for alive nodes: %d / 1000", changedOnAliveNodes)
+	})
+
+	t.Run("weight-based distribution", func(t *testing.T) {
+		// 1. Create 2 proxies with different weights (2:1)
+		p1, _ := httpproxy.New(httpproxy.Options{Target: "http://h1", Weight: 20}, nil) // Weight 2
+		p2, _ := httpproxy.New(httpproxy.Options{Target: "http://h2", Weight: 10}, nil) // Weight 1
+		proxies := []proxy.Proxy{p1, p2}
+
+		// Use a fixed replicas to make it predictable
+		b := NewBalancer(proxies, "$var.uid", 160)
+
+		// 2. Map 100,000 keys and record their assignments
+		distribution := make(map[string]int)
+		numKeys := 100000
+		for i := 0; i < numKeys; i++ {
+			hzctx := app.NewContext(0)
+			hzctx.Set("uid", i)
+			p, _ := b.Select(context.Background(), hzctx)
+			distribution[p.Target()]++
+		}
+
+		// 3. Verify distribution matches weights (approx 2:1)
+		// Expected: h1 (66.6%), h2 (33.3%)
+		h1Count := distribution["http://h1"]
+		h2Count := distribution["http://h2"]
+
+		t.Logf("Distribution: h1=%d, h2=%d", h1Count, h2Count)
+
+		// Check if h1 receives approximately 2x the traffic of h2
+		ratio := float64(h1Count) / float64(h2Count)
+		t.Logf("Measured Ratio (h1/h2): %.4f (Expected around 2.0)", ratio)
+
+		// Tolerance: allow some deviation due to hashing distribution, but should be close to 2.0
+		assert.Greater(t, ratio, 1.7, "h1 should receive about 2x traffic of h2")
+		assert.Less(t, ratio, 2.3, "h1 should receive about 2x traffic of h2")
+	})
+
+	t.Run("consistent failover order", func(t *testing.T) {
+		p1, _ := httpproxy.New(httpproxy.Options{Target: "http://h1", MaxFails: 1, FailTimeout: 10 * time.Minute}, nil)
+		p2, _ := httpproxy.New(httpproxy.Options{Target: "http://h2", MaxFails: 1, FailTimeout: 10 * time.Minute}, nil)
+		p3, _ := httpproxy.New(httpproxy.Options{Target: "http://h3", MaxFails: 1, FailTimeout: 10 * time.Minute}, nil)
+		proxies := []proxy.Proxy{p1, p2, p3}
+
+		b := NewBalancer(proxies, "$var.uid", 160)
+		key := "failover-key"
+		hzctx := app.NewContext(0)
+		hzctx.Set("uid", key)
+
+		// 1. Get the candidate order from the ring
+		candidates, err := b.ring.GetN(key, 3)
+		require.NoError(t, err)
+		require.Equal(t, 3, len(candidates))
+
+		// 2. Initial selection should be the first candidate
+		p, err := b.Select(context.Background(), hzctx)
+		require.NoError(t, err)
+		assert.Equal(t, candidates[0], p.Target(), "Should pick the first candidate on the ring")
+
+		// 3. Fail the first candidate, should pick the second one from the ring in clockwise order
+		_ = b.nodeMap[candidates[0]].AddFailedCount(1)
+		p, err = b.Select(context.Background(), hzctx)
+		require.NoError(t, err)
+		assert.Equal(t, candidates[1], p.Target(), "Failover should pick the second candidate on the ring")
+
+		// 4. Fail the second candidate, should pick the third one from the ring
+		_ = b.nodeMap[candidates[1]].AddFailedCount(1)
+		p, err = b.Select(context.Background(), hzctx)
+		require.NoError(t, err)
+		assert.Equal(t, candidates[2], p.Target(), "Failover should pick the third candidate on the ring")
+	})
+
+	t.Run("determinism", func(t *testing.T) {
+		p1, _ := httpproxy.New(httpproxy.Options{Target: "http://h1"}, nil)
+		p2, _ := httpproxy.New(httpproxy.Options{Target: "http://h2"}, nil)
+		p3, _ := httpproxy.New(httpproxy.Options{Target: "http://h3"}, nil)
+
+		proxies1 := []proxy.Proxy{p1, p2, p3}
+		proxies2 := []proxy.Proxy{p3, p1, p2} // Different initial order
+
+		b1 := NewBalancer(proxies1, "$var.uid", 160)
+		b2 := NewBalancer(proxies2, "$var.uid", 160)
+
+		key := "test-determinism"
+		hzctx := app.NewContext(0)
+		hzctx.Set("uid", key)
+
+		sel1, err1 := b1.Select(context.Background(), hzctx)
+		sel2, err2 := b2.Select(context.Background(), hzctx)
+
+		assert.NoError(t, err1)
+		assert.NoError(t, err2)
+		assert.Equal(t, sel1.Target(), sel2.Target(), "Selection should be identical regardless of proxy input order")
+
+		// Also verify the internal ring nodes are sorted
+		assert.ElementsMatch(t, b1.ring.Nodes(), b2.ring.Nodes())
 	})
 }
