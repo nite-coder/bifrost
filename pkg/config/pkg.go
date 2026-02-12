@@ -28,7 +28,7 @@ var (
 	dnsResolver      *resolver.Resolver
 )
 
-func TestAndSkipResovler(path string) (string, error) {
+func TestAndSkipResolver(path string) (string, error) {
 	mainOptions, err := load(path, true)
 	return mainOptions.configPath, err
 }

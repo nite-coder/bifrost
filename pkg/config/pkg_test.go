@@ -223,17 +223,17 @@ func TestWatch(t *testing.T) {
 	})
 }
 
-func TestTestAndSkipResovler(t *testing.T) {
+func TestAndSkipResolverFunc(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
 		configPath := "./../../test/config/min.yaml"
-		path, err := TestAndSkipResovler(configPath)
+		path, err := TestAndSkipResolver(configPath)
 		assert.NoError(t, err)
 		assert.Contains(t, path, "min.yaml")
 	})
 
 	t.Run("invalid config path", func(t *testing.T) {
 		configPath := "./../../test/config/nonexistent.yaml"
-		_, err := TestAndSkipResovler(configPath)
+		_, err := TestAndSkipResolver(configPath)
 		assert.Error(t, err)
 	})
 }

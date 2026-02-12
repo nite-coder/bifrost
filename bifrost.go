@@ -130,7 +130,7 @@ func Run(opts ...Option) error {
 
 			isTestAndSkip := cCtx.Bool("testskip")
 			if isTestAndSkip {
-				path, err := config.TestAndSkipResovler(configPath)
+				path, err := config.TestAndSkipResolver(configPath)
 				if err != nil {
 					slog.Error("failed to load config", "error", err.Error())
 					slog.Info("the configuration file test has failed")
