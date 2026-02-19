@@ -249,7 +249,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*u.bifrost.options.Default.Service.MaxConnsPerHost))
 		}
 		if strings.EqualFold(addr.Scheme, "https") {
-			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{ // nolint
+			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
 				// when client uses ip address to connect to server, client need to set the ServerName to the domain name you want to use
 				ServerName:         serverName,
 				InsecureSkipVerify: !u.serviceOptions.TLSVerify, //nolint:gosec
@@ -308,9 +308,9 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			}
 			newProxies = append(newProxies, proxy)
 		case config.ProtocolGRPC:
-			url = fmt.Sprintf("grpc://%s%s", targetHost, addr.Path)
+			url = "grpc://" + targetHost + addr.Path
 			if port != "" {
-				url = fmt.Sprintf("grpc://%s:%s%s", targetHost, port, addr.Path)
+				url = "grpc://" + net.JoinHostPort(targetHost, port) + addr.Path
 			}
 			grpcOptions := grpcproxy.Options{
 				Target:           url,
@@ -377,7 +377,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		slog.Debug("upstream refresh success", "upstream_id", u.options.ID, "proxy_id", updatedProxies[0].ID(), "len", len(updatedProxies))
 	}
 
-	factory := balancer.Factory(string(u.options.Balancer.Type))
+	factory := balancer.Factory(u.options.Balancer.Type)
 	balancer, err := factory(updatedProxies, u.options.Balancer.Params)
 	if err != nil {
 		return err

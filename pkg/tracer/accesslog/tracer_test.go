@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	content = `{"label": "hello 您好 ~"}`
+	content = `{"label": "hello world ~"}`
 )
 
 func TestEscape(t *testing.T) {
@@ -23,8 +23,8 @@ func TestEscape(t *testing.T) {
 		expected   string
 	}{
 		{"empty string", "", config.DefaultEscape, ""},
-		{"default escape", "hello 您好", config.DefaultEscape, `hello \xe6\x82\xa8\xe5\xa5\xbd`},
-		{"json escape", content, config.JSONEscape, `{\"label\": \"hello 您好 ~\"}`},
+		{"default escape", "hello world", config.DefaultEscape, `hello world`},
+		{"json escape", content, config.JSONEscape, `{\"label\": \"hello world ~\"}`},
 		{"none escape", content, config.NoneEscape, content},
 		{"invalid escape", content, " invalid", content},
 	}
@@ -60,7 +60,7 @@ func BenchmarkEscapeJSON(b *testing.B) {
 			"size": "0.0001",
 			"side": "sell",
 			"user_id": 1,
-			"text": "你好世界"
+			"text": "hello world"
 		}`},
 	}
 

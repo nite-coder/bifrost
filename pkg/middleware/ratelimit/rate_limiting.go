@@ -28,7 +28,7 @@ type StrategyMode string
 const (
 	Local           StrategyMode = "local"
 	Redis           StrategyMode = "redis"
-	LocalAsyncRedis StrategyMode = "local_async_redis" // nolint
+	LocalAsyncRedis StrategyMode = "local_async_redis"
 )
 
 type Options struct {

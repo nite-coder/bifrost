@@ -8,7 +8,7 @@ import (
 type ChangeFunc func() error
 type Provider interface {
 	Watch() error
-	SetOnChanged(ChangeFunc)
+	SetOnChanged(f ChangeFunc)
 }
 type GetInstanceOptions struct {
 	Namespace string

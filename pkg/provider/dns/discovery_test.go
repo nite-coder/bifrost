@@ -32,7 +32,7 @@ func TestDNSServiceDiscovery_GetInstances(t *testing.T) {
 			name:        "valid service without port",
 			servers:     []string{"1.1.1.1"},
 			serviceName: "www.google.com",
-			valid:       time.Duration(10 * time.Minute),
+			valid:       10 * time.Minute,
 			mockIPs:     []string{"142.250.198.68"},
 			wantErr:     false,
 		},

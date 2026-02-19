@@ -108,6 +108,6 @@ func (e *Engine) Use(middleware ...app.HandlerFunc) {
 	e.middlewares = e.handlers
 
 	if e.notFoundHandler != nil {
-		e.middlewares = append(e.handlers, e.notFoundHandler) // nolint
+		e.middlewares = append(e.handlers, e.notFoundHandler)
 	}
 }

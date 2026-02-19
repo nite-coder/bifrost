@@ -29,7 +29,7 @@ type EnvGetter func(string) string
 // process is an interface representing an operating system process.
 // It abstracts os.Process for testing purposes.
 type process interface {
-	Signal(os.Signal) error
+	Signal(sig os.Signal) error
 	Kill() error
 	Wait() (*os.ProcessState, error)
 	Release() error

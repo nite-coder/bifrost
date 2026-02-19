@@ -59,7 +59,7 @@ func load(path string, skipResolver bool) (Options, error) {
 
 	err = ValidateConfig(mainOpts, false)
 	if err != nil {
-		var errInvalidConfig ErrInvalidConfig
+		var errInvalidConfig InvalidConfigError
 		if errors.As(err, &errInvalidConfig) {
 			line := findConfigurationLine(content, errInvalidConfig.Structure, errInvalidConfig.Value)
 			return mainOpts, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), path, line)
@@ -126,7 +126,7 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 		for _, c := range cInfo {
 			mainOptions, err = mergeOptions(mainOptions, c.Content)
 			if err != nil {
-				var errInvalidConfig ErrInvalidConfig
+				var errInvalidConfig InvalidConfigError
 				if errors.As(err, &errInvalidConfig) {
 					line := findConfigurationLine(c.Content, errInvalidConfig.Structure, errInvalidConfig.Value)
 					return nil, mainOptions, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), c.Path, line)
@@ -192,7 +192,7 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 		for _, file := range files {
 			mainOptions, err = mergeOptions(mainOptions, file.Content)
 			if err != nil {
-				var errInvalidConfig ErrInvalidConfig
+				var errInvalidConfig InvalidConfigError
 				if errors.As(err, &errInvalidConfig) {
 					line := findConfigurationLine(file.Content, errInvalidConfig.Structure, errInvalidConfig.Value)
 					return nil, mainOptions, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), file.DataID, line)

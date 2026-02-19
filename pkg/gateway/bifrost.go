@@ -242,8 +242,8 @@ func NewBifrost(mainOptions config.Options, isReload bool) (bifrost *Bifrost, er
 			return nil, fmt.Errorf("http server '%s' already exists", id)
 		}
 		// deep copy; each server has only one access logger tracer
-		myTracers := make([]tracer.Tracer, len(tracers))
-		copy(myTracers, tracers)
+		myTracers := make([]tracer.Tracer, 0, len(tracers)+1)
+		myTracers = append(myTracers, tracers...)
 		if len(server.AccessLogID) > 0 {
 			_, found := mainOptions.AccessLogs[server.AccessLogID]
 			if !found {

@@ -36,7 +36,7 @@ var startCommand = func(cmd *exec.Cmd) error {
 	return cmd.Start()
 }
 
-// Environment variable used to identify worker processes.
+// EnvBifrostRole variable used to identify worker processes.
 const EnvBifrostRole = "BIFROST_ROLE"
 
 // RoleWorker is the value of BIFROST_ROLE for worker processes.

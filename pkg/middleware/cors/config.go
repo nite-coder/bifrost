@@ -88,7 +88,7 @@ func (c *Config) AddAllowHeaders(headers ...string) {
 func (c *Config) AddExposeHeaders(headers ...string) {
 	c.ExposeHeaders = append(c.ExposeHeaders, headers...)
 }
-func (c Config) getAllowedSchemas() []string {
+func (c *Config) getAllowedSchemas() []string {
 	allowedSchemas := DefaultSchemas
 	if c.AllowBrowserExtensions {
 		allowedSchemas = append(allowedSchemas, ExtensionSchemas...)
@@ -101,7 +101,7 @@ func (c Config) getAllowedSchemas() []string {
 	}
 	return allowedSchemas
 }
-func (c Config) validateAllowedSchemas(origin string) bool {
+func (c *Config) validateAllowedSchemas(origin string) bool {
 	allowedSchemas := c.getAllowedSchemas()
 	for _, schema := range allowedSchemas {
 		if strings.HasPrefix(origin, schema) {
@@ -112,7 +112,7 @@ func (c Config) validateAllowedSchemas(origin string) bool {
 }
 
 // Validate is check configuration of user defined.
-func (c Config) Validate() error {
+func (c *Config) Validate() error {
 	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0) {
 		return errors.New("conflict settings: all origins are allowed. AllowOriginFunc or AllowOrigins is not needed")
 	}
@@ -126,7 +126,7 @@ func (c Config) Validate() error {
 	}
 	return nil
 }
-func (c Config) parseWildcardRules() [][]string {
+func (c *Config) parseWildcardRules() [][]string {
 	var wRules [][]string
 	if !c.AllowWildcard {
 		return wRules

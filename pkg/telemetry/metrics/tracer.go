@@ -126,7 +126,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 
 	httpServerRequestBodySize := prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "http_server_request_body_size",
+			Name: "http_server_request_body_size_total",
 			Help: "Size of HTTP server request bodies.",
 		},
 		[]string{labelServerID},
@@ -135,7 +135,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 
 	httpServerResponseBodySize := prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "http_server_response_body_size",
+			Name: "http_server_response_body_size_total",
 			Help: "Size of HTTP server response bodies.",
 		},
 		[]string{labelServerID},
@@ -144,7 +144,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 
 	httpServerRequests := prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "http_server_requests",
+			Name: "http_server_requests_total",
 			Help: "Total number of HTTPs completed by the server, regardless of success or failure",
 		},
 		[]string{labelMethod, labelPath, labelStatusCode, labelGRPCStatusCode, labelServerID, labelRouteID, labelServiceID},

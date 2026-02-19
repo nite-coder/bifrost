@@ -188,7 +188,7 @@ func (m *CorazaMiddleware) log(ctx context.Context, c *app.RequestContext, tx ty
 func Init() error {
 	bifrostWAFCoreRulesetHits = prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "bifrost_waf_core_ruleset_hits",
+			Name: "bifrost_waf_core_ruleset_hits_total",
 			Help: "Number of WAF Core Ruleset hits",
 		},
 		[]string{"server_id", "method", "path", "rule_id", "client_ip"},

@@ -69,13 +69,13 @@ func NewOptions() Options {
 	}
 	return mainOptions
 }
-func (opt Options) IsWatch() bool {
+func (opt *Options) IsWatch() bool {
 	if opt.Watch == nil {
 		return true
 	}
 	return *opt.Watch
 }
-func (opt Options) ConfigPath() string {
+func (opt *Options) ConfigPath() string {
 	return opt.configPath
 }
 
