@@ -1,7 +1,7 @@
 package initialize
 
 import (
-	// register middleware
+	// register middleware.
 	"github.com/nite-coder/bifrost/pkg/middleware/addprefix"
 	"github.com/nite-coder/bifrost/pkg/middleware/buffering"
 	"github.com/nite-coder/bifrost/pkg/middleware/compression"
@@ -21,7 +21,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware/trafficsplitter"
 	"github.com/nite-coder/bifrost/pkg/middleware/uarestriction"
 
-	// register balance
+	// register balance.
 	"github.com/nite-coder/bifrost/pkg/balancer/chash"
 	"github.com/nite-coder/bifrost/pkg/balancer/random"
 	"github.com/nite-coder/bifrost/pkg/balancer/roundrobin"

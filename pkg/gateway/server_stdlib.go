@@ -23,7 +23,7 @@ var (
 	}
 )
 
-// HertzBridge implements http.Handler by bridging to a Hertz instance
+// HertzBridge implements http.Handler by bridging to a Hertz instance.
 type HertzBridge struct {
 	Hertz *server.Hertz
 }
@@ -103,7 +103,7 @@ func (b *HertzBridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// NewStdlibServer creates a new http.Server that wraps a Hertz instance for HTTP/2 support
+// NewStdlibServer creates a new http.Server that wraps a Hertz instance for HTTP/2 support.
 func NewStdlibServer(h *server.Hertz, options *config.ServerOptions, tlsConfig *tls.Config) *http.Server {
 	protocols := &http.Protocols{}
 	protocols.SetHTTP1(true)

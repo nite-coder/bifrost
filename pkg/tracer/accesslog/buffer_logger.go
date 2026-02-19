@@ -96,12 +96,6 @@ func (l *BufferedLogger) Flush() error {
 	return nil
 }
 
-// periodicFlush is called periodically to flush the buffer.
-func (l *BufferedLogger) periodicFlush() {
-	_ = l.Flush()
-	l.flushTimer.Reset(l.options.Flush) // Reset the timer for the next flush
-}
-
 // Close closes the logger and releases resources.
 func (l *BufferedLogger) Close() error {
 	if l.flushTimer != nil {
@@ -114,6 +108,12 @@ func (l *BufferedLogger) Close() error {
 		return l.file.Close()
 	}
 	return nil
+}
+
+// periodicFlush is called periodically to flush the buffer.
+func (l *BufferedLogger) periodicFlush() {
+	_ = l.Flush()
+	l.flushTimer.Reset(l.options.Flush) // Reset the timer for the next flush
 }
 
 // reopenFile closes the current log file and reopens it.

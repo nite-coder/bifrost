@@ -31,11 +31,32 @@ type Options struct {
 	Gopool          bool                        `yaml:"gopool" json:"gopool"`
 }
 
-func (o *Options) UnmarshalYAML(value *yaml.Node) error {
+// NewOptions creates a new Options instance with default values.
+func NewOptions() Options {
+	return Options{
+		Gopool:      true,
+		AccessLogs:  make(map[string]AccessLogOptions),
+		Servers:     make(map[string]ServerOptions),
+		Routes:      make([]*RouteOptions, 0),
+		Middlewares: make(map[string]MiddlwareOptions),
+		Services:    make(map[string]ServiceOptions),
+		Upstreams:   make(map[string]UpstreamOptions),
+	}
+}
+
+// UnmarshalYAML custom unmarshaler for Options.
+func (opt *Options) UnmarshalYAML(value *yaml.Node) error {
 	type options Options
-	if err := value.Decode((*options)(o)); err != nil {
+	var defaults options
+	if err := value.Decode(&defaults); err != nil {
 		return err
 	}
+	*opt = Options(defaults)
+
+	if opt.Gopool {
+		// handle gopool logic if needed
+	}
+
 	// due to map is unordered in Go, therefore, we need to parse `routes` section in yaml manually
 	for idx, node := range value.Content {
 		if node.Value == "routes" && len(value.Content) >= idx+1 {
@@ -51,23 +72,12 @@ func (o *Options) UnmarshalYAML(value *yaml.Node) error {
 					if err != nil {
 						return err
 					}
-					o.Routes = append(o.Routes, &routeOption)
+					opt.Routes = append(opt.Routes, &routeOption)
 				}
 			}
 		}
 	}
 	return nil
-}
-func NewOptions() Options {
-	mainOptions := Options{
-		AccessLogs:  make(map[string]AccessLogOptions),
-		Servers:     make(map[string]ServerOptions),
-		Routes:      make([]*RouteOptions, 0),
-		Middlewares: make(map[string]MiddlwareOptions),
-		Services:    make(map[string]ServiceOptions),
-		Upstreams:   make(map[string]UpstreamOptions),
-	}
-	return mainOptions
 }
 func (opt *Options) IsWatch() bool {
 	if opt.Watch == nil {

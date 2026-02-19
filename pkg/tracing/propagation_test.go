@@ -63,8 +63,7 @@ func TestGRPCMetadataInject(t *testing.T) {
 	md := metadata.MD{}
 
 	type args struct {
-		ctx context.Context
-		md  metadata.MD
+		md metadata.MD
 	}
 	tests := []struct {
 		name string
@@ -73,14 +72,13 @@ func TestGRPCMetadataInject(t *testing.T) {
 		{
 			name: "inject valid",
 			args: args{
-				ctx: ctx,
-				md:  md,
+				md: md,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			InjectGRPCMetadata(tt.args.ctx, tt.args.md)
+			InjectGRPCMetadata(ctx, tt.args.md)
 			assert.NotEmpty(t, tt.args.md)
 			assert.Equal(t, "01000000000000000000000000000000-0200000000000000-0", tt.args.md.Get("b3")[0])
 			assert.Equal(t, "00-01000000000000000000000000000000-0200000000000000-00", tt.args.md.Get("traceparent")[0])
@@ -109,7 +107,6 @@ func TestHTTPHeaderInject(t *testing.T) {
 	md := &protocol.RequestHeader{}
 
 	type args struct {
-		ctx      context.Context
 		metadata *protocol.RequestHeader
 	}
 	tests := []struct {
@@ -119,14 +116,13 @@ func TestHTTPHeaderInject(t *testing.T) {
 		{
 			name: "inject valid",
 			args: args{
-				ctx:      ctx,
 				metadata: md,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			InjectHTTPHeader(tt.args.ctx, tt.args.metadata)
+			InjectHTTPHeader(ctx, tt.args.metadata)
 			assert.NotEmpty(t, tt.args.metadata)
 			assert.Equal(t, "01000000000000000000000000000000-0200000000000000-0", md.Get("b3"))
 			assert.Equal(t, "00-01000000000000000000000000000000-0200000000000000-00", md.Get("traceparent"))

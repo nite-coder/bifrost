@@ -178,7 +178,75 @@ func (cp *ControlPlane) SetFDHandler(handler func(fds []*os.File, keys []string)
 	cp.fdHandler = handler
 }
 
-// ...
+// ReceiveFDsFromConn extracts FDs from the given connection using SCM_RIGHTS.
+func (cp *ControlPlane) ReceiveFDsFromConn(conn net.Conn) ([]*os.File, error) {
+	unixConn, ok := conn.(*net.UnixConn)
+	if !ok {
+		return nil, errors.New("connection is not a unix socket")
+	}
+
+	rawConn, err := unixConn.SyscallConn()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get syscall conn: %w", err)
+	}
+
+	var files []*os.File
+	var recvErr error
+
+	// We expect the peer to send OOB data now.
+	// Since we are synced via Ack, the next bytes on the wire should be the OOB msg.
+	err = rawConn.Read(func(fd uintptr) bool {
+		buf := make([]byte, 1)                    // Dummy byte
+		oob := make([]byte, unix.CmsgSpace(4*10)) // Space for up to 10 FDs
+
+		// Use MSG_CMSG_CLOEXEC for safety? Go usually handles it.
+		n, oobn, _, _, err := unix.Recvmsg(int(fd), buf, oob, 0)
+		if err != nil {
+			if errors.Is(err, syscall.EAGAIN) {
+				return false // Try again
+			}
+			recvErr = fmt.Errorf("recvmsg failed: %w", err)
+			return true
+		}
+
+		if n == 0 && oobn == 0 {
+			recvErr = errors.New("received empty message during FD transfer")
+			return true
+		}
+
+		scms, err := unix.ParseSocketControlMessage(oob[:oobn])
+		if err != nil {
+			recvErr = fmt.Errorf("failed to parse socket control message: %w", err)
+			return true
+		}
+
+		for _, scm := range scms {
+			fds, err := unix.ParseUnixRights(&scm)
+			if err != nil {
+				continue
+			}
+			for _, fd := range fds {
+				files = append(files, os.NewFile(uintptr(fd), ""))
+			}
+		}
+
+		return true
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	if recvErr != nil {
+		return nil, recvErr
+	}
+
+	return files, nil
+}
+
+// SocketPath returns the socket path used by this ControlPlane.
+func (cp *ControlPlane) SocketPath() string {
+	return cp.options.SocketPath
+}
 
 // handleConnection handles a single Worker connection.
 func (cp *ControlPlane) handleConnection(ctx context.Context, conn net.Conn) {
@@ -272,76 +340,6 @@ func (cp *ControlPlane) handleConnection(ctx context.Context, conn net.Conn) {
 	}
 }
 
-// ReceiveFDsFromConn extracts FDs from the given connection using SCM_RIGHTS.
-func (cp *ControlPlane) ReceiveFDsFromConn(conn net.Conn) ([]*os.File, error) {
-	unixConn, ok := conn.(*net.UnixConn)
-	if !ok {
-		return nil, errors.New("connection is not a unix socket")
-	}
-
-	rawConn, err := unixConn.SyscallConn()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get syscall conn: %w", err)
-	}
-
-	var files []*os.File
-	var recvErr error
-
-	// We expect the peer to send OOB data now.
-	// Since we are synced via Ack, the next bytes on the wire should be the OOB msg.
-	err = rawConn.Read(func(fd uintptr) bool {
-		buf := make([]byte, 1)                    // Dummy byte
-		oob := make([]byte, unix.CmsgSpace(4*10)) // Space for up to 10 FDs
-
-		// Use MSG_CMSG_CLOEXEC for safety? Go usually handles it.
-		n, oobn, _, _, err := unix.Recvmsg(int(fd), buf, oob, 0)
-		if err != nil {
-			if errors.Is(err, syscall.EAGAIN) {
-				return false // Try again
-			}
-			recvErr = fmt.Errorf("recvmsg failed: %w", err)
-			return true
-		}
-
-		if n == 0 && oobn == 0 {
-			recvErr = errors.New("received empty message during FD transfer")
-			return true
-		}
-
-		scms, err := unix.ParseSocketControlMessage(oob[:oobn])
-		if err != nil {
-			recvErr = fmt.Errorf("failed to parse socket control message: %w", err)
-			return true
-		}
-
-		for _, scm := range scms {
-			fds, err := unix.ParseUnixRights(&scm)
-			if err != nil {
-				continue
-			}
-			for _, fd := range fds {
-				files = append(files, os.NewFile(uintptr(fd), ""))
-			}
-		}
-
-		return true
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	if recvErr != nil {
-		return nil, recvErr
-	}
-
-	return files, nil
-}
-
-// SocketPath returns the socket path used by this ControlPlane.
-func (cp *ControlPlane) SocketPath() string {
-	return cp.options.SocketPath
-}
-
 // WorkerControlPlane is the Worker-side control plane client.
 type WorkerControlPlane struct {
 	conn       net.Conn
@@ -390,20 +388,6 @@ func (wcp *WorkerControlPlane) NotifyReady() error {
 		Type:      MessageTypeReady,
 		WorkerPID: wcp.pid,
 	})
-}
-
-// sendMessage sends a control message to Master.
-func (wcp *WorkerControlPlane) sendMessage(msg *ControlMessage) error {
-	if wcp.conn == nil {
-		return errors.New("not connected to control plane")
-	}
-
-	encoder := json.NewEncoder(wcp.conn)
-	if err := encoder.Encode(msg); err != nil {
-		return fmt.Errorf("failed to send message: %w", err)
-	}
-
-	return nil
 }
 
 // SendFDs opens a dedicated connection to Master and sends listener FDs.
@@ -543,5 +527,19 @@ func (wcp *WorkerControlPlane) Close() error {
 	if wcp.conn != nil {
 		return wcp.conn.Close()
 	}
+	return nil
+}
+
+// sendMessage sends a control message to Master.
+func (wcp *WorkerControlPlane) sendMessage(msg *ControlMessage) error {
+	if wcp.conn == nil {
+		return errors.New("not connected to control plane")
+	}
+
+	encoder := json.NewEncoder(wcp.conn)
+	if err := encoder.Encode(msg); err != nil {
+		return fmt.Errorf("failed to send message: %w", err)
+	}
+
 	return nil
 }

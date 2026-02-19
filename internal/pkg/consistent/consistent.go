@@ -36,7 +36,7 @@ type Consistent struct {
 
 // New creates a new Consistent hash ring with default configuration:
 // - 160 virtual nodes per physical node
-// - CRC32 hash function
+// - CRC32 hash function.
 func New() *Consistent {
 	return &Consistent{
 		replicas: DefaultReplicas,
@@ -114,30 +114,6 @@ func (c *Consistent) Remove(nodeID string) error {
 
 	c.removeUnsafe(nodeID)
 	return nil
-}
-
-// removeUnsafe removes a node from the ring without locking.
-// The caller must hold the lock.
-func (c *Consistent) removeUnsafe(nodeID string) {
-	replicas := c.nodes[nodeID]
-
-	// Remove all virtual nodes for this physical node
-	for i := 0; i < replicas; i++ {
-		virtualNodeKey := strconv.Itoa(i) + nodeID
-		hash := c.hashFunc([]byte(virtualNodeKey))
-		delete(c.ring, hash)
-	}
-
-	// Rebuild sorted nodes list without the removed node's virtual nodes
-	newSortedNodes := make([]uint32, 0, len(c.sortedNodes)-replicas)
-	for _, hash := range c.sortedNodes {
-		if _, exists := c.ring[hash]; exists {
-			newSortedNodes = append(newSortedNodes, hash)
-		}
-	}
-
-	c.sortedNodes = newSortedNodes
-	delete(c.nodes, nodeID)
 }
 
 // Get returns the physical node for the given key.
@@ -229,6 +205,30 @@ func (c *Consistent) IsEmpty() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return len(c.nodes) == 0
+}
+
+// removeUnsafe removes a node from the ring without locking.
+// The caller must hold the lock.
+func (c *Consistent) removeUnsafe(nodeID string) {
+	replicas := c.nodes[nodeID]
+
+	// Remove all virtual nodes for this physical node
+	for i := 0; i < replicas; i++ {
+		virtualNodeKey := strconv.Itoa(i) + nodeID
+		hash := c.hashFunc([]byte(virtualNodeKey))
+		delete(c.ring, hash)
+	}
+
+	// Rebuild sorted nodes list without the removed node's virtual nodes
+	newSortedNodes := make([]uint32, 0, len(c.sortedNodes)-replicas)
+	for _, hash := range c.sortedNodes {
+		if _, exists := c.ring[hash]; exists {
+			newSortedNodes = append(newSortedNodes, hash)
+		}
+	}
+
+	c.sortedNodes = newSortedNodes
+	delete(c.nodes, nodeID)
 }
 
 // crc32hash is a CRC32 hash function.

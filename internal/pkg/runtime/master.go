@@ -22,7 +22,7 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
-// Allow mocking for tests
+// Allow mocking for tests.
 var (
 	lookupUser  = user.Lookup
 	lookupGroup = user.LookupGroup
@@ -109,7 +109,7 @@ type Master struct {
 	listenerDataCh chan *listenerData
 }
 
-// listenerData holds the FDs and their keys (addresses)
+// listenerData holds the FDs and their keys (addresses).
 type listenerData struct {
 	fds  []*os.File
 	keys []string
@@ -324,6 +324,11 @@ func (m *Master) WorkerPID() int {
 		return 0
 	}
 	return m.currentWorker.Process.Pid
+}
+
+// ControlPlane returns the control plane instance.
+func (m *Master) ControlPlane() *ControlPlane {
+	return m.controlPlane
 }
 
 // spawnAndWatch spawns a new worker and starts watching it.
@@ -648,11 +653,6 @@ func (m *Master) handleFDTransfer(fds []*os.File, keys []string) {
 			_ = f.Close()
 		}
 	}
-}
-
-// ControlPlane returns the control plane instance.
-func (m *Master) ControlPlane() *ControlPlane {
-	return m.controlPlane
 }
 
 // IsWorker returns true if the current process is a worker.

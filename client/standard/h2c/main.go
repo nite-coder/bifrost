@@ -77,7 +77,7 @@ func main() {
 }
 
 func addGrpcPrefix(data []byte) []byte {
-	prefix := make([]byte, 5)
+	prefix := make([]byte, 5, 5+len(data))
 	binary.BigEndian.PutUint32(prefix[1:], uint32(len(data)))
 	return append(prefix, data...)
 }

@@ -19,7 +19,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
-// ValidateConfig checks if the config's values are valid, but does not check if the config's value mapping is valid
+// ValidateConfig checks if the config's values are valid, but does not check if the config's value mapping is valid.
 func ValidateConfig(mainOptions Options, isFullMode bool) error {
 
 	if dnsResolver == nil && !mainOptions.SkipResolver {

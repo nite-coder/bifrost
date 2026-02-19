@@ -122,7 +122,7 @@ func escape(s string, escapeType config.EscapeType) string {
 	return s
 }
 
-// escapeString function to escape special characters
+// escapeString function to escape special characters.
 func escapeString(s string) string {
 	var b strings.Builder
 	for i := 0; i < len(s); {

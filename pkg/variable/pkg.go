@@ -612,7 +612,7 @@ func sortBifrostVariables(slice []string) {
 	sort.Sort(byLengthAndContent(slice))
 }
 
-// MethodToString tries to return consts without allocation
+// MethodToString tries to return consts without allocation.
 func MethodToString(m []byte) string {
 	if len(m) == 0 {
 		return "GET"

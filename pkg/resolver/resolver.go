@@ -27,21 +27,7 @@ type Resolver struct {
 	dnsCache   *cache.Cache[string, []string]
 }
 
-func (r *Resolver) Close() {
-	if r.dnsCache != nil {
-		r.dnsCache.StopCleanup()
-	}
-}
-
-type Options struct {
-	// dns server for querying
-	Servers   []string
-	Hostsfile string
-	Order     []string
-	Timeout   time.Duration
-	SkipTest  bool
-}
-
+// NewResolver creates a new Resolver instance with the given options.
 func NewResolver(option Options) (*Resolver, error) {
 	if len(option.Order) == 0 {
 		option.Order = []string{"last", "a", "cname"}
@@ -105,6 +91,21 @@ func NewResolver(option Options) (*Resolver, error) {
 	}
 
 	return r, nil
+}
+
+func (r *Resolver) Close() {
+	if r.dnsCache != nil {
+		r.dnsCache.StopCleanup()
+	}
+}
+
+type Options struct {
+	// dns server for querying
+	Servers   []string
+	Hostsfile string
+	Order     []string
+	Timeout   time.Duration
+	SkipTest  bool
 }
 
 func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]string) ([]string, error) {

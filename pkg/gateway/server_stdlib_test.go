@@ -19,7 +19,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// Reusing gRPC test server logic from pkg/proxy/grpc/proxy_test.go logic
+// Reusing gRPC test server logic from pkg/proxy/grpc/proxy_test.go logic.
 type testGrpcServer struct {
 	proto.UnimplementedGreeterServer
 }

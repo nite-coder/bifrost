@@ -269,7 +269,7 @@ func TestServiceNoUpstream(t *testing.T) {
 	assert.Equal(t, 500, hzCtx.Response.StatusCode())
 }
 
-// TestServiceBalancerNil verifies that the service returns 503 when balancer is nil
+// TestServiceBalancerNil verifies that the service returns 503 when balancer is nil.
 func TestServiceBalancerNil(t *testing.T) {
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
 	assert.NoError(t, err)

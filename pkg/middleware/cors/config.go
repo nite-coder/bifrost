@@ -74,41 +74,19 @@ type Config struct {
 	AllowFiles bool
 }
 
-// AddAllowMethods is allowed to add custom methods
+// AddAllowMethods is allowed to add custom methods.
 func (c *Config) AddAllowMethods(methods ...string) {
 	c.AllowMethods = append(c.AllowMethods, methods...)
 }
 
-// AddAllowHeaders is allowed to add custom headers
+// AddAllowHeaders is allowed to add custom headers.
 func (c *Config) AddAllowHeaders(headers ...string) {
 	c.AllowHeaders = append(c.AllowHeaders, headers...)
 }
 
-// AddExposeHeaders is allowed to add custom expose headers
+// AddExposeHeaders is allowed to add custom expose headers.
 func (c *Config) AddExposeHeaders(headers ...string) {
 	c.ExposeHeaders = append(c.ExposeHeaders, headers...)
-}
-func (c *Config) getAllowedSchemas() []string {
-	allowedSchemas := DefaultSchemas
-	if c.AllowBrowserExtensions {
-		allowedSchemas = append(allowedSchemas, ExtensionSchemas...)
-	}
-	if c.AllowWebSockets {
-		allowedSchemas = append(allowedSchemas, WebSocketSchemas...)
-	}
-	if c.AllowFiles {
-		allowedSchemas = append(allowedSchemas, FileSchemas...)
-	}
-	return allowedSchemas
-}
-func (c *Config) validateAllowedSchemas(origin string) bool {
-	allowedSchemas := c.getAllowedSchemas()
-	for _, schema := range allowedSchemas {
-		if strings.HasPrefix(origin, schema) {
-			return true
-		}
-	}
-	return false
 }
 
 // Validate is check configuration of user defined.
@@ -125,6 +103,30 @@ func (c *Config) Validate() error {
 		}
 	}
 	return nil
+}
+
+func (c *Config) getAllowedSchemas() []string {
+	allowedSchemas := DefaultSchemas
+	if c.AllowBrowserExtensions {
+		allowedSchemas = append(allowedSchemas, ExtensionSchemas...)
+	}
+	if c.AllowWebSockets {
+		allowedSchemas = append(allowedSchemas, WebSocketSchemas...)
+	}
+	if c.AllowFiles {
+		allowedSchemas = append(allowedSchemas, FileSchemas...)
+	}
+	return allowedSchemas
+}
+
+func (c *Config) validateAllowedSchemas(origin string) bool {
+	allowedSchemas := c.getAllowedSchemas()
+	for _, schema := range allowedSchemas {
+		if strings.HasPrefix(origin, schema) {
+			return true
+		}
+	}
+	return false
 }
 func (c *Config) parseWildcardRules() [][]string {
 	var wRules [][]string

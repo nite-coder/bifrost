@@ -13,12 +13,12 @@ import (
 	"github.com/nite-coder/bifrost/internal/pkg/hzadaptor"
 )
 
-// stdlibFactory implements suite.ClientFactory
+// stdlibFactory implements suite.ClientFactory.
 type stdlibFactory struct {
 	tlsConfig *tls.Config
 }
 
-// NewClientFactory creates a new stdlibFactory
+// NewClientFactory creates a new stdlibFactory.
 func NewClientFactory(tlsConfig *tls.Config) suite.ClientFactory {
 	return &stdlibFactory{
 		tlsConfig: tlsConfig,
@@ -39,7 +39,7 @@ func (f *stdlibFactory) NewHostClient() (hclient.HostClient, error) {
 	}, nil
 }
 
-// stdlibHostClient implements protocol/client.HostClient
+// stdlibHostClient implements protocol/client.HostClient.
 type stdlibHostClient struct {
 	client *http.Client
 }

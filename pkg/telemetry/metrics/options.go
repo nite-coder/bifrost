@@ -32,28 +32,28 @@ func defaultConfig() *promConfig {
 	}
 }
 
-// WithEnableGoCollector enable go collector
+// WithEnableGoCollector enable go collector.
 func WithEnableGoCollector(enable bool) Option {
 	return option(func(cfg *promConfig) {
 		cfg.enableGoCollector = enable
 	})
 }
 
-// WithGoCollectorRule define your custom go collector rule
+// WithGoCollectorRule define your custom go collector rule.
 func WithGoCollectorRule(rules ...collectors.GoRuntimeMetricsRule) Option {
 	return option(func(cfg *promConfig) {
 		cfg.runtimeMetricRules = rules
 	})
 }
 
-// WithDisableServer disable prometheus server
+// WithDisableServer disable prometheus server.
 func WithDisableServer(disable bool) Option {
 	return option(func(cfg *promConfig) {
 		cfg.disableServer = disable
 	})
 }
 
-// WithHistogramBuckets define your custom histogram buckets base on your biz
+// WithHistogramBuckets define your custom histogram buckets base on your biz.
 func WithHistogramBuckets(buckets []float64) Option {
 	return option(func(cfg *promConfig) {
 		if len(buckets) > 0 {

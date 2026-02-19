@@ -158,7 +158,7 @@ func TestMaster_SignalForwarding(t *testing.T) {
 	}
 }
 
-// TestLogHelperProcess is a mock worker that reports its actions
+// TestLogHelperProcess is a mock worker that reports its actions.
 func TestLogHelperProcess(t *testing.T) {
 	if os.Getenv("GO_WANT_LOG_HELPER") != "1" {
 		return

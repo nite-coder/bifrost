@@ -9,7 +9,7 @@ import (
 	"github.com/stathat/consistent"
 )
 
-// TestDistributionWith5Nodes tests distribution with 5 physical nodes
+// TestDistributionWith5Nodes tests distribution with 5 physical nodes.
 func TestDistributionWith5Nodes(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -78,7 +78,7 @@ func TestDistributionWith5Nodes(t *testing.T) {
 	}
 }
 
-// TestDistributionWith10Nodes tests distribution with 10 physical nodes
+// TestDistributionWith10Nodes tests distribution with 10 physical nodes.
 func TestDistributionWith10Nodes(t *testing.T) {
 	testCases := []struct {
 		name     string

@@ -3,21 +3,17 @@ version: "2"
 linters:
   default: all
   disable:
-    # TODO: Tweak for current project needs
-    - containedctx
     - cyclop
+    - noctx
+    # TODO: Tweak for current project needs
     - depguard
     - dupl
-    - dupword
     - err113
     - exhaustruct
-    - funcorder
     - gochecknoglobals
-    - godot
     - intrange
     - ireturn
     - nlreturn
-    - noctx
     - noinlineerr
     - nonamedreturns
     - tagliatelle

@@ -44,7 +44,7 @@ func TestStathatDistribution(t *testing.T) {
 	}
 }
 
-// TestOurDistribution tests our implementation's distribution
+// TestOurDistribution tests our implementation's distribution.
 func TestOurDistribution(t *testing.T) {
 	ring := New() // Default 160 replicas
 
@@ -77,7 +77,7 @@ func TestOurDistribution(t *testing.T) {
 	}
 }
 
-// BenchmarkStathatGet benchmarks stathat/consistent Get operation
+// BenchmarkStathatGet benchmarks stathat/consistent Get operation.
 func BenchmarkStathatGet(b *testing.B) {
 	c := consistent.New()
 	c.NumberOfReplicas = 160
@@ -92,7 +92,7 @@ func BenchmarkStathatGet(b *testing.B) {
 	}
 }
 
-// BenchmarkOurGet benchmarks our implementation's Get operation
+// BenchmarkOurGet benchmarks our implementation's Get operation.
 func BenchmarkOurGet(b *testing.B) {
 	ring := New()
 	_ = ring.Add("node1")
@@ -106,7 +106,7 @@ func BenchmarkOurGet(b *testing.B) {
 	}
 }
 
-// BenchmarkStathatAdd benchmarks stathat/consistent Add operation
+// BenchmarkStathatAdd benchmarks stathat/consistent Add operation.
 func BenchmarkStathatAdd(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -116,7 +116,7 @@ func BenchmarkStathatAdd(b *testing.B) {
 	}
 }
 
-// BenchmarkOurAdd benchmarks our implementation's Add operation
+// BenchmarkOurAdd benchmarks our implementation's Add operation.
 func BenchmarkOurAdd(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -125,7 +125,7 @@ func BenchmarkOurAdd(b *testing.B) {
 	}
 }
 
-// BenchmarkStathatConcurrentGet benchmarks concurrent Get operations for stathat/consistent
+// BenchmarkStathatConcurrentGet benchmarks concurrent Get operations for stathat/consistent.
 func BenchmarkStathatConcurrentGet(b *testing.B) {
 	c := consistent.New()
 	c.NumberOfReplicas = 160
@@ -144,7 +144,7 @@ func BenchmarkStathatConcurrentGet(b *testing.B) {
 	})
 }
 
-// BenchmarkOurConcurrentGet benchmarks concurrent Get operations for our implementation
+// BenchmarkOurConcurrentGet benchmarks concurrent Get operations for our implementation.
 func BenchmarkOurConcurrentGet(b *testing.B) {
 	ring := New()
 	_ = ring.Add("node1")

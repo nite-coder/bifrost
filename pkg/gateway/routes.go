@@ -121,7 +121,7 @@ func newRoutes() *Routes {
 	}
 }
 
-// ServeHTTP implements the http.Handler interface
+// ServeHTTP implements the http.Handler interface.
 func (r *Routes) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	method := cast.B2S(ctx.Method())
 	path := cast.B2S(ctx.Request.Path())
@@ -158,7 +158,7 @@ func (r *Routes) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 
 }
 
-// Add adds a new route
+// Add adds a new route.
 func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFunc) error {
 	var err error
 

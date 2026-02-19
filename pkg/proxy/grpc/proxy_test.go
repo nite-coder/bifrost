@@ -26,7 +26,7 @@ type grpcTestServer struct {
 	proto.UnimplementedGreeterServer
 }
 
-// SayHello implements helloworld.GreeterServer
+// SayHello implements helloworld.GreeterServer.
 func (s *grpcTestServer) SayHello(ctx context.Context, in *proto.HelloRequest) (*proto.HelloReply, error) {
 	// received metadata
 	md, ok := metadata.FromIncomingContext(ctx)

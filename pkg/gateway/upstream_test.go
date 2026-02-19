@@ -265,7 +265,7 @@ func TestRefreshProxies(t *testing.T) {
 
 }
 
-// mockErrorDiscovery is a mock service discovery that always returns an error
+// mockErrorDiscovery is a mock service discovery that always returns an error.
 type mockErrorDiscovery struct{}
 
 func (m *mockErrorDiscovery) GetInstances(ctx context.Context, opts provider.GetInstanceOptions) ([]provider.Instancer, error) {
@@ -280,7 +280,7 @@ func (m *mockErrorDiscovery) Close() error {
 	return nil
 }
 
-// TestWatchErrorHandling verifies that watch() returns early when Watch() fails
+// TestWatchErrorHandling verifies that watch() returns early when Watch() fails.
 func TestWatchErrorHandling(t *testing.T) {
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
 	assert.NoError(t, err)

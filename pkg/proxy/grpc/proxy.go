@@ -126,7 +126,7 @@ func (p *GRPCProxy) AddFailedCount(count uint) error {
 	return nil
 }
 
-// ID return proxy's ID
+// ID return proxy's ID.
 func (p *GRPCProxy) ID() string {
 	return p.id
 }
@@ -162,7 +162,7 @@ func (p *GRPCProxy) Tags() map[string]string {
 	return p.tags
 }
 
-// ServeHTTP implements the http.Handler interface
+// ServeHTTP implements the http.Handler interface.
 func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 	defer func() {
@@ -229,8 +229,8 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			ctx, span = tracer.Start(ctx, fullMethodName, spanOptions...)
 			tracing.InjectGRPCMetadata(ctx, md)
 			defer func() {
-				// Extract service and method names from fullMethodName
-				// fullMethodName format: /<service-name>/<method-name>
+				// Extract service and method names.
+				// Format: /<service-name>/<method-name>
 				serviceName := ""
 				methodName := ""
 				if idx := strings.LastIndex(fullMethodName, "/"); idx != -1 {

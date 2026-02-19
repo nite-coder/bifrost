@@ -13,7 +13,7 @@ var (
 	HTTPMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch, http.MethodHead, http.MethodOptions, http.MethodTrace, http.MethodConnect}
 )
 
-// methodHandler contains handler functions for various HTTP methods
+// methodHandler contains handler functions for various HTTP methods.
 type methodHandler struct {
 	handlers map[string][]app.HandlerFunc // Associates HTTP methods with handler functions
 }
@@ -31,7 +31,7 @@ type Children struct {
 	Path string
 }
 
-// node represents a node in the Trie
+// node represents a node in the Trie.
 type node struct {
 	path            string           // Path name of the node
 	children        map[string]*node // Child nodes, indexed by path name
@@ -40,7 +40,7 @@ type node struct {
 	generalChildren []*Children
 }
 
-// newNode creates a new node
+// newNode creates a new node.
 func newNode(path string) *node {
 	return &node{
 		path:            path,
@@ -51,7 +51,7 @@ func newNode(path string) *node {
 	}
 }
 
-// addChild adds a child node to the current node
+// addChild adds a child node to the current node.
 func (n *node) addChild(child *node, nodeType NodeType) {
 	switch nodeType {
 	case PreferentialPrefix:
@@ -90,7 +90,7 @@ func (n *node) addChild(child *node, nodeType NodeType) {
 	}
 }
 
-// findChildByName searches for a node with the specified name among the children
+// findChildByName searches for a node with the specified name among the children.
 func (n *node) findChildByName(name string, nodeType NodeType) *node {
 	switch nodeType {
 	case PreferentialPrefix:
@@ -138,7 +138,7 @@ func (n *node) matchChildByName(name string, nodeType NodeType) *node {
 	return nil
 }
 
-// addHandler adds handler functions to the node
+// addHandler adds handler functions to the node.
 func (n *node) addHandler(method string, h []app.HandlerFunc) {
 	if n.handler.handlers == nil {
 		n.handler.handlers = make(map[string][]app.HandlerFunc)
@@ -146,7 +146,7 @@ func (n *node) addHandler(method string, h []app.HandlerFunc) {
 	n.handler.handlers[method] = h
 }
 
-// findHandler searches for handler functions based on the request method
+// findHandler searches for handler functions based on the request method.
 func (n *node) findHandler(method string) []app.HandlerFunc {
 	if handlers, ok := n.handler.handlers[method]; ok {
 		return handlers
@@ -154,12 +154,12 @@ func (n *node) findHandler(method string) []app.HandlerFunc {
 	return nil
 }
 
-// Router struct contains the Trie and handler chain
+// Router struct contains the Trie and handler chain.
 type Router struct {
 	tree *node // Root node of the Trie
 }
 
-// NewRouter creates and returns a new router
+// NewRouter creates and returns a new router.
 func NewRouter() *Router {
 	r := &Router{
 		tree: newNode("/"),
@@ -167,7 +167,7 @@ func NewRouter() *Router {
 	return r
 }
 
-// Add adds a route to radix tree
+// Add adds a route to radix tree.
 func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.HandlerFunc) error {
 	if len(path) == 0 || path[0] != '/' {
 		return fmt.Errorf("router: invalid path '%s'; must begin with '/'", path)
@@ -230,7 +230,7 @@ func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.H
 	return nil
 }
 
-// Find searches the Trie for handler functions matching the route, returns the handler functions and whether the handler is deferred (genernal match)
+// Find searches the Trie for handler functions matching the route, returns the handler functions and whether the handler is deferred (genernal match).
 func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 	if path == "" || path[0] != '/' {
 		path = "/"

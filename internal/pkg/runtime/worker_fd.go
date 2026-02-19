@@ -91,6 +91,13 @@ func (h *WorkerFDHandler) HandleFDRequest() error {
 	return h.wcp.SendFDs(files, keys)
 }
 
+// ListenerCount returns the number of registered listeners.
+func (h *WorkerFDHandler) ListenerCount() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.listeners)
+}
+
 // getListenerFile extracts the underlying file descriptor from a listener.
 func (h *WorkerFDHandler) getListenerFile(listener net.Listener) (*os.File, error) {
 	// Handle proxy protocol wrapper
@@ -109,13 +116,6 @@ func (h *WorkerFDHandler) getListenerFile(listener net.Listener) (*os.File, erro
 	}
 
 	return nil, fmt.Errorf("unsupported listener type: %T", listener)
-}
-
-// ListenerCount returns the number of registered listeners.
-func (h *WorkerFDHandler) ListenerCount() int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return len(h.listeners)
 }
 
 // InheritedListeners returns the listener FDs and their keys inherited from Master.

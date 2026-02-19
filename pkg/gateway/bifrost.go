@@ -33,113 +33,6 @@ type Bifrost struct {
 	state           uint32
 }
 
-// Run starts all HTTP servers in the Bifrost instance. The last server is started
-// in the current goroutine, and the function will block until the last server
-// stops. The other servers are started in separate goroutines.
-func (b *Bifrost) Run() {
-	i := 0
-	for _, server := range b.httpServers {
-		if i == len(b.httpServers)-1 {
-			// last server need to blocked
-			safety.Go(context.Background(), server.Run)
-			return
-		}
-		go safety.Go(context.Background(), server.Run)
-		i++
-	}
-}
-func (b *Bifrost) ZeroDownTime() *runtime.ZeroDownTime {
-	return b.runtime
-}
-
-// Shutdown shuts down all HTTP servers in the Bifrost instance gracefully.
-// It blocks until all servers finish their shutdown process.
-// The function returns an error if any server fails to shut down.
-func (b *Bifrost) Shutdown(ctx context.Context) error {
-	return b.shutdown(ctx, false)
-}
-
-func (b *Bifrost) ShutdownNow(ctx context.Context) error {
-	return b.shutdown(ctx, true)
-}
-
-// Service retrieves a service by its ID from the Bifrost instance.
-// It returns a pointer to the Service and a boolean indicating whether
-// the service was found. If the serviceID does not exist, the returned
-// Service pointer will be nil and the boolean will be false.
-func (b *Bifrost) Service(serviceID string) (*Service, bool) {
-	result, found := b.services[serviceID]
-	return result, found
-}
-
-// IsActive returns whether the Bifrost is active or not. It returns true if the Bifrost is active, false otherwise.
-func (b *Bifrost) IsActive() bool {
-	return atomic.LoadUint32(&b.state) == 1
-}
-
-// SetActive sets whether the Bifrost is active or not. If the value is true, Bifrost will be set to active, otherwise it will be set to inactive.
-func (b *Bifrost) SetActive(value bool) {
-	if value {
-		atomic.StoreUint32(&b.state, 1)
-	} else {
-		atomic.StoreUint32(&b.state, 0)
-	}
-}
-func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
-	b.SetActive(false)
-	wg := &sync.WaitGroup{}
-	maxTimeout := 10 * time.Second
-	for _, server := range b.httpServers {
-		wg.Add(1)
-		if server.options.Timeout.Graceful > 0 && server.options.Timeout.Graceful > maxTimeout {
-			maxTimeout = server.options.Timeout.Graceful
-		}
-		go func(srv *HTTPServer) {
-			safety.Go(ctx, func() {
-				defer wg.Done()
-				if srv.options.Timeout.Graceful > 0 {
-					ctx, cancel := context.WithTimeout(ctx, server.options.Timeout.Graceful)
-					defer cancel()
-					_ = srv.Shutdown(ctx)
-				} else {
-					_ = srv.Shutdown(ctx)
-				}
-
-				slog.Debug("http server shutdown", "id", srv.options.ID)
-			})
-		}(server)
-	}
-
-	if now {
-		maxTimeout = 500 * time.Millisecond
-	}
-	waitTimeout(wg, maxTimeout)
-
-	_ = b.Close()
-
-	if b.tracerProvider != nil {
-		_ = b.tracerProvider.Shutdown(ctx)
-	}
-
-	if b.metricsProvider != nil {
-		_ = b.metricsProvider.Shutdown(ctx)
-	}
-
-	return b.runtime.Close(ctx)
-}
-
-func (b *Bifrost) Close() error {
-	for _, service := range b.services {
-		_ = service.Close()
-	}
-
-	if b.resolver != nil {
-		b.resolver.Close()
-	}
-
-	return nil
-}
-
 // NewBifrost creates a new instance of Bifrost.
 //
 // It takes in two parameters: mainOptions of type config.Options and isReload of type bool.
@@ -262,4 +155,112 @@ func NewBifrost(mainOptions config.Options, isReload bool) (bifrost *Bifrost, er
 	}
 	bifrost.SetActive(true)
 	return bifrost, nil
+}
+
+// Run starts all HTTP servers in the Bifrost instance. The last server is started
+// in the current goroutine, and the function will block until the last server
+// stops. The other servers are started in separate goroutines.
+func (b *Bifrost) Run() {
+	i := 0
+	for _, server := range b.httpServers {
+		if i == len(b.httpServers)-1 {
+			// last server need to blocked
+			safety.Go(context.Background(), server.Run)
+			return
+		}
+		go safety.Go(context.Background(), server.Run)
+		i++
+	}
+}
+func (b *Bifrost) ZeroDownTime() *runtime.ZeroDownTime {
+	return b.runtime
+}
+
+// Shutdown shuts down all HTTP servers in the Bifrost instance gracefully.
+// It blocks until all servers finish their shutdown process.
+// The function returns an error if any server fails to shut down.
+func (b *Bifrost) Shutdown(ctx context.Context) error {
+	return b.shutdown(ctx, false)
+}
+
+func (b *Bifrost) ShutdownNow(ctx context.Context) error {
+	return b.shutdown(ctx, true)
+}
+
+// Service retrieves a service by its ID from the Bifrost instance.
+// It returns a pointer to the Service and a boolean indicating whether
+// the service was found. If the serviceID does not exist, the returned
+// Service pointer will be nil and the boolean will be false.
+func (b *Bifrost) Service(serviceID string) (*Service, bool) {
+	result, found := b.services[serviceID]
+	return result, found
+}
+
+// IsActive returns whether the Bifrost is active or not. It returns true if the Bifrost is active, false otherwise.
+func (b *Bifrost) IsActive() bool {
+	return atomic.LoadUint32(&b.state) == 1
+}
+
+// SetActive sets whether the Bifrost is active or not. If the value is true, Bifrost will be set to active, otherwise it will be set to inactive.
+func (b *Bifrost) SetActive(value bool) {
+	if value {
+		atomic.StoreUint32(&b.state, 1)
+	} else {
+		atomic.StoreUint32(&b.state, 0)
+	}
+}
+
+func (b *Bifrost) Close() error {
+	for _, service := range b.services {
+		_ = service.Close()
+	}
+
+	if b.resolver != nil {
+		b.resolver.Close()
+	}
+
+	return nil
+}
+
+func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
+	b.SetActive(false)
+	wg := &sync.WaitGroup{}
+	maxTimeout := 10 * time.Second
+	for _, server := range b.httpServers {
+		wg.Add(1)
+		if server.options.Timeout.Graceful > 0 && server.options.Timeout.Graceful > maxTimeout {
+			maxTimeout = server.options.Timeout.Graceful
+		}
+		go func(srv *HTTPServer) {
+			safety.Go(ctx, func() {
+				defer wg.Done()
+				if srv.options.Timeout.Graceful > 0 {
+					ctx, cancel := context.WithTimeout(ctx, server.options.Timeout.Graceful)
+					defer cancel()
+					_ = srv.Shutdown(ctx)
+				} else {
+					_ = srv.Shutdown(ctx)
+				}
+
+				slog.Debug("http server shutdown", "id", srv.options.ID)
+			})
+		}(server)
+	}
+
+	if now {
+		maxTimeout = 500 * time.Millisecond
+	}
+	waitTimeout(wg, maxTimeout)
+
+	_ = b.Close()
+
+	if b.tracerProvider != nil {
+		_ = b.tracerProvider.Shutdown(ctx)
+	}
+
+	if b.metricsProvider != nil {
+		_ = b.metricsProvider.Shutdown(ctx)
+	}
+
+	return b.runtime.Close(ctx)
 }
