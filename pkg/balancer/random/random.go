@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 )

@@ -13,11 +13,9 @@ import (
 	proxyproto "github.com/pires/go-proxyproto"
 )
 
-var (
-	// startFD is the starting file descriptor for inherited listeners.
-	// It is a variable to allow tests to verify logic without conflicting with test runner FDs.
-	startFD = 3
-)
+// startFD is the starting file descriptor for inherited listeners.
+// It is a variable to allow tests to verify logic without conflicting with test runner FDs.
+var startFD = 3
 
 // ControlPlaneClient defines the methods required by WorkerFDHandler to communicate with Master.
 type ControlPlaneClient interface {

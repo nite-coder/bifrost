@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/initialize"
@@ -13,7 +14,6 @@ func registerMiddlewares() error {
 		m := TimingMiddleware{}
 		return m.ServeHTTP, nil
 	})
-
 	if err != nil {
 		return err
 	}

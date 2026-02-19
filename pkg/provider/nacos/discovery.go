@@ -11,8 +11,9 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
 	"github.com/nacos-group/nacos-sdk-go/v2/model"
 	"github.com/nacos-group/nacos-sdk-go/v2/vo"
-	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/blackbear/pkg/cast"
+
+	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
 var newNamingClientFunc = clients.NewNamingClient
@@ -109,28 +110,37 @@ func NewNacosServiceDiscovery(options Options) (*NacosServiceDiscovery, error) {
 		client:  client,
 		options: &options,
 	}, nil
-
 }
 
-func (d *NacosServiceDiscovery) GetInstances(ctx context.Context, options provider.GetInstanceOptions) ([]provider.Instancer, error) {
+func (d *NacosServiceDiscovery) GetInstances(
+	ctx context.Context,
+	options provider.GetInstanceOptions,
+) ([]provider.Instancer, error) {
 	nacosInstances, err := d.client.SelectInstances(vo.SelectInstancesParam{
 		ServiceName: options.Name,
 		GroupName:   options.Group,
 		HealthyOnly: true,
 	})
-
 	if err != nil {
 		if err.Error() == "instance list is empty!" {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to select instances from nacos, error: %w, discovery id: %s, group: %s", err, options.Name, options.Group)
+		return nil, fmt.Errorf(
+			"failed to select instances from nacos, error: %w, discovery id: %s, group: %s",
+			err,
+			options.Name,
+			options.Group,
+		)
 	}
 
 	instances := ToProviderInstance(nacosInstances)
 	return instances, nil
 }
 
-func (d *NacosServiceDiscovery) Watch(ctx context.Context, options provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
+func (d *NacosServiceDiscovery) Watch(
+	ctx context.Context,
+	options provider.GetInstanceOptions,
+) (<-chan []provider.Instancer, error) {
 	ch := make(chan []provider.Instancer, 1)
 	d.watchCh = ch
 	d.stopCh = make(chan struct{})
@@ -151,7 +161,6 @@ func (d *NacosServiceDiscovery) Watch(ctx context.Context, options provider.GetI
 			}
 		},
 	})
-
 	if err != nil {
 		return nil, err
 	}

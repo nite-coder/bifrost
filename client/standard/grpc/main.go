@@ -5,11 +5,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/nite-coder/bifrost/proto"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+
+	"github.com/nite-coder/bifrost/proto"
 )
 
 func main() {

@@ -4,10 +4,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/nite-coder/bifrost/pkg/middleware/cors"
 	"github.com/nite-coder/bifrost/pkg/resolver"
 	"github.com/nite-coder/bifrost/pkg/router"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
@@ -18,7 +19,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestValidateProviders(t *testing.T) {
-
 	t.Run("file provider", func(t *testing.T) {
 		options := NewOptions()
 
@@ -65,7 +65,6 @@ func TestValidateProviders(t *testing.T) {
 }
 
 func TestValidateRoutes(t *testing.T) {
-
 	t.Run("success", func(t *testing.T) {
 		options := NewOptions()
 
@@ -276,7 +275,6 @@ func TestValidateRoutes(t *testing.T) {
 }
 
 func TestValidateMiddlewares(t *testing.T) {
-
 	t.Run("normal", func(t *testing.T) {
 		options := NewOptions()
 
@@ -309,7 +307,6 @@ func TestValidateMiddlewares(t *testing.T) {
 }
 
 func TestValidateServer(t *testing.T) {
-
 	t.Run("bind", func(t *testing.T) {
 		options := NewOptions()
 
@@ -411,11 +408,9 @@ func TestValidateServer(t *testing.T) {
 		err = validateServers(options, true)
 		assert.Error(t, err)
 	})
-
 }
 
 func TestValidateService(t *testing.T) {
-
 	t.Run("service url with ip", func(t *testing.T) {
 		options := NewOptions()
 		route1 := &RouteOptions{
@@ -534,7 +529,6 @@ func TestValidateService(t *testing.T) {
 }
 
 func TestValidateUpstream(t *testing.T) {
-
 	t.Run("upstream target with ip", func(t *testing.T) {
 		options := NewOptions()
 		options.Upstreams["test"] = UpstreamOptions{
@@ -625,7 +619,6 @@ func TestValidateUpstream(t *testing.T) {
 }
 
 func TestValidateMetrics(t *testing.T) {
-
 	t.Run("success", func(t *testing.T) {
 		options := NewOptions()
 
@@ -650,7 +643,6 @@ func TestValidateMetrics(t *testing.T) {
 		err := validateMetrics(options, true)
 		assert.ErrorContains(t, err, "server_id 'test' not found for prometheus")
 	})
-
 }
 
 func TestValidateTracing(t *testing.T) {

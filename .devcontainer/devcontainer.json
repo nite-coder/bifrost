@@ -37,7 +37,8 @@
 				"[go]": {
 					"editor.formatOnSave": true,
 					"editor.codeActionsOnSave": {
-						"source.organizeImports": "explicit"
+						"source.organizeImports": "always",
+						"source.fixAll.golangci-lint": "always"
 					},
 					// Optional: Disable snippets, as they conflict with completion ranking.
 					"editor.snippetSuggestions": "none"
@@ -53,8 +54,9 @@
 					"staticcheck": true
 				},
 				"go.lintTool": "golangci-lint",
-				"go.lintOnSave": "workspace",
-				"go.vetOnSave": "workspace",
+				"go.lintOnSave": "package",
+				"go.vetOnSave": "package",
+				"go.formatTool": "gofumpt",
 				"editor.formatOnSave": true,
 				"go.testFlags": [
 					"-v",

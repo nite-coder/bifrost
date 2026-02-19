@@ -8,15 +8,16 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/nite-coder/bifrost/internal/pkg/safety"
-	"github.com/nite-coder/bifrost/pkg/log"
-	"github.com/nite-coder/bifrost/pkg/provider"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
+	"github.com/nite-coder/bifrost/pkg/log"
+	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
 type K8sDiscovery struct {
@@ -85,7 +86,10 @@ func NewK8sDiscovery(options Options) (*K8sDiscovery, error) {
 	}, nil
 }
 
-func (k *K8sDiscovery) GetInstances(ctx context.Context, options provider.GetInstanceOptions) ([]provider.Instancer, error) {
+func (k *K8sDiscovery) GetInstances(
+	ctx context.Context,
+	options provider.GetInstanceOptions,
+) ([]provider.Instancer, error) {
 	logger := log.FromContext(ctx)
 
 	if options.Name == "" {
@@ -140,7 +144,10 @@ func (k *K8sDiscovery) GetInstances(ctx context.Context, options provider.GetIns
 	return instances, nil
 }
 
-func (k *K8sDiscovery) Watch(ctx context.Context, options provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
+func (k *K8sDiscovery) Watch(
+	ctx context.Context,
+	options provider.GetInstanceOptions,
+) (<-chan []provider.Instancer, error) {
 	logger := log.FromContext(ctx)
 
 	endpointsWatcher, err := k.client.DiscoveryV1().EndpointSlices(options.Namespace).Watch(ctx, metav1.ListOptions{

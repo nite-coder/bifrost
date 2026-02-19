@@ -68,8 +68,20 @@ func startRedisCluster(t *testing.T) ([]string, map[string]string, func()) {
 
 	for i := 0; i < 3; i++ {
 		req := testcontainers.ContainerRequest{
-			Image:        "redis:7.4",
-			Cmd:          []string{"redis-server", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--requirepass", "bitnami"},
+			Image: "redis:7.4",
+			Cmd: []string{
+				"redis-server",
+				"--cluster-enabled",
+				"yes",
+				"--cluster-config-file",
+				"nodes.conf",
+				"--cluster-node-timeout",
+				"5000",
+				"--appendonly",
+				"yes",
+				"--requirepass",
+				"bitnami",
+			},
 			ExposedPorts: []string{"6379/tcp"},
 			Networks:     []string{networkName},
 			WaitingFor:   wait.ForLog("Ready to accept connections"),
@@ -234,7 +246,6 @@ func TestRedisCluster(t *testing.T) {
 }
 
 func testLimiter(t *testing.T, limiter Limiter, options Options) {
-
 	t.Run("Basic functionality", func(t *testing.T) {
 		key := "test_key"
 		ctx := context.Background()

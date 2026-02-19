@@ -9,14 +9,15 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/nite-coder/bifrost/pkg/config"
-	proxygrpc "github.com/nite-coder/bifrost/pkg/proxy/grpc"
-	"github.com/nite-coder/bifrost/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+
+	"github.com/nite-coder/bifrost/pkg/config"
+	proxygrpc "github.com/nite-coder/bifrost/pkg/proxy/grpc"
+	"github.com/nite-coder/bifrost/proto"
 )
 
 // Reusing gRPC test server logic from pkg/proxy/grpc/proxy_test.go logic.

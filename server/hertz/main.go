@@ -13,16 +13,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
-	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
-	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
-
-	configBifrost "github.com/nite-coder/bifrost/pkg/config"
-
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	hertzslog "github.com/hertz-contrib/logger/slog"
+
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
+	configBifrost "github.com/nite-coder/bifrost/pkg/config"
+	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
+	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 )
 
 func withDefaultServerHeader(disable bool) config.Option {
@@ -31,9 +30,7 @@ func withDefaultServerHeader(disable bool) config.Option {
 	}}
 }
 
-var (
-	daemon = flag.Bool("d", false, "Run in daemon mode")
-)
+var daemon = flag.Bool("d", false, "Run in daemon mode")
 
 func main() {
 	flag.Parse()

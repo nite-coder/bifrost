@@ -17,9 +17,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nite-coder/blackbear/pkg/cast"
+
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/log"
-	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 // Allow mocking for tests.

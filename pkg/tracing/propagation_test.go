@@ -131,7 +131,6 @@ func TestHTTPHeaderInject(t *testing.T) {
 }
 
 func TestHTTPHeaderCarrierKeys(t *testing.T) {
-
 	headers := &protocol.RequestHeader{}
 	headers.DisableNormalizing()
 

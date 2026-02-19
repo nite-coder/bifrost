@@ -2,6 +2,4 @@ package router
 
 import "errors"
 
-var (
-	ErrAlreadyExists = errors.New("already exists")
-)
+var ErrAlreadyExists = errors.New("already exists")

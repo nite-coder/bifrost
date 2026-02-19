@@ -18,6 +18,8 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app/client"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
+	prom "github.com/prometheus/client_golang/prometheus"
+
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -29,12 +31,9 @@ import (
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	prom "github.com/prometheus/client_golang/prometheus"
 )
 
-var (
-	httpServiceOpenConnections *prom.GaugeVec
-)
+var httpServiceOpenConnections *prom.GaugeVec
 
 func init() {
 	httpServiceOpenConnections = prom.NewGaugeVec(
@@ -77,7 +76,11 @@ func (u *Upstream) Close() error {
 	return nil
 }
 
-func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstreamOptions config.UpstreamOptions) (*Upstream, error) {
+func newUpstream(
+	bifrost *Bifrost,
+	serviceOptions config.ServiceOptions,
+	upstreamOptions config.UpstreamOptions,
+) (*Upstream, error) {
 	if len(upstreamOptions.ID) == 0 {
 		return nil, errors.New("upstream ID cannot be empty")
 	}
@@ -95,7 +98,10 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 		if !bifrost.options.Providers.DNS.Enabled {
 			return nil, fmt.Errorf("dns provider is disabled for upstream ID: %s", upstreamOptions.ID)
 		}
-		discovery, err := dns.NewDNSServiceDiscovery(bifrost.options.Providers.DNS.Servers, bifrost.options.Providers.DNS.Valid)
+		discovery, err := dns.NewDNSServiceDiscovery(
+			bifrost.options.Providers.DNS.Servers,
+			bifrost.options.Providers.DNS.Valid,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -374,7 +380,15 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	}
 
 	if len(updatedProxies) > 0 {
-		slog.Debug("upstream refresh success", "upstream_id", u.options.ID, "proxy_id", updatedProxies[0].ID(), "len", len(updatedProxies))
+		slog.Debug(
+			"upstream refresh success",
+			"upstream_id",
+			u.options.ID,
+			"proxy_id",
+			updatedProxies[0].ID(),
+			"len",
+			len(updatedProxies),
+		)
 	}
 
 	factory := balancer.Factory(u.options.Balancer.Type)
@@ -386,6 +400,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	u.balancer.Store(balancer)
 	return nil
 }
+
 func (u *Upstream) watch() {
 	u.watchOnce.Do(func() {
 		options := provider.GetInstanceOptions{
@@ -413,6 +428,7 @@ func (u *Upstream) watch() {
 		})
 	})
 }
+
 func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[string]*Upstream, error) {
 	upstreams := make(map[string]*Upstream)
 	var wg sync.WaitGroup

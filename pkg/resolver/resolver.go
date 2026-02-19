@@ -16,9 +16,7 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cache/v2"
 )
 
-var (
-	ErrNotFound = errors.New("no records found")
-)
+var ErrNotFound = errors.New("no records found")
 
 type Resolver struct {
 	options    *Options
@@ -196,7 +194,15 @@ func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]stri
 					if cname, ok := answer.(*dns.CNAME); ok {
 						resolvedIPs, err := r.Lookup(ctx, cname.Target, []string{"a"})
 						if err != nil {
-							slog.Debug("dns: failed to resolve CNAME record", "host", cname.String(), "server", server, "error", err)
+							slog.Debug(
+								"dns: failed to resolve CNAME record",
+								"host",
+								cname.String(),
+								"server",
+								server,
+								"error",
+								err,
+							)
 							continue
 						}
 

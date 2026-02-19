@@ -28,8 +28,8 @@ func createTestDir(t *testing.T) (string, func()) {
 
 	for _, f := range files {
 		path := filepath.Join(dir, f.path)
-		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
-		require.NoError(t, os.WriteFile(path, []byte(f.content), 0644))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(f.content), 0o644))
 	}
 
 	return dir, func() { os.RemoveAll(dir) }
@@ -127,7 +127,7 @@ func TestFileProvider_OpenErrors(t *testing.T) {
 		defer cleanup()
 
 		badFile := filepath.Join(testDir, "badfile.yaml")
-		require.NoError(t, os.WriteFile(badFile, nil, 0000))
+		require.NoError(t, os.WriteFile(badFile, nil, 0o000))
 
 		p := NewProvider(Options{Paths: []string{badFile}})
 		_, err := p.Open()
@@ -141,7 +141,7 @@ func TestFileProvider_Watch(t *testing.T) {
 
 	// create test file
 	targetFile := filepath.Join(testDir, "watch_test.yaml")
-	require.NoError(t, os.WriteFile(targetFile, []byte("initial content"), 0644))
+	require.NoError(t, os.WriteFile(targetFile, []byte("initial content"), 0o644))
 
 	p := NewProvider(Options{
 		Paths:      []string{targetFile},
@@ -160,20 +160,20 @@ func TestFileProvider_Watch(t *testing.T) {
 	defer p.watcher.Close()
 
 	// first modify
-	require.NoError(t, os.WriteFile(targetFile, []byte("modified content 1"), 0644))
+	require.NoError(t, os.WriteFile(targetFile, []byte("modified content 1"), 0o644))
 	assert.Eventually(t, func() bool {
 		return eventCounter.Load() == 1
 	}, 2*time.Second, 100*time.Millisecond)
 
 	// second modify
-	require.NoError(t, os.WriteFile(targetFile, []byte("modified content 2"), 0644))
+	require.NoError(t, os.WriteFile(targetFile, []byte("modified content 2"), 0o644))
 	assert.Eventually(t, func() bool {
 		return eventCounter.Load() == 2
 	}, 2*time.Second, 100*time.Millisecond)
 
 	// delete and create
 	require.NoError(t, os.Remove(targetFile))
-	require.NoError(t, os.WriteFile(targetFile, []byte("new content"), 0644))
+	require.NoError(t, os.WriteFile(targetFile, []byte("new content"), 0o644))
 	assert.Eventually(t, func() bool {
 		return eventCounter.Load() == 3
 	}, 2*time.Second, 100*time.Millisecond)

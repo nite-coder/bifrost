@@ -5,11 +5,11 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/router"
-
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/router"
 )
 
 func exactkHandler(c context.Context, ctx *app.RequestContext) {
@@ -60,7 +60,6 @@ func registerByNodeType(route *Routes, nodeType router.NodeType) *Routes {
 }
 
 func TestRoutePriorityAndRoot(t *testing.T) {
-
 	t.Run("exact match", func(t *testing.T) {
 		nodeTypes := []router.NodeType{router.Exact, router.PreferentialPrefix, router.Prefix, router.Regex}
 		route := newRoutes()
@@ -228,7 +227,6 @@ func TestRoutePriorityAndRoot(t *testing.T) {
 			t.Errorf("Expected %v for path %s, but got %v", 204, "/market/btc", statusCode)
 		}
 	})
-
 }
 
 func TestRootRoute(t *testing.T) {

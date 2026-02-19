@@ -18,12 +18,13 @@ import (
 	cgopool "github.com/cloudwego/gopkg/concurrency/gopool"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/netpoll"
+	"github.com/nite-coder/blackbear/pkg/cast"
+	"github.com/valyala/bytebufferpool"
+
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/connector/redis"
 	"github.com/nite-coder/bifrost/pkg/log"
-	"github.com/nite-coder/blackbear/pkg/cast"
-	"github.com/valyala/bytebufferpool"
 )
 
 var (
@@ -130,7 +131,6 @@ func Run(mainOptions config.Options) (err error) {
 		}
 
 		b, err := sonic.Marshal(mainOptions)
-
 		if err != nil {
 			return err
 		}
@@ -208,7 +208,13 @@ func Run(mainOptions config.Options) (err error) {
 		readinessStart := time.Now()
 		readinessDeadline := readinessStart.Add(readinessTimeout)
 
-		slog.Debug("starting readiness check for HTTP servers", "timeout", readinessTimeout, "serverCount", len(bifrost.httpServers))
+		slog.Debug(
+			"starting readiness check for HTTP servers",
+			"timeout",
+			readinessTimeout,
+			"serverCount",
+			len(bifrost.httpServers),
+		)
 
 		for serverID, httpServer := range bifrost.httpServers {
 			serverReady := false

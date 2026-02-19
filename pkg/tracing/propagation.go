@@ -9,8 +9,10 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-var _ propagation.TextMapCarrier = &httpHeaderCarrier{}
-var _ propagation.TextMapCarrier = &grpcMetadataCarrier{}
+var (
+	_ propagation.TextMapCarrier = &httpHeaderCarrier{}
+	_ propagation.TextMapCarrier = &grpcMetadataCarrier{}
+)
 
 type httpHeaderCarrier struct {
 	metadata map[string]string

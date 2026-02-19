@@ -9,14 +9,15 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/nite-coder/blackbear/pkg/cast"
+	"github.com/urfave/cli/v2"
+	_ "go.uber.org/automaxprocs"
+
 	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/initialize"
-	"github.com/nite-coder/blackbear/pkg/cast"
-	"github.com/urfave/cli/v2"
-	_ "go.uber.org/automaxprocs"
 )
 
 type options struct {
@@ -189,7 +190,9 @@ func runMasterMode(mainOptions config.Options) error {
 	// Check for necessary privileges if User/Group is configured
 	if mainOptions.User != "" || mainOptions.Group != "" {
 		if os.Geteuid() != 0 {
-			return fmt.Errorf("need root privileges to switch user/group: please run as root or remove user/group from configuration")
+			return fmt.Errorf(
+				"need root privileges to switch user/group: please run as root or remove user/group from configuration",
+			)
 		}
 	}
 

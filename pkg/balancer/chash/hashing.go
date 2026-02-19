@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/internal/pkg/consistent"
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/proxy"
@@ -17,24 +18,27 @@ const (
 )
 
 func Init() error {
-	return balancer.Register([]string{"hashing", "chash"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
-		if params == nil {
-			return nil, errors.New("params cannot be empty")
-		}
-
-		var hashon string
-		replicas := defaultReplicas
-
-		if val, ok := params.(map[string]any); ok {
-			hashon, ok = val["hash_on"].(string)
-			if !ok {
-				return nil, errors.New("hash_on is required and must be a string")
+	return balancer.Register(
+		[]string{"hashing", "chash"},
+		func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
+			if params == nil {
+				return nil, errors.New("params cannot be empty")
 			}
-		}
 
-		b := NewBalancer(proxies, hashon, replicas)
-		return b, nil
-	})
+			var hashon string
+			replicas := defaultReplicas
+
+			if val, ok := params.(map[string]any); ok {
+				hashon, ok = val["hash_on"].(string)
+				if !ok {
+					return nil, errors.New("hash_on is required and must be a string")
+				}
+			}
+
+			b := NewBalancer(proxies, hashon, replicas)
+			return b, nil
+		},
+	)
 }
 
 // HashingBalancer implements a consistent hashing balancer using the consistent package.

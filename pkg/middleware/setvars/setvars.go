@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -40,7 +41,6 @@ type SetVarsMiddlware struct {
 }
 
 func NewMiddleware(options []*Options) *SetVarsMiddlware {
-
 	for _, v := range options {
 		if v.Key == "" {
 			continue

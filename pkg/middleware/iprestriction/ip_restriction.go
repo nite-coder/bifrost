@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
@@ -34,6 +35,7 @@ func NewMiddleware(options Options) (*IPRestriction, error) {
 	}
 	return &IPRestriction{options: &options}, nil
 }
+
 func (m *IPRestriction) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	clientIP := c.ClientIP()
 	if len(m.options.Allow) > 0 {
@@ -106,6 +108,7 @@ func (m *IPRestriction) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 }
+
 func Init() error {
 	return middleware.RegisterTyped([]string{"ip_restriction"}, func(option Options) (app.HandlerFunc, error) {
 		m, err := NewMiddleware(option)

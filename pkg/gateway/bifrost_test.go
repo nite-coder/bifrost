@@ -14,11 +14,12 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/go-resty/resty/v2"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/http2"
+
 	"github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/middleware/cors"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/http2"
 )
 
 func TestMain(m *testing.M) {

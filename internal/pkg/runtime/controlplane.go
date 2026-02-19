@@ -12,8 +12,9 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"golang.org/x/sys/unix"
+
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 )
 
 // MessageType represents the type of control message sent via UDS.
@@ -232,7 +233,6 @@ func (cp *ControlPlane) ReceiveFDsFromConn(conn net.Conn) ([]*os.File, error) {
 
 		return true
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -457,7 +457,6 @@ func (wcp *WorkerControlPlane) SendFDs(files []*os.File, keys []string) error {
 		}
 		return true
 	})
-
 	if err != nil {
 		return fmt.Errorf("raw write failed: %w", err)
 	}

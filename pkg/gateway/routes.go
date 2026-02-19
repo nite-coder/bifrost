@@ -9,13 +9,13 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/nite-coder/blackbear/pkg/cast"
+
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/router"
 	"github.com/nite-coder/bifrost/pkg/variable"
-
-	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 type routeSetting struct {
@@ -70,12 +70,21 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 			}
 			handler := middleware.Factory(m.Type)
 			if handler == nil {
-				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", m.Type, routeOptions.Paths)
+				return nil, fmt.Errorf(
+					"middleware handler '%s' was not found in route: '%s'",
+					m.Type,
+					routeOptions.Paths,
+				)
 			}
 
 			appHandler, err := handler(m.Params)
 			if err != nil {
-				return nil, fmt.Errorf("failed to create middleware '%s' failed in route: '%s', error: %w", m.Type, routeOptions.Paths, err)
+				return nil, fmt.Errorf(
+					"failed to create middleware '%s' failed in route: '%s', error: %w",
+					m.Type,
+					routeOptions.Paths,
+					err,
+				)
 			}
 
 			routeMiddlewares = append(routeMiddlewares, appHandler)
@@ -91,7 +100,11 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 		default:
 			service, found := services[routeOptions.ServiceID]
 			if !found {
-				return nil, fmt.Errorf("service_id '%s' was not found in route: %s", routeOptions.ServiceID, routeOptions.ID)
+				return nil, fmt.Errorf(
+					"service_id '%s' was not found in route: %s",
+					routeOptions.ServiceID,
+					routeOptions.ID,
+				)
 			}
 
 			if len(service.middlewares) > 0 {
@@ -155,7 +168,6 @@ func (r *Routes) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		ctx.Abort()
 		return
 	}
-
 }
 
 // Add adds a new route.

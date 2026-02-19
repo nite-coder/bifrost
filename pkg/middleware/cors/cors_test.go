@@ -249,7 +249,11 @@ func TestValidateOrigin(t *testing.T) {
 	assert.False(t, cors.validateOrigin("wss://socket-connection"))
 
 	cors = newCors(Config{
-		AllowOrigins:           []string{"chrome-extension://*", "safari-extension://my-extension-*-app", "*.some-domain.com"},
+		AllowOrigins: []string{
+			"chrome-extension://*",
+			"safari-extension://my-extension-*-app",
+			"*.some-domain.com",
+		},
 		AllowBrowserExtensions: true,
 		AllowWildcard:          true,
 	})
@@ -394,7 +398,13 @@ func TestPassesAllowAllOrigins(t *testing.T) {
 
 func TestWildcard(t *testing.T) {
 	router := newTestRouter(Config{
-		AllowOrigins:  []string{"https://*.github.com", "https://api.*", "http://*", "https://facebook.com", "*.golang.org"},
+		AllowOrigins: []string{
+			"https://*.github.com",
+			"https://api.*",
+			"http://*",
+			"https://facebook.com",
+			"*.golang.org",
+		},
 		AllowMethods:  []string{"GET"},
 		AllowWildcard: true,
 	})

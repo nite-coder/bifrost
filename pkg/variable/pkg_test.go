@@ -238,7 +238,6 @@ func TestEnvDirective(t *testing.T) {
 }
 
 func TestParseDirectives(t *testing.T) {
-
 	template := `{"time":"$time",
 	"remote_addr":"$network.peer.address",
 	"host": "$http.request.host",

@@ -10,10 +10,10 @@ import (
 	"net"
 	"net/http"
 
-	model "github.com/nite-coder/bifrost/proto"
-
 	"golang.org/x/net/http2"
 	"google.golang.org/protobuf/proto"
+
+	model "github.com/nite-coder/bifrost/proto"
 )
 
 func main() {
@@ -34,7 +34,11 @@ func main() {
 
 	framedData := addGrpcPrefix(data)
 
-	req, err := http.NewRequest("POST", "http://localhost:8003/helloworld.Greeter/SayHello", bytes.NewReader(framedData))
+	req, err := http.NewRequest(
+		"POST",
+		"http://localhost:8003/helloworld.Greeter/SayHello",
+		bytes.NewReader(framedData),
+	)
 	if err != nil {
 		log.Fatalf("Error creating request: %v", err)
 	}
@@ -73,7 +77,6 @@ func main() {
 	for k, v := range resp.Trailer {
 		fmt.Printf("Trailer2: %s: %v\n", k, v)
 	}
-
 }
 
 func addGrpcPrefix(data []byte) []byte {

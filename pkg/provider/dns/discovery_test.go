@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
 func TestDNSServiceDiscovery_GetInstances(t *testing.T) {

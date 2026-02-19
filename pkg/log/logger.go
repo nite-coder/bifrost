@@ -13,9 +13,10 @@ import (
 	"sync"
 	"syscall"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
-	"golang.org/x/sys/unix"
 )
 
 // fileWriter is a wrapper around os.File to support reopening the file on SIGUSR1.
@@ -40,7 +41,7 @@ func (fw *fileWriter) reopen() error {
 
 	// Open the new file first to ensure we don't lose logging if open fails
 	// Open-Swap-Close pattern
-	newFile, err := os.OpenFile(fw.file.Name(), os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0644)
+	newFile, err := os.OpenFile(fw.file.Name(), os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0o644)
 	if err != nil {
 		return err
 	}
@@ -119,12 +120,13 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 		writer = os.Stderr // Write logs to stderr
 	default:
 		// Open the log file for appending, creating it if it doesn't exist
-		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0644)
+		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0o644)
 		if err != nil {
 			return nil, err
 		}
 
-		shouldRedirect := !opts.DisableRedirectStdStream && (opts.Output != "stderr" && opts.Output != "stdout" && opts.Output != "")
+		shouldRedirect := !opts.DisableRedirectStdStream &&
+			(opts.Output != "stderr" && opts.Output != "stdout" && opts.Output != "")
 
 		// Wrap the file in a fileWriter to support reopening
 		fw := &fileWriter{

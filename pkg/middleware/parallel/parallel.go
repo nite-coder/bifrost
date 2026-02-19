@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/middleware"
@@ -25,6 +26,7 @@ func NewMiddleware(options []*Options) *ParallelMiddleware {
 		options: options,
 	}
 }
+
 func (m *ParallelMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	waitGroup := sync.WaitGroup{}
 	waitGroup.Add(len(m.options))
@@ -46,25 +48,33 @@ func (m *ParallelMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContex
 		c.Abort()
 	}
 }
-func Init() error {
-	return middleware.RegisterTyped([]string{"parallel"}, func(middlewareOptions []*config.MiddlwareOptions) (app.HandlerFunc, error) {
-		if len(middlewareOptions) == 0 {
-			return nil, errors.New("parallel middleware params is empty or invalid")
-		}
 
-		options := make([]*Options, 0)
-		for _, middlewareOption := range middlewareOptions {
-			h := middleware.Factory(middlewareOption.Type)
-			m, err := h(middlewareOption.Params)
-			if err != nil {
-				return nil, fmt.Errorf("%s middleware params is invalid in parallel middleware, error: %w", middlewareOption.Type, err)
+func Init() error {
+	return middleware.RegisterTyped(
+		[]string{"parallel"},
+		func(middlewareOptions []*config.MiddlwareOptions) (app.HandlerFunc, error) {
+			if len(middlewareOptions) == 0 {
+				return nil, errors.New("parallel middleware params is empty or invalid")
 			}
-			options = append(options, &Options{
-				MiddlewareOptions: *middlewareOption,
-				Middleware:        m,
-			})
-		}
-		m := NewMiddleware(options)
-		return m.ServeHTTP, nil
-	})
+
+			options := make([]*Options, 0)
+			for _, middlewareOption := range middlewareOptions {
+				h := middleware.Factory(middlewareOption.Type)
+				m, err := h(middlewareOption.Params)
+				if err != nil {
+					return nil, fmt.Errorf(
+						"%s middleware params is invalid in parallel middleware, error: %w",
+						middlewareOption.Type,
+						err,
+					)
+				}
+				options = append(options, &Options{
+					MiddlewareOptions: *middlewareOption,
+					Middleware:        m,
+				})
+			}
+			m := NewMiddleware(options)
+			return m.ServeHTTP, nil
+		},
+	)
 }

@@ -8,16 +8,15 @@ import (
 	"runtime/debug"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/nite-coder/blackbear/pkg/cast"
+
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
-var (
-	abortMiiddleware = &AbortMiddleware{}
-)
+var abortMiiddleware = &AbortMiddleware{}
 
 type initMiddleware struct {
 	logger   *slog.Logger
@@ -106,7 +105,6 @@ func (m *FirstRouteMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCont
 }
 
 func loadMiddlewares(middlewareOptions map[string]config.MiddlwareOptions) (map[string]app.HandlerFunc, error) {
-
 	middlewares := map[string]app.HandlerFunc{}
 	for id, middlewareOpts := range middlewareOptions {
 
@@ -123,12 +121,21 @@ func loadMiddlewares(middlewareOptions map[string]config.MiddlwareOptions) (map[
 		handler := middleware.Factory(middlewareOpts.Type)
 
 		if handler == nil {
-			return nil, fmt.Errorf("middleware type '%s' was not found in middleware id: '%s'", middlewareOpts.Type, middlewareOpts.ID)
+			return nil, fmt.Errorf(
+				"middleware type '%s' was not found in middleware id: '%s'",
+				middlewareOpts.Type,
+				middlewareOpts.ID,
+			)
 		}
 
 		m, err := handler(middlewareOpts.Params)
 		if err != nil {
-			return nil, fmt.Errorf("middleware type '%s' params is invalid in middleware id: '%s'. error: %w", middlewareOpts.Type, middlewareOpts.ID, err)
+			return nil, fmt.Errorf(
+				"middleware type '%s' params is invalid in middleware id: '%s'. error: %w",
+				middlewareOpts.Type,
+				middlewareOpts.ID,
+				err,
+			)
 		}
 
 		middlewares[middlewareOpts.ID] = m

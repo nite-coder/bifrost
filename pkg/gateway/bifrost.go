@@ -11,6 +11,8 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
 	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -18,7 +20,6 @@ import (
 	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/tracer/accesslog"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 type Bifrost struct {
@@ -172,6 +173,7 @@ func (b *Bifrost) Run() {
 		i++
 	}
 }
+
 func (b *Bifrost) ZeroDownTime() *runtime.ZeroDownTime {
 	return b.runtime
 }

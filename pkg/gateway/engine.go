@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cloudwego/hertz/pkg/app"
+	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
+
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
-
-	"github.com/cloudwego/hertz/pkg/app"
-	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 )
 
 type Engine struct {
@@ -23,7 +23,6 @@ type Engine struct {
 }
 
 func newEngine(bifrost *Bifrost, serverOptions config.ServerOptions) (*Engine, error) {
-
 	// routes
 	route, err := loadRoutes(bifrost, serverOptions, bifrost.services)
 	if err != nil {
@@ -75,14 +74,20 @@ func newEngine(bifrost *Bifrost, serverOptions config.ServerOptions) (*Engine, e
 
 		apphandler, err := handler(m.Params)
 		if err != nil {
-			return nil, fmt.Errorf("middleware type '%s' params is invalid in server id: '%s'. error: %w", m.Type, serverOptions.ID, err)
+			return nil, fmt.Errorf(
+				"middleware type '%s' params is invalid in server id: '%s'. error: %w",
+				m.Type,
+				serverOptions.ID,
+				err,
+			)
 		}
 
 		engine.Use(apphandler)
 	}
 
 	// set prom metric middleware
-	if (bifrost.options.Metrics.Prometheus.Enabled || bifrost.options.Metrics.OTLP.Enabled) && serverOptions.ID == bifrost.options.Metrics.Prometheus.ServerID {
+	if (bifrost.options.Metrics.Prometheus.Enabled || bifrost.options.Metrics.OTLP.Enabled) &&
+		serverOptions.ID == bifrost.options.Metrics.Prometheus.ServerID {
 		m := metrics.NewMetricMiddleware(bifrost.options.Metrics.Prometheus.Path, bifrost.metricsProvider)
 		engine.Use(m.ServeHTTP)
 	}
@@ -100,7 +105,6 @@ func (e *Engine) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 }
 
 func (e *Engine) OnShutdown() {
-
 }
 
 func (e *Engine) Use(middleware ...app.HandlerFunc) {

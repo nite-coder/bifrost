@@ -5,13 +5,11 @@ import (
 	"log/slog"
 )
 
-var (
-	ctxKey = &struct {
-		name string
-	}{
-		name: "log",
-	}
-)
+var ctxKey = &struct {
+	name string
+}{
+	name: "log",
+}
 
 const (
 	LevelNotice = slog.Level(10)

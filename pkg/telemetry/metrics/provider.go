@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/config"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -20,6 +19,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
 var (
@@ -45,7 +46,7 @@ func SetMeterProvider(mp *sdkmetric.MeterProvider) {
 // slogErrorLogger adapts slog.Logger to promhttp.Logger interface.
 type slogErrorLogger struct{}
 
-func (l *slogErrorLogger) Println(v ...interface{}) {
+func (l *slogErrorLogger) Println(v ...any) {
 	slog.Error("promhttp error", "details", fmt.Sprint(v...))
 }
 
@@ -185,7 +186,11 @@ func createPrometheusExporter() (*promexp.Exporter, prom.Gatherer, error) {
 }
 
 // createOTLPReader creates an OTLP exporter reader for push mode.
-func createOTLPReader(ctx context.Context, opts config.OTLPMetricsOptions, producer sdkmetric.Producer) (sdkmetric.Reader, error) {
+func createOTLPReader(
+	ctx context.Context,
+	opts config.OTLPMetricsOptions,
+	producer sdkmetric.Producer,
+) (sdkmetric.Reader, error) {
 	if opts.Endpoint == "" {
 		opts.Endpoint = "localhost:4317"
 	}

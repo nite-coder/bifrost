@@ -22,7 +22,6 @@ func TestLocalNameServer(t *testing.T) {
 }
 
 func TestQueryHost(t *testing.T) {
-
 	t.Run("default resolver", func(t *testing.T) {
 		r, err := NewResolver(Options{SkipTest: true})
 		require.NoError(t, err)
@@ -79,5 +78,4 @@ func TestQueryHost(t *testing.T) {
 		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, len(result), 1)
 	})
-
 }

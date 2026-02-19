@@ -5,8 +5,9 @@ import (
 	"strings"
 
 	"github.com/nacos-group/nacos-sdk-go/v2/model"
-	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/blackbear/pkg/cast"
+
+	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
 func ToProviderInstance(nacosInstances []model.Instance) []provider.Instancer {

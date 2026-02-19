@@ -6,22 +6,20 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
 	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/adaptor"
+
 	"github.com/nite-coder/bifrost/pkg/config"
 )
 
-var (
-	requestContextPool = sync.Pool{
-		New: func() any {
-			return app.NewContext(0)
-		},
-	}
-)
+var requestContextPool = sync.Pool{
+	New: func() any {
+		return app.NewContext(0)
+	},
+}
 
 // HertzBridge implements http.Handler by bridging to a Hertz instance.
 type HertzBridge struct {
@@ -61,7 +59,13 @@ func (b *HertzBridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Forbidden headers in HTTP/2 and headers that should be treated as trailers
 		switch canonicalKey {
-		case "Connection", "Keep-Alive", "Proxy-Connection", "Transfer-Encoding", "Upgrade", "Trailer", "Content-Length":
+		case "Connection",
+			"Keep-Alive",
+			"Proxy-Connection",
+			"Transfer-Encoding",
+			"Upgrade",
+			"Trailer",
+			"Content-Length":
 			return
 		}
 		h.Add(key, string(v))

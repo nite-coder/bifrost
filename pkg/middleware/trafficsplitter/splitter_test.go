@@ -6,12 +6,12 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
 func TestSplitter(t *testing.T) {
-
 	options := &Options{
 		Key: "$my_order",
 		Destinations: []*Destination{

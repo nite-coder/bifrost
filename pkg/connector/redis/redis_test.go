@@ -4,8 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
 func TestInitialize(t *testing.T) {

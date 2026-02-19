@@ -13,6 +13,7 @@ func newInvalidConfig(structure []string, value any, message string) InvalidConf
 		Message:   message,
 	}
 }
+
 func (e InvalidConfigError) Error() string {
 	return e.Message
 }

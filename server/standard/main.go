@@ -16,10 +16,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
-
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 )
 
 type ProxyHandler struct {

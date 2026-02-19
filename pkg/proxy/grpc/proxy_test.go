@@ -11,7 +11,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/adaptor"
-	"github.com/nite-coder/bifrost/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -20,6 +19,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	"github.com/nite-coder/bifrost/proto"
 )
 
 type grpcTestServer struct {
@@ -240,7 +241,13 @@ type mockClientConn struct {
 	grpc.ClientConnInterface
 }
 
-func (m *mockClientConn) Invoke(ctx context.Context, method string, args interface{}, reply interface{}, opts ...grpc.CallOption) error {
+func (m *mockClientConn) Invoke(
+	ctx context.Context,
+	method string,
+	args any,
+	reply any,
+	opts ...grpc.CallOption,
+) error {
 	return nil
 }
 

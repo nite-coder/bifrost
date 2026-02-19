@@ -15,8 +15,9 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol"
 	reqHelper "github.com/cloudwego/hertz/pkg/protocol/http1/req"
 	respHelper "github.com/cloudwego/hertz/pkg/protocol/http1/resp"
-	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"golang.org/x/net/http/httpguts"
+
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 )
 
 func upgradeReqType(h *protocol.RequestHeader) string {
@@ -33,7 +34,12 @@ func upgradeRespType(h *protocol.ResponseHeader) string {
 	return h.Get("Upgrade")
 }
 
-func (p *HTTPProxy) roundTrip(ctx context.Context, clientCtx *app.RequestContext, req *protocol.Request, resp *protocol.Response) error {
+func (p *HTTPProxy) roundTrip(
+	ctx context.Context,
+	clientCtx *app.RequestContext,
+	req *protocol.Request,
+	resp *protocol.Response,
+) error {
 	dailer := p.client.GetOptions().Dialer
 
 	host := string(req.Host())
@@ -44,7 +50,12 @@ func (p *HTTPProxy) roundTrip(ctx context.Context, clientCtx *app.RequestContext
 		host = utils.AddMissingPort(host, false)
 	}
 
-	backendConn, err := dailer.DialConnection("tcp", host, p.client.GetOptions().DialTimeout, p.client.GetOptions().TLSConfig)
+	backendConn, err := dailer.DialConnection(
+		"tcp",
+		host,
+		p.client.GetOptions().DialTimeout,
+		p.client.GetOptions().TLSConfig,
+	)
 	if err != nil {
 		return err
 	}

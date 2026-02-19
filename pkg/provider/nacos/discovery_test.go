@@ -8,9 +8,10 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/v2/clients/naming_client"
 	"github.com/nacos-group/nacos-sdk-go/v2/model"
 	"github.com/nacos-group/nacos-sdk-go/v2/vo"
-	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
 type MockNamingClient struct {
@@ -192,6 +193,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 		})
 	}
 }
+
 func TestNacosServiceDiscovery_Watch(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -205,7 +207,6 @@ func TestNacosServiceDiscovery_Watch(t *testing.T) {
 				m.On("Subscribe", mock.MatchedBy(func(param *vo.SubscribeParam) bool {
 					return param.ServiceName == "test-service" && param.GroupName == "test-group"
 				})).Return(nil)
-
 			},
 			options: provider.GetInstanceOptions{
 				Name:  "test-service",

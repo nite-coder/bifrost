@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
@@ -99,7 +100,9 @@ func (c *Config) Validate() error {
 	}
 	for _, origin := range c.AllowOrigins {
 		if !strings.Contains(origin, "*") && !c.validateAllowedSchemas(origin) {
-			return errors.New("bad origin: origins must contain '*' or include " + strings.Join(c.getAllowedSchemas(), ","))
+			return errors.New(
+				"bad origin: origins must contain '*' or include " + strings.Join(c.getAllowedSchemas(), ","),
+			)
 		}
 	}
 	return nil
@@ -128,6 +131,7 @@ func (c *Config) validateAllowedSchemas(origin string) bool {
 	}
 	return false
 }
+
 func (c *Config) parseWildcardRules() [][]string {
 	var wRules [][]string
 	if !c.AllowWildcard {
@@ -178,6 +182,7 @@ func NewMiddleware(config Config) app.HandlerFunc {
 		cors.applyCors(c)
 	}
 }
+
 func Init() error {
 	return middleware.RegisterTyped([]string{"cors"}, func(cfg Config) (app.HandlerFunc, error) {
 		// Validates if the config is valid or considered empty/invalid which implies default

@@ -9,9 +9,17 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
-var (
-	HTTPMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch, http.MethodHead, http.MethodOptions, http.MethodTrace, http.MethodConnect}
-)
+var HTTPMethods = []string{
+	http.MethodGet,
+	http.MethodPost,
+	http.MethodPut,
+	http.MethodDelete,
+	http.MethodPatch,
+	http.MethodHead,
+	http.MethodOptions,
+	http.MethodTrace,
+	http.MethodConnect,
+}
 
 // methodHandler contains handler functions for various HTTP methods.
 type methodHandler struct {
@@ -114,6 +122,7 @@ func (n *node) findChildByName(name string, nodeType NodeType) *node {
 	}
 	return nil
 }
+
 func (n *node) matchChildByName(name string, nodeType NodeType) *node {
 	switch nodeType {
 	case Exact:
@@ -186,7 +195,12 @@ func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.H
 		}
 		handlers := currentNode.findHandler(method)
 		if len(handlers) > 0 {
-			return fmt.Errorf("router: duplicate route for method '%s' and path '%s': %w", method, originalPath, ErrAlreadyExists)
+			return fmt.Errorf(
+				"router: duplicate route for method '%s' and path '%s': %w",
+				method,
+				originalPath,
+				ErrAlreadyExists,
+			)
 		}
 		currentNode.addHandler(method, middleware)
 		return nil
@@ -223,7 +237,12 @@ func (r *Router) Add(method, path string, nodeType NodeType, middleware ...app.H
 	}
 	handlers := currentNode.findHandler(method)
 	if len(handlers) > 0 {
-		return fmt.Errorf("router: duplicate route for method '%s' and path '%s': %w", method, originalPath, ErrAlreadyExists)
+		return fmt.Errorf(
+			"router: duplicate route for method '%s' and path '%s': %w",
+			method,
+			originalPath,
+			ErrAlreadyExists,
+		)
 	}
 	// Add handler functions to the final node
 	currentNode.addHandler(method, middleware)
@@ -324,9 +343,18 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 	}
 	return nil, false
 }
+
 func IsValidHTTPMethod(method string) bool {
 	switch method {
-	case http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch, http.MethodHead, http.MethodOptions, http.MethodTrace, http.MethodConnect:
+	case http.MethodGet,
+		http.MethodPost,
+		http.MethodPut,
+		http.MethodDelete,
+		http.MethodPatch,
+		http.MethodHead,
+		http.MethodOptions,
+		http.MethodTrace,
+		http.MethodConnect:
 		return true
 	default:
 		return false

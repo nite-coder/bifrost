@@ -26,12 +26,13 @@ import (
 	"github.com/cloudwego/netpoll"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 	"github.com/hertz-contrib/pprof"
-	bifrostRuntime "github.com/nite-coder/bifrost/internal/pkg/runtime"
-	"github.com/nite-coder/bifrost/internal/pkg/safety"
-	"github.com/nite-coder/bifrost/pkg/config"
 	proxyproto "github.com/pires/go-proxyproto"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/unix"
+
+	bifrostRuntime "github.com/nite-coder/bifrost/internal/pkg/runtime"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
 var (
@@ -60,7 +61,12 @@ type HTTPServer struct {
 	isActive         atomic.Bool
 }
 
-func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers []tracer.Tracer, disableListener bool) (*HTTPServer, error) {
+func newHTTPServer(
+	bifrost *Bifrost,
+	serverOptions config.ServerOptions,
+	tracers []tracer.Tracer,
+	disableListener bool,
+) (*HTTPServer, error) {
 	ctx := context.Background()
 	httpServer := &HTTPServer{}
 	httpServer.isActive.Store(true)
@@ -296,8 +302,17 @@ func newHTTPServer(bifrost *Bifrost, serverOptions config.ServerOptions, tracers
 	httpServer.server = h
 	return httpServer, nil
 }
+
 func (s *HTTPServer) Run() {
-	slog.Info("starting server", "id", s.options.ID, "bind", s.options.Bind, "transporter", s.server.GetTransporterName())
+	slog.Info(
+		"starting server",
+		"id",
+		s.options.ID,
+		"bind",
+		s.options.Bind,
+		"transporter",
+		s.server.GetTransporterName(),
+	)
 	if s.stdlibServer != nil {
 		l := s.listener
 		if s.stdlibServer.TLSConfig != nil {
@@ -308,6 +323,7 @@ func (s *HTTPServer) Run() {
 		_ = s.server.Run()
 	}
 }
+
 func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	s.isActive.Store(false)
 	var err error
@@ -319,12 +335,15 @@ func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	}
 	return err
 }
+
 func (s *HTTPServer) Bind() string {
 	return s.options.Bind
 }
+
 func (s *HTTPServer) SetEngine(engine *Engine) {
 	s.switcher.SetEngine(engine)
 }
+
 func (s *HTTPServer) Engine() *Engine {
 	return s.switcher.Engine()
 }

@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/resolver"
-
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
-	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
 	"github.com/stretchr/testify/assert"
+
+	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/resolver"
 )
 
 const (

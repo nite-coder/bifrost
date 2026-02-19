@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -13,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/ptr"
+
+	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
 func TestGetInstances(t *testing.T) {

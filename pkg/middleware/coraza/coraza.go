@@ -9,16 +9,15 @@ import (
 	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/nite-coder/blackbear/pkg/cast"
+	prom "github.com/prometheus/client_golang/prometheus"
+
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/nite-coder/blackbear/pkg/cast"
-	prom "github.com/prometheus/client_golang/prometheus"
 )
 
-var (
-	bifrostWAFCoreRulesetHits *prom.CounterVec
-)
+var bifrostWAFCoreRulesetHits *prom.CounterVec
 
 const (
 	labelServerID     = "server_id"
@@ -65,6 +64,7 @@ func NewMiddleware(options Options) (*CorazaMiddleware, error) {
 		waf:     waf,
 	}, nil
 }
+
 func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 	clientIP := c.ClientIP()
@@ -130,7 +130,13 @@ func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext)
 	m.log(ctx, c, tx)
 	c.Next(ctx)
 }
-func (m *CorazaMiddleware) processInterruption(ctx context.Context, c *app.RequestContext, tx types.Transaction, it *types.Interruption) {
+
+func (m *CorazaMiddleware) processInterruption(
+	ctx context.Context,
+	c *app.RequestContext,
+	tx types.Transaction,
+	it *types.Interruption,
+) {
 	if it == nil {
 		return
 	}
@@ -147,6 +153,7 @@ func (m *CorazaMiddleware) processInterruption(ctx context.Context, c *app.Reque
 		return
 	}
 }
+
 func (m *CorazaMiddleware) log(ctx context.Context, c *app.RequestContext, tx types.Transaction) {
 	logger := log.FromContext(ctx)
 	matchedRules := tx.MatchedRules()
@@ -185,6 +192,7 @@ func (m *CorazaMiddleware) log(ctx context.Context, c *app.RequestContext, tx ty
 		}
 	}
 }
+
 func Init() error {
 	bifrostWAFCoreRulesetHits = prom.NewCounterVec(
 		prom.CounterOpts{
@@ -202,12 +210,14 @@ func Init() error {
 		return m.ServeHTTP, nil
 	})
 }
+
 func defaultValIfEmpty(val, def string) string {
 	if val == "" {
 		return def
 	}
 	return val
 }
+
 func counterAdd(counterVec *prom.CounterVec, value int, labels prom.Labels) error {
 	counter, err := counterVec.GetMetricWith(labels)
 	if err != nil {

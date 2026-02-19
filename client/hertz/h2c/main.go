@@ -7,16 +7,15 @@ import (
 	"io"
 	"log"
 
-	model "github.com/nite-coder/bifrost/proto"
-
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 	"google.golang.org/protobuf/proto"
+
+	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
+	model "github.com/nite-coder/bifrost/proto"
 )
 
 func main() {
-
 	c, err := httpproxy.NewClient(httpproxy.ClientOptions{
 		IsHTTP2: true,
 	})

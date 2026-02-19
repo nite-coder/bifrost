@@ -20,12 +20,6 @@ import (
 	hzerrors "github.com/cloudwego/hertz/pkg/common/errors"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/google/uuid"
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/log"
-	"github.com/nite-coder/bifrost/pkg/proxy"
-	"github.com/nite-coder/bifrost/pkg/timecache"
-	"github.com/nite-coder/bifrost/pkg/tracing"
-	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
 	"go.opentelemetry.io/otel"
@@ -33,6 +27,13 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/log"
+	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/timecache"
+	"github.com/nite-coder/bifrost/pkg/tracing"
+	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 // TrailerPrefix is a magic prefix for [ResponseWriter.Header] map keys
@@ -173,6 +174,7 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 	}
 	return r, nil
 }
+
 func (p *HTTPProxy) IsAvailable() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -188,6 +190,7 @@ func (p *HTTPProxy) IsAvailable() bool {
 	}
 	return false
 }
+
 func (p *HTTPProxy) AddFailedCount(count uint) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -203,12 +206,18 @@ func (p *HTTPProxy) AddFailedCount(count uint) error {
 	}
 	return nil
 }
+
 func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 	defer func() {
 		if r := recover(); r != nil {
 			stackTrace := cast.B2S(debug.Stack())
-			logger.ErrorContext(ctx, "proxy: HTTP proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
+			logger.ErrorContext(
+				ctx,
+				"proxy: HTTP proxy panic recovered",
+				slog.Any("error", r),
+				slog.String("stack", stackTrace),
+			)
 			c.Abort()
 		}
 		// check upstream health
@@ -350,15 +359,19 @@ func (p *HTTPProxy) SetClient(client *client.Client) {
 func (p *HTTPProxy) SetErrorHandler(eh func(c *app.RequestContext, err error)) {
 	p.errorHandler = eh
 }
+
 func (r *HTTPProxy) SetTransferTrailer(b bool) {
 	r.transferTrailer = b
 }
+
 func (p *HTTPProxy) Weight() uint32 {
 	return p.weight
 }
+
 func (p *HTTPProxy) Target() string {
 	return p.target
 }
+
 func (p *HTTPProxy) Close() error {
 	if p.client != nil {
 		p.client.CloseIdleConnections()

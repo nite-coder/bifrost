@@ -7,13 +7,12 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
 	"github.com/cloudwego/hertz/pkg/common/tracer/traceinfo"
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
-var (
-	content = `{"label": "hello world ~"}`
-)
+var content = `{"label": "hello world ~"}`
 
 func TestEscape(t *testing.T) {
 	tests := []struct {

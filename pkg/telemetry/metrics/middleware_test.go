@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
 func TestNewMetricMiddleware(t *testing.T) {

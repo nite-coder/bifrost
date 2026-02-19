@@ -11,13 +11,12 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
-var (
-	ErrNotFound = errors.New("no records found")
-)
+var ErrNotFound = errors.New("no records found")
 
 type DNSServiceDiscovery struct {
 	client  *dns.Client
@@ -58,7 +57,11 @@ func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*DNSServiceD
 	}
 	return d, nil
 }
-func (d *DNSServiceDiscovery) GetInstances(ctx context.Context, options provider.GetInstanceOptions) ([]provider.Instancer, error) {
+
+func (d *DNSServiceDiscovery) GetInstances(
+	ctx context.Context,
+	options provider.GetInstanceOptions,
+) ([]provider.Instancer, error) {
 	instances := make([]provider.Instancer, 0)
 	targetHost, targetPort, err := net.SplitHostPort(options.Name)
 	if err != nil {
@@ -84,7 +87,11 @@ func (d *DNSServiceDiscovery) GetInstances(ctx context.Context, options provider
 	}
 	return instances, nil
 }
-func (d *DNSServiceDiscovery) Watch(ctx context.Context, options provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
+
+func (d *DNSServiceDiscovery) Watch(
+	ctx context.Context,
+	options provider.GetInstanceOptions,
+) (<-chan []provider.Instancer, error) {
 	ch := make(chan []provider.Instancer, 1)
 	go safety.Go(ctx, func() {
 		defer close(ch)
@@ -108,6 +115,7 @@ func (d *DNSServiceDiscovery) Close() error {
 	}
 	return nil
 }
+
 func (d *DNSServiceDiscovery) Lookup(ctx context.Context, host string) ([]string, error) {
 	if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]" {
 		return []string{"127.0.0.1"}, nil

@@ -7,18 +7,16 @@ import (
 	"log"
 	"net"
 
-	"github.com/nite-coder/bifrost/proto"
-
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
+
+	"github.com/nite-coder/bifrost/proto"
 )
 
-var (
-	port = flag.Int("port", 8501, "The server port")
-)
+var port = flag.Int("port", 8501, "The server port")
 
 // server is used to implement helloworld.GreeterServer.
 type server struct {

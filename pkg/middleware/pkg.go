@@ -8,9 +8,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 )
 
-var (
-	handlers map[string]CreateMiddlewareHandler = make(map[string]CreateMiddlewareHandler)
-)
+var handlers map[string]CreateMiddlewareHandler = make(map[string]CreateMiddlewareHandler)
 
 type CreateMiddlewareHandler func(param any) (app.HandlerFunc, error)
 

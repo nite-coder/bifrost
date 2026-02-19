@@ -7,9 +7,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
-var (
-	ErrMaxFailedCount = errors.New("proxy: reach max failed count")
-)
+var ErrMaxFailedCount = errors.New("proxy: reach max failed count")
 
 type Proxy interface {
 	ID() string

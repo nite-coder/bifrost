@@ -9,9 +9,7 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
-var (
-	Go func(ctx context.Context, f func())
-)
+var Go func(ctx context.Context, f func())
 
 func init() {
 	Go = func(ctx context.Context, f func()) {

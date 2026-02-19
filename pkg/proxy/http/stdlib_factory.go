@@ -10,6 +10,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol"
 	hclient "github.com/cloudwego/hertz/pkg/protocol/client"
 	"github.com/cloudwego/hertz/pkg/protocol/suite"
+
 	"github.com/nite-coder/bifrost/internal/pkg/hzadaptor"
 )
 

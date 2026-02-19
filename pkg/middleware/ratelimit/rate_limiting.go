@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/pkg/connector/redis"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
@@ -76,6 +77,7 @@ func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 	}
 	return m, nil
 }
+
 func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	isAllow := c.GetBool(variable.Allow)
 	if isAllow {
@@ -126,6 +128,7 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 	}
 	c.Next(ctx)
 }
+
 func buildReplacer(directives []string, c *app.RequestContext) []string {
 	if len(directives) == 0 {
 		return nil
@@ -137,6 +140,7 @@ func buildReplacer(directives []string, c *app.RequestContext) []string {
 	}
 	return replacements
 }
+
 func Init() error {
 	return middleware.RegisterTyped([]string{"rate_limit"}, func(option Options) (app.HandlerFunc, error) {
 		if len(option.LimitBy) == 0 {

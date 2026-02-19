@@ -6,9 +6,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/redis/go-redis/v9"
+
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/redis/go-redis/v9"
 )
 
 var (

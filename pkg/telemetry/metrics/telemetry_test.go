@@ -11,14 +11,14 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
+
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 func TestTracer(t *testing.T) {
-
 	opts := config.MetricsOptions{
 		Prometheus: config.PrometheusOptions{
 			Enabled: true,
@@ -92,13 +92,13 @@ func TestTracer(t *testing.T) {
 	metricsResStr := string(metricsResBytes)
 
 	// Verify legacy tracer metrics
-	assert.True(t, strings.Contains(metricsResStr, `http_server_requests{grpc_status_code="",method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`))
-	assert.True(t, strings.Contains(metricsResStr, `http_server_requests{grpc_status_code="OK",method="POST",path="/test_post",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`))
-	assert.True(t, strings.Contains(metricsResStr, `http_bifrost_request_duration_bucket{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200",le="0.005"} 10`))
-	assert.True(t, strings.Contains(metricsResStr, `http_bifrost_request_duration_bucket{method="POST",path="/test_post",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200",le="0.05"} 10`))
-	assert.True(t, strings.Contains(metricsResStr, `http_bifrost_request_duration_count{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`))
+	assert.Contains(t, metricsResStr, `http_server_requests_total{grpc_status_code="",method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`)
+	assert.Contains(t, metricsResStr, `http_server_requests_total{grpc_status_code="OK",method="POST",path="/test_post",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`)
+	assert.Contains(t, metricsResStr, `http_bifrost_request_duration_bucket{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200",le="0.005"} 10`)
+	assert.Contains(t, metricsResStr, `http_bifrost_request_duration_bucket{method="POST",path="/test_post",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200",le="0.05"} 10`)
+	assert.Contains(t, metricsResStr, `http_bifrost_request_duration_count{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`)
 
 	// Verify custom OTel metric (converted to Prometheus format)
 	// OTel metrics might have scope labels
-	assert.True(t, strings.Contains(metricsResStr, `otel_custom_counter_total{otel_scope_name="test-meter",otel_scope_version=""} 5`))
+	assert.Contains(t, metricsResStr, `otel_custom_counter_total{otel_scope_name="test-meter",otel_scope_version=""} 5`)
 }
