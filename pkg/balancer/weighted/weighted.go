@@ -67,7 +67,7 @@ func (b *WeightedBalancer) Select(ctx context.Context, hzCtx *app.RequestContext
 	failedRecords := map[string]bool{}
 
 findLoop:
-	// nolint:gosec
+	//nolint:gosec
 	randomWeight := int64(rand.IntN(int(b.totalWeight)))
 
 	for _, p := range b.proxies {

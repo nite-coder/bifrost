@@ -39,7 +39,7 @@ func main() {
 		log.Fatalf("Error creating request: %v", err)
 	}
 
-	req.Header.Set("content-type", "application/grpc")
+	req.Header.Set("Content-Type", "application/grpc")
 	req.Header.Set("te", "trailers")
 
 	resp, err := client.Do(req)
@@ -61,7 +61,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Response: %v\n", replyData.Message)
+	fmt.Printf("Response: %v\n", replyData.GetMessage())
 
 	for key, val := range resp.Header {
 		// Logic using key

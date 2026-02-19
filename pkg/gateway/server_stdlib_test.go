@@ -43,7 +43,7 @@ func (s *testGrpcServer) SayHello(ctx context.Context, in *proto.HelloRequest) (
 	// Send a trailer
 	_ = grpc.SetTrailer(ctx, metadata.Pairs("trailer-key", "trailer-val"))
 
-	return &proto.HelloReply{Message: "Hello " + in.Name}, nil
+	return &proto.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
 
 func startTestBackend(t *testing.T, port string) {
@@ -121,7 +121,7 @@ func TestStdlibServer_GRPC_Integration(t *testing.T) {
 	require.NoError(t, err, "gRPC call failed")
 
 	// 6. Verify Results
-	assert.Equal(t, "Hello World", resp.Message)
+	assert.Equal(t, "Hello World", resp.GetMessage())
 
 	// Check Headers
 	values := header.Get("server-name")

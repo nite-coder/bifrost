@@ -36,5 +36,5 @@ func main() {
 		}
 	}
 
-	slog.Info("result:", "msg", reply.Message)
+	slog.Info("result:", "msg", reply.GetMessage())
 }

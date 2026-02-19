@@ -2,14 +2,15 @@ package file
 
 import (
 	"context"
-	"github.com/fsnotify/fsnotify"
-	"github.com/nite-coder/bifrost/internal/pkg/safety"
-	"github.com/nite-coder/bifrost/pkg/provider"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
+	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
 type ContentInfo struct {

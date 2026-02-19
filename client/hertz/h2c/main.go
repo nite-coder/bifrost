@@ -60,7 +60,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Response: %v\n", replyData.Message)
+	fmt.Printf("Response: %v\n", replyData.GetMessage())
 
 	resp.Header.Trailer().VisitAll(func(key, value []byte) {
 		fmt.Printf("Trailer: %s: %s\n", key, value)

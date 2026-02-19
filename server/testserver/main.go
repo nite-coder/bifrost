@@ -194,8 +194,8 @@ func chunkHandler(ctx context.Context, c *app.RequestContext) {
 	c.Response.HijackWriter(resp.NewChunkedBodyWriter(&c.Response, c.GetWriter()))
 
 	for i := 0; i < 100; i++ {
-		c.Write(orderResp) // nolint: errcheck
-		c.Flush()          // nolint: errcheck
+		c.Write(orderResp) //nolint: errcheck
+		c.Flush()          //nolint: errcheck
 		time.Sleep(1 * time.Second)
 	}
 }

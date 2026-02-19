@@ -170,7 +170,7 @@ func TestGRPCProxy(t *testing.T) {
 		client := proto.NewGreeterClient(conn)
 
 		md := metadata.Pairs("user_id", "5478")
-		ctx = metadata.NewOutgoingContext(ctx, md)
+		ctx := metadata.NewOutgoingContext(ctx, md)
 
 		var header, trailer metadata.MD // variable to store header and trailer
 
@@ -180,7 +180,7 @@ func TestGRPCProxy(t *testing.T) {
 			grpc.Trailer(&trailer))
 
 		require.NoError(t, err)
-		assert.Equal(t, "Hello Bifrost", resp.Message)
+		assert.Equal(t, "Hello Bifrost", resp.GetMessage())
 		assert.Equal(t, "bifrost", header["server-name"][0])
 	})
 
@@ -188,7 +188,7 @@ func TestGRPCProxy(t *testing.T) {
 		client := proto.NewGreeterClient(conn)
 
 		md := metadata.Pairs("user_id", "54781")
-		ctx = metadata.NewOutgoingContext(ctx, md)
+		ctx := metadata.NewOutgoingContext(ctx, md)
 
 		_, err := client.SayHello(ctx, &proto.HelloRequest{Name: "Bifrost"})
 		st, ok := status.FromError(err)
@@ -209,7 +209,7 @@ func TestGRPCProxy(t *testing.T) {
 		client := proto.NewGreeterClient(conn)
 
 		md := metadata.Pairs("user_id", "5478")
-		ctx = metadata.NewOutgoingContext(ctx, md)
+		ctx := metadata.NewOutgoingContext(ctx, md)
 		_, err := client.SayHello(ctx, &proto.HelloRequest{Name: "sleep"})
 		st, ok := status.FromError(err)
 		assert.True(t, ok)

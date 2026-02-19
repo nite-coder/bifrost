@@ -2,10 +2,11 @@ package router
 
 import (
 	"fmt"
-	"github.com/cloudwego/hertz/pkg/app"
 	"net/http"
 	"sort"
 	"strings"
+
+	"github.com/cloudwego/hertz/pkg/app"
 )
 
 var (

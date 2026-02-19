@@ -137,8 +137,8 @@ type K8SProviderOptions struct {
 	Enabled   bool   `yaml:"enabled" json:"enabled"`
 }
 type MetricsOptions struct {
-	Prometheus PrometheusOptions    `yaml:"prometheus" json:"prometheus"`
-	OTLP       OTLPMetricsOptions   `yaml:"otlp" json:"otlp"`
+	Prometheus PrometheusOptions  `yaml:"prometheus" json:"prometheus"`
+	OTLP       OTLPMetricsOptions `yaml:"otlp" json:"otlp"`
 }
 
 type OTLPMetricsOptions struct {

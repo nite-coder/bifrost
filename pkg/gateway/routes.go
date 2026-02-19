@@ -33,42 +33,42 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 			continue
 		}
 
-		        if len(routeOptions.Paths) == 0 {
-		            return nil, fmt.Errorf("paths cannot be empty for route ID: %s", routeOptions.ID)
-		        }
-		
-		        routeOptions.ServiceID = strings.TrimSpace(routeOptions.ServiceID)
-		        if len(routeOptions.ServiceID) == 0 {
-		            return nil, fmt.Errorf("service_ID cannot be empty for route ID: %s", routeOptions.ID)
-		        }
-		
-		        routeMiddlewares := make([]app.HandlerFunc, 0)
-		
-		        rOptions := &variable.RequestRoute{
-		            RouteID:   routeOptions.ID,
-		            Route:     routeOptions.Route,
-		            Tags:      routeOptions.Tags,
-		            ServiceID: routeOptions.ServiceID,
-		        }
-		
-		        firstRouteMiddleware := newFirstRouteMiddleware(rOptions)
-		        routeMiddlewares = append(routeMiddlewares, firstRouteMiddleware.ServeHTTP)
-		
-		        for _, m := range routeOptions.Middlewares {
-		            if len(m.Use) > 0 {
-		                val, found := bifrost.middlewares[m.Use]
-		                if !found {
-		                    return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", m.Use, routeOptions.ID)
-		                }
-		
-		                routeMiddlewares = append(routeMiddlewares, val)
-		                continue
-		            }
-		
-		            if len(m.Type) == 0 {
-		                return nil, fmt.Errorf("middleware type cannot be empty for route: %s", routeOptions.Paths)
-		            }
-					handler := middleware.Factory(m.Type)
+		if len(routeOptions.Paths) == 0 {
+			return nil, fmt.Errorf("paths cannot be empty for route ID: %s", routeOptions.ID)
+		}
+
+		routeOptions.ServiceID = strings.TrimSpace(routeOptions.ServiceID)
+		if len(routeOptions.ServiceID) == 0 {
+			return nil, fmt.Errorf("service_ID cannot be empty for route ID: %s", routeOptions.ID)
+		}
+
+		routeMiddlewares := make([]app.HandlerFunc, 0)
+
+		rOptions := &variable.RequestRoute{
+			RouteID:   routeOptions.ID,
+			Route:     routeOptions.Route,
+			Tags:      routeOptions.Tags,
+			ServiceID: routeOptions.ServiceID,
+		}
+
+		firstRouteMiddleware := newFirstRouteMiddleware(rOptions)
+		routeMiddlewares = append(routeMiddlewares, firstRouteMiddleware.ServeHTTP)
+
+		for _, m := range routeOptions.Middlewares {
+			if len(m.Use) > 0 {
+				val, found := bifrost.middlewares[m.Use]
+				if !found {
+					return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", m.Use, routeOptions.ID)
+				}
+
+				routeMiddlewares = append(routeMiddlewares, val)
+				continue
+			}
+
+			if len(m.Type) == 0 {
+				return nil, fmt.Errorf("middleware type cannot be empty for route: %s", routeOptions.Paths)
+			}
+			handler := middleware.Factory(m.Type)
 			if handler == nil {
 				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", m.Type, routeOptions.Paths)
 			}

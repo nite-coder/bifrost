@@ -49,7 +49,7 @@ func (tc *TimeCache) Close() {
 }
 
 func (tc *TimeCache) refresh() {
-	ticker := time.NewTicker(tc.interval) 
+	ticker := time.NewTicker(tc.interval)
 	defer ticker.Stop()
 
 	for {
