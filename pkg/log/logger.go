@@ -58,10 +58,12 @@ func (fw *fileWriter) reopen() error {
 	if fw.redirectStdStream {
 		if runtime.GOOS != "windows" {
 			// Redirect both stdout and stderr to the new file
-			if err := unix.Dup2(int(fw.file.Fd()), int(os.Stdout.Fd())); err != nil {
+			err := unix.Dup2(int(fw.file.Fd()), int(os.Stdout.Fd()))
+			if err != nil {
 				return fmt.Errorf("failed to redirect stdout during rotation: %w", err)
 			}
-			if err := unix.Dup2(int(fw.file.Fd()), int(os.Stderr.Fd())); err != nil {
+			err = unix.Dup2(int(fw.file.Fd()), int(os.Stderr.Fd()))
+			if err != nil {
 				return fmt.Errorf("failed to redirect stderr during rotation: %w", err)
 			}
 		}
@@ -142,11 +144,13 @@ func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
 			}
 			// Linux and macOS support unix.Dup2
 			// Redirect stdout
-			if err := unix.Dup2(int(file.Fd()), int(os.Stdout.Fd())); err != nil {
+			err := unix.Dup2(int(file.Fd()), int(os.Stdout.Fd()))
+			if err != nil {
 				return nil, fmt.Errorf("failed to redirect stdout: %w", err)
 			}
 			// Redirect stderr
-			if err := unix.Dup2(int(file.Fd()), int(os.Stderr.Fd())); err != nil {
+			err = unix.Dup2(int(file.Fd()), int(os.Stderr.Fd()))
+			if err != nil {
 				return nil, fmt.Errorf("failed to redirect stderr: %w", err)
 			}
 		}

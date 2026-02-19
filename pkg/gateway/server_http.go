@@ -126,19 +126,22 @@ func newHTTPServer(
 				var opErr error
 				err := c.Control(func(fd uintptr) {
 					if serverOptions.ReusePort {
-						if err := setTCPReusePort(fd); err != nil {
+						err := setTCPReusePort(fd)
+						if err != nil {
 							opErr = err
 							return
 						}
 					}
 					if serverOptions.TCPQuickAck {
-						if err := setTCPQuickAck(fd); err != nil {
+						err := setTCPQuickAck(fd)
+						if err != nil {
 							opErr = err
 							return
 						}
 					}
 					if serverOptions.TCPFastOpen {
-						if err := setTCPFastOpen(fd); err != nil {
+						err := setTCPFastOpen(fd)
+						if err != nil {
 							opErr = err
 							return
 						}

@@ -126,7 +126,8 @@ func (l *BufferedLogger) reopenFile() error {
 	}
 	// Close the current file if it's not stderr
 	if l.file != nil && l.file != os.Stderr {
-		if err := l.file.Close(); err != nil {
+		err := l.file.Close()
+		if err != nil {
 			return fmt.Errorf("failed to close file: %w", err)
 		}
 	}

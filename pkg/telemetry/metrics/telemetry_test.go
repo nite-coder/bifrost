@@ -92,11 +92,31 @@ func TestTracer(t *testing.T) {
 	metricsResStr := string(metricsResBytes)
 
 	// Verify legacy tracer metrics
-	assert.Contains(t, metricsResStr, `http_server_requests_total{grpc_status_code="",method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`)
-	assert.Contains(t, metricsResStr, `http_server_requests_total{grpc_status_code="OK",method="POST",path="/test_post",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`)
-	assert.Contains(t, metricsResStr, `http_bifrost_request_duration_bucket{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200",le="0.005"} 10`)
-	assert.Contains(t, metricsResStr, `http_bifrost_request_duration_bucket{method="POST",path="/test_post",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200",le="0.05"} 10`)
-	assert.Contains(t, metricsResStr, `http_bifrost_request_duration_count{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`)
+	assert.Contains(
+		t,
+		metricsResStr,
+		`http_server_requests_total{grpc_status_code="",method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`,
+	)
+	assert.Contains(
+		t,
+		metricsResStr,
+		`http_server_requests_total{grpc_status_code="OK",method="POST",path="/test_post",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`,
+	)
+	assert.Contains(
+		t,
+		metricsResStr,
+		`http_bifrost_request_duration_bucket{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200",le="0.005"} 10`,
+	)
+	assert.Contains(
+		t,
+		metricsResStr,
+		`http_bifrost_request_duration_bucket{method="POST",path="/test_post",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200",le="0.05"} 10`,
+	)
+	assert.Contains(
+		t,
+		metricsResStr,
+		`http_bifrost_request_duration_count{method="GET",path="/test_get",route_id="unknown",server_id="unknown",service_id="unknown",status_code="200"} 10`,
+	)
 
 	// Verify custom OTel metric (converted to Prometheus format)
 	// OTel metrics might have scope labels

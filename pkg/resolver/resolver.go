@@ -84,7 +84,8 @@ func NewResolver(option Options) (*Resolver, error) {
 		dnsCache:   cache.NewCache[string, []string](5 * time.Minute),
 	}
 
-	if err := r.loadHostsFile(); err != nil {
+	err := r.loadHostsFile()
+	if err != nil {
 		return nil, fmt.Errorf("DNS: failed to load hosts file: %w", err)
 	}
 

@@ -34,7 +34,8 @@ func (b *HertzBridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// Convert http.Request to Hertz RequestContext
-	if err := adaptor.CopyToHertzRequest(r, &c.Request); err != nil {
+	err := adaptor.CopyToHertzRequest(r, &c.Request)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte("failed to copy request"))
 		return

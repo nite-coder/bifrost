@@ -48,7 +48,8 @@ func NewOptions() Options {
 func (opt *Options) UnmarshalYAML(value *yaml.Node) error {
 	type options Options
 	var defaults options
-	if err := value.Decode(&defaults); err != nil {
+	err := value.Decode(&defaults)
+	if err != nil {
 		return err
 	}
 	*opt = Options(defaults)

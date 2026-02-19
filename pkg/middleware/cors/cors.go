@@ -75,7 +75,8 @@ var (
 )
 
 func newCors(config Config) *cors {
-	if err := config.Validate(); err != nil {
+	err := config.Validate()
+	if err != nil {
 		panic(err.Error())
 	}
 

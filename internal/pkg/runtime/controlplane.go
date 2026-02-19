@@ -163,7 +163,8 @@ func (cp *ControlPlane) SendMessage(workerPID int, msg *ControlMessage) error {
 	}
 
 	encoder := json.NewEncoder(conn)
-	if err := encoder.Encode(msg); err != nil {
+	err := encoder.Encode(msg)
+	if err != nil {
 		return fmt.Errorf("failed to send message to worker %d: %w", workerPID, err)
 	}
 
@@ -263,7 +264,8 @@ func (cp *ControlPlane) handleConnection(ctx context.Context, conn net.Conn) {
 		}
 
 		var msg ControlMessage
-		if err := decoder.Decode(&msg); err != nil {
+		err := decoder.Decode(&msg)
+		if err != nil {
 			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 				return
 			}
@@ -280,7 +282,8 @@ func (cp *ControlPlane) handleConnection(ctx context.Context, conn net.Conn) {
 			// Extract Keys from Payload
 			var keys []string
 			if len(msg.Payload) > 0 {
-				if err := json.Unmarshal(msg.Payload, &keys); err != nil {
+				err := json.Unmarshal(msg.Payload, &keys)
+				if err != nil {
 					slog.Error("failed to unmarshal listener keys", "error", err)
 					// Continue, but keys will be empty
 				}
@@ -491,7 +494,8 @@ func (wcp *WorkerControlPlane) Start(ctx context.Context, fdHandler FDHandler) e
 		}
 
 		var msg ControlMessage
-		if err := decoder.Decode(&msg); err != nil {
+		err := decoder.Decode(&msg)
+		if err != nil {
 			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 				return nil
 			}
@@ -504,14 +508,16 @@ func (wcp *WorkerControlPlane) Start(ctx context.Context, fdHandler FDHandler) e
 		switch msg.Type {
 		case MessageTypeFDRequest:
 			if fdHandler != nil {
-				if err := fdHandler.HandleFDRequest(); err != nil {
+				err := fdHandler.HandleFDRequest()
+				if err != nil {
 					slog.Error("worker failed to handle FD request", "error", err)
 				}
 			}
 		case MessageTypeShutdown:
 			slog.Info("worker received shutdown request")
 			// Send SIGTERM to self to trigger graceful shutdown
-			if err := wcp.signalFunc(wcp.pid, syscall.SIGTERM); err != nil {
+			err := wcp.signalFunc(wcp.pid, syscall.SIGTERM)
+			if err != nil {
 				slog.Error("failed to signal self", "error", err)
 			}
 			return nil
@@ -536,7 +542,8 @@ func (wcp *WorkerControlPlane) sendMessage(msg *ControlMessage) error {
 	}
 
 	encoder := json.NewEncoder(wcp.conn)
-	if err := encoder.Encode(msg); err != nil {
+	err := encoder.Encode(msg)
+	if err != nil {
 		return fmt.Errorf("failed to send message: %w", err)
 	}
 

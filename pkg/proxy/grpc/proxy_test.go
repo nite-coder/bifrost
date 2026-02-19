@@ -80,7 +80,8 @@ func createGrpcServer() {
 	s := grpc.NewServer()
 	proto.RegisterGreeterServer(s, &grpcTestServer{})
 	go func() {
-		if err := s.Serve(lis); err != nil {
+		err := s.Serve(lis)
+		if err != nil {
 			log.Fatalf("Server exited with error: %v", err)
 		}
 	}()
@@ -111,7 +112,8 @@ func TestGRPCProxy(t *testing.T) {
 	hsrv := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			c := app.NewContext(0)
-			if err := adaptor.CopyToHertzRequest(r, &c.Request); err != nil {
+			err := adaptor.CopyToHertzRequest(r, &c.Request)
+			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}

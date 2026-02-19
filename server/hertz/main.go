@@ -36,7 +36,8 @@ func main() {
 	flag.Parse()
 
 	if runtime.IsWorker() {
-		if err := runWorker(); err != nil {
+		err := runWorker()
+		if err != nil {
 			log.Fatal(err)
 		}
 		return
@@ -50,7 +51,8 @@ func main() {
 			InitialBackoff: 1 * time.Second,
 		},
 	})
-	if err := master.Run(context.Background()); err != nil {
+	err := master.Run(context.Background())
+	if err != nil {
 		log.Fatal(err)
 	}
 }
@@ -72,7 +74,8 @@ func runWorker() error {
 
 	// 2. Start Control Plane Loop
 	go func() {
-		if err := wcp.Start(context.Background(), nil); err != nil {
+		err := wcp.Start(context.Background(), nil)
+		if err != nil {
 			slog.Error("control plane loop exited", "error", err)
 		}
 	}()

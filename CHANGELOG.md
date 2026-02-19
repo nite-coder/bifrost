@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed goroutine leak during hot reload by properly closing `TimeCache`, `Resolver`, and `Upstream` resources ([#102](https://github.com/nite-coder/bifrost/pull/102) by [0x5487](https://github.com/0x5487))
 - Fixed worker processes not starting with the configured user and group ([#104](https://github.com/nite-coder/bifrost/pull/104) by [0x5487](https://github.com/0x5487))
+- Fixed various linter errors (funcorder, makezero, gosmopolitan, etc.) and improved code formatting project-wide ([#109](https://github.com/nite-coder/bifrost/pull/109) by [0x5487](https://github.com/0x5487))
+
 
 ## Changed
 
@@ -20,7 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use `variable.GetString` for Nacos password configuration to support environment variables ([#106](https://github.com/nite-coder/bifrost/pull/106) by [0x5487](https://github.com/0x5487))
 - Refactor middleware and balancer initialization to use explicit `Init()` calls instead of `init()` functions ([#107](https://github.com/nite-coder/bifrost/pull/107) by [0x5487](https://github.com/0x5487))
 - Refactor consistent hashing into a separate `internal/pkg/consistent` package with improved performance, distribution quality, and weight-based support ([#108](https://github.com/nite-coder/bifrost/pull/108) by [0x5487](https://github.com/0x5487))
-
 
 ## [0.8.0] (2026-01-21)
 

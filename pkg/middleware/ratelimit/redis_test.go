@@ -41,7 +41,8 @@ func startRedis(t *testing.T) (string, func()) {
 	endpoint = strings.TrimPrefix(endpoint, "redis://")
 
 	return endpoint, func() {
-		if err := redisContainer.Terminate(ctx); err != nil {
+		err := redisContainer.Terminate(ctx)
+		if err != nil {
 			t.Fatalf("failed to terminate container: %s", err)
 		}
 	}
