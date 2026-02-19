@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 	"net/http"
 
@@ -80,9 +81,14 @@ func main() {
 }
 
 func addGrpcPrefix(data []byte) []byte {
-	prefix := make([]byte, 5, 5+len(data))
+	if len(data) > math.MaxUint32-5 {
+		// This should not happen in this example, but good for security
+		return data
+	}
+	prefix := make([]byte, 5+len(data))
 	binary.BigEndian.PutUint32(prefix[1:], uint32(len(data)))
-	return append(prefix, data...)
+	copy(prefix[5:], data)
+	return prefix
 }
 
 func removeGrpcPrefix(data []byte) []byte {

@@ -186,7 +186,7 @@ run_master_worker_test() {
     kill -HUP "$master_pid"
     log_info "  Sent SIGHUP to Master ($master_pid)"
     
-    sleep 8 # Wait for reload to complete (including wait for FDs)
+    sleep 15 # Wait for reload to complete (including wait for FDs)
     
     local post_upgrade_master_pid=$(get_master_pid)
     local final_worker_pids=$(get_worker_pids)

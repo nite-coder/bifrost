@@ -455,19 +455,21 @@ func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File, keys []
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	// Pass listener FDs for zero-downtime reload
+	// Set extra file descriptors for listener inheritance
 	if len(extraFiles) > 0 {
 		cmd.ExtraFiles = extraFiles
+
+		// Set environment variable to notify child about inherited FDs
+		// (Used by internal/pkg/runtime/worker_fd.go)
+
+		// Keys must be base64 encoded for safety (Abstract Namespace or special chars)
+		encodedKeys := base64.StdEncoding.EncodeToString([]byte(strings.Join(keys, ",")))
+
 		cmd.Env = append(cmd.Env,
 			"UPGRADE=1",
-			fmt.Sprintf("BIFROST_FD_COUNT=%d", len(extraFiles)),
+			"BIFROST_LISTENER_KEYS"+"="+encodedKeys,
+			"BIFROST_FD_COUNT"+"="+strconv.Itoa(len(extraFiles)),
 		)
-		if len(keys) > 0 {
-			// Encode keys as a comma-separated string, then base64 encode it
-			keysStr := strings.Join(keys, ",")
-			encodedKeys := base64.StdEncoding.EncodeToString([]byte(keysStr))
-			cmd.Env = append(cmd.Env, "BIFROST_LISTENER_KEYS="+encodedKeys)
-		}
 	}
 
 	err := startCommand(cmd)
