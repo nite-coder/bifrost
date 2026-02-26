@@ -1,18 +1,19 @@
 package config
 
-type ErrInvalidConfig struct {
+type InvalidConfigError struct {
 	Value     any
 	Message   string
 	Structure []string
 }
 
-func newInvalidConfig(structure []string, value any, message string) ErrInvalidConfig {
-	return ErrInvalidConfig{
+func newInvalidConfig(structure []string, value any, message string) InvalidConfigError {
+	return InvalidConfigError{
 		Structure: structure,
 		Value:     value,
 		Message:   message,
 	}
 }
-func (e ErrInvalidConfig) Error() string {
+
+func (e InvalidConfigError) Error() string {
 	return e.Message
 }

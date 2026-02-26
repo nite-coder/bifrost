@@ -11,15 +11,14 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
+	"github.com/nite-coder/blackbear/pkg/cast"
+
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
-var (
-	grpcContentType = []byte("application/grpc")
-)
+var grpcContentType = []byte("application/grpc")
 
 type Tracer struct {
 	writer     *BufferedLogger
@@ -44,9 +43,11 @@ func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 	}
 	return tracer, nil
 }
+
 func (t *Tracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
 	return ctx
 }
+
 func (t *Tracer) Finish(ctx context.Context, c *app.RequestContext) {
 	vals := t.buildReplacer(c)
 	if vals == nil {
@@ -56,6 +57,7 @@ func (t *Tracer) Finish(ctx context.Context, c *app.RequestContext) {
 	result := replacer.Replace(t.options.Template)
 	t.writer.Write(result)
 }
+
 func (t *Tracer) Close() error {
 	if strings.EqualFold(t.options.Output, "stderr") {
 		return nil
@@ -66,6 +68,7 @@ func (t *Tracer) Close() error {
 	}
 	return err
 }
+
 func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 	httpStats := c.GetTraceInfo().Stats()
 	httpStart := httpStats.GetEvent(stats.HTTPStart)
@@ -105,6 +108,7 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 	}
 	return replacements
 }
+
 func escape(s string, escapeType config.EscapeType) string {
 	if len(s) == 0 {
 		return s
@@ -122,7 +126,7 @@ func escape(s string, escapeType config.EscapeType) string {
 	return s
 }
 
-// escapeString function to escape special characters
+// escapeString function to escape special characters.
 func escapeString(s string) string {
 	var b strings.Builder
 	for i := 0; i < len(s); {
@@ -177,6 +181,7 @@ func escapeJSON(comp string) string {
 	}
 	return comp
 }
+
 func needsEscape(c byte) bool {
 	return c == '"' || c == '\\' || c < 32
 }

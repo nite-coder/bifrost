@@ -7,9 +7,10 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
-	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	prom "github.com/prometheus/client_golang/prometheus"
+
+	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 const (
@@ -113,7 +114,6 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 
 	_ = counterAdd(s.httpServerRequestBodySize, requestSize, serverLabel)
 	_ = counterAdd(s.httpServerResponseBodySize, responseSize, serverLabel)
-
 }
 
 // NewTracer provides tracer for server access, addr and path is the scrape_configs for prometheus server.
@@ -126,7 +126,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 
 	httpServerRequestBodySize := prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "http_server_request_body_size",
+			Name: "http_server_request_body_size_total",
 			Help: "Size of HTTP server request bodies.",
 		},
 		[]string{labelServerID},
@@ -135,7 +135,7 @@ func NewTracer(opts ...Option) tracer.Tracer {
 
 	httpServerResponseBodySize := prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "http_server_response_body_size",
+			Name: "http_server_response_body_size_total",
 			Help: "Size of HTTP server response bodies.",
 		},
 		[]string{labelServerID},
@@ -144,10 +144,18 @@ func NewTracer(opts ...Option) tracer.Tracer {
 
 	httpServerRequests := prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "http_server_requests",
+			Name: "http_server_requests_total",
 			Help: "Total number of HTTPs completed by the server, regardless of success or failure",
 		},
-		[]string{labelMethod, labelPath, labelStatusCode, labelGRPCStatusCode, labelServerID, labelRouteID, labelServiceID},
+		[]string{
+			labelMethod,
+			labelPath,
+			labelStatusCode,
+			labelGRPCStatusCode,
+			labelServerID,
+			labelRouteID,
+			labelServiceID,
+		},
 	)
 	prom.MustRegister(httpServerRequests)
 

@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"io"
 	"log"
-
-	model "github.com/nite-coder/bifrost/proto"
+	"math"
 
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 	"google.golang.org/protobuf/proto"
+
+	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
+	model "github.com/nite-coder/bifrost/proto"
 )
 
 func main() {
-
 	c, err := httpproxy.NewClient(httpproxy.ClientOptions{
 		IsHTTP2: true,
 	})
@@ -60,7 +60,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Response: %v\n", replyData.Message)
+	fmt.Printf("Response: %v\n", replyData.GetMessage())
 
 	resp.Header.Trailer().VisitAll(func(key, value []byte) {
 		fmt.Printf("Trailer: %s: %s\n", key, value)
@@ -68,9 +68,14 @@ func main() {
 }
 
 func addGrpcPrefix(data []byte) []byte {
-	prefix := make([]byte, 5)
+	if len(data) > math.MaxUint32-5 {
+		// This should not happen in this example, but good for security
+		return data
+	}
+	prefix := make([]byte, 5+len(data))
 	binary.BigEndian.PutUint32(prefix[1:], uint32(len(data)))
-	return append(prefix, data...)
+	copy(prefix[5:], data)
+	return prefix
 }
 
 func removeGrpcPrefix(data []byte) []byte {

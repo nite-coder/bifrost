@@ -16,7 +16,6 @@ func main() {
 			return nil
 		}),
 	)
-
 	if err != nil {
 		slog.Error("failed to run bifrost", "error", err)
 		os.Exit(1)

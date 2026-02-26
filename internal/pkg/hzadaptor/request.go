@@ -75,7 +75,7 @@ func (r *bytesReader) Read(p []byte) (n int, err error) {
 	return n, nil
 }
 
-// parseHTTPVersion parses an HTTP version string like "HTTP/1.1" or "HTTP/2.0"
+// parseHTTPVersion parses an HTTP version string like "HTTP/1.1" or "HTTP/2.0".
 func parseHTTPVersion(proto string) (major, minor int) {
 	// Default to HTTP/1.1
 	major, minor = 1, 1

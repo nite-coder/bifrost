@@ -5,14 +5,14 @@ import (
 	"net"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/resolver"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
-
 	targetOptions := []config.TargetOptions{
 		{
 			Target: "127.0.0.1:1234",
@@ -167,7 +167,6 @@ func TestRefreshProxies(t *testing.T) {
 		}
 
 		assert.Equal(t, plist1IDs, plist2IDs, "Expected proxy IDs to be the same regardless of order")
-
 	})
 
 	t.Run("success with updated tags", func(t *testing.T) {
@@ -231,8 +230,18 @@ func TestRefreshProxies(t *testing.T) {
 			plist2Map[p.Target()] = p.ID()
 		}
 
-		assert.NotEqual(t, plist1Map["http://127.0.0.1:8080"], plist2Map["http://127.0.0.1:8080"], "proxy should be updated due to tag changes")
-		assert.Equal(t, plist1Map["http://127.0.0.2:8080"], plist2Map["http://127.0.0.2:8080"], "proxy without tag changes should remain the same")
+		assert.NotEqual(
+			t,
+			plist1Map["http://127.0.0.1:8080"],
+			plist2Map["http://127.0.0.1:8080"],
+			"proxy should be updated due to tag changes",
+		)
+		assert.Equal(
+			t,
+			plist1Map["http://127.0.0.2:8080"],
+			plist2Map["http://127.0.0.2:8080"],
+			"proxy without tag changes should remain the same",
+		)
 	})
 
 	t.Run("fail with no instances", func(t *testing.T) {
@@ -262,17 +271,22 @@ func TestRefreshProxies(t *testing.T) {
 		err = upstream.refreshProxies([]provider.Instancer{})
 		assert.Error(t, err)
 	})
-
 }
 
-// mockErrorDiscovery is a mock service discovery that always returns an error
+// mockErrorDiscovery is a mock service discovery that always returns an error.
 type mockErrorDiscovery struct{}
 
-func (m *mockErrorDiscovery) GetInstances(ctx context.Context, opts provider.GetInstanceOptions) ([]provider.Instancer, error) {
+func (m *mockErrorDiscovery) GetInstances(
+	ctx context.Context,
+	opts provider.GetInstanceOptions,
+) ([]provider.Instancer, error) {
 	return nil, assert.AnError
 }
 
-func (m *mockErrorDiscovery) Watch(ctx context.Context, opts provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
+func (m *mockErrorDiscovery) Watch(
+	ctx context.Context,
+	opts provider.GetInstanceOptions,
+) (<-chan []provider.Instancer, error) {
 	return nil, assert.AnError
 }
 
@@ -280,7 +294,7 @@ func (m *mockErrorDiscovery) Close() error {
 	return nil
 }
 
-// TestWatchErrorHandling verifies that watch() returns early when Watch() fails
+// TestWatchErrorHandling verifies that watch() returns early when Watch() fails.
 func TestWatchErrorHandling(t *testing.T) {
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
 	assert.NoError(t, err)

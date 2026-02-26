@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -31,6 +32,7 @@ func NewMiddleware(opts Options) *ResponseTransFormaterMiddleware {
 		options: &opts,
 	}
 }
+
 func (m *ResponseTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	c.Next(ctx)
 	if len(m.options.Remove.Headers) > 0 {
@@ -66,6 +68,7 @@ func (m *ResponseTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.
 		}
 	}
 }
+
 func Init() error {
 	return middleware.RegisterTyped([]string{"response_transformer"}, func(opts Options) (app.HandlerFunc, error) {
 		m := NewMiddleware(opts)

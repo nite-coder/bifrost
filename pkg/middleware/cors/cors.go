@@ -75,7 +75,8 @@ var (
 )
 
 func newCors(config Config) *cors {
-	if err := config.Validate(); err != nil {
+	err := config.Validate()
+	if err != nil {
 		panic(err.Error())
 	}
 
@@ -123,7 +124,9 @@ func (cors *cors) applyCors(c *app.RequestContext) {
 
 	if bytes.Equal(c.Request.Method(), DefaultHeaderBytes[0]) {
 		cors.handlePreflight(c)
-		defer c.AbortWithStatus(consts.StatusNoContent) // Using 204 is better than 200 when the request status is OPTIONS
+		defer c.AbortWithStatus(
+			consts.StatusNoContent,
+		) // Using 204 is better than 200 when the request status is OPTIONS
 	} else {
 		cors.handleNormal(c)
 	}

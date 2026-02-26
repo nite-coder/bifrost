@@ -2,14 +2,16 @@ package file
 
 import (
 	"context"
-	"github.com/fsnotify/fsnotify"
-	"github.com/nite-coder/bifrost/internal/pkg/safety"
-	"github.com/nite-coder/bifrost/pkg/provider"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
+
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
+	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
 type ContentInfo struct {
@@ -17,10 +19,10 @@ type ContentInfo struct {
 	Path    string
 }
 type Options struct {
-	Paths      []string `yaml:"paths" json:"paths"`
+	Paths      []string `yaml:"paths"      json:"paths"`
 	Extensions []string `yaml:"extensions" json:"extensions"`
 	Watch      bool
-	Enabled    bool `yaml:"enabled" json:"enabled"`
+	Enabled    bool `yaml:"enabled"    json:"enabled"`
 }
 type FileProvider struct {
 	watcher   *fsnotify.Watcher
@@ -36,12 +38,15 @@ func NewProvider(opts Options) *FileProvider {
 		options: opts,
 	}
 }
+
 func (p *FileProvider) Reset() {
 	p.options.Paths = p.options.Paths[:0]
 }
+
 func (p *FileProvider) Add(path string) {
 	p.options.Paths = append(p.options.Paths, path)
 }
+
 func (p *FileProvider) Open() ([]*ContentInfo, error) {
 	p.options.Paths = slices.Compact(p.options.Paths)
 	var contents []*ContentInfo
@@ -88,9 +93,11 @@ func (p *FileProvider) Open() ([]*ContentInfo, error) {
 	}
 	return contents, nil
 }
+
 func (p *FileProvider) SetOnChanged(changeFunc provider.ChangeFunc) {
 	p.OnChanged = changeFunc
 }
+
 func (p *FileProvider) Watch() error {
 	if !p.options.Watch {
 		return nil
@@ -160,6 +167,7 @@ func (p *FileProvider) Watch() error {
 	}
 	return nil
 }
+
 func (p *FileProvider) addWatch(path string) error {
 	return filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {

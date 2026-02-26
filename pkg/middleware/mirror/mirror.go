@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/log"

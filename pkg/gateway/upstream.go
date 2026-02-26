@@ -18,6 +18,8 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app/client"
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
+	prom "github.com/prometheus/client_golang/prometheus"
+
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -29,12 +31,9 @@ import (
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	prom "github.com/prometheus/client_golang/prometheus"
 )
 
-var (
-	httpServiceOpenConnections *prom.GaugeVec
-)
+var httpServiceOpenConnections *prom.GaugeVec
 
 func init() {
 	httpServiceOpenConnections = prom.NewGaugeVec(
@@ -77,7 +76,11 @@ func (u *Upstream) Close() error {
 	return nil
 }
 
-func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstreamOptions config.UpstreamOptions) (*Upstream, error) {
+func newUpstream(
+	bifrost *Bifrost,
+	serviceOptions config.ServiceOptions,
+	upstreamOptions config.UpstreamOptions,
+) (*Upstream, error) {
 	if len(upstreamOptions.ID) == 0 {
 		return nil, errors.New("upstream ID cannot be empty")
 	}
@@ -95,7 +98,10 @@ func newUpstream(bifrost *Bifrost, serviceOptions config.ServiceOptions, upstrea
 		if !bifrost.options.Providers.DNS.Enabled {
 			return nil, fmt.Errorf("dns provider is disabled for upstream ID: %s", upstreamOptions.ID)
 		}
-		discovery, err := dns.NewDNSServiceDiscovery(bifrost.options.Providers.DNS.Servers, bifrost.options.Providers.DNS.Valid)
+		discovery, err := dns.NewDNSServiceDiscovery(
+			bifrost.options.Providers.DNS.Servers,
+			bifrost.options.Providers.DNS.Valid,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -249,7 +255,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*u.bifrost.options.Default.Service.MaxConnsPerHost))
 		}
 		if strings.EqualFold(addr.Scheme, "https") {
-			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{ // nolint
+			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
 				// when client uses ip address to connect to server, client need to set the ServerName to the domain name you want to use
 				ServerName:         serverName,
 				InsecureSkipVerify: !u.serviceOptions.TLSVerify, //nolint:gosec
@@ -308,9 +314,9 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 			}
 			newProxies = append(newProxies, proxy)
 		case config.ProtocolGRPC:
-			url = fmt.Sprintf("grpc://%s%s", targetHost, addr.Path)
+			url = "grpc://" + targetHost + addr.Path
 			if port != "" {
-				url = fmt.Sprintf("grpc://%s:%s%s", targetHost, port, addr.Path)
+				url = "grpc://" + net.JoinHostPort(targetHost, port) + addr.Path
 			}
 			grpcOptions := grpcproxy.Options{
 				Target:           url,
@@ -374,10 +380,18 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	}
 
 	if len(updatedProxies) > 0 {
-		slog.Debug("upstream refresh success", "upstream_id", u.options.ID, "proxy_id", updatedProxies[0].ID(), "len", len(updatedProxies))
+		slog.Debug(
+			"upstream refresh success",
+			"upstream_id",
+			u.options.ID,
+			"proxy_id",
+			updatedProxies[0].ID(),
+			"len",
+			len(updatedProxies),
+		)
 	}
 
-	factory := balancer.Factory(string(u.options.Balancer.Type))
+	factory := balancer.Factory(u.options.Balancer.Type)
 	balancer, err := factory(updatedProxies, u.options.Balancer.Params)
 	if err != nil {
 		return err
@@ -386,6 +400,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	u.balancer.Store(balancer)
 	return nil
 }
+
 func (u *Upstream) watch() {
 	u.watchOnce.Do(func() {
 		options := provider.GetInstanceOptions{
@@ -413,6 +428,7 @@ func (u *Upstream) watch() {
 		})
 	})
 }
+
 func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[string]*Upstream, error) {
 	upstreams := make(map[string]*Upstream)
 	var wg sync.WaitGroup

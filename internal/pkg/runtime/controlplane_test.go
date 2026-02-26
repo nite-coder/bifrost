@@ -55,7 +55,7 @@ func TestControlPlane_Listen(t *testing.T) {
 		path := filepath.Join(dir, "cleanup.sock")
 
 		// Create a dummy file
-		err := os.WriteFile(path, []byte("dummy"), 0600)
+		err := os.WriteFile(path, []byte("dummy"), 0o600)
 		require.NoError(t, err)
 
 		cp := NewControlPlane(&ControlPlaneOptions{SocketPath: path})
@@ -66,7 +66,7 @@ func TestControlPlane_Listen(t *testing.T) {
 		// Should be a socket now
 		fi, err := os.Stat(path)
 		require.NoError(t, err)
-		assert.Equal(t, os.ModeSocket|0600, fi.Mode()&os.ModeSocket|0600) // approximate check
+		assert.Equal(t, os.ModeSocket|0o600, fi.Mode()&os.ModeSocket|0o600) // approximate check
 	})
 }
 

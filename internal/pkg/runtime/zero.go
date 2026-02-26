@@ -13,8 +13,9 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	proxyproto "github.com/pires/go-proxyproto"
+
+	"github.com/nite-coder/bifrost/internal/pkg/safety"
 )
 
 // CommandRunner is an interface for creating exec.Cmd instances.
@@ -29,7 +30,7 @@ type EnvGetter func(string) string
 // process is an interface representing an operating system process.
 // It abstracts os.Process for testing purposes.
 type process interface {
-	Signal(os.Signal) error
+	Signal(sig os.Signal) error
 	Kill() error
 	Wait() (*os.ProcessState, error)
 	Release() error
@@ -42,8 +43,10 @@ type ProcessFinder interface {
 }
 
 // FileOpener is a function type for opening files.
-type FileOpener func(name string) (*os.File, error)
-type defaultCommandRunner struct{}
+type (
+	FileOpener           func(name string) (*os.File, error)
+	defaultCommandRunner struct{}
+)
 
 func (d *defaultCommandRunner) Command(name string, arg ...string) *exec.Cmd {
 	return exec.CommandContext(context.TODO(), name, arg...)
@@ -58,7 +61,7 @@ func (d *defaultProcessFinder) FindProcess(pid int) (process, error) {
 }
 
 var defaultFileOpener = func(name string) (*os.File, error) {
-	return os.OpenFile(name, os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC, 0600)
+	return os.OpenFile(name, os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC, 0o600)
 }
 
 // listenInfo holds information about a network listener.
@@ -236,7 +239,15 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 	if options.Config != nil {
 		listener, err = options.Config.Listen(ctx, options.Network, options.Address)
 		if err != nil {
-			slog.Error("failed to create listener from config", "error", err, "addr", options.Address, "network", options.Network)
+			slog.Error(
+				"failed to create listener from config",
+				"error",
+				err,
+				"addr",
+				options.Address,
+				"network",
+				options.Network,
+			)
 			return nil, err
 		}
 	} else {

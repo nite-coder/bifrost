@@ -6,8 +6,9 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
 func TestRateLimitMiddleware(t *testing.T) {

@@ -5,9 +5,10 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
 func TestBifrostCumulativeLeak_FinalEvidence(t *testing.T) {
@@ -32,20 +33,20 @@ func TestBifrostCumulativeLeak_FinalEvidence(t *testing.T) {
 	initialGoroutines := runtime.NumGoroutine()
 	t.Logf("[Initial] Goroutines: %d", initialGoroutines)
 
-	// --- 證據 1: 模擬初始化失敗 ---
-	t.Log("--- 證據 1: 模擬初始化失敗 ---")
+	// --- Evidence 1: Simulate initialization failure ---
+	t.Log("--- Evidence 1: Simulate initialization failure ---")
 	failOptions := baseOptions
-	failOptions.Services["fail_svc"] = config.ServiceOptions{URL: "://invalid"} // 故意出錯
+	failOptions.Services["fail_svc"] = config.ServiceOptions{URL: "://invalid"} // Deliberate error
 
 	for i := 1; i <= 2; i++ {
 		_, err := NewBifrost(failOptions, false)
 		require.Error(t, err)
 		runtime.GC()
-		t.Logf("嘗試 #%d (失敗) 後 Goroutines: %d", i, runtime.NumGoroutine())
+		t.Logf("Try #%d (Fail) after Goroutines: %d", i, runtime.NumGoroutine())
 	}
 
-	// --- 證據 2: Direct Proxy (URL) 成功重載 ---
-	t.Log("--- 證據 2: 模擬 Direct Proxy 成功重載 ---")
+	// --- Evidence 2: Direct Proxy (URL) Reload Success ---
+	t.Log("--- Evidence 2: Simulate Direct Proxy Reload Success ---")
 	directOptions := config.NewOptions()
 	directOptions.Servers["test_server"] = config.ServerOptions{Bind: "127.0.0.1:0"}
 	for i := 0; i < 10; i++ {
@@ -58,7 +59,7 @@ func TestBifrostCumulativeLeak_FinalEvidence(t *testing.T) {
 
 	runtime.GC()
 	baseline := runtime.NumGoroutine()
-	t.Logf("使用 Direct Proxy 啟動後 baseline: %d", baseline)
+	t.Logf("Goroutines baseline after Direct Proxy startup: %d", baseline)
 
 	for i := 1; i <= 2; i++ {
 		newB, err := NewBifrost(directOptions, true)
@@ -66,7 +67,7 @@ func TestBifrostCumulativeLeak_FinalEvidence(t *testing.T) {
 		_ = bifrost.Close()
 		bifrost = newB
 		runtime.GC()
-		t.Logf("Direct Proxy 重載 #%d 後 Goroutines: %d", i, runtime.NumGoroutine())
+		t.Logf("Direct Proxy Reload #%d after Goroutines: %d", i, runtime.NumGoroutine())
 	}
 
 	final := runtime.NumGoroutine()

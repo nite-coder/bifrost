@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 )
@@ -49,7 +50,7 @@ func (b *RandomBalancer) Select(ctx context.Context, hzCtx *app.RequestContext) 
 
 	failedRecords := map[string]bool{}
 findLoop:
-	// nolint:gosec
+	//nolint:gosec
 	selectedIndex := rand.IntN(len(b.proxies))
 	p := b.proxies[selectedIndex]
 	if p.IsAvailable() {

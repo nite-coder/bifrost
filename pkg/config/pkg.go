@@ -9,13 +9,13 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"gopkg.in/yaml.v3"
+
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/provider/file"
 	"github.com/nite-coder/bifrost/pkg/provider/nacos"
 	"github.com/nite-coder/bifrost/pkg/resolver"
 	"github.com/nite-coder/bifrost/pkg/variable"
-
-	"gopkg.in/yaml.v3"
 )
 
 type ChangeFunc func() error
@@ -59,7 +59,7 @@ func load(path string, skipResolver bool) (Options, error) {
 
 	err = ValidateConfig(mainOpts, false)
 	if err != nil {
-		var errInvalidConfig ErrInvalidConfig
+		var errInvalidConfig InvalidConfigError
 		if errors.As(err, &errInvalidConfig) {
 			line := findConfigurationLine(content, errInvalidConfig.Structure, errInvalidConfig.Value)
 			return mainOpts, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), path, line)
@@ -94,7 +94,6 @@ func load(path string, skipResolver bool) (Options, error) {
 }
 
 func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
-
 	providers := make([]provider.Provider, 0)
 
 	// file provider
@@ -126,7 +125,7 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 		for _, c := range cInfo {
 			mainOptions, err = mergeOptions(mainOptions, c.Content)
 			if err != nil {
-				var errInvalidConfig ErrInvalidConfig
+				var errInvalidConfig InvalidConfigError
 				if errors.As(err, &errInvalidConfig) {
 					line := findConfigurationLine(c.Content, errInvalidConfig.Structure, errInvalidConfig.Value)
 					return nil, mainOptions, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), c.Path, line)
@@ -170,7 +169,9 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 			nacosConfigOptions.Watch = true
 		}
 
-		nacosConfigOptions.Endpoints = append(nacosConfigOptions.Endpoints, mainOptions.Providers.Nacos.Config.Endpoints...)
+		nacosConfigOptions.Endpoints = append(
+			nacosConfigOptions.Endpoints,
+			mainOptions.Providers.Nacos.Config.Endpoints...)
 
 		for _, file := range mainOptions.Providers.Nacos.Config.Files {
 			nacosConfigOptions.Files = append(nacosConfigOptions.Files, &nacos.File{
@@ -192,7 +193,7 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 		for _, file := range files {
 			mainOptions, err = mergeOptions(mainOptions, file.Content)
 			if err != nil {
-				var errInvalidConfig ErrInvalidConfig
+				var errInvalidConfig InvalidConfigError
 				if errors.As(err, &errInvalidConfig) {
 					line := findConfigurationLine(file.Content, errInvalidConfig.Structure, errInvalidConfig.Value)
 					return nil, mainOptions, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), file.DataID, line)
@@ -239,7 +240,6 @@ func unmarshal(content string) (Options, error) {
 }
 
 func mergeOptions(mainOpts Options, content string) (Options, error) {
-
 	newOptions, err := unmarshal(content)
 	if err != nil {
 		return mainOpts, err

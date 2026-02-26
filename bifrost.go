@@ -9,14 +9,15 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/nite-coder/blackbear/pkg/cast"
+	"github.com/urfave/cli/v2"
+	_ "go.uber.org/automaxprocs"
+
 	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/initialize"
-	"github.com/nite-coder/blackbear/pkg/cast"
-	"github.com/urfave/cli/v2"
-	_ "go.uber.org/automaxprocs"
 )
 
 type options struct {
@@ -161,7 +162,8 @@ func Run(opts ...Option) error {
 			if runtime.IsWorker() || opt.debug {
 				// Execute User Init Hook
 				if opt.init != nil {
-					if err := opt.init(mainOptions); err != nil {
+					err := opt.init(mainOptions)
+					if err != nil {
 						return err
 					}
 				}
@@ -189,7 +191,9 @@ func runMasterMode(mainOptions config.Options) error {
 	// Check for necessary privileges if User/Group is configured
 	if mainOptions.User != "" || mainOptions.Group != "" {
 		if os.Geteuid() != 0 {
-			return fmt.Errorf("need root privileges to switch user/group: please run as root or remove user/group from configuration")
+			return fmt.Errorf(
+				"need root privileges to switch user/group: please run as root or remove user/group from configuration",
+			)
 		}
 	}
 
@@ -227,7 +231,8 @@ func runAsWorker(mainOptions config.Options, debugMode bool) {
 
 	if socketPath != "" {
 		wcp := runtime.NewWorkerControlPlane(socketPath)
-		if err := wcp.Connect(); err != nil {
+		err := wcp.Connect()
+		if err != nil {
 			slog.Warn("failed to connect to control plane", "error", err)
 		} else {
 			slog.Debug("worker connected to control plane", "socket", socketPath) // Success log
@@ -235,7 +240,8 @@ func runAsWorker(mainOptions config.Options, debugMode bool) {
 
 			// Register with Master
 			slog.Debug("worker sending register message")
-			if err := wcp.Register(); err != nil {
+			err := wcp.Register()
+			if err != nil {
 				slog.Warn("failed to register with master", "error", err)
 			} else {
 				slog.Debug("worker register message sent")
@@ -246,7 +252,8 @@ func runAsWorker(mainOptions config.Options, debugMode bool) {
 
 			// Start control plane loop
 			go safety.Go(context.Background(), func() {
-				if err := wcp.Start(context.Background(), fdHandler); err != nil {
+				err := wcp.Start(context.Background(), fdHandler)
+				if err != nil {
 					slog.Error("control plane loop exited with error", "error", err)
 				}
 			})
@@ -273,7 +280,8 @@ func runAsWorker(mainOptions config.Options, debugMode bool) {
 						}
 
 						// Notify Master we are ready
-						if err := wcp.NotifyReady(); err != nil {
+						err := wcp.NotifyReady()
+						if err != nil {
 							slog.Warn("failed to notify master ready", "error", err)
 						}
 						return
@@ -285,7 +293,8 @@ func runAsWorker(mainOptions config.Options, debugMode bool) {
 	}
 
 	// Run as worker (uses inherited FDs if UPGRADE=1)
-	if err := gateway.Run(mainOptions); err != nil {
+	err := gateway.Run(mainOptions)
+	if err != nil {
 		slog.Error("worker failed", "error", err)
 		os.Exit(1)
 	}

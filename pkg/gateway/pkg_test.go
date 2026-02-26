@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
 func TestGatewayRun(t *testing.T) {
-
 	options := config.NewOptions()
 
 	watch := true

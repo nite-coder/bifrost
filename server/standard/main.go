@@ -16,10 +16,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
-
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
 )
 
 type ProxyHandler struct {
@@ -34,7 +34,8 @@ func main() {
 	flag.Parse()
 
 	if runtime.IsWorker() {
-		if err := runWorker(); err != nil {
+		err := runWorker()
+		if err != nil {
 			log.Fatal(err)
 		}
 		return
@@ -48,7 +49,8 @@ func main() {
 			InitialBackoff: 1 * time.Second,
 		},
 	})
-	if err := master.Run(context.Background()); err != nil {
+	err := master.Run(context.Background())
+	if err != nil {
 		log.Fatal(err)
 	}
 }
@@ -70,7 +72,8 @@ func runWorker() error {
 
 	// 2. Start Control Plane Loop
 	go func() {
-		if err := wcp.Start(context.Background(), nil); err != nil { // nil handler as we don't need to handle incoming FDs in this simple example
+		err := wcp.Start(context.Background(), nil)
+		if err != nil { // nil handler as we don't need to handle incoming FDs in this simple example
 			slog.Error("control plane loop exited", "error", err)
 		}
 	}()
@@ -114,7 +117,8 @@ func runWorker() error {
 
 	go func() {
 		slog.Info("starting server", "bind", ":8001")
-		if err := httpServer.Serve(ln); err != nil && err != http.ErrServerClosed {
+		err := httpServer.Serve(ln)
+		if err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Error starting server: %v\n", err)
 		}
 	}()

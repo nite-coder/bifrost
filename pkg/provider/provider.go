@@ -5,11 +5,14 @@ import (
 	"net"
 )
 
-type ChangeFunc func() error
-type Provider interface {
-	Watch() error
-	SetOnChanged(ChangeFunc)
-}
+type (
+	ChangeFunc func() error
+	Provider   interface {
+		Watch() error
+		SetOnChanged(f ChangeFunc)
+	}
+)
+
 type GetInstanceOptions struct {
 	Namespace string
 	Name      string
@@ -39,19 +42,23 @@ func NewInstance(addr net.Addr, weight uint32) *Instance {
 		metadata: make(map[string]string),
 	}
 }
+
 func (i *Instance) Address() net.Addr {
 	return i.addr
 }
+
 func (i *Instance) Weight() uint32 {
 	if i.weight <= 0 {
 		return 1
 	}
 	return i.weight
 }
+
 func (i *Instance) Tag(key string) (value string, exist bool) {
 	val, found := i.metadata[key]
 	return val, found
 }
+
 func (i *Instance) SetTag(key string, value string) {
 	i.metadata[key] = value
 }

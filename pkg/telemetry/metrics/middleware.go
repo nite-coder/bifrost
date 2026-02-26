@@ -10,9 +10,7 @@ import (
 	promhttp "github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var (
-	httpGET = []byte("GET")
-)
+var httpGET = []byte("GET")
 
 // MetricMiddleware serves the /metrics endpoint for Prometheus scraping.
 type MetricMiddleware struct {

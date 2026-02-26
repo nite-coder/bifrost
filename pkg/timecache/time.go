@@ -18,7 +18,7 @@ type TimeCache struct {
 //
 // The interval parameter specifies the duration between cache refreshes.
 // If interval is 0, it defaults to 1 second; if it's less than 1 millisecond, it defaults to 1 millisecond.
-// *TimeCache
+// *TimeCache.
 func New(interval time.Duration) *TimeCache {
 	if interval == 0 {
 		interval = time.Second
@@ -49,7 +49,7 @@ func (tc *TimeCache) Close() {
 }
 
 func (tc *TimeCache) refresh() {
-	ticker := time.NewTicker(tc.interval) 
+	ticker := time.NewTicker(tc.interval)
 	defer ticker.Stop()
 
 	for {

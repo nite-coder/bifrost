@@ -15,9 +15,10 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
+
+	"github.com/nite-coder/bifrost/pkg/timecache"
 )
 
 var (
@@ -92,7 +93,6 @@ func Get(key string, c *app.RequestContext) (val any, found bool) {
 	}
 
 	return directive(key, c)
-
 }
 
 func GetString(key string, c *app.RequestContext) string {
@@ -612,7 +612,7 @@ func sortBifrostVariables(slice []string) {
 	sort.Sort(byLengthAndContent(slice))
 }
 
-// MethodToString tries to return consts without allocation
+// MethodToString tries to return consts without allocation.
 func MethodToString(m []byte) string {
 	if len(m) == 0 {
 		return "GET"

@@ -5,9 +5,10 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSetVarsMiddleware(t *testing.T) {

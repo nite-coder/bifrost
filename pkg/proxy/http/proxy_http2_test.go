@@ -14,11 +14,12 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/protocol"
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
-// setupHTTP2Server starts a test server that supports ONLY HTTP/2 (via TLS)
+// setupHTTP2Server starts a test server that supports ONLY HTTP/2 (via TLS).
 func setupHTTP2Server(t *testing.T, handler http.HandlerFunc) (*httptest.Server, string) {
 	ts := httptest.NewUnstartedServer(handler)
 	ts.EnableHTTP2 = true
@@ -88,13 +89,13 @@ func TestProxy_HTTP2_Basic(t *testing.T) {
 func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 	ts, url := setupHTTP2Server(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/grpc")
-		w.Header().Set("Trailer", "grpc-status, grpc-message")
+		w.Header().Set("Trailer", "Grpc-Status, Grpc-Message")
 		w.WriteHeader(http.StatusOK)
 
 		w.Write([]byte("grpc body"))
 
-		w.Header().Set("grpc-status", "0")
-		w.Header().Set("grpc-message", "ok")
+		w.Header().Set("Grpc-Status", "0")
+		w.Header().Set("Grpc-Message", "ok")
 	})
 	defer ts.Close()
 
@@ -155,14 +156,14 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 	assert.Equal(t, "application/grpc", resp.Header.Get("Content-Type"))
 
 	// Verify Trailers
-	status := resp.Header.Get("grpc-status")
-	message := resp.Header.Get("grpc-message")
+	status := resp.Header.Get("Grpc-Status")
+	message := resp.Header.Get("Grpc-Message")
 
-	assert.Equal(t, "0", status, "grpc-status should be 0")
-	assert.Equal(t, "ok", message, "grpc-message should be ok")
+	assert.Equal(t, "0", status, "Grpc-Status should be 0")
+	assert.Equal(t, "ok", message, "Grpc-Message should be ok")
 }
 
-// TestH2UpstreamBaseline verifies that the stdlib http.Client can talk to the test server as H2
+// TestH2UpstreamBaseline verifies that the stdlib http.Client can talk to the test server as H2.
 func TestH2UpstreamBaseline(t *testing.T) {
 	ts, url := setupHTTP2Server(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Proto", r.Proto)

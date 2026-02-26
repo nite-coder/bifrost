@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
 	"github.com/nite-coder/bifrost/pkg/middleware"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestMirror(t *testing.T) {

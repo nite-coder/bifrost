@@ -41,7 +41,7 @@ func NewBufferedLogger(opts config.AccessLogOptions) (*BufferedLogger, error) {
 		writer = os.Stderr // Write logs to stderr
 	default:
 		// Open the log file for appending, creating it if it doesn't exist
-		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0600)
+		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0o600)
 		if err != nil {
 			return nil, err
 		}
@@ -96,12 +96,6 @@ func (l *BufferedLogger) Flush() error {
 	return nil
 }
 
-// periodicFlush is called periodically to flush the buffer.
-func (l *BufferedLogger) periodicFlush() {
-	_ = l.Flush()
-	l.flushTimer.Reset(l.options.Flush) // Reset the timer for the next flush
-}
-
 // Close closes the logger and releases resources.
 func (l *BufferedLogger) Close() error {
 	if l.flushTimer != nil {
@@ -116,6 +110,12 @@ func (l *BufferedLogger) Close() error {
 	return nil
 }
 
+// periodicFlush is called periodically to flush the buffer.
+func (l *BufferedLogger) periodicFlush() {
+	_ = l.Flush()
+	l.flushTimer.Reset(l.options.Flush) // Reset the timer for the next flush
+}
+
 // reopenFile closes the current log file and reopens it.
 func (l *BufferedLogger) reopenFile() error {
 	l.mu.Lock()
@@ -126,12 +126,13 @@ func (l *BufferedLogger) reopenFile() error {
 	}
 	// Close the current file if it's not stderr
 	if l.file != nil && l.file != os.Stderr {
-		if err := l.file.Close(); err != nil {
+		err := l.file.Close()
+		if err != nil {
 			return fmt.Errorf("failed to close file: %w", err)
 		}
 	}
 	// Reopen the file
-	file, err := os.OpenFile(l.options.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0600)
+	file, err := os.OpenFile(l.options.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to reopen file: %w", err)
 	}

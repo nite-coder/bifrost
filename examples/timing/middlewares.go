@@ -8,8 +8,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
-type TimingMiddleware struct {
-}
+type TimingMiddleware struct{}
 
 func NewMiddleware() *TimingMiddleware {
 	return &TimingMiddleware{}

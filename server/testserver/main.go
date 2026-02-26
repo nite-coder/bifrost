@@ -23,6 +23,7 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
 	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
 	"github.com/nacos-group/nacos-sdk-go/v2/vo"
+
 	"github.com/nite-coder/bifrost/pkg/middleware/cors"
 )
 
@@ -53,9 +54,7 @@ const (
 	  }`
 )
 
-var (
-	orderResp []byte
-)
+var orderResp []byte
 
 func main() {
 	flag.Parse()
@@ -119,7 +118,6 @@ func echoHandler(c context.Context, ctx *app.RequestContext) {
 var placeOrderCounter atomic.Uint64
 
 func placeOrderHandler(ctx context.Context, c *app.RequestContext) {
-
 	if (placeOrderCounter.Load() % 99) == 0 {
 		if *tail > 0 {
 			time.Sleep(*tail)
@@ -172,7 +170,7 @@ func wssHandler(c context.Context, ctx *app.RequestContext) {
 				// slog.ErrorContext(c, "read err:", "error", err)
 				break
 			}
-			//slog.Info("recv", "msg", string(msg))
+			// slog.Info("recv", "msg", string(msg))
 
 			err = conn.WriteMessage(websocket.TextMessage, orderResp)
 			if err != nil {
@@ -181,7 +179,6 @@ func wssHandler(c context.Context, ctx *app.RequestContext) {
 			}
 		}
 	})
-
 	if err != nil {
 		slog.ErrorContext(c, "upgrade err:", "error", err)
 		return
@@ -189,13 +186,12 @@ func wssHandler(c context.Context, ctx *app.RequestContext) {
 }
 
 func chunkHandler(ctx context.Context, c *app.RequestContext) {
-
 	// Hijack the writer of response
 	c.Response.HijackWriter(resp.NewChunkedBodyWriter(&c.Response, c.GetWriter()))
 
 	for i := 0; i < 100; i++ {
-		c.Write(orderResp) // nolint: errcheck
-		c.Flush()          // nolint: errcheck
+		c.Write(orderResp) //nolint: errcheck
+		c.Flush()          //nolint: errcheck
 		time.Sleep(1 * time.Second)
 	}
 }

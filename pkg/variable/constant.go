@@ -59,11 +59,10 @@ const (
 	ClientIP                    = "$client_ip"
 	BifrostRoute                = "$bifrost.route"
 	TargetTimeout               = "target_timeout"
-	// grpc
-	GRPCStatusCode = "$grpc.status_code"
-	GRPCMessage    = "$grpc.message"
-	B              = 1
-	KB             = 1024 * B
-	MB             = 1024 * KB
-	GB             = 1024 * MB
+	GRPCStatusCode              = "$grpc.status_code"
+	GRPCMessage                 = "$grpc.message"
+	B                           = 1
+	KB                          = 1024 * B
+	MB                          = 1024 * KB
+	GB                          = 1024 * MB
 )

@@ -127,7 +127,6 @@ func TestListener(t *testing.T) {
 			// In test we can return any file.
 			return os.CreateTemp(t.TempDir(), "fd3")
 		}
-
 	})
 }
 

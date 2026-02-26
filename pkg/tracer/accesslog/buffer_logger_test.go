@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
 func TestBufferedLoggerReopen(t *testing.T) {

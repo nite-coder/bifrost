@@ -5,8 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/blackbear/pkg/cache/v2"
+
+	"github.com/nite-coder/bifrost/pkg/timecache"
 )
 
 type LocalLimiter struct {

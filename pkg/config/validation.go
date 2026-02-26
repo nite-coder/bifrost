@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/resolver"
@@ -19,15 +20,13 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
-// ValidateConfig checks if the config's values are valid, but does not check if the config's value mapping is valid
+// ValidateConfig checks if the config's values are valid, but does not check if the config's value mapping is valid.
 func ValidateConfig(mainOptions Options, isFullMode bool) error {
-
 	if dnsResolver == nil && !mainOptions.SkipResolver {
 		var err error
 		dnsResolver, err = resolver.NewResolver(resolver.Options{
 			Servers: mainOptions.Resolver.Servers,
 		})
-
 		if err != nil {
 			return err
 		}
@@ -92,7 +91,6 @@ func ValidateConfig(mainOptions Options, isFullMode bool) error {
 }
 
 func validateProviders(mainOptions Options) error {
-
 	if mainOptions.Providers.File.Enabled && len(mainOptions.Providers.File.Paths) == 0 {
 		return errors.New("paths cannot be empty for file provider")
 	}
@@ -109,7 +107,10 @@ func validateProviders(mainOptions Options) error {
 			}
 
 			if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
-				return fmt.Errorf("invalid endpoint '%s' for Nacos config provider; must start with http:// or https://", endpoint)
+				return fmt.Errorf(
+					"invalid endpoint '%s' for Nacos config provider; must start with http:// or https://",
+					endpoint,
+				)
 			}
 		}
 
@@ -130,7 +131,10 @@ func validateProviders(mainOptions Options) error {
 			}
 
 			if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
-				return fmt.Errorf("invalid endpoint '%s' for Nacos discovery provider; must start with http:// or https://", endpoint)
+				return fmt.Errorf(
+					"invalid endpoint '%s' for Nacos discovery provider; must start with http:// or https://",
+					endpoint,
+				)
 			}
 		}
 	}
@@ -139,7 +143,6 @@ func validateProviders(mainOptions Options) error {
 }
 
 func validateLogging(opts LoggingOtions) error {
-
 	level := strings.ToLower(opts.Level)
 	switch level {
 	case "", "debug", "info", "warn", "error":
@@ -162,7 +165,6 @@ func validateLogging(opts LoggingOtions) error {
 }
 
 func validateTracing(opts TracingOptions) error {
-
 	if !opts.Enabled {
 		return nil
 	}
@@ -226,10 +228,13 @@ func validateAccessLog(options map[string]AccessLogOptions) error {
 }
 
 func validateMiddlewares(mainOptions Options, isFullMode bool) error {
-
 	for middlewareID, middlewareOptions := range mainOptions.Middlewares {
 		if len(middlewareOptions.Use) > 0 {
-			return fmt.Errorf("middleware '%s' cannot run in 'use' mode for middleware ID: %s", middlewareOptions.Use, middlewareID)
+			return fmt.Errorf(
+				"middleware '%s' cannot run in 'use' mode for middleware ID: %s",
+				middlewareOptions.Use,
+				middlewareID,
+			)
 		}
 
 		if len(middlewareOptions.Type) == 0 {
@@ -240,7 +245,11 @@ func validateMiddlewares(mainOptions Options, isFullMode bool) error {
 			if len(middlewareOptions.Type) > 0 {
 				hander := middleware.Factory(middlewareOptions.Type)
 				if hander == nil {
-					return fmt.Errorf("middleware '%s' not found for middleware ID: %s", middlewareOptions.Type, middlewareID)
+					return fmt.Errorf(
+						"middleware '%s' not found for middleware ID: %s",
+						middlewareOptions.Type,
+						middlewareID,
+					)
 				}
 			}
 		}
@@ -250,7 +259,6 @@ func validateMiddlewares(mainOptions Options, isFullMode bool) error {
 }
 
 func validateServers(mainOptions Options, isFullMode bool) error {
-
 	for serverID, serverOptions := range mainOptions.Servers {
 		if serverOptions.Bind == "" {
 			msg := "bind cannot be empty for server ID: " + serverID
@@ -325,7 +333,6 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 }
 
 func validateRoutes(mainOptions Options, isFullMode bool) error {
-
 	servers := map[string]*router.Router{}
 
 	for serverID := range mainOptions.Servers {
@@ -410,7 +417,6 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 }
 
 func validateServices(mainOptions Options, isFullMode bool) error {
-
 	for serviceID, service := range mainOptions.Services {
 
 		if !isFullMode {
@@ -436,11 +442,20 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 				if dnsResolver != nil && !mainOptions.SkipResolver {
 					ips, err := dnsResolver.Lookup(context.Background(), hostname)
 					if err != nil {
-						return fmt.Errorf("failed to lookup host '%s' for service ID '%s': %w", hostname, serviceID, err)
+						return fmt.Errorf(
+							"failed to lookup host '%s' for service ID '%s': %w",
+							hostname,
+							serviceID,
+							err,
+						)
 					}
 
 					if len(ips) == 0 {
-						return fmt.Errorf("failed to lookup host '%s' for service ID '%s': no IP found", hostname, serviceID)
+						return fmt.Errorf(
+							"failed to lookup host '%s' for service ID '%s': no IP found",
+							hostname,
+							serviceID,
+						)
 					}
 				} else {
 					ip := net.ParseIP(hostname)
@@ -471,7 +486,6 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 }
 
 func validateUpstreams(mainOptions Options, isFullMode bool) error {
-
 	for upstreamID, upstreamOptions := range mainOptions.Upstreams {
 
 		if !isFullMode {
@@ -522,7 +536,11 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 				return fmt.Errorf("targets cannot be empty for upstream ID: %s", upstreamID)
 			}
 		default:
-			msg := fmt.Sprintf("unsupported discovery type '%s' for upstream ID: %s", upstreamOptions.Discovery.Type, upstreamID)
+			msg := fmt.Sprintf(
+				"unsupported discovery type '%s' for upstream ID: %s",
+				upstreamOptions.Discovery.Type,
+				upstreamID,
+			)
 			structure := []string{"upstreams", upstreamID, "discovery", "type"}
 			return newInvalidConfig(structure, upstreamOptions.Discovery.Type, msg)
 		}
@@ -537,7 +555,11 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 					}
 
 					if len(ips) == 0 {
-						return fmt.Errorf("failed to lookup host '%s' for upstream ID '%s': no IP found", addr, upstreamID)
+						return fmt.Errorf(
+							"failed to lookup host '%s' for upstream ID '%s': no IP found",
+							addr,
+							upstreamID,
+						)
 					}
 				}
 			}
@@ -581,7 +603,6 @@ func validateMetrics(options Options, isFullMode bool) error {
 }
 
 func validateResolver(options Options) error {
-
 	if len(options.Resolver.Hostsfile) > 0 {
 		if _, err := os.Stat(options.Resolver.Hostsfile); errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("hosts file '%s' not found", options.Resolver.Hostsfile)
@@ -615,7 +636,6 @@ func extractAddr(addrport string) string {
 }
 
 func addRoute(r *router.Router, routeOptions RouteOptions) error {
-
 	for _, path := range routeOptions.Paths {
 		path = strings.TrimSpace(path)
 		var nodeType router.NodeType

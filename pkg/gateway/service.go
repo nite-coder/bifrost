@@ -12,6 +12,8 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
+	"github.com/nite-coder/blackbear/pkg/cast"
+
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -20,7 +22,6 @@ import (
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 type Service struct {
@@ -106,7 +107,6 @@ func loadServices(bifrost *Bifrost) (map[string]*Service, error) {
 }
 
 func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Service, error) {
-
 	if len(serviceOptions.Protocol) == 0 && len(bifrost.options.Default.Service.Protocol) > 0 {
 		serviceOptions.Protocol = bifrost.options.Default.Service.Protocol
 	} else if len(serviceOptions.Protocol) == 0 && len(bifrost.options.Default.Service.Protocol) == 0 {
@@ -142,12 +142,21 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 
 		handler := middleware.Factory(middlewareOpts.Type)
 		if handler == nil {
-			return nil, fmt.Errorf("middleware handler '%s' was not found in service: '%s'", middlewareOpts.Type, serviceOptions.ID)
+			return nil, fmt.Errorf(
+				"middleware handler '%s' was not found in service: '%s'",
+				middlewareOpts.Type,
+				serviceOptions.ID,
+			)
 		}
 
 		appHandler, err := handler(middlewareOpts.Params)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create middleware '%s' in route: '%s', error: %w", middlewareOpts.Type, serviceOptions.ID, err)
+			return nil, fmt.Errorf(
+				"failed to create middleware '%s' in route: '%s', error: %w",
+				middlewareOpts.Type,
+				serviceOptions.ID,
+				err,
+			)
 		}
 
 		svc.middlewares = append(svc.middlewares, appHandler)
@@ -360,7 +369,7 @@ func (svc *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext)
 	c.Set(variable.ServiceID, serviceName)
 
 	// Create a new slice to avoid modifying the original service.middlewares
-	middlewares := append(service.middlewares, service.ServeHTTP) // nolint
+	middlewares := append(service.middlewares, service.ServeHTTP)
 	c.SetIndex(-1)
 	c.SetHandlers(middlewares)
 	c.Next(ctx)

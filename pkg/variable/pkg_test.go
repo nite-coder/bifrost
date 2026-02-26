@@ -25,7 +25,7 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Set(UpstreamID, "upstreamA")
 	hzCtx.Set(UpstreamRequestHost, "1.2.3.4")
 	hzCtx.Set(UpstreamResponoseStatusCode, 200)
-	hzCtx.Set(UpstreamDuration, time.Duration(1*time.Second))
+	hzCtx.Set(UpstreamDuration, 1*time.Second)
 
 	hzCtx.Set(HTTPRoute, "/orders/{order_id}")
 
@@ -238,7 +238,6 @@ func TestEnvDirective(t *testing.T) {
 }
 
 func TestParseDirectives(t *testing.T) {
-
 	template := `{"time":"$time",
 	"remote_addr":"$network.peer.address",
 	"host": "$http.request.host",

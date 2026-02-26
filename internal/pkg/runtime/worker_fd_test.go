@@ -39,7 +39,7 @@ func TestDecodeListenerKeys(t *testing.T) {
 	})
 }
 
-// Mock ControlPlaneClient
+// Mock ControlPlaneClient.
 type mockControlPlaneClient struct {
 	sentFDs  []*os.File
 	sentKeys []string

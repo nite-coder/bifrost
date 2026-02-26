@@ -13,11 +13,9 @@ import (
 	proxyproto "github.com/pires/go-proxyproto"
 )
 
-var (
-	// startFD is the starting file descriptor for inherited listeners.
-	// It is a variable to allow tests to verify logic without conflicting with test runner FDs.
-	startFD = 3
-)
+// startFD is the starting file descriptor for inherited listeners.
+// It is a variable to allow tests to verify logic without conflicting with test runner FDs.
+var startFD = 3
 
 // ControlPlaneClient defines the methods required by WorkerFDHandler to communicate with Master.
 type ControlPlaneClient interface {
@@ -91,6 +89,13 @@ func (h *WorkerFDHandler) HandleFDRequest() error {
 	return h.wcp.SendFDs(files, keys)
 }
 
+// ListenerCount returns the number of registered listeners.
+func (h *WorkerFDHandler) ListenerCount() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.listeners)
+}
+
 // getListenerFile extracts the underlying file descriptor from a listener.
 func (h *WorkerFDHandler) getListenerFile(listener net.Listener) (*os.File, error) {
 	// Handle proxy protocol wrapper
@@ -109,13 +114,6 @@ func (h *WorkerFDHandler) getListenerFile(listener net.Listener) (*os.File, erro
 	}
 
 	return nil, fmt.Errorf("unsupported listener type: %T", listener)
-}
-
-// ListenerCount returns the number of registered listeners.
-func (h *WorkerFDHandler) ListenerCount() int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return len(h.listeners)
 }
 
 // InheritedListeners returns the listener FDs and their keys inherited from Master.

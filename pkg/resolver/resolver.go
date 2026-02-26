@@ -16,9 +16,7 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cache/v2"
 )
 
-var (
-	ErrNotFound = errors.New("no records found")
-)
+var ErrNotFound = errors.New("no records found")
 
 type Resolver struct {
 	options    *Options
@@ -27,21 +25,7 @@ type Resolver struct {
 	dnsCache   *cache.Cache[string, []string]
 }
 
-func (r *Resolver) Close() {
-	if r.dnsCache != nil {
-		r.dnsCache.StopCleanup()
-	}
-}
-
-type Options struct {
-	// dns server for querying
-	Servers   []string
-	Hostsfile string
-	Order     []string
-	Timeout   time.Duration
-	SkipTest  bool
-}
-
+// NewResolver creates a new Resolver instance with the given options.
 func NewResolver(option Options) (*Resolver, error) {
 	if len(option.Order) == 0 {
 		option.Order = []string{"last", "a", "cname"}
@@ -100,11 +84,27 @@ func NewResolver(option Options) (*Resolver, error) {
 		dnsCache:   cache.NewCache[string, []string](5 * time.Minute),
 	}
 
-	if err := r.loadHostsFile(); err != nil {
+	err := r.loadHostsFile()
+	if err != nil {
 		return nil, fmt.Errorf("DNS: failed to load hosts file: %w", err)
 	}
 
 	return r, nil
+}
+
+func (r *Resolver) Close() {
+	if r.dnsCache != nil {
+		r.dnsCache.StopCleanup()
+	}
+}
+
+type Options struct {
+	// dns server for querying
+	Servers   []string
+	Hostsfile string
+	Order     []string
+	Timeout   time.Duration
+	SkipTest  bool
 }
 
 func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]string) ([]string, error) {
@@ -195,7 +195,15 @@ func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]stri
 					if cname, ok := answer.(*dns.CNAME); ok {
 						resolvedIPs, err := r.Lookup(ctx, cname.Target, []string{"a"})
 						if err != nil {
-							slog.Debug("dns: failed to resolve CNAME record", "host", cname.String(), "server", server, "error", err)
+							slog.Debug(
+								"dns: failed to resolve CNAME record",
+								"host",
+								cname.String(),
+								"server",
+								server,
+								"error",
+								err,
+							)
 							continue
 						}
 

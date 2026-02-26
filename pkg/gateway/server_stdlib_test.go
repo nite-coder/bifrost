@@ -9,17 +9,18 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/nite-coder/bifrost/pkg/config"
-	proxygrpc "github.com/nite-coder/bifrost/pkg/proxy/grpc"
-	"github.com/nite-coder/bifrost/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+
+	"github.com/nite-coder/bifrost/pkg/config"
+	proxygrpc "github.com/nite-coder/bifrost/pkg/proxy/grpc"
+	"github.com/nite-coder/bifrost/proto"
 )
 
-// Reusing gRPC test server logic from pkg/proxy/grpc/proxy_test.go logic
+// Reusing gRPC test server logic from pkg/proxy/grpc/proxy_test.go logic.
 type testGrpcServer struct {
 	proto.UnimplementedGreeterServer
 }
@@ -43,7 +44,7 @@ func (s *testGrpcServer) SayHello(ctx context.Context, in *proto.HelloRequest) (
 	// Send a trailer
 	_ = grpc.SetTrailer(ctx, metadata.Pairs("trailer-key", "trailer-val"))
 
-	return &proto.HelloReply{Message: "Hello " + in.Name}, nil
+	return &proto.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
 
 func startTestBackend(t *testing.T, port string) {
@@ -121,7 +122,7 @@ func TestStdlibServer_GRPC_Integration(t *testing.T) {
 	require.NoError(t, err, "gRPC call failed")
 
 	// 6. Verify Results
-	assert.Equal(t, "Hello World", resp.Message)
+	assert.Equal(t, "Hello World", resp.GetMessage())
 
 	// Check Headers
 	values := header.Get("server-name")

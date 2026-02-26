@@ -5,9 +5,7 @@ import (
 	"time"
 )
 
-var (
-	cache atomic.Value
-)
+var cache atomic.Value
 
 func Set(timeCache *TimeCache) {
 	val, ok := cache.Load().(*TimeCache)

@@ -7,13 +7,14 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 	"net/http"
 
-	model "github.com/nite-coder/bifrost/proto"
-
 	"golang.org/x/net/http2"
 	"google.golang.org/protobuf/proto"
+
+	model "github.com/nite-coder/bifrost/proto"
 )
 
 func main() {
@@ -34,12 +35,16 @@ func main() {
 
 	framedData := addGrpcPrefix(data)
 
-	req, err := http.NewRequest("POST", "http://localhost:8003/helloworld.Greeter/SayHello", bytes.NewReader(framedData))
+	req, err := http.NewRequest(
+		"POST",
+		"http://localhost:8003/helloworld.Greeter/SayHello",
+		bytes.NewReader(framedData),
+	)
 	if err != nil {
 		log.Fatalf("Error creating request: %v", err)
 	}
 
-	req.Header.Set("content-type", "application/grpc")
+	req.Header.Set("Content-Type", "application/grpc")
 	req.Header.Set("te", "trailers")
 
 	resp, err := client.Do(req)
@@ -61,7 +66,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Response: %v\n", replyData.Message)
+	fmt.Printf("Response: %v\n", replyData.GetMessage())
 
 	for key, val := range resp.Header {
 		// Logic using key
@@ -73,13 +78,17 @@ func main() {
 	for k, v := range resp.Trailer {
 		fmt.Printf("Trailer2: %s: %v\n", k, v)
 	}
-
 }
 
 func addGrpcPrefix(data []byte) []byte {
-	prefix := make([]byte, 5)
+	if len(data) > math.MaxUint32-5 {
+		// This should not happen in this example, but good for security
+		return data
+	}
+	prefix := make([]byte, 5+len(data))
 	binary.BigEndian.PutUint32(prefix[1:], uint32(len(data)))
-	return append(prefix, data...)
+	copy(prefix[5:], data)
+	return prefix
 }
 
 func removeGrpcPrefix(data []byte) []byte {

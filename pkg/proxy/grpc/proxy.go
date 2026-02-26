@@ -11,19 +11,13 @@ import (
 	"math"
 	"net/url"
 	"runtime/debug"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
-	"strconv"
-	"strings"
-
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
-	"github.com/nite-coder/bifrost/pkg/log"
-	"github.com/nite-coder/bifrost/pkg/proxy"
-	"github.com/nite-coder/bifrost/pkg/timecache"
-	"github.com/nite-coder/bifrost/pkg/tracing"
-	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -36,6 +30,12 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/nite-coder/bifrost/pkg/log"
+	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/timecache"
+	"github.com/nite-coder/bifrost/pkg/tracing"
+	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 type Options struct {
@@ -95,6 +95,7 @@ func New(options Options) (*GRPCProxy, error) {
 		tags:       options.Tags,
 	}, nil
 }
+
 func (p *GRPCProxy) IsAvailable() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -110,6 +111,7 @@ func (p *GRPCProxy) IsAvailable() bool {
 	}
 	return false
 }
+
 func (p *GRPCProxy) AddFailedCount(count uint) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -126,16 +128,19 @@ func (p *GRPCProxy) AddFailedCount(count uint) error {
 	return nil
 }
 
-// ID return proxy's ID
+// ID return proxy's ID.
 func (p *GRPCProxy) ID() string {
 	return p.id
 }
+
 func (p *GRPCProxy) Weight() uint32 {
 	return p.weight
 }
+
 func (p *GRPCProxy) Target() string {
 	return p.target
 }
+
 func (p *GRPCProxy) Close() error {
 	if p.client != nil {
 		if closer, ok := p.client.(io.Closer); ok {
@@ -162,13 +167,18 @@ func (p *GRPCProxy) Tags() map[string]string {
 	return p.tags
 }
 
-// ServeHTTP implements the http.Handler interface
+// ServeHTTP implements the http.Handler interface.
 func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 	defer func() {
 		if r := recover(); r != nil {
 			stackTrace := cast.B2S(debug.Stack())
-			logger.ErrorContext(ctx, "proxy: gRPC proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
+			logger.ErrorContext(
+				ctx,
+				"proxy: gRPC proxy panic recovered",
+				slog.Any("error", r),
+				slog.String("stack", stackTrace),
+			)
 			c.Abort()
 		}
 	}()
@@ -192,7 +202,11 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// Check if the request payload is valid
 	payload := c.Request.Body()
 	if len(payload) < 5 {
-		logger.WarnContext(ctx, "proxy: gRPC proxy request payload is invalid", slog.Any("error", "gRPC proxy request payload is invalid"))
+		logger.WarnContext(
+			ctx,
+			"proxy: gRPC proxy request payload is invalid",
+			slog.Any("error", "gRPC proxy request payload is invalid"),
+		)
 		return
 	}
 	// Get the length of the message
@@ -229,8 +243,8 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			ctx, span = tracer.Start(ctx, fullMethodName, spanOptions...)
 			tracing.InjectGRPCMetadata(ctx, md)
 			defer func() {
-				// Extract service and method names from fullMethodName
-				// fullMethodName format: /<service-name>/<method-name>
+				// Extract service and method names.
+				// Format: /<service-name>/<method-name>
 				serviceName := ""
 				methodName := ""
 				if idx := strings.LastIndex(fullMethodName, "/"); idx != -1 {
@@ -252,7 +266,10 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 						if code != codes.OK {
 							span.SetStatus(otelcodes.Error, c.GetString(variable.GRPCMessage))
 							labels = append(labels, attribute.Int64("rpc.grpc.status_code", int64(code)))
-							labels = append(labels, attribute.String("rpc.grpc.message", c.GetString(variable.GRPCMessage)))
+							labels = append(
+								labels,
+								attribute.String("rpc.grpc.message", c.GetString(variable.GRPCMessage)),
+							)
 						} else {
 							span.SetStatus(otelcodes.Ok, "")
 						}
@@ -311,6 +328,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	c.Response.Header.Set("Content-Type", "application/grpc")
 	c.Response.SetBody(frame)
 }
+
 func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, err error) {
 	if err == nil {
 		return
@@ -362,6 +380,7 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 	errorFrame := makeGRPCErrorFrame(ctx, st)
 	c.Response.SetBody(errorFrame)
 }
+
 func makeGRPCErrorFrame(ctx context.Context, st *status.Status) []byte {
 	statusProto := st.Proto()
 	serialized, _ := proto.Marshal(statusProto)

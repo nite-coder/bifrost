@@ -5,15 +5,15 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	_ "github.com/nite-coder/bifrost/pkg/middleware/cors"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/stretchr/testify/assert"
 )
 
 func BenchmarkSaveByte(b *testing.B) {
-
 	path := []byte(`/spot/orders/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
 
 	c := app.NewContext(0)
@@ -29,7 +29,6 @@ func BenchmarkSaveByte(b *testing.B) {
 }
 
 func BenchmarkSaveString(b *testing.B) {
-
 	path := []byte(`/spot/orders/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
 
 	c := app.NewContext(0)

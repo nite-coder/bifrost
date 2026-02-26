@@ -1,7 +1,10 @@
 package initialize
 
 import (
-	// register middleware
+	"github.com/nite-coder/bifrost/pkg/balancer/chash"
+	"github.com/nite-coder/bifrost/pkg/balancer/random"
+	"github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
+	"github.com/nite-coder/bifrost/pkg/balancer/weighted"
 	"github.com/nite-coder/bifrost/pkg/middleware/addprefix"
 	"github.com/nite-coder/bifrost/pkg/middleware/buffering"
 	"github.com/nite-coder/bifrost/pkg/middleware/compression"
@@ -20,102 +23,118 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware/stripprefix"
 	"github.com/nite-coder/bifrost/pkg/middleware/trafficsplitter"
 	"github.com/nite-coder/bifrost/pkg/middleware/uarestriction"
-
-	// register balance
-	"github.com/nite-coder/bifrost/pkg/balancer/chash"
-	"github.com/nite-coder/bifrost/pkg/balancer/random"
-	"github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
-	"github.com/nite-coder/bifrost/pkg/balancer/weighted"
 )
 
 func Bifrost() error {
 	// middleware
-	if err := addprefix.Init(); err != nil {
+	err := addprefix.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := buffering.Init(); err != nil {
+	err = buffering.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := compression.Init(); err != nil {
+	err = compression.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := coraza.Init(); err != nil {
+	err = coraza.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := cors.Init(); err != nil {
+	err = cors.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := iprestriction.Init(); err != nil {
+	err = iprestriction.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := mirror.Init(); err != nil {
+	err = mirror.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := parallel.Init(); err != nil {
+	err = parallel.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := ratelimit.Init(); err != nil {
+	err = ratelimit.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := replacepath.Init(); err != nil {
+	err = replacepath.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := replacepathregex.Init(); err != nil {
+	err = replacepathregex.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := requesttermination.Init(); err != nil {
+	err = requesttermination.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := requesttransformer.Init(); err != nil {
+	err = requesttransformer.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := responsetransformer.Init(); err != nil {
+	err = responsetransformer.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := setvars.Init(); err != nil {
+	err = setvars.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := stripprefix.Init(); err != nil {
+	err = stripprefix.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := trafficsplitter.Init(); err != nil {
+	err = trafficsplitter.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := uarestriction.Init(); err != nil {
+	err = uarestriction.Init()
+	if err != nil {
 		return err
 	}
 
 	// balancer
-	if err := chash.Init(); err != nil {
+	err = chash.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := random.Init(); err != nil {
+	err = random.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := roundrobin.Init(); err != nil {
+	err = roundrobin.Init()
+	if err != nil {
 		return err
 	}
 
-	if err := weighted.Init(); err != nil {
+	err = weighted.Init()
+	if err != nil {
 		return err
 	}
 

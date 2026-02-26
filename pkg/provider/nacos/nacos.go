@@ -2,15 +2,17 @@ package nacos
 
 import (
 	"fmt"
+	"net/url"
+	"strings"
+	"time"
+
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients/config_client"
 	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
 	"github.com/nacos-group/nacos-sdk-go/v2/vo"
-	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/blackbear/pkg/cast"
-	"net/url"
-	"strings"
-	"time"
+
+	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
 type Options struct {
@@ -101,9 +103,11 @@ func NewProvider(options Options) (*NacosProvider, error) {
 		client:  client,
 	}, nil
 }
+
 func (p *NacosProvider) SetOnChanged(changeFunc provider.ChangeFunc) {
 	p.OnChanged = changeFunc
 }
+
 func (p *NacosProvider) ConfigOpen() ([]*File, error) {
 	result := make([]*File, 0, len(p.options.Files))
 	for _, file := range p.options.Files {
@@ -116,7 +120,13 @@ func (p *NacosProvider) ConfigOpen() ([]*File, error) {
 			Group:  file.Group,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("nacos: failed to get '%s' file from '%s' group in '%s' namespace_id, error: %w", file.DataID, file.Group, p.options.NamespaceID, err)
+			return nil, fmt.Errorf(
+				"nacos: failed to get '%s' file from '%s' group in '%s' namespace_id, error: %w",
+				file.DataID,
+				file.Group,
+				p.options.NamespaceID,
+				err,
+			)
 		}
 		newFile := &File{
 			DataID:  file.DataID,
@@ -127,6 +137,7 @@ func (p *NacosProvider) ConfigOpen() ([]*File, error) {
 	}
 	return result, nil
 }
+
 func (p *NacosProvider) Watch() error {
 	if !p.options.Watch {
 		return nil

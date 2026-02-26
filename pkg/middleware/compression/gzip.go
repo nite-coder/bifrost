@@ -8,8 +8,9 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/compress"
 	"github.com/cloudwego/hertz/pkg/protocol"
-	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/blackbear/pkg/cast"
+
+	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
 const (

@@ -11,8 +11,9 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/ut"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/cloudwego/hertz/pkg/route"
-	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
 func TestNewMiddleware(t *testing.T) {

@@ -14,7 +14,6 @@ import (
 )
 
 func main() {
-
 	options := []hzconfig.ClientOption{
 		client.WithNoDefaultUserAgentHeader(true),
 		client.WithDisableHeaderNamesNormalizing(true),
@@ -25,7 +24,7 @@ func main() {
 		client.WithMaxIdleConnDuration(120 * time.Second),
 		client.WithKeepAlive(true),
 		client.WithMaxConnsPerHost(1024),
-		//client.WithDialer(standard.NewDialer()),
+		// client.WithDialer(standard.NewDialer()),
 		client.WithTLSConfig(&tls.Config{
 			// when you use ip address to connect to server, you need to set the ServerName to the domain name you want to use
 			ServerName:         "echo.free.beeceptor.com", // magic part
@@ -53,5 +52,4 @@ func main() {
 	}
 
 	fmt.Printf("Response: %v\n", string(resp.Body()))
-
 }

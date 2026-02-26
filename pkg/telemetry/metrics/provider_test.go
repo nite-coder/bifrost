@@ -2,16 +2,17 @@ package metrics_test
 
 import (
 	"context"
-	"fmt"
+	"net"
 	"testing"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 )
 
 func TestNewProvider_WithPrometheusEnabled(t *testing.T) {
@@ -198,8 +199,8 @@ func startOTelCollector(t *testing.T) (grpcEndpoint string, httpEndpoint string,
 		t.Fatal(err)
 	}
 
-	grpcEndpoint = fmt.Sprintf("%s:%s", host, grpcPort.Port())
-	httpEndpoint = fmt.Sprintf("http://%s:%s", host, httpPort.Port())
+	grpcEndpoint = net.JoinHostPort(host, grpcPort.Port())
+	httpEndpoint = "http://" + net.JoinHostPort(host, httpPort.Port())
 
 	return grpcEndpoint, httpEndpoint, func() {
 		_ = container.Terminate(ctx)

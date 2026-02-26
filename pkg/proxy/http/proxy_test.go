@@ -10,15 +10,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hertz-contrib/websocket"
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	gwebsocket "github.com/gorilla/websocket"
+	"github.com/hertz-contrib/websocket"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
 // Reverse proxy tests.
@@ -214,7 +214,6 @@ func TestReverseProxyStripHeadersPresentInConnection(t *testing.T) {
 		Weight:   1,
 	}
 	proxy, err := New(proxyOptions, nil)
-
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
 	}
@@ -291,7 +290,6 @@ func TestReverseProxyStripEmptyConnection(t *testing.T) {
 		Weight:   1,
 	}
 	proxy, err := New(proxyOptions, nil)
-
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
 	}
@@ -365,7 +363,6 @@ func TestXForwardedFor(t *testing.T) {
 		Weight:           1,
 	}
 	proxy, err := New(proxyOptions, nil)
-
 	if err != nil {
 		t.Errorf("proxy error: %v", err)
 	}
@@ -545,7 +542,7 @@ func TestReverseProxyWebSocket(t *testing.T) {
 		}
 	})
 
-	//Create a proxy
+	// Create a proxy
 	proxyOptions := Options{
 		Target:   "http://127.0.0.1:9998/proxy",
 		Protocol: config.ProtocolHTTP,

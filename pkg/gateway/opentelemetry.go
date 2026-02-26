@@ -10,10 +10,6 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/log"
-	"github.com/nite-coder/bifrost/pkg/tracing"
-	"github.com/nite-coder/bifrost/pkg/variable"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
 	"go.opentelemetry.io/otel"
@@ -26,6 +22,11 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/log"
+	"github.com/nite-coder/bifrost/pkg/tracing"
+	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, error) {
@@ -124,7 +125,6 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 }
 
 func newTraceProvider(exporter sdktrace.SpanExporter, options config.TracingOptions) (*sdktrace.TracerProvider, error) {
-
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
 		return nil, errors.New("failed to read build info")

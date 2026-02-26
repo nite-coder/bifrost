@@ -161,7 +161,6 @@ func TestCorazaMiddleware_SQLInjection(t *testing.T) {
 			t.Errorf("%s: got status code %d, want %d", "SQL Injection Blocked", code, 403)
 		}
 	})
-
 }
 
 func TestCorazaCustomRules(t *testing.T) {
@@ -221,7 +220,6 @@ func TestCorazaCustomRules(t *testing.T) {
 			t.Errorf("%s: got status code %d, want %d", "IP Host", code, 200)
 		}
 	})
-
 }
 
 func TestCorazaIPAllowList(t *testing.T) {
@@ -253,5 +251,4 @@ func TestCorazaIPAllowList(t *testing.T) {
 			t.Errorf("%s: got status code %d, want %d", "SQL Injection Blocked", code, 200)
 		}
 	})
-
 }

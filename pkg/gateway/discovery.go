@@ -19,8 +19,10 @@ func NewResolverDiscovery(upstream *Upstream) *ResolverDiscovery {
 	}
 }
 
-func (d *ResolverDiscovery) GetInstances(ctx context.Context, options provider.GetInstanceOptions) ([]provider.Instancer, error) {
-
+func (d *ResolverDiscovery) GetInstances(
+	ctx context.Context,
+	options provider.GetInstanceOptions,
+) ([]provider.Instancer, error) {
 	instances := make([]provider.Instancer, 0)
 
 	for _, targetOptions := range d.upstream.options.Targets {
@@ -66,7 +68,10 @@ func (d *ResolverDiscovery) GetInstances(ctx context.Context, options provider.G
 	return instances, nil
 }
 
-func (d *ResolverDiscovery) Watch(ctx context.Context, options provider.GetInstanceOptions) (<-chan []provider.Instancer, error) {
+func (d *ResolverDiscovery) Watch(
+	ctx context.Context,
+	options provider.GetInstanceOptions,
+) (<-chan []provider.Instancer, error) {
 	return nil, nil
 }
 

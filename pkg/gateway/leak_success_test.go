@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
 func TestBifrostLeakInSuccessPath_Evidence(t *testing.T) {
@@ -55,7 +56,7 @@ func TestBifrostLeakInSuccessPath_Evidence(t *testing.T) {
 
 	final := runtime.NumGoroutine()
 	if final > baseline+5 {
-		t.Log("洩漏偵測！正在輸出協程堆疊資訊...")
+		t.Log("Leak detected! Outputting goroutine stack trace...")
 		buf := make([]byte, 1<<20)
 		len := runtime.Stack(buf, true)
 		os.Stderr.Write(buf[:len])

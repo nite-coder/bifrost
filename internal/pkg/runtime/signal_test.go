@@ -13,10 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/log"
 )
 
 // TestLogRotation_InodeVerification verifies that stdout and stderr correctly point
@@ -158,7 +159,7 @@ func TestMaster_SignalForwarding(t *testing.T) {
 	}
 }
 
-// TestLogHelperProcess is a mock worker that reports its actions
+// TestLogHelperProcess is a mock worker that reports its actions.
 func TestLogHelperProcess(t *testing.T) {
 	if os.Getenv("GO_WANT_LOG_HELPER") != "1" {
 		return

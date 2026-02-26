@@ -13,16 +13,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
-	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
-	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
-
-	configBifrost "github.com/nite-coder/bifrost/pkg/config"
-
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	hertzslog "github.com/hertz-contrib/logger/slog"
+
+	"github.com/nite-coder/bifrost/internal/pkg/runtime"
+	configBifrost "github.com/nite-coder/bifrost/pkg/config"
+	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
+	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 )
 
 func withDefaultServerHeader(disable bool) config.Option {
@@ -31,15 +30,14 @@ func withDefaultServerHeader(disable bool) config.Option {
 	}}
 }
 
-var (
-	daemon = flag.Bool("d", false, "Run in daemon mode")
-)
+var daemon = flag.Bool("d", false, "Run in daemon mode")
 
 func main() {
 	flag.Parse()
 
 	if runtime.IsWorker() {
-		if err := runWorker(); err != nil {
+		err := runWorker()
+		if err != nil {
 			log.Fatal(err)
 		}
 		return
@@ -53,7 +51,8 @@ func main() {
 			InitialBackoff: 1 * time.Second,
 		},
 	})
-	if err := master.Run(context.Background()); err != nil {
+	err := master.Run(context.Background())
+	if err != nil {
 		log.Fatal(err)
 	}
 }
@@ -75,7 +74,8 @@ func runWorker() error {
 
 	// 2. Start Control Plane Loop
 	go func() {
-		if err := wcp.Start(context.Background(), nil); err != nil {
+		err := wcp.Start(context.Background(), nil)
+		if err != nil {
 			slog.Error("control plane loop exited", "error", err)
 		}
 	}()

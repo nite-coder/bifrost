@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
@@ -74,21 +75,40 @@ type Config struct {
 	AllowFiles bool
 }
 
-// AddAllowMethods is allowed to add custom methods
+// AddAllowMethods is allowed to add custom methods.
 func (c *Config) AddAllowMethods(methods ...string) {
 	c.AllowMethods = append(c.AllowMethods, methods...)
 }
 
-// AddAllowHeaders is allowed to add custom headers
+// AddAllowHeaders is allowed to add custom headers.
 func (c *Config) AddAllowHeaders(headers ...string) {
 	c.AllowHeaders = append(c.AllowHeaders, headers...)
 }
 
-// AddExposeHeaders is allowed to add custom expose headers
+// AddExposeHeaders is allowed to add custom expose headers.
 func (c *Config) AddExposeHeaders(headers ...string) {
 	c.ExposeHeaders = append(c.ExposeHeaders, headers...)
 }
-func (c Config) getAllowedSchemas() []string {
+
+// Validate is check configuration of user defined.
+func (c *Config) Validate() error {
+	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0) {
+		return errors.New("conflict settings: all origins are allowed. AllowOriginFunc or AllowOrigins is not needed")
+	}
+	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 {
+		return errors.New("conflict settings: all origins disabled")
+	}
+	for _, origin := range c.AllowOrigins {
+		if !strings.Contains(origin, "*") && !c.validateAllowedSchemas(origin) {
+			return errors.New(
+				"bad origin: origins must contain '*' or include " + strings.Join(c.getAllowedSchemas(), ","),
+			)
+		}
+	}
+	return nil
+}
+
+func (c *Config) getAllowedSchemas() []string {
 	allowedSchemas := DefaultSchemas
 	if c.AllowBrowserExtensions {
 		allowedSchemas = append(allowedSchemas, ExtensionSchemas...)
@@ -101,7 +121,8 @@ func (c Config) getAllowedSchemas() []string {
 	}
 	return allowedSchemas
 }
-func (c Config) validateAllowedSchemas(origin string) bool {
+
+func (c *Config) validateAllowedSchemas(origin string) bool {
 	allowedSchemas := c.getAllowedSchemas()
 	for _, schema := range allowedSchemas {
 		if strings.HasPrefix(origin, schema) {
@@ -111,22 +132,7 @@ func (c Config) validateAllowedSchemas(origin string) bool {
 	return false
 }
 
-// Validate is check configuration of user defined.
-func (c Config) Validate() error {
-	if c.AllowAllOrigins && (c.AllowOriginFunc != nil || len(c.AllowOrigins) > 0) {
-		return errors.New("conflict settings: all origins are allowed. AllowOriginFunc or AllowOrigins is not needed")
-	}
-	if !c.AllowAllOrigins && c.AllowOriginFunc == nil && len(c.AllowOrigins) == 0 {
-		return errors.New("conflict settings: all origins disabled")
-	}
-	for _, origin := range c.AllowOrigins {
-		if !strings.Contains(origin, "*") && !c.validateAllowedSchemas(origin) {
-			return errors.New("bad origin: origins must contain '*' or include " + strings.Join(c.getAllowedSchemas(), ","))
-		}
-	}
-	return nil
-}
-func (c Config) parseWildcardRules() [][]string {
+func (c *Config) parseWildcardRules() [][]string {
 	var wRules [][]string
 	if !c.AllowWildcard {
 		return wRules
@@ -176,10 +182,12 @@ func NewMiddleware(config Config) app.HandlerFunc {
 		cors.applyCors(c)
 	}
 }
+
 func Init() error {
 	return middleware.RegisterTyped([]string{"cors"}, func(cfg Config) (app.HandlerFunc, error) {
 		// Validates if the config is valid or considered empty/invalid which implies default
-		if err := cfg.Validate(); err != nil {
+		err := cfg.Validate()
+		if err != nil {
 			// Check if it's the specific "conflict settings: all origins disabled" error which happens when config is empty
 			if strings.Contains(err.Error(), "conflict settings: all origins disabled") {
 				cfg = DefaultConfig()

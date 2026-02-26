@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/resolver"
-
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
-	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
 	"github.com/stretchr/testify/assert"
+
+	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/resolver"
 )
 
 const (
@@ -269,7 +269,7 @@ func TestServiceNoUpstream(t *testing.T) {
 	assert.Equal(t, 500, hzCtx.Response.StatusCode())
 }
 
-// TestServiceBalancerNil verifies that the service returns 503 when balancer is nil
+// TestServiceBalancerNil verifies that the service returns 503 when balancer is nil.
 func TestServiceBalancerNil(t *testing.T) {
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
 	assert.NoError(t, err)

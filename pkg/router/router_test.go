@@ -72,7 +72,7 @@ func BenchmarkStatic5(b *testing.B) {
 
 type RouteOptions struct {
 	Methods []string `yaml:"methods" json:"methods"`
-	Paths   []string `yaml:"paths" json:"paths"`
+	Paths   []string `yaml:"paths"   json:"paths"`
 }
 
 func BenchmarkCode(b *testing.B) {
@@ -92,7 +92,6 @@ func BenchmarkCode(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		func() app.HandlerFunc {
-
 			isFound := false
 			if slices.Contains(routeSetting.Paths, path10) {
 				isFound = true

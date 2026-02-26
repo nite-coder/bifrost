@@ -20,12 +20,6 @@ import (
 	hzerrors "github.com/cloudwego/hertz/pkg/common/errors"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/google/uuid"
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/log"
-	"github.com/nite-coder/bifrost/pkg/proxy"
-	"github.com/nite-coder/bifrost/pkg/timecache"
-	"github.com/nite-coder/bifrost/pkg/tracing"
-	"github.com/nite-coder/bifrost/pkg/variable"
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/valyala/bytebufferpool"
 	"go.opentelemetry.io/otel"
@@ -33,6 +27,13 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/log"
+	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/timecache"
+	"github.com/nite-coder/bifrost/pkg/tracing"
+	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 // TrailerPrefix is a magic prefix for [ResponseWriter.Header] map keys
@@ -173,6 +174,7 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 	}
 	return r, nil
 }
+
 func (p *HTTPProxy) IsAvailable() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -188,6 +190,7 @@ func (p *HTTPProxy) IsAvailable() bool {
 	}
 	return false
 }
+
 func (p *HTTPProxy) AddFailedCount(count uint) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -203,12 +206,18 @@ func (p *HTTPProxy) AddFailedCount(count uint) error {
 	}
 	return nil
 }
+
 func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 	defer func() {
 		if r := recover(); r != nil {
 			stackTrace := cast.B2S(debug.Stack())
-			logger.ErrorContext(ctx, "proxy: HTTP proxy panic recovered", slog.Any("error", r), slog.String("stack", stackTrace))
+			logger.ErrorContext(
+				ctx,
+				"proxy: HTTP proxy panic recovered",
+				slog.Any("error", r),
+				slog.String("stack", stackTrace),
+			)
 			c.Abort()
 		}
 		// check upstream health
@@ -331,34 +340,38 @@ ProxyPassLoop:
 	}
 }
 
-// ID return proxy's ID
+// ID return proxy's ID.
 func (p *HTTPProxy) ID() string {
 	return p.id
 }
 
-// SetDirector use to customize protocol.Request
+// SetDirector use to customize protocol.Request.
 func (p *HTTPProxy) SetDirector(director func(req *protocol.Request)) {
 	p.director = director
 }
 
-// SetClient use to customize client
+// SetClient use to customize client.
 func (p *HTTPProxy) SetClient(client *client.Client) {
 	p.client = client
 }
 
-// SetErrorHandler use to customize error handler
+// SetErrorHandler use to customize error handler.
 func (p *HTTPProxy) SetErrorHandler(eh func(c *app.RequestContext, err error)) {
 	p.errorHandler = eh
 }
+
 func (r *HTTPProxy) SetTransferTrailer(b bool) {
 	r.transferTrailer = b
 }
+
 func (p *HTTPProxy) Weight() uint32 {
 	return p.weight
 }
+
 func (p *HTTPProxy) Target() string {
 	return p.target
 }
+
 func (p *HTTPProxy) Close() error {
 	if p.client != nil {
 		p.client.CloseIdleConnections()
@@ -413,7 +426,7 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 }
 
 // removeRequestConnHeaders removes hop-by-hop headers listed in the "Connection" header of h.
-// See RFC 7230, section 6.1
+// See RFC 7230, section 6.1.
 func removeRequestConnHeaders(c *app.RequestContext) {
 	c.Request.Header.VisitAll(func(k, v []byte) {
 		if cast.B2S(k) == "Connection" {
@@ -427,7 +440,7 @@ func removeRequestConnHeaders(c *app.RequestContext) {
 }
 
 // removeRespConnHeaders removes hop-by-hop headers listed in the "Connection" header of h.
-// See RFC 7230, section 6.1
+// See RFC 7230, section 6.1.
 func removeResponseConnHeaders(c *app.RequestContext) {
 	c.Response.Header.VisitAll(func(k, v []byte) {
 		if cast.B2S(k) == "Connection" {

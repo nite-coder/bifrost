@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -40,6 +41,7 @@ func NewMiddleware(newPath string) *ReplacePathMiddleware {
 		directives: variable.ParseDirectives(newPath),
 	}
 }
+
 func (m *ReplacePathMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	if len(m.directives) > 0 {
 		replacements := make([]string, 0, len(m.directives)*2)

@@ -6,8 +6,9 @@ import (
 	"regexp"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/blackbear/pkg/cast"
+
+	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
 type Options struct {
@@ -53,6 +54,7 @@ func NewMiddleware(options Options) (*UARestriction, error) {
 	}
 	return m, nil
 }
+
 func (m *UARestriction) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	userAgent := cast.B2S(c.UserAgent())
 	if userAgent == "" && m.options.BypassMissing {
@@ -92,6 +94,7 @@ func (m *UARestriction) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 }
+
 func Init() error {
 	return middleware.RegisterTyped([]string{"ua_restriction"}, func(option Options) (app.HandlerFunc, error) {
 		m, err := NewMiddleware(option)

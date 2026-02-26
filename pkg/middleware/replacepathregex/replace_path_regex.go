@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
@@ -37,7 +38,6 @@ type ReplacePathRegexMiddleware struct {
 }
 
 func NewMiddleware(regex, replacement string) (*ReplacePathRegexMiddleware, error) {
-
 	if regex == "" || replacement == "" {
 		return nil, errors.New("regex or replacement is empty")
 	}

@@ -9,13 +9,13 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/nite-coder/blackbear/pkg/cast"
+
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/router"
 	"github.com/nite-coder/bifrost/pkg/variable"
-
-	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
 type routeSetting struct {
@@ -33,49 +33,58 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 			continue
 		}
 
-		        if len(routeOptions.Paths) == 0 {
-		            return nil, fmt.Errorf("paths cannot be empty for route ID: %s", routeOptions.ID)
-		        }
-		
-		        routeOptions.ServiceID = strings.TrimSpace(routeOptions.ServiceID)
-		        if len(routeOptions.ServiceID) == 0 {
-		            return nil, fmt.Errorf("service_ID cannot be empty for route ID: %s", routeOptions.ID)
-		        }
-		
-		        routeMiddlewares := make([]app.HandlerFunc, 0)
-		
-		        rOptions := &variable.RequestRoute{
-		            RouteID:   routeOptions.ID,
-		            Route:     routeOptions.Route,
-		            Tags:      routeOptions.Tags,
-		            ServiceID: routeOptions.ServiceID,
-		        }
-		
-		        firstRouteMiddleware := newFirstRouteMiddleware(rOptions)
-		        routeMiddlewares = append(routeMiddlewares, firstRouteMiddleware.ServeHTTP)
-		
-		        for _, m := range routeOptions.Middlewares {
-		            if len(m.Use) > 0 {
-		                val, found := bifrost.middlewares[m.Use]
-		                if !found {
-		                    return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", m.Use, routeOptions.ID)
-		                }
-		
-		                routeMiddlewares = append(routeMiddlewares, val)
-		                continue
-		            }
-		
-		            if len(m.Type) == 0 {
-		                return nil, fmt.Errorf("middleware type cannot be empty for route: %s", routeOptions.Paths)
-		            }
-					handler := middleware.Factory(m.Type)
+		if len(routeOptions.Paths) == 0 {
+			return nil, fmt.Errorf("paths cannot be empty for route ID: %s", routeOptions.ID)
+		}
+
+		routeOptions.ServiceID = strings.TrimSpace(routeOptions.ServiceID)
+		if len(routeOptions.ServiceID) == 0 {
+			return nil, fmt.Errorf("service_ID cannot be empty for route ID: %s", routeOptions.ID)
+		}
+
+		routeMiddlewares := make([]app.HandlerFunc, 0)
+
+		rOptions := &variable.RequestRoute{
+			RouteID:   routeOptions.ID,
+			Route:     routeOptions.Route,
+			Tags:      routeOptions.Tags,
+			ServiceID: routeOptions.ServiceID,
+		}
+
+		firstRouteMiddleware := newFirstRouteMiddleware(rOptions)
+		routeMiddlewares = append(routeMiddlewares, firstRouteMiddleware.ServeHTTP)
+
+		for _, m := range routeOptions.Middlewares {
+			if len(m.Use) > 0 {
+				val, found := bifrost.middlewares[m.Use]
+				if !found {
+					return nil, fmt.Errorf("middleware '%s' was not found in route id: '%s'", m.Use, routeOptions.ID)
+				}
+
+				routeMiddlewares = append(routeMiddlewares, val)
+				continue
+			}
+
+			if len(m.Type) == 0 {
+				return nil, fmt.Errorf("middleware type cannot be empty for route: %s", routeOptions.Paths)
+			}
+			handler := middleware.Factory(m.Type)
 			if handler == nil {
-				return nil, fmt.Errorf("middleware handler '%s' was not found in route: '%s'", m.Type, routeOptions.Paths)
+				return nil, fmt.Errorf(
+					"middleware handler '%s' was not found in route: '%s'",
+					m.Type,
+					routeOptions.Paths,
+				)
 			}
 
 			appHandler, err := handler(m.Params)
 			if err != nil {
-				return nil, fmt.Errorf("failed to create middleware '%s' failed in route: '%s', error: %w", m.Type, routeOptions.Paths, err)
+				return nil, fmt.Errorf(
+					"failed to create middleware '%s' failed in route: '%s', error: %w",
+					m.Type,
+					routeOptions.Paths,
+					err,
+				)
 			}
 
 			routeMiddlewares = append(routeMiddlewares, appHandler)
@@ -91,7 +100,11 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 		default:
 			service, found := services[routeOptions.ServiceID]
 			if !found {
-				return nil, fmt.Errorf("service_id '%s' was not found in route: %s", routeOptions.ServiceID, routeOptions.ID)
+				return nil, fmt.Errorf(
+					"service_id '%s' was not found in route: %s",
+					routeOptions.ServiceID,
+					routeOptions.ID,
+				)
 			}
 
 			if len(service.middlewares) > 0 {
@@ -121,7 +134,7 @@ func newRoutes() *Routes {
 	}
 }
 
-// ServeHTTP implements the http.Handler interface
+// ServeHTTP implements the http.Handler interface.
 func (r *Routes) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 	method := cast.B2S(ctx.Method())
 	path := cast.B2S(ctx.Request.Path())
@@ -155,10 +168,9 @@ func (r *Routes) ServeHTTP(c context.Context, ctx *app.RequestContext) {
 		ctx.Abort()
 		return
 	}
-
 }
 
-// Add adds a new route
+// Add adds a new route.
 func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFunc) error {
 	var err error
 
@@ -268,7 +280,6 @@ func checkRegexpRoute(setting routeSetting, method string, path string) bool {
 	return setting.regex.MatchString(path)
 }
 
-// nolint
 func getHost(ctx *app.RequestContext) func() string {
 	var (
 		host string

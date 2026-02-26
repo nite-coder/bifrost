@@ -6,24 +6,22 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
 	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/adaptor"
+
 	"github.com/nite-coder/bifrost/pkg/config"
 )
 
-var (
-	requestContextPool = sync.Pool{
-		New: func() any {
-			return app.NewContext(0)
-		},
-	}
-)
+var requestContextPool = sync.Pool{
+	New: func() any {
+		return app.NewContext(0)
+	},
+}
 
-// HertzBridge implements http.Handler by bridging to a Hertz instance
+// HertzBridge implements http.Handler by bridging to a Hertz instance.
 type HertzBridge struct {
 	Hertz *server.Hertz
 }
@@ -36,7 +34,8 @@ func (b *HertzBridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// Convert http.Request to Hertz RequestContext
-	if err := adaptor.CopyToHertzRequest(r, &c.Request); err != nil {
+	err := adaptor.CopyToHertzRequest(r, &c.Request)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte("failed to copy request"))
 		return
@@ -61,7 +60,13 @@ func (b *HertzBridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Forbidden headers in HTTP/2 and headers that should be treated as trailers
 		switch canonicalKey {
-		case "Connection", "Keep-Alive", "Proxy-Connection", "Transfer-Encoding", "Upgrade", "Trailer", "Content-Length":
+		case "Connection",
+			"Keep-Alive",
+			"Proxy-Connection",
+			"Transfer-Encoding",
+			"Upgrade",
+			"Trailer",
+			"Content-Length":
 			return
 		}
 		h.Add(key, string(v))
@@ -103,7 +108,7 @@ func (b *HertzBridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// NewStdlibServer creates a new http.Server that wraps a Hertz instance for HTTP/2 support
+// NewStdlibServer creates a new http.Server that wraps a Hertz instance for HTTP/2 support.
 func NewStdlibServer(h *server.Hertz, options *config.ServerOptions, tlsConfig *tls.Config) *http.Server {
 	protocols := &http.Protocols{}
 	protocols.SetHTTP1(true)

@@ -17,12 +17,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nite-coder/blackbear/pkg/cast"
+
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/log"
-	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
-// Allow mocking for tests
+// Allow mocking for tests.
 var (
 	lookupUser  = user.Lookup
 	lookupGroup = user.LookupGroup
@@ -36,7 +37,7 @@ var startCommand = func(cmd *exec.Cmd) error {
 	return cmd.Start()
 }
 
-// Environment variable used to identify worker processes.
+// EnvBifrostRole variable used to identify worker processes.
 const EnvBifrostRole = "BIFROST_ROLE"
 
 // RoleWorker is the value of BIFROST_ROLE for worker processes.
@@ -109,7 +110,7 @@ type Master struct {
 	listenerDataCh chan *listenerData
 }
 
-// listenerData holds the FDs and their keys (addresses)
+// listenerData holds the FDs and their keys (addresses).
 type listenerData struct {
 	fds  []*os.File
 	keys []string
@@ -150,7 +151,8 @@ func NewMaster(opts *MasterOptions) *Master {
 // This method blocks until shutdown is complete.
 func (m *Master) Run(ctx context.Context) error {
 	// Setup control plane
-	if err := m.controlPlane.Listen(); err != nil {
+	err := m.controlPlane.Listen()
+	if err != nil {
 		return fmt.Errorf("failed to start control plane: %w", err)
 	}
 	defer m.controlPlane.Close()
@@ -161,13 +163,15 @@ func (m *Master) Run(ctx context.Context) error {
 
 	// Start accepting control plane connections
 	go safety.Go(ctx, func() {
-		if err := m.controlPlane.Accept(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		err := m.controlPlane.Accept(ctx)
+		if err != nil && !errors.Is(err, context.Canceled) {
 			slog.Error("control plane accept loop exited", "error", err)
 		}
 	})
 
 	// Spawn initial worker
-	if err := m.spawnAndWatch(ctx); err != nil {
+	err = m.spawnAndWatch(ctx)
+	if err != nil {
 		return fmt.Errorf("failed to spawn initial worker: %w", err)
 	}
 
@@ -207,7 +211,8 @@ func (m *Master) Run(ctx context.Context) error {
 			switch sig {
 			case syscall.SIGHUP:
 				slog.Log(ctx, log.LevelNotice, "received SIGHUP, triggering hot reload")
-				if err := m.handleReload(ctx); err != nil {
+				err := m.handleReload(ctx)
+				if err != nil {
 					slog.Error("hot reload failed", "error", err)
 				}
 
@@ -224,7 +229,8 @@ func (m *Master) Run(ctx context.Context) error {
 				m.mu.RUnlock()
 
 				if worker != nil && worker.Process != nil {
-					if err := worker.Process.Signal(syscall.SIGUSR1); err != nil {
+					err := worker.Process.Signal(syscall.SIGUSR1)
+					if err != nil {
 						slog.Error("failed to forward SIGUSR1 to worker", "error", err, "workerPID", worker.Process.Pid)
 					}
 				}
@@ -263,7 +269,8 @@ func (m *Master) Run(ctx context.Context) error {
 					return nil
 				}
 
-				if err := m.spawnAndWatch(ctx); err != nil {
+				err := m.spawnAndWatch(ctx)
+				if err != nil {
 					slog.Error("failed to restart worker", "error", err)
 				}
 			}
@@ -285,7 +292,8 @@ func (m *Master) Shutdown(ctx context.Context) error {
 
 	// Send SIGTERM to worker
 	if m.currentWorker != nil && m.currentWorker.Process != nil {
-		if err := m.currentWorker.Process.Signal(syscall.SIGTERM); err != nil {
+		err := m.currentWorker.Process.Signal(syscall.SIGTERM)
+		if err != nil {
 			if !errors.Is(err, os.ErrProcessDone) {
 				slog.Error("failed to send SIGTERM to worker", "error", err)
 			}
@@ -324,6 +332,11 @@ func (m *Master) WorkerPID() int {
 		return 0
 	}
 	return m.currentWorker.Process.Pid
+}
+
+// ControlPlane returns the control plane instance.
+func (m *Master) ControlPlane() *ControlPlane {
+	return m.controlPlane
 }
 
 // spawnAndWatch spawns a new worker and starts watching it.
@@ -442,22 +455,25 @@ func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File, keys []
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	// Pass listener FDs for zero-downtime reload
+	// Set extra file descriptors for listener inheritance
 	if len(extraFiles) > 0 {
 		cmd.ExtraFiles = extraFiles
+
+		// Set environment variable to notify child about inherited FDs
+		// (Used by internal/pkg/runtime/worker_fd.go)
+
+		// Keys must be base64 encoded for safety (Abstract Namespace or special chars)
+		encodedKeys := base64.StdEncoding.EncodeToString([]byte(strings.Join(keys, ",")))
+
 		cmd.Env = append(cmd.Env,
 			"UPGRADE=1",
-			fmt.Sprintf("BIFROST_FD_COUNT=%d", len(extraFiles)),
+			"BIFROST_LISTENER_KEYS"+"="+encodedKeys,
+			"BIFROST_FD_COUNT"+"="+strconv.Itoa(len(extraFiles)),
 		)
-		if len(keys) > 0 {
-			// Encode keys as a comma-separated string, then base64 encode it
-			keysStr := strings.Join(keys, ",")
-			encodedKeys := base64.StdEncoding.EncodeToString([]byte(keysStr))
-			cmd.Env = append(cmd.Env, "BIFROST_LISTENER_KEYS="+encodedKeys)
-		}
 	}
 
-	if err := startCommand(cmd); err != nil {
+	err := startCommand(cmd)
+	if err != nil {
 		return nil, fmt.Errorf("failed to start worker: %w", err)
 	}
 
@@ -543,9 +559,10 @@ func (m *Master) handleReload(ctx context.Context) error {
 		default:
 		}
 
-		if err := m.controlPlane.SendMessage(oldWorkerPID, &ControlMessage{
+		err := m.controlPlane.SendMessage(oldWorkerPID, &ControlMessage{
 			Type: MessageTypeFDRequest,
-		}); err != nil {
+		})
+		if err != nil {
 			slog.Warn("failed to request FDs from old worker", "error", err)
 			// Continue without FDs - new worker will create new listeners
 		} else {
@@ -600,7 +617,8 @@ func (m *Master) handleReload(ctx context.Context) error {
 	// Gracefully stop old worker
 	if oldWorker != nil && oldWorker.Process != nil {
 		slog.Info("stopping old worker", "oldWorkerPID", oldWorkerPID)
-		if err := oldWorker.Process.Signal(syscall.SIGTERM); err != nil {
+		err := oldWorker.Process.Signal(syscall.SIGTERM)
+		if err != nil {
 			if !errors.Is(err, os.ErrProcessDone) {
 				slog.Error("failed to send SIGTERM to old worker", "error", err)
 			}
@@ -648,11 +666,6 @@ func (m *Master) handleFDTransfer(fds []*os.File, keys []string) {
 			_ = f.Close()
 		}
 	}
-}
-
-// ControlPlane returns the control plane instance.
-func (m *Master) ControlPlane() *ControlPlane {
-	return m.controlPlane
 }
 
 // IsWorker returns true if the current process is a worker.

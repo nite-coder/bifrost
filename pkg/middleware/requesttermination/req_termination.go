@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
@@ -25,7 +26,6 @@ func NewMiddleware(options Options) *RequestTerminationMiddleware {
 }
 
 func (m *RequestTerminationMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
-
 	if m.options.StatusCode > 0 {
 		c.Response.SetStatusCode(m.options.StatusCode)
 	}

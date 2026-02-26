@@ -5,10 +5,11 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/resolver"
 	"github.com/nite-coder/bifrost/pkg/variable"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestMiddlewarePipeline(t *testing.T) {
