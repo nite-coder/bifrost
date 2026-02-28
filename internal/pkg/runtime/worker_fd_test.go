@@ -6,12 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
 
 	proxyproto "github.com/pires/go-proxyproto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 func TestDecodeListenerKeys(t *testing.T) {
@@ -127,10 +127,10 @@ func TestInheritedListeners(t *testing.T) {
 	defer f.Close()
 
 	// Dup to 42
-	err = syscall.Dup2(int(f.Fd()), 42)
+	err = unix.Dup2(int(f.Fd()), 42)
 	require.NoError(t, err)
 	// We should close 42 when done, or rely on OS cleanup, but explicit is better for test hygiene
-	defer syscall.Close(42)
+	defer unix.Close(42)
 
 	// Setup env
 	keys := []string{"localhost:1234"}
