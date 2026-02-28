@@ -260,7 +260,6 @@ func testLimiter(t *testing.T, limiter Limiter, options Options) {
 			assert.Equal(t, options.Limit, result.Limit)
 			assert.Equal(t, uint64(5-i), result.Remaining)
 			assert.LessOrEqual(t, result.ResetTime.Sub(now).Seconds(), float64(1.1))
-			time.Sleep(100 * time.Millisecond)
 		}
 		result := limiter.Allow(ctx, key)
 		if result.Allow {
