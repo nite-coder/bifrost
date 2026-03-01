@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"net"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -167,7 +166,7 @@ func TestWorkerFDHandler_GetListenerFile(t *testing.T) {
 	file.Close()
 
 	// Case 2: Unix Listener
-	tmpSocket := filepath.Join(t.TempDir(), "test.sock")
+	tmpSocket := TempSocketPath(t, "test.sock")
 	ul, err := net.Listen("unix", tmpSocket)
 	require.NoError(t, err)
 	defer ul.Close()

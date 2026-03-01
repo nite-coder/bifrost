@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"os/user"
-	"path/filepath"
 	"syscall"
 	"testing"
 	"time"
@@ -411,7 +410,7 @@ func TestMaster_Run(t *testing.T) {
 	t.Run("run and shutdown context", func(t *testing.T) {
 		m := NewMaster(nil)
 		// Use unique socket path
-		socketPath := filepath.Join(t.TempDir(), "test1.sock")
+		socketPath := TempSocketPath(t, "test1.sock")
 		m.controlPlane = NewControlPlane(&ControlPlaneOptions{SocketPath: socketPath})
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -460,7 +459,7 @@ func TestMaster_Run(t *testing.T) {
 	t.Run("run and stop channel", func(t *testing.T) {
 		m := NewMaster(nil)
 		// Use unique socket path
-		socketPath := filepath.Join(t.TempDir(), "test2.sock")
+		socketPath := TempSocketPath(t, "test2.sock")
 		m.controlPlane = NewControlPlane(&ControlPlaneOptions{SocketPath: socketPath})
 
 		// Run in background
@@ -502,7 +501,7 @@ func TestMaster_Run(t *testing.T) {
 
 func TestMaster_FDTransfer(t *testing.T) {
 	m := NewMaster(nil)
-	socketPath := filepath.Join(t.TempDir(), "fd_transfer.sock")
+	socketPath := TempSocketPath(t, "fd_transfer.sock")
 	m.controlPlane = NewControlPlane(&ControlPlaneOptions{SocketPath: socketPath})
 
 	m.controlPlane.SetFDHandler(func(fds []*os.File, keys []string) {

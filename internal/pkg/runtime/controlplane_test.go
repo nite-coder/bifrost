@@ -13,6 +13,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TempSocketPath(t *testing.T, name string) string {
+	dir, err := os.MkdirTemp(os.TempDir(), "bifrost-*")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		os.RemoveAll(dir)
+	})
+	return filepath.Join(dir, name)
+}
+
 func TestNewControlPlane(t *testing.T) {
 	t.Run("default options", func(t *testing.T) {
 		cp := NewControlPlane(nil)
@@ -23,7 +32,7 @@ func TestNewControlPlane(t *testing.T) {
 	})
 
 	t.Run("custom socket path", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "test.sock")
+		path := TempSocketPath(t, "test.sock")
 		opts := &ControlPlaneOptions{SocketPath: path}
 		cp := NewControlPlane(opts)
 		assert.Equal(t, path, cp.SocketPath())
@@ -32,8 +41,7 @@ func TestNewControlPlane(t *testing.T) {
 
 func TestControlPlane_Listen(t *testing.T) {
 	t.Run("listen creates socket file", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "listen.sock")
+		path := TempSocketPath(t, "listen.sock")
 
 		cp := NewControlPlane(&ControlPlaneOptions{SocketPath: path})
 		err := cp.Listen()
@@ -51,8 +59,7 @@ func TestControlPlane_Listen(t *testing.T) {
 	})
 
 	t.Run("listen cleans up existing socket", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "cleanup.sock")
+		path := TempSocketPath(t, "cleanup.sock")
 
 		// Create a dummy file
 		err := os.WriteFile(path, []byte("dummy"), 0o600)
@@ -72,7 +79,7 @@ func TestControlPlane_Listen(t *testing.T) {
 
 func TestControlPlane_Connection(t *testing.T) {
 	t.Run("connection and register", func(t *testing.T) {
-		socketPath := filepath.Join(t.TempDir(), "conn.sock")
+		socketPath := TempSocketPath(t, "conn.sock")
 		cp := NewControlPlane(&ControlPlaneOptions{SocketPath: socketPath})
 
 		// Setup message handler
@@ -131,7 +138,7 @@ func TestControlPlane_Connection(t *testing.T) {
 func TestControlPlane_SendReceiveFDs(t *testing.T) {
 	// Create a pair of connected sockets to simulate transport
 
-	socketPath := filepath.Join(t.TempDir(), "fd.sock")
+	socketPath := TempSocketPath(t, "fd.sock")
 	cp := NewControlPlane(&ControlPlaneOptions{SocketPath: socketPath})
 
 	// Channel to receive FDs
@@ -190,7 +197,7 @@ func (m *mockFDHandler) HandleFDRequest() error {
 
 func TestWorkerControlPlane_Start(t *testing.T) {
 	// Setup Master
-	socketPath := filepath.Join(t.TempDir(), "worker_start.sock")
+	socketPath := TempSocketPath(t, "worker_start.sock")
 	cp := NewControlPlane(&ControlPlaneOptions{SocketPath: socketPath})
 	require.NoError(t, cp.Listen())
 	defer cp.Close()
