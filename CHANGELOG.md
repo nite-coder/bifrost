@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed worker processes not starting with the configured user and group ([#104](https://github.com/nite-coder/bifrost/pull/104) by [0x5487](https://github.com/0x5487))
 - Fixed various linter errors (funcorder, makezero, gosmopolitan, etc.) and improved code formatting project-wide ([#109](https://github.com/nite-coder/bifrost/pull/109) by [0x5487](https://github.com/0x5487))
 - Fixed `dup2` syscall usage in worker file descriptor handling to use `golang.org/x/sys/unix` instead of `syscall` package for better cross-platform compatibility ([#110](https://github.com/nite-coder/bifrost/pull/110) by [0x5487](https://github.com/0x5487))
+- Fixed unit tests failure on macOS due to Unix socket path length limits by using `os.TempDir()` instead of `t.TempDir()` ([#111](https://github.com/nite-coder/bifrost/pull/111) by [0x5487](https://github.com/0x5487))
+
 
 ## Changed
 

@@ -102,7 +102,7 @@ func TestMaster_SignalForwarding(t *testing.T) {
 		GracefulTimeout: 100 * time.Millisecond,
 	})
 	// Use unique socket path
-	socketPath := filepath.Join(t.TempDir(), "signal_test.sock")
+	socketPath := TempSocketPath(t, "signal_test.sock")
 	m.controlPlane = NewControlPlane(&ControlPlaneOptions{SocketPath: socketPath})
 
 	// Run Master in background

@@ -3,7 +3,6 @@ package runtime
 import (
 	"net"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -20,8 +19,7 @@ func TestNotifySystemdReady(t *testing.T) {
 
 	t.Run("with notify socket", func(t *testing.T) {
 		// Create a temporary socket
-		tmpDir := t.TempDir()
-		socketPath := filepath.Join(tmpDir, "notify.sock")
+		socketPath := TempSocketPath(t, "notify.sock")
 
 		// Listen on the socket (Unixgram)
 		addr := &net.UnixAddr{Name: socketPath, Net: "unixgram"}

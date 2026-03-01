@@ -13,13 +13,14 @@ coverage: test
 	go tool cover -func=cover.out
 
 lint:
-	go tool golangci-lint run --fix
 	go tool golangci-lint cache clean
 	go tool golangci-lint run --timeout 5m --verbose ./pkg/... ./internal/pkg/... -v
 
 lintd:
 	docker run -it --rm -v "${LOCAL_WORKSPACE_FOLDER}:/app" -w /app golangci/golangci-lint:v2.7.2-alpine golangci-lint run --timeout 5m --verbose ./pkg/...
 
+fix:
+	go tool golangci-lint run --fix
 
 build:
 	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -o bin/bifrost server/bifrost/main.go
@@ -34,7 +35,7 @@ rund:
 		-v "${LOCAL_WORKSPACE_FOLDER}/server/bifrost/conf:/app/conf" \
 		jasonsoft/bifrost 
 
-release: build lint test e2e-test
+check: build lint test e2e-test
 
 k8s_apply:
 	kubectl apply -f ./config/k8s/bifrost_deployment.yaml -f ./config/k8s/echo_deployment.yaml
