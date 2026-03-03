@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [unreleased]
+
+## Fixed
+
+- Ensure CLI console output for config testing is always visible by using standard library log instead of slog ([#113](https://github.com/nite-coder/bifrost/pull/113) by [0x5487](https://github.com/0x5487))
+
+## Security
+
+- Bump OpenTelemetry package to `v1.40.0` ([#112](https://github.com/nite-coder/bifrost/pull/112) by [0x5487](https://github.com/0x5487))
+
 ## [0.9.0] (2026-03-01)
 
 ## Fixed

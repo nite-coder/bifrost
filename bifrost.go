@@ -3,6 +3,7 @@ package bifrost
 import (
 	"context"
 	"fmt"
+	stdlog "log"
 	"log/slog"
 	"os"
 	stdruntime "runtime"
@@ -80,7 +81,9 @@ func Run(opts ...Option) error {
 	}
 
 	cli.VersionPrinter = func(cliCtx *cli.Context) {
-		fmt.Printf("version=%s, build=%s, go=%s\n", cliCtx.App.Version, opt.build, stdruntime.Version())
+		fmt.Printf("version=%s\n", cliCtx.App.Version)
+		fmt.Printf("go=%s\n", stdruntime.Version())
+		fmt.Printf("build=%s\n", opt.build)
 	}
 
 	app := &cli.App{
@@ -117,10 +120,7 @@ func Run(opts ...Option) error {
 					}
 
 					stackTrace := debug.Stack()
-					slog.Error("unknown error",
-						slog.String("error", err.Error()),
-						slog.String("stack", cast.B2S(stackTrace)),
-					)
+					stdlog.Printf("unknown error: %v\nstack: %s", err, cast.B2S(stackTrace))
 					os.Exit(1)
 				}
 			}()
@@ -133,30 +133,33 @@ func Run(opts ...Option) error {
 			if isTestAndSkip {
 				path, err := config.TestAndSkipResolver(configPath)
 				if err != nil {
-					slog.Error("failed to load config", "error", err.Error())
-					slog.Info("the configuration file test has failed")
+					stdlog.Printf("failed to load config: %v", err)
+					stdlog.Println("the configuration file test has failed")
 					return err
 				}
 
-				slog.Info("the config file tested successfully", "path", path)
+				stdlog.Printf("the config file tested successfully, path: %s", path)
 				return nil
 			}
 
 			isTest := cCtx.Bool("test")
 			mainOptions, err := config.Load(configPath)
 			if err != nil {
-				slog.Error("failed to load config", "error", err.Error())
+				stdlog.Printf("failed to load config: %v", err)
 				if isTest {
-					slog.Info("the configuration file test has failed")
+					stdlog.Println("the configuration file test has failed")
 				}
 				return err
 			}
 
-			_ = initialize.Logger(mainOptions)
-
 			if isTest {
-				slog.Info("the config file tested successfully", "path", mainOptions.ConfigPath())
+				stdlog.Printf("the config file tested successfully, path: %s", mainOptions.ConfigPath())
 				return nil
+			}
+
+			err = initialize.Logger(mainOptions)
+			if err != nil {
+				return err
 			}
 
 			if runtime.IsWorker() || opt.debug {
