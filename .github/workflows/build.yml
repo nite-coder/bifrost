@@ -6,16 +6,16 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        go-version: ["1.24", "1.25"]
+        go-version: ["1.25", "1.26"]
     steps:
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go-version }}
         id: go
 
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Build
         run: go build ./...
@@ -24,7 +24,7 @@ jobs:
     name: lint
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
@@ -37,15 +37,15 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        go-version: ["1.24", "1.25"]
+        go-version: ["1.25", "1.26"]
     steps:
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go-version }}
 
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Test Go code
         run: go test -race -coverprofile=cover.out -covermode=atomic ./pkg/... ./internal/pkg/...
@@ -62,12 +62,12 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: "1.24"
+          go-version: "1.25"
 
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Build bifrost
         run: go build -o /tmp/bifrost ./server/bifrost
