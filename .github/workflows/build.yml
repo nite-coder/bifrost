@@ -74,3 +74,22 @@ jobs:
 
       - name: Run E2E upgrade test
         run: sudo bash ./test/e2e/upgrade_test.sh
+
+  vuln_check:
+    name: Security Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run Govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-package: ./...
