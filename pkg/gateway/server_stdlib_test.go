@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -196,6 +197,7 @@ func TestStdlibServer_NonGRPC_ContentLength(t *testing.T) {
 type spyTracer struct {
 	startCalls  atomic.Int64
 	finishCalls atomic.Int64
+	mu          sync.Mutex
 	lastCtx     *app.RequestContext
 }
 
@@ -206,7 +208,9 @@ func (s *spyTracer) Start(ctx context.Context, c *app.RequestContext) context.Co
 
 func (s *spyTracer) Finish(_ context.Context, c *app.RequestContext) {
 	s.finishCalls.Add(1)
+	s.mu.Lock()
 	s.lastCtx = c
+	s.mu.Unlock()
 }
 
 // TestStdlibServer_TracerInvoked ensures that, when tracers are registered with
@@ -250,8 +254,11 @@ func TestStdlibServer_TracerInvoked(t *testing.T) {
 	assert.Equal(t, int64(1), spy.startCalls.Load(), "tracer.Start should be called once")
 	assert.Equal(t, int64(1), spy.finishCalls.Load(), "tracer.Finish should be called once")
 
+	spy.mu.Lock()
 	require.NotNil(t, spy.lastCtx, "lastCtx must be set by Finish")
 	ti := spy.lastCtx.GetTraceInfo()
+	spy.mu.Unlock()
+
 	require.NotNil(t, ti, "TraceInfo must be present on RequestContext")
 
 	httpStart := ti.Stats().GetEvent(stats.HTTPStart)
