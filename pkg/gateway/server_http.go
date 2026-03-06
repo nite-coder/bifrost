@@ -288,7 +288,7 @@ func newHTTPServer(
 		h.SetClientIPFunc(app.ClientIPWithOption(clientIPOptions))
 	}
 	if serverOptions.HTTP2 {
-		httpServer.stdlibServer = NewStdlibServer(h, &serverOptions, tlsConfig)
+		httpServer.stdlibServer = NewStdlibServer(h, &serverOptions, tlsConfig, tracers)
 	}
 	h.OnShutdown = append(h.OnShutdown, func(ctx context.Context) {
 		for _, tracer := range tracers {

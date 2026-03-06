@@ -4,11 +4,14 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/cloudwego/hertz/pkg/common/tracer"
+	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -91,7 +94,7 @@ func TestStdlibServer_GRPC_Integration(t *testing.T) {
 			Idle:  time.Second,
 		},
 	}
-	stdlibSrv := NewStdlibServer(h, mockOptions, nil)
+	stdlibSrv := NewStdlibServer(h, mockOptions, nil, nil)
 
 	go func() {
 		_ = stdlibSrv.Serve(ln)
@@ -164,7 +167,7 @@ func TestStdlibServer_NonGRPC_ContentLength(t *testing.T) {
 			Idle:  time.Second,
 		},
 	}
-	stdlibSrv := NewStdlibServer(h, mockOptions, nil)
+	stdlibSrv := NewStdlibServer(h, mockOptions, nil, nil)
 	go func() {
 		_ = stdlibSrv.Serve(ln)
 	}()
@@ -185,4 +188,76 @@ func TestStdlibServer_NonGRPC_ContentLength(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 	assert.Equal(t, "15", resp.Header.Get("Content-Length")) // `{"status":"ok"}` is 15 bytes
+}
+
+// spyTracer is a minimal tracer.Tracer that counts Start/Finish invocations and
+// captures the last request context seen in Finish so the test can inspect
+// the HTTPStart / HTTPFinish events.
+type spyTracer struct {
+	startCalls  atomic.Int64
+	finishCalls atomic.Int64
+	lastCtx     *app.RequestContext
+}
+
+func (s *spyTracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
+	s.startCalls.Add(1)
+	return ctx
+}
+
+func (s *spyTracer) Finish(_ context.Context, c *app.RequestContext) {
+	s.finishCalls.Add(1)
+	s.lastCtx = c
+}
+
+// TestStdlibServer_TracerInvoked ensures that, when tracers are registered with
+// the HertzBridge, both tracer.Start and tracer.Finish are called for every
+// HTTP request (including HTTP/2 / gRPC traffic) and that the TraceInfo on the
+// RequestContext carries the HTTPStart and HTTPFinish events.
+func TestStdlibServer_TracerInvoked(t *testing.T) {
+	spy := &spyTracer{}
+
+	h := server.New(server.WithHostPorts(":0"))
+	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
+		c.Response.SetBodyString("pong")
+	})
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer ln.Close()
+
+	mockOptions := &config.ServerOptions{
+		Timeout: config.ServerTimeoutOptions{
+			Read:  time.Second,
+			Write: time.Second,
+			Idle:  time.Second,
+		},
+	}
+
+	stdlibSrv := NewStdlibServer(h, mockOptions, nil, []tracer.Tracer{spy})
+	go func() { _ = stdlibSrv.Serve(ln) }()
+	defer stdlibSrv.Close()
+	time.Sleep(50 * time.Millisecond)
+
+	resp, err := http.Get("http://" + ln.Addr().String() + "/ping")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Give the deferred doFinish goroutine a chance to run.
+	time.Sleep(50 * time.Millisecond)
+
+	assert.Equal(t, int64(1), spy.startCalls.Load(), "tracer.Start should be called once")
+	assert.Equal(t, int64(1), spy.finishCalls.Load(), "tracer.Finish should be called once")
+
+	require.NotNil(t, spy.lastCtx, "lastCtx must be set by Finish")
+	ti := spy.lastCtx.GetTraceInfo()
+	require.NotNil(t, ti, "TraceInfo must be present on RequestContext")
+
+	httpStart := ti.Stats().GetEvent(stats.HTTPStart)
+	httpFinish := ti.Stats().GetEvent(stats.HTTPFinish)
+	assert.NotNil(t, httpStart, "HTTPStart event should be recorded")
+	assert.NotNil(t, httpFinish, "HTTPFinish event should be recorded")
+	assert.True(t, httpFinish.Time().After(httpStart.Time()),
+		"HTTPFinish must be after HTTPStart")
 }
