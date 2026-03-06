@@ -39,16 +39,17 @@ func (tc *tracerController) hasTracer() bool {
 
 // doStart records the HTTPStart event on the RequestContext and calls
 // tracer.Start on every registered tracer.
-func (tc *tracerController) doStart(ctx context.Context, c *app.RequestContext) context.Context {
+func (tc *tracerController) doStart(ctx context.Context, c *app.RequestContext) (startCtx context.Context) {
+	startCtx = ctx
 	defer tc.tryRecover()
 	if ti := c.GetTraceInfo(); ti != nil {
 		ti.Stats().Record(stats.HTTPStart, stats.StatusInfo, "")
 	}
 	for _, t := range tc.tracers {
 		//nolint:fatcontext // intentional: mirrors Hertz DoStart; each tracer enriches the context
-		ctx = t.Start(ctx, c)
+		startCtx = t.Start(startCtx, c)
 	}
-	return ctx
+	return startCtx
 }
 
 // doFinish records the HTTPFinish event and calls tracer.Finish in reverse
@@ -103,6 +104,7 @@ func newHertzBridge(h *server.Hertz, tracers []tracer.Tracer) *HertzBridge {
 	b.ctxPool.New = func() any {
 		c := app.NewContext(0)
 		if ctl.hasTracer() {
+			c.SetEnableTrace(true)
 			ti := traceinfo.NewTraceInfo()
 			ti.Stats().SetLevel(traceLevel)
 			c.SetTraceInfo(ti)

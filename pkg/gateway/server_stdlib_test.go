@@ -198,7 +198,14 @@ type spyTracer struct {
 	startCalls  atomic.Int64
 	finishCalls atomic.Int64
 	mu          sync.Mutex
-	lastCtx     *app.RequestContext
+	lastTrace   capturedTraceEvents
+}
+
+type capturedTraceEvents struct {
+	hasHTTPStart  bool
+	hasHTTPFinish bool
+	httpStartAt   time.Time
+	httpFinishAt  time.Time
 }
 
 func (s *spyTracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
@@ -209,9 +216,26 @@ func (s *spyTracer) Start(ctx context.Context, c *app.RequestContext) context.Co
 func (s *spyTracer) Finish(_ context.Context, c *app.RequestContext) {
 	s.finishCalls.Add(1)
 	s.mu.Lock()
-	s.lastCtx = c
+	if ti := c.GetTraceInfo(); ti != nil {
+		if evt := ti.Stats().GetEvent(stats.HTTPStart); evt != nil {
+			s.lastTrace.hasHTTPStart = true
+			s.lastTrace.httpStartAt = evt.Time()
+		}
+		if evt := ti.Stats().GetEvent(stats.HTTPFinish); evt != nil {
+			s.lastTrace.hasHTTPFinish = true
+			s.lastTrace.httpFinishAt = evt.Time()
+		}
+	}
 	s.mu.Unlock()
 }
+
+type panicTracer struct{}
+
+func (panicTracer) Start(context.Context, *app.RequestContext) context.Context {
+	panic("boom")
+}
+
+func (panicTracer) Finish(context.Context, *app.RequestContext) {}
 
 // TestStdlibServer_TracerInvoked ensures that, when tracers are registered with
 // the HertzBridge, both tracer.Start and tracer.Finish are called for every
@@ -255,16 +279,64 @@ func TestStdlibServer_TracerInvoked(t *testing.T) {
 	assert.Equal(t, int64(1), spy.finishCalls.Load(), "tracer.Finish should be called once")
 
 	spy.mu.Lock()
-	require.NotNil(t, spy.lastCtx, "lastCtx must be set by Finish")
-	ti := spy.lastCtx.GetTraceInfo()
+	trace := spy.lastTrace
 	spy.mu.Unlock()
 
-	require.NotNil(t, ti, "TraceInfo must be present on RequestContext")
-
-	httpStart := ti.Stats().GetEvent(stats.HTTPStart)
-	httpFinish := ti.Stats().GetEvent(stats.HTTPFinish)
-	assert.NotNil(t, httpStart, "HTTPStart event should be recorded")
-	assert.NotNil(t, httpFinish, "HTTPFinish event should be recorded")
-	assert.True(t, httpFinish.Time().After(httpStart.Time()),
+	assert.True(t, trace.hasHTTPStart, "HTTPStart event should be recorded")
+	assert.True(t, trace.hasHTTPFinish, "HTTPFinish event should be recorded")
+	assert.True(t, trace.httpFinishAt.After(trace.httpStartAt),
 		"HTTPFinish must be after HTTPStart")
+}
+
+func TestHertzBridge_PooledContextEnablesTraceReset(t *testing.T) {
+	b := newHertzBridge(server.New(), []tracer.Tracer{&spyTracer{}})
+
+	c := b.ctxPool.Get().(*app.RequestContext)
+	t.Cleanup(func() { b.ctxPool.Put(c) })
+
+	require.True(t, c.IsEnableTrace(), "pooled RequestContext must enable trace")
+
+	ti := c.GetTraceInfo()
+	require.NotNil(t, ti, "TraceInfo must be present when tracers are enabled")
+
+	ti.Stats().Record(stats.HTTPStart, stats.StatusInfo, "")
+	require.NotNil(t, ti.Stats().GetEvent(stats.HTTPStart), "HTTPStart event should be recorded before reset")
+
+	c.Reset()
+
+	assert.Nil(t, ti.Stats().GetEvent(stats.HTTPStart), "trace events must be recycled on reset")
+}
+
+func TestStdlibServer_TracerPanicPreservesRequestContext(t *testing.T) {
+	h := server.New(server.WithHostPorts(":0"))
+
+	var sawNonNilCtx atomic.Bool
+	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
+		sawNonNilCtx.Store(ctx != nil)
+		c.Response.SetBodyString("pong")
+	})
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer ln.Close()
+
+	mockOptions := &config.ServerOptions{
+		Timeout: config.ServerTimeoutOptions{
+			Read:  time.Second,
+			Write: time.Second,
+			Idle:  time.Second,
+		},
+	}
+
+	stdlibSrv := NewStdlibServer(h, mockOptions, nil, []tracer.Tracer{panicTracer{}})
+	go func() { _ = stdlibSrv.Serve(ln) }()
+	defer stdlibSrv.Close()
+	time.Sleep(50 * time.Millisecond)
+
+	resp, err := http.Get("http://" + ln.Addr().String() + "/ping")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.True(t, sawNonNilCtx.Load(), "handler should receive a non-nil context even if tracer.Start panics")
 }
