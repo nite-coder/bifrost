@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Ensure CLI console output for config testing is always visible by using standard library log instead of slog ([#113](https://github.com/nite-coder/bifrost/pull/113) by [0x5487](https://github.com/0x5487))
 - Fix missing access log and metrics tracers for HTTP/2 requests in standard library bridge ([#116](https://github.com/nite-coder/bifrost/pull/116) by [0x5487](https://github.com/0x5487))
+- Fix gRPC proxy to preserve response trailers and set content type correctly ([#117](https://github.com/nite-coder/bifrost/pull/117) by [0x5487](https://github.com/0x5487))
 
 ## Security
 

@@ -29,5 +29,4 @@ func setCloExec(fd int) error {
 }
 
 func setUserAndGroup(cmd *exec.Cmd, uid, gid uint32) {
-
 }

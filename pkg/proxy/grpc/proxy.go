@@ -355,8 +355,6 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 	_ = c.Response.Header.Trailer().Set("grpc-status", code)
 	_ = c.Response.Header.Trailer().Set("grpc-message", st.Message())
 	c.Response.Header.SetContentType("application/grpc")
-	c.Response.Header.Set("grpc-status", code)
-	c.Response.Header.Set("grpc-message", st.Message())
 	switch st.Code() {
 	case codes.Unavailable, codes.Unknown, codes.Unimplemented:
 		err := p.AddFailedCount(1)

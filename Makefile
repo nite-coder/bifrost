@@ -51,3 +51,6 @@ k8s_create:
 
 k8s_show_logs:
 	kubectl logs -l app=bifrost --all-containers=true -f
+
+fmt:
+	go tool golangci-lint fmt
