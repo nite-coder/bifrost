@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -281,4 +282,54 @@ func TestGRPCProxy_PanicOnInvalidPayload(t *testing.T) {
 	// Assert: No panic should occur.
 	// Check if status code became 400 (as per our fix)
 	assert.Equal(t, 400, c.Response.StatusCode(), "Should return 400 Bad Request for invalid payload length")
+}
+
+func TestGRPCProxy_ErrorStatusPlacement(t *testing.T) {
+	// Setup
+	mockConn := &mockClientConnError{err: status.Error(codes.Unauthenticated, "test error")}
+	proxy := &GRPCProxy{
+		client: mockConn,
+		options: &Options{
+			Timeout: time.Second,
+		},
+	}
+
+	ctx := context.Background()
+	c := app.NewContext(0)
+	// Minimal valid gRPC body (5 bytes header + 0 bytes body)
+	c.Request.SetBody([]byte{0, 0, 0, 0, 0})
+	c.Request.SetRequestURI("/TestService/TestMethod")
+
+	// Execute
+	proxy.ServeHTTP(ctx, c)
+
+	// Assert
+	// grpc-status should NOT be in the regular headers
+	assert.Equal(t, "", string(c.Response.Header.Peek("grpc-status")), "grpc-status should not be in headers")
+	assert.Equal(t, "", string(c.Response.Header.Peek("grpc-message")), "grpc-message should not be in headers")
+
+	// grpc-status SHOULD be in the trailers
+	trailers := c.Response.Header.Trailer()
+	assert.Equal(
+		t,
+		strconv.Itoa(int(codes.Unauthenticated)),
+		string(trailers.Peek("grpc-status")),
+		"grpc-status should be in trailers",
+	)
+	assert.Equal(t, "test error", string(trailers.Peek("grpc-message")), "grpc-message should be in trailers")
+}
+
+type mockClientConnError struct {
+	grpc.ClientConnInterface
+	err error
+}
+
+func (m *mockClientConnError) Invoke(
+	ctx context.Context,
+	method string,
+	args any,
+	reply any,
+	opts ...grpc.CallOption,
+) error {
+	return m.err
 }
