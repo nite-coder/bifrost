@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Security
 
-- Bump OpenTelemetry package to `v1.40.0` ([#112](https://github.com/nite-coder/bifrost/pull/112) by [0x5487](https://github.com/0x5487))
+- Bump OpenTelemetry package to `v1.40.0` and update semantic conventions to v1.39.0 ([#112](https://github.com/nite-coder/bifrost/pull/112) by [0x5487](https://github.com/0x5487))
 
 ## Changed
 
