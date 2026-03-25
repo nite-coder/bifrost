@@ -13,7 +13,7 @@ import (
 )
 
 func TestLogging(t *testing.T) {
-	options := config.LoggingOtions{
+	options := config.LoggingOptions{
 		Level:   "",
 		Handler: "json",
 		Output:  "",
@@ -26,7 +26,7 @@ func TestLogging(t *testing.T) {
 }
 
 func TestLoggingStdout(t *testing.T) {
-	options := config.LoggingOtions{
+	options := config.LoggingOptions{
 		Level:   "info",
 		Handler: "text",
 		Output:  "stdout",
@@ -49,7 +49,7 @@ func TestSIGUSR1Reopen(t *testing.T) {
 	defer os.Remove(tmpFile.Name()) // Clean up the temp file after the test
 
 	// Configure the logger to write to the temp file
-	opts := config.LoggingOtions{
+	opts := config.LoggingOptions{
 		Output:  tmpFile.Name(),
 		Level:   "info",
 		Handler: "text",

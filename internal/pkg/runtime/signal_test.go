@@ -43,7 +43,7 @@ func runLogRotationTest(t *testing.T) {
 	logFile := filepath.Join(logDir, "bifrost.log")
 
 	// 1. Initialize Logger and redirect Stdout/Stderr
-	opts := config.LoggingOtions{
+	opts := config.LoggingOptions{
 		Output:                   logFile,
 		Level:                    "info",
 		DisableRedirectStdStream: false,

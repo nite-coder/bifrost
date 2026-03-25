@@ -714,26 +714,26 @@ func TestConfigDNS(t *testing.T) {
 func TestValidateLogging(t *testing.T) {
 	t.Run("valid levels", func(t *testing.T) {
 		for _, level := range []string{"", "debug", "info", "warn", "error", "DEBUG", "INFO"} {
-			err := validateLogging(LoggingOtions{Level: level})
+			err := validateLogging(LoggingOptions{Level: level})
 			assert.NoError(t, err, "level: %s", level)
 		}
 	})
 
 	t.Run("invalid level", func(t *testing.T) {
-		err := validateLogging(LoggingOtions{Level: "invalid"})
+		err := validateLogging(LoggingOptions{Level: "invalid"})
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported logging level")
 	})
 
 	t.Run("valid handlers", func(t *testing.T) {
 		for _, handler := range []string{"", "text", "json", "TEXT", "JSON"} {
-			err := validateLogging(LoggingOtions{Handler: handler})
+			err := validateLogging(LoggingOptions{Handler: handler})
 			assert.NoError(t, err, "handler: %s", handler)
 		}
 	})
 
 	t.Run("invalid handler", func(t *testing.T) {
-		err := validateLogging(LoggingOtions{Handler: "invalid"})
+		err := validateLogging(LoggingOptions{Handler: "invalid"})
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported logging handler")
 	})
