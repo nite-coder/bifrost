@@ -73,7 +73,7 @@ func (fw *fileWriter) reopen() error {
 }
 
 // NewLogger creates a new slog.Logger instance with the specified options.
-func NewLogger(opts config.LoggingOtions) (*slog.Logger, error) {
+func NewLogger(opts config.LoggingOptions) (*slog.Logger, error) {
 	var writer io.Writer
 
 	// Configure the slog.HandlerOptions

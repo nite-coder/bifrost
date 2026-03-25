@@ -142,7 +142,7 @@ func validateProviders(mainOptions Options) error {
 	return nil
 }
 
-func validateLogging(opts LoggingOtions) error {
+func validateLogging(opts LoggingOptions) error {
 	level := strings.ToLower(opts.Level)
 	switch level {
 	case "", "debug", "info", "warn", "error":

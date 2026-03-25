@@ -19,7 +19,7 @@ type Options struct {
 	User            string                      `yaml:"user"             json:"user"`
 	Group           string                      `yaml:"group"            json:"group"`
 	Metrics         MetricsOptions              `yaml:"metrics"          json:"metrics"`
-	Logging         LoggingOtions               `yaml:"logging"          json:"logging"`
+	Logging         LoggingOptions              `yaml:"logging"          json:"logging"`
 	Routes          []*RouteOptions             `yaml:"-"`
 	Redis           []RedisOptions              `yaml:"redis"            json:"redis"`
 	Resolver        ResolverOptions             `yaml:"resolver"         json:"resolver"`
@@ -162,7 +162,7 @@ type OTLPMetricsOptions struct {
 	Insecure    bool          `yaml:"insecure"     json:"insecure"`
 	Enabled     bool          `yaml:"enabled"      json:"enabled"`
 }
-type LoggingOtions struct {
+type LoggingOptions struct {
 	Level                    string `yaml:"level"                      json:"level"`
 	Handler                  string `yaml:"handler"                    json:"handler"`
 	Output                   string `yaml:"output"                     json:"output"`
@@ -207,7 +207,7 @@ type ServerOptions struct {
 	ID                 string               `yaml:"-"                     json:"-"`
 	Bind               string               `yaml:"bind"                  json:"bind"`
 	AccessLogID        string               `yaml:"access_log_id"         json:"access_log_id"`
-	Logging            LoggingOtions        `yaml:"logging"               json:"logging"`
+	Logging            LoggingOptions       `yaml:"logging"               json:"logging"`
 	Middlewares        []MiddlwareOptions   `yaml:"middlewares"           json:"middlewares"`
 	TrustedCIDRS       []string             `yaml:"trusted_cidrs"         json:"trusted_cidrs"`
 	RemoteIPHeaders    []string             `yaml:"remote_ip_headers"     json:"remote_ip_headers"`
