@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/tracer"
@@ -32,16 +33,16 @@ func genRequestDurationLabels(c *app.RequestContext, isGRPC bool) prom.Labels {
 	routeID := variable.GetString(variable.RouteID, c)
 	serviceID := variable.GetString(variable.ServiceID, c)
 
-	labels[labelServerID] = defaultValIfEmpty(serverID, unknownLabelValue)
-	labels[labelRouteID] = defaultValIfEmpty(routeID, unknownLabelValue)
-	labels[labelServiceID] = defaultValIfEmpty(serviceID, unknownLabelValue)
-	labels[labelStatusCode] = defaultValIfEmpty(strconv.Itoa(c.Response.Header.StatusCode()), unknownLabelValue)
+	labels[labelServerID] = stableLabelValue(serverID)
+	labels[labelRouteID] = stableLabelValue(routeID)
+	labels[labelServiceID] = stableLabelValue(serviceID)
+	labels[labelStatusCode] = stableLabelValue(strconv.Itoa(c.Response.Header.StatusCode()))
 
 	method := variable.GetString(variable.HTTPRequestMethod, c)
 	if method == "" {
 		method = cast.B2S(c.Method())
 	}
-	labels[labelMethod] = defaultValIfEmpty(method, unknownLabelValue)
+	labels[labelMethod] = stableLabelValue(method)
 
 	path := variable.GetString(variable.HTTPRoute, c)
 	if path == "" {
@@ -50,7 +51,7 @@ func genRequestDurationLabels(c *app.RequestContext, isGRPC bool) prom.Labels {
 			path = cast.B2S(c.Request.Path())
 		}
 	}
-	labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
+	labels[labelPath] = stableLabelValue(path)
 
 	if isGRPC {
 		grpcStatusCode := ""
@@ -60,7 +61,7 @@ func genRequestDurationLabels(c *app.RequestContext, isGRPC bool) prom.Labels {
 			grpcStatusCode, _ = cast.ToString(val)
 		}
 
-		labels[labelGRPCStatusCode] = grpcStatusCode
+		labels[labelGRPCStatusCode] = strings.Clone(grpcStatusCode)
 	}
 
 	return labels
@@ -205,4 +206,8 @@ func defaultValIfEmpty(val, def string) string {
 		return def
 	}
 	return val
+}
+
+func stableLabelValue(val string) string {
+	return strings.Clone(defaultValIfEmpty(val, unknownLabelValue))
 }
