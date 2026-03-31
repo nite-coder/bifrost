@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -61,7 +62,8 @@ func (d *defaultProcessFinder) FindProcess(pid int) (process, error) {
 }
 
 var defaultFileOpener = func(name string) (*os.File, error) {
-	return os.OpenFile(name, os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC, 0o600)
+	/* #nosec G304 */
+	return os.OpenFile(filepath.Clean(name), os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC, 0o600)
 }
 
 // listenInfo holds information about a network listener.

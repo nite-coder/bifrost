@@ -72,7 +72,7 @@ func (d *ResolverDiscovery) Watch(
 	ctx context.Context,
 	options provider.GetInstanceOptions,
 ) (<-chan []provider.Instancer, error) {
-	return nil, nil
+	return nil, fmt.Errorf("watch is not supported by resolver discovery")
 }
 
 func (d *ResolverDiscovery) Close() error {

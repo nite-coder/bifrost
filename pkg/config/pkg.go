@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -46,7 +47,8 @@ func load(path string, skipResolver bool) (Options, error) {
 		return mainOpts, err
 	}
 
-	b, err := os.ReadFile(path)
+	/* #nosec G304 */
+	b, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return mainOpts, err
 	}

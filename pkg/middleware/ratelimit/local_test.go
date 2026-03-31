@@ -30,6 +30,7 @@ func TestLocalLimiter(t *testing.T) {
 			}
 
 			assert.Equal(t, options.Limit, result.Limit)
+			/* #nosec G115 */
 			assert.Equal(t, uint64(5-i), result.Remaining)
 			assert.LessOrEqual(t, float64(1), result.ResetTime.Sub(now).Seconds())
 		}

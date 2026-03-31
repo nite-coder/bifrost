@@ -71,6 +71,7 @@ func TestBufferedLoggerReopen(t *testing.T) {
 	}
 
 	// Read the contents of the new log file
+	/* #nosec G304 */
 	newLogContent, err := os.ReadFile(tmpFile.Name())
 	if err != nil {
 		t.Fatalf("Failed to read new log file: %v", err)
@@ -83,6 +84,7 @@ func TestBufferedLoggerReopen(t *testing.T) {
 	}
 
 	// Read the contents of the rotated log file
+	/* #nosec G304 */
 	rotatedLogContent, err := os.ReadFile(rotatedFile)
 	if err != nil {
 		t.Fatalf("Failed to read rotated log file: %v", err)

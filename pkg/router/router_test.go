@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func exactHandler(c context.Context, ctx *app.RequestContext) {
@@ -92,14 +93,7 @@ func BenchmarkCode(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		func() app.HandlerFunc {
-			isFound := false
-			if slices.Contains(routeSetting.Paths, path10) {
-				isFound = true
-			}
-
-			if slices.Contains(routeSetting.Methods, method) {
-				isFound = true
-			}
+			isFound := slices.Contains(routeSetting.Paths, path10) || slices.Contains(routeSetting.Methods, method)
 
 			if isFound {
 				return exactHandler
@@ -153,9 +147,9 @@ func BenchmarkMapLookup(b *testing.B) {
 func TestRouter(t *testing.T) {
 	router := NewRouter()
 
-	router.Add(http.MethodGet, "/", Prefix, generalkHandler)
-	router.Add(http.MethodPost, "/orders/123", PreferentialPrefix, prefixHandler)
-	router.Add(http.MethodPut, "/foo", Exact, exactHandler)
+	require.NoError(t, router.Add(http.MethodGet, "/", Prefix, generalkHandler))
+	require.NoError(t, router.Add(http.MethodPost, "/orders/123", PreferentialPrefix, prefixHandler))
+	require.NoError(t, router.Add(http.MethodPut, "/foo", Exact, exactHandler))
 
 	middlewares, isDefered := router.Find(http.MethodGet, "/")
 	assert.True(t, isDefered)
@@ -173,8 +167,8 @@ func TestRouter(t *testing.T) {
 func TestDuplicatedRoutes(t *testing.T) {
 	router := NewRouter()
 
-	router.Add(http.MethodGet, "/foo", Prefix, generalkHandler)
-	router.Add(http.MethodGet, "/foo", Exact, exactHandler)
+	require.NoError(t, router.Add(http.MethodGet, "/foo", Prefix, generalkHandler))
+	require.NoError(t, router.Add(http.MethodGet, "/foo", Exact, exactHandler))
 
 	middlewares, isDefered := router.Find(http.MethodGet, "/foo")
 	assert.False(t, isDefered)

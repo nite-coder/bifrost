@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"encoding/base64"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -150,6 +151,7 @@ func TestInheritedListeners(t *testing.T) {
 	// Sanity check invalid count
 	t.Setenv("BIFROST_FD_COUNT", "0")
 	listeners, err = InheritedListeners()
+	require.NoError(t, err)
 	assert.Nil(t, listeners)
 }
 
@@ -163,7 +165,7 @@ func TestWorkerFDHandler_GetListenerFile(t *testing.T) {
 	file, err := h.getListenerFile(l)
 	assert.NoError(t, err)
 	assert.NotNil(t, file)
-	file.Close()
+	_ = file.Close()
 
 	// Case 2: Unix Listener
 	tmpSocket := TempSocketPath(t, "test.sock")
@@ -173,14 +175,14 @@ func TestWorkerFDHandler_GetListenerFile(t *testing.T) {
 	file, err = h.getListenerFile(ul)
 	assert.NoError(t, err)
 	assert.NotNil(t, file)
-	file.Close()
+	_ = file.Close()
 
 	// Case 3: Proxy Protocol Listener
 	pl := &proxyproto.Listener{Listener: l}
 	file, err = h.getListenerFile(pl)
 	assert.NoError(t, err) // Should unwrap and succeed
 	assert.NotNil(t, file)
-	file.Close()
+	_ = file.Close()
 
 	// Case 4: Unsupported Listener
 	badListener := &dummyListener{}
@@ -192,6 +194,6 @@ func TestWorkerFDHandler_GetListenerFile(t *testing.T) {
 
 type dummyListener struct{}
 
-func (d *dummyListener) Accept() (net.Conn, error) { return nil, nil }
+func (d *dummyListener) Accept() (net.Conn, error) { return nil, io.EOF }
 func (d *dummyListener) Close() error              { return nil }
 func (d *dummyListener) Addr() net.Addr            { return nil }

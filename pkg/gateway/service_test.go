@@ -43,7 +43,7 @@ func testServer(t *testing.T) *server.Hertz {
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", "localhost:8088", 100*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 		return false

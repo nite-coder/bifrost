@@ -47,6 +47,7 @@ func TestSetHashFunc(t *testing.T) {
 // TestChainableAPI tests that all configuration methods can be chained.
 func TestChainableAPI(t *testing.T) {
 	customHash := func(data []byte) uint32 {
+		/* #nosec G115 */
 		return uint32(len(data))
 	}
 
@@ -197,6 +198,7 @@ func TestDistributionBias(t *testing.T) {
 
 	for i := 0; i < numKeys; i++ {
 		// Simulate userID as uint32
+		/* #nosec G115 */
 		userID := uint32(i)
 		key := strconv.FormatUint(uint64(userID), 10)
 		node, err := ring.Get(key)

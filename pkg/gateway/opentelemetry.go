@@ -31,7 +31,7 @@ import (
 
 func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, error) {
 	if !opts.Enabled {
-		return nil, nil
+		return sdktrace.NewTracerProvider(), nil
 	}
 
 	if opts.Endpoint == "" {

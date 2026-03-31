@@ -227,7 +227,7 @@ func Run(mainOptions config.Options) (err error) {
 				}
 				conn, err := dialer.DialContext(ctx, "tcp", httpServer.Bind())
 				if err == nil {
-					conn.Close()
+					_ = conn.Close()
 					serverReady = true
 					slog.Debug("HTTP server is ready",
 						"serverID", serverID,

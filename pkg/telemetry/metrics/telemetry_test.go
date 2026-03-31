@@ -65,17 +65,23 @@ func TestTracer(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", "127.0.0.1:6666", 100*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 		return false
 	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 
 	for i := 0; i < 10; i++ {
-		_, err := http.Get("http://127.0.0.1:6666/test_get")
+		resp, err := http.Get("http://127.0.0.1:6666/test_get")
 		assert.NoError(t, err)
-		_, err = http.Post("http://127.0.0.1:6666/test_post", "application/json", strings.NewReader(""))
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+		resp, err = http.Post("http://127.0.0.1:6666/test_post", "application/json", strings.NewReader(""))
 		assert.NoError(t, err)
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
 	}
 
 	metricsRes, err := http.Get("http://127.0.0.1:6666/metrics")

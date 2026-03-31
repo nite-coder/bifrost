@@ -105,7 +105,9 @@ func NewProvider(ctx context.Context, metricsOpts config.MetricsOptions) (*Provi
 	}
 
 	if len(readers) == 0 {
-		return nil, nil
+		return &Provider{
+			prometheusOpts: metricsOpts.Prometheus,
+		}, nil
 	}
 
 	// Create resource with service name

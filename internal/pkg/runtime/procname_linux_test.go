@@ -24,12 +24,12 @@ func TestInitSetsProcessName(t *testing.T) {
 
 	t.Run("worker role detection", func(t *testing.T) {
 		originalRole := os.Getenv(EnvBifrostRole)
-		defer os.Setenv(EnvBifrostRole, originalRole)
+		defer func() { _ = os.Setenv(EnvBifrostRole, originalRole) }()
 
-		os.Setenv(EnvBifrostRole, RoleWorker)
+		_ = os.Setenv(EnvBifrostRole, RoleWorker)
 		assert.True(t, IsWorker())
 
-		os.Setenv(EnvBifrostRole, "")
+		_ = os.Setenv(EnvBifrostRole, "")
 		assert.False(t, IsWorker())
 	})
 

@@ -45,7 +45,7 @@ func TestReverseProxy(t *testing.T) {
 
 	serv.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
 		if ctx.Query("mode") == "hangup" {
-			ctx.GetConn().Close()
+			_ = ctx.GetConn().Close()
 			return
 		}
 		if ctx.Request.Header.Get("X-Forwarded-For") == "" {
@@ -103,7 +103,7 @@ func TestReverseProxy(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", "127.0.0.1:9990", 100*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 		return false
@@ -225,7 +225,7 @@ func TestReverseProxyStripHeadersPresentInConnection(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", "127.0.0.1:9991", 100*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 		return false
@@ -300,7 +300,7 @@ func TestReverseProxyStripEmptyConnection(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", "127.0.0.1:9992", 100*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 		return false
@@ -371,7 +371,7 @@ func TestXForwardedFor(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", "127.0.0.1:9993", 100*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 		return false
@@ -435,7 +435,7 @@ func TestReverseProxyQuery(t *testing.T) {
 		assert.Eventually(t, func() bool {
 			conn, err := net.DialTimeout("tcp", "127.0.0.1:9995", 100*time.Millisecond)
 			if err == nil {
-				conn.Close()
+				_ = conn.Close()
 				return true
 			}
 			return false
@@ -484,7 +484,7 @@ func TestReverseProxy_Post(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", "127.0.0.1:9996", 100*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 		return false
@@ -554,7 +554,7 @@ func TestReverseProxyWebSocket(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", "127.0.0.1:9998", 100*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 		return false
@@ -567,14 +567,17 @@ func TestReverseProxyWebSocket(t *testing.T) {
 
 	// websocket client
 	dialer := gwebsocket.DefaultDialer
-	connect, _, err := dialer.Dial("ws://127.0.0.1:9998/websocket", nil)
+	connect, resp, err := dialer.Dial("ws://127.0.0.1:9998/websocket", nil)
 	if nil != err {
 		log.Println(err)
 		return
 	}
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
 	defer connect.Close()
 
-	connect.WriteMessage(websocket.TextMessage, []byte("hello"))
+	_ = connect.WriteMessage(websocket.TextMessage, []byte("hello"))
 	_, message, err := connect.ReadMessage()
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", string(message))

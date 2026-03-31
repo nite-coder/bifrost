@@ -29,7 +29,6 @@ package cors
 
 import (
 	"bytes"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -111,19 +110,14 @@ func convert(s []string, c converter) []string {
 	return out
 }
 
-func str2bytes(s string) (b []byte) {
+func str2bytes(s string) []byte {
 	/* #nosec G103 */
-	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	/* #nosec G103 */
-	sh := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	bh.Data = sh.Data
-	bh.Len = sh.Len
-	bh.Cap = sh.Len
-	return b
+	return unsafe.Slice(unsafe.StringData(s), len(s))
 }
 
 func bytes2str(b []byte) string {
-	return *(*string)(unsafe.Pointer(&b))
+	/* #nosec G103 */
+	return unsafe.String(unsafe.SliceData(b), len(b))
 }
 
 func compareByteSlices(origin []byte, patterns ...[]byte) int {

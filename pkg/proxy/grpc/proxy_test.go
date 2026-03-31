@@ -139,7 +139,8 @@ func TestGRPCProxy(t *testing.T) {
 				}
 			})
 		}),
-		Protocols: &http.Protocols{},
+		ReadHeaderTimeout: 3 * time.Second,
+		Protocols:         &http.Protocols{},
 	}
 	hsrv.Protocols.SetHTTP1(true)
 	hsrv.Protocols.SetHTTP2(true)
@@ -152,7 +153,7 @@ func TestGRPCProxy(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", "127.0.0.1:8001", 100*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 		return false

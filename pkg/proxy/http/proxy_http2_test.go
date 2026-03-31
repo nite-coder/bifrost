@@ -35,7 +35,7 @@ func TestProxy_HTTP2_Basic(t *testing.T) {
 			t.Errorf("upstream got proto %d.%d; want 2.0", r.ProtoMajor, r.ProtoMinor)
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(backendResponse))
+		_, _ = w.Write([]byte(backendResponse))
 	})
 	defer ts.Close()
 
@@ -55,7 +55,7 @@ func TestProxy_HTTP2_Basic(t *testing.T) {
 	clientOpts := ClientOptions{
 		IsHTTP2: true,
 		HZOptions: append(DefaultClientOptions(),
-			client.WithTLSConfig(&tls.Config{InsecureSkipVerify: true}),
+			client.WithTLSConfig(&tls.Config{InsecureSkipVerify: true}), /* #nosec G402 */
 		),
 	}
 	hClient, err := NewClient(clientOpts)
@@ -71,7 +71,7 @@ func TestProxy_HTTP2_Basic(t *testing.T) {
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
-		r.Shutdown(ctx)
+		_ = r.Shutdown(ctx)
 	}()
 
 	c, _ := client.NewClient()
@@ -92,7 +92,7 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 		w.Header().Set("Trailer", "Grpc-Status, Grpc-Message")
 		w.WriteHeader(http.StatusOK)
 
-		w.Write([]byte("grpc body"))
+		_, _ = w.Write([]byte("grpc body"))
 
 		w.Header().Set("Grpc-Status", "0")
 		w.Header().Set("Grpc-Message", "ok")
@@ -115,7 +115,7 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 	clientOpts := ClientOptions{
 		IsHTTP2: true,
 		HZOptions: append(DefaultClientOptions(),
-			client.WithTLSConfig(&tls.Config{InsecureSkipVerify: true}),
+			client.WithTLSConfig(&tls.Config{InsecureSkipVerify: true}), /* #nosec G402 */
 		),
 	}
 	hClient, err := NewClient(clientOpts)
@@ -130,14 +130,14 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
-		r.Shutdown(ctx)
+		_ = r.Shutdown(ctx)
 	}()
 
 	// Wait for server to start
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 		return false
@@ -169,14 +169,14 @@ func TestH2UpstreamBaseline(t *testing.T) {
 		w.Header().Set("X-Proto", r.Proto)
 		w.Header().Set("Trailer", "X-Trailer")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 		w.Header().Set("X-Trailer", "trailers-ready")
 	})
 	defer ts.Close()
 
 	client := &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true}, /* #nosec G402 */
 			ForceAttemptHTTP2: true,
 		},
 	}
@@ -201,7 +201,7 @@ func TestProxy_HTTP2_Timeout(t *testing.T) {
 	clientOpts := ClientOptions{
 		IsHTTP2: true,
 		HZOptions: append(DefaultClientOptions(),
-			client.WithTLSConfig(&tls.Config{InsecureSkipVerify: true}),
+			client.WithTLSConfig(&tls.Config{InsecureSkipVerify: true}), /* #nosec G402 */
 		),
 	}
 	hClient, err := NewClient(clientOpts)

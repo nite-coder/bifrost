@@ -24,6 +24,7 @@ func TestStathatDistribution(t *testing.T) {
 	distribution := make(map[string]int)
 
 	for i := 0; i < numKeys; i++ {
+		/* #nosec G115 */
 		userID := uint32(i)
 		key := strconv.FormatUint(uint64(userID), 10)
 		node, err := c.Get(key)
@@ -57,6 +58,7 @@ func TestOurDistribution(t *testing.T) {
 	distribution := make(map[string]int)
 
 	for i := 0; i < numKeys; i++ {
+		/* #nosec G115 */
 		userID := uint32(i)
 		key := strconv.FormatUint(uint64(userID), 10)
 		node, err := ring.Get(key)

@@ -68,7 +68,8 @@ func (p *FileProvider) Open() ([]*ContentInfo, error) {
 					fileExtension := filepath.Ext(filePath)
 					// Check if the file extension is in the allowed list
 					if len(fileExtension) > 0 && slices.Contains(p.options.Extensions, fileExtension) {
-						content, err := os.ReadFile(filePath)
+						/* #nosec G304 */
+						content, err := os.ReadFile(filepath.Clean(filePath))
 						if err != nil {
 							return nil, err
 						}
@@ -81,7 +82,8 @@ func (p *FileProvider) Open() ([]*ContentInfo, error) {
 			}
 		} else {
 			// If it's a file, read it directly
-			content, err := os.ReadFile(path)
+			/* #nosec G304 */
+			content, err := os.ReadFile(filepath.Clean(path))
 			if err != nil {
 				return nil, err
 			}
