@@ -125,7 +125,7 @@ func TestGRPCProxy(t *testing.T) {
 
 			// Handle Trailers
 			trailers := c.Response.Header.Trailer()
-			trailers.VisitAll(func(k, v []byte) {
+			trailers.VisitAll(func(k, _ []byte) {
 				w.Header().Add("Trailer", string(k))
 			})
 
@@ -247,11 +247,11 @@ type mockClientConn struct {
 }
 
 func (m *mockClientConn) Invoke(
-	ctx context.Context,
-	method string,
-	args any,
-	reply any,
-	opts ...grpc.CallOption,
+	_ context.Context,
+	_ string,
+	_ any,
+	_ any,
+	_ ...grpc.CallOption,
 ) error {
 	return nil
 }
@@ -327,11 +327,11 @@ type mockClientConnError struct {
 }
 
 func (m *mockClientConnError) Invoke(
-	ctx context.Context,
-	method string,
-	args any,
-	reply any,
-	opts ...grpc.CallOption,
+	_ context.Context,
+	_ string,
+	_ any,
+	_ any,
+	_ ...grpc.CallOption,
 ) error {
 	return m.err
 }

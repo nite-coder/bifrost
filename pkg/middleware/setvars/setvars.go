@@ -11,6 +11,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+// Init registers the setvars middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"setvars"}, func(options []*Options) (app.HandlerFunc, error) {
 		if len(options) == 0 {
@@ -28,6 +29,7 @@ func Init() error {
 	})
 }
 
+// Options defines the key-value pairs to be set in the request context.
 type Options struct {
 	Key     string
 	Value   string
@@ -36,10 +38,12 @@ type Options struct {
 	directives []string
 }
 
+// SetVarsMiddlware is a middleware that sets variables in the request context.
 type SetVarsMiddlware struct {
 	options []*Options
 }
 
+// NewMiddleware creates a new SetVarsMiddlware instance.
 func NewMiddleware(options []*Options) *SetVarsMiddlware {
 	for _, v := range options {
 		if v.Key == "" {
@@ -54,7 +58,7 @@ func NewMiddleware(options []*Options) *SetVarsMiddlware {
 	}
 }
 
-func (m *SetVarsMiddlware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *SetVarsMiddlware) ServeHTTP(_ context.Context, c *app.RequestContext) {
 	for _, varinfo := range m.options {
 		if len(varinfo.directives) > 0 {
 			replacements := make([]string, 0, len(varinfo.directives)*2)

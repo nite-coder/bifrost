@@ -12,19 +12,19 @@ import (
 	"github.com/nite-coder/bifrost/pkg/router"
 )
 
-func exactkHandler(c context.Context, ctx *app.RequestContext) {
+func exactkHandler(_ context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(201)
 }
 
-func prefixHandler(c context.Context, ctx *app.RequestContext) {
+func prefixHandler(_ context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(202)
 }
 
-func regexkHandler(c context.Context, ctx *app.RequestContext) {
+func regexkHandler(_ context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(203)
 }
 
-func generalkHandler(c context.Context, ctx *app.RequestContext) {
+func generalkHandler(_ context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(204)
 }
 

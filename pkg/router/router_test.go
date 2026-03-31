@@ -13,15 +13,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func exactHandler(c context.Context, ctx *app.RequestContext) {
+func exactHandler(_ context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(201)
 }
 
-func prefixHandler(c context.Context, ctx *app.RequestContext) {
+func prefixHandler(_ context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(202)
 }
 
-func generalkHandler(c context.Context, ctx *app.RequestContext) {
+func generalkHandler(_ context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(204)
 }
 
@@ -139,7 +139,7 @@ func BenchmarkMapLookup(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, found := m[""]
 		if !found {
-			b.Errorf("key not found")
+			b.Error("key not found")
 		}
 	}
 }

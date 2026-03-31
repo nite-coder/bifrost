@@ -22,6 +22,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/tracer/accesslog"
 )
 
+// Bifrost is the main gateway engine.
 type Bifrost struct {
 	tracerProvider  *sdktrace.TracerProvider
 	metricsProvider *metrics.Provider
@@ -174,6 +175,7 @@ func (b *Bifrost) Run() {
 	}
 }
 
+// ZeroDownTime returns the zero-downtime runtime manager.
 func (b *Bifrost) ZeroDownTime() *runtime.ZeroDownTime {
 	return b.runtime
 }
@@ -185,6 +187,7 @@ func (b *Bifrost) Shutdown(ctx context.Context) error {
 	return b.shutdown(ctx, false)
 }
 
+// ShutdownNow shuts down all servers immediately.
 func (b *Bifrost) ShutdownNow(ctx context.Context) error {
 	return b.shutdown(ctx, true)
 }
@@ -212,6 +215,7 @@ func (b *Bifrost) SetActive(value bool) {
 	}
 }
 
+// Close releases resources used by Bifrost.
 func (b *Bifrost) Close() error {
 	for _, service := range b.services {
 		_ = service.Close()

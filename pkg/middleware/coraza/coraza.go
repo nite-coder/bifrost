@@ -28,10 +28,12 @@ const (
 	unknownLabelValue = "unknown"
 )
 
+// CorazaMiddleware is a middleware that provides Web Application Firewall (WAF) capabilities using Coraza.
 type CorazaMiddleware struct {
 	options *Options
 	waf     coraza.WAF
 }
+// Options defines the configuration for the Coraza WAF middleware.
 type Options struct {
 	Directives               string   `mapstructure:"directives"`
 	RejectedHTTPContentType  string   `mapstructure:"rejected_http_content_type"`
@@ -40,6 +42,7 @@ type Options struct {
 	RejectedHTTPStatusCode   int      `mapstructure:"rejected_http_status_code"`
 }
 
+// NewMiddleware creates a new CorazaMiddleware instance with the given options.
 func NewMiddleware(options Options) (*CorazaMiddleware, error) {
 	if options.Directives == "" {
 		options.Directives = `
@@ -193,6 +196,7 @@ func (m *CorazaMiddleware) log(ctx context.Context, c *app.RequestContext, tx ty
 	}
 }
 
+// Init initializes metrics and registers the coraza middleware.
 func Init() error {
 	bifrostWAFCoreRulesetHits = prom.NewCounterVec(
 		prom.CounterOpts{

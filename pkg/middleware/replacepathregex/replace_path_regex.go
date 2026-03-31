@@ -10,11 +10,13 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
+// Config defines the configuration for the replace_path_regex middleware.
 type Config struct {
 	Regex       string `mapstructure:"regex"`
 	Replacement string `mapstructure:"replacement"`
 }
 
+// Init registers the replace_path_regex middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"replace_path_regex"}, func(cfg Config) (app.HandlerFunc, error) {
 		if cfg.Regex == "" {
@@ -32,11 +34,13 @@ func Init() error {
 	})
 }
 
+// ReplacePathRegexMiddleware is a middleware that replaces the request path using a regular expression.
 type ReplacePathRegexMiddleware struct {
 	regex       *regexp.Regexp
 	replacement []byte
 }
 
+// NewMiddleware creates a new ReplacePathRegexMiddleware instance.
 func NewMiddleware(regex, replacement string) (*ReplacePathRegexMiddleware, error) {
 	if regex == "" || replacement == "" {
 		return nil, errors.New("regex or replacement is empty")

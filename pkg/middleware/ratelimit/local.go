@@ -10,6 +10,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/timecache"
 )
 
+// LocalLimiter implements rate limiting using local memory.
 type LocalLimiter struct {
 	options *Options
 	cache   *cache.Cache[string, *item]
@@ -21,6 +22,7 @@ type item struct {
 	counter    uint64
 }
 
+// NewLocalLimiter creates a new LocalLimiter instance.
 func NewLocalLimiter(options Options) *LocalLimiter {
 	return &LocalLimiter{
 		options: &options,
@@ -28,7 +30,8 @@ func NewLocalLimiter(options Options) *LocalLimiter {
 	}
 }
 
-func (l *LocalLimiter) Allow(ctx context.Context, key string) *AllowResult {
+// Allow checks if the given key is allowed to proceed based on rate limits.
+func (l *LocalLimiter) Allow(_ context.Context, key string) *AllowResult {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 

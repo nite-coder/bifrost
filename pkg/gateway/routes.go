@@ -122,6 +122,7 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 	return route, nil
 }
 
+// Routes manages the routing logic, including exact, prefix, and regex matching.
 type Routes struct {
 	router       *router.Router
 	regexpRoutes []routeSetting

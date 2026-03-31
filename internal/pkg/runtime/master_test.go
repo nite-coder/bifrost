@@ -188,7 +188,7 @@ func TestMaster_SpawnWorker(t *testing.T) {
 	t.Run("spawn failure", func(t *testing.T) {
 		// Mock failure
 		oldExecCtx := execCommandContext
-		execCommandContext = func(ctx context.Context, _ string, _ ...string) *exec.Cmd {
+		execCommandContext = func(_ context.Context, _ string, _ ...string) *exec.Cmd {
 			return exec.Command("non-existent-binary-xyz-12345")
 		}
 		defer func() { execCommandContext = oldExecCtx }()

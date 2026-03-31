@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix missing access log and metrics tracers for HTTP/2 requests in standard library bridge ([#116](https://github.com/nite-coder/bifrost/pull/116) by [0x5487](https://github.com/0x5487))
 - Fix gRPC proxy to preserve response trailers and set content type correctly ([#117](https://github.com/nite-coder/bifrost/pull/117) by [0x5487](https://github.com/0x5487))
 - rename `LoggingOtions` to `LoggingOptions` ([#121](https://github.com/nite-coder/bifrost/pull/121) by [0x5487](https://github.com/0x5487))
-- Resolve various linting warnings (gosec, nilnil, bodyclose, etc.) and follow security best practices ([#122](https://github.com/nite-coder/bifrost/pull/122) by [0x5487](https://github.com/0x5487))
+- Resolve various linting warnings (gosec, nilnil, bodyclose, etc.) and follow security best practices ([#122](https://github.com/nite-coder/bifrost/pull/122), [#124](https://github.com/nite-coder/bifrost/pull/124) by [0x5487](https://github.com/0x5487))
 
 ## Security
 

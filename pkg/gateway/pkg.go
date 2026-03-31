@@ -75,7 +75,7 @@ func Run(mainOptions config.Options) (err error) {
 	}
 
 	if mainOptions.Gopool {
-		cgopool.SetPanicHandler(func(ctx context.Context, r any) {
+		cgopool.SetPanicHandler(func(_ context.Context, _ any) {
 			if r := recover(); r != nil {
 				var e error
 				switch v := r.(type) {

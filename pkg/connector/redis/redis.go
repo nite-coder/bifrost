@@ -17,6 +17,7 @@ var (
 	mu      = sync.RWMutex{}
 )
 
+// Get returns a redis client by its ID.
 func Get(id string) (redis.UniversalClient, bool) {
 	mu.RLock()
 	defer mu.RUnlock()
@@ -29,6 +30,7 @@ func Get(id string) (redis.UniversalClient, bool) {
 	return nil, false
 }
 
+// Set adds a redis client to the global client pool.
 func Set(id string, client redis.UniversalClient) {
 	mu.RLock()
 	defer mu.RUnlock()
@@ -36,6 +38,7 @@ func Set(id string, client redis.UniversalClient) {
 	clients[id] = client
 }
 
+// Initialize creates and pings redis clients based on the provided options.
 func Initialize(ctx context.Context, options []config.RedisOptions) error {
 	if len(options) == 0 {
 		return nil

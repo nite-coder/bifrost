@@ -53,7 +53,7 @@ func TestPanicMiddleware(t *testing.T) {
 	logger := log.FromContext(ctx)
 	m := newInitMiddleware("test", logger)
 
-	hzCtx.SetHandlers([]app.HandlerFunc{func(ctx context.Context, c *app.RequestContext) {
+	hzCtx.SetHandlers([]app.HandlerFunc{func(_ context.Context, _ *app.RequestContext) {
 		panic("test panic")
 	}})
 

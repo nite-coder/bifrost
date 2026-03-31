@@ -20,7 +20,7 @@ import (
 )
 
 // setupHTTP2Server starts a test server that supports ONLY HTTP/2 (via TLS).
-func setupHTTP2Server(t *testing.T, handler http.HandlerFunc) (*httptest.Server, string) {
+func setupHTTP2Server(_ *testing.T, handler http.HandlerFunc) (*httptest.Server, string) {
 	ts := httptest.NewUnstartedServer(handler)
 	ts.EnableHTTP2 = true
 	ts.StartTLS()
@@ -87,7 +87,7 @@ func TestProxy_HTTP2_Basic(t *testing.T) {
 }
 
 func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
-	ts, url := setupHTTP2Server(t, func(w http.ResponseWriter, r *http.Request) {
+	ts, url := setupHTTP2Server(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/grpc")
 		w.Header().Set("Trailer", "Grpc-Status, Grpc-Message")
 		w.WriteHeader(http.StatusOK)
@@ -192,7 +192,7 @@ func TestH2UpstreamBaseline(t *testing.T) {
 }
 
 func TestProxy_HTTP2_Timeout(t *testing.T) {
-	ts, url := setupHTTP2Server(t, func(w http.ResponseWriter, r *http.Request) {
+	ts, url := setupHTTP2Server(t, func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(200 * time.Millisecond) // Longer than client timeout
 		w.WriteHeader(http.StatusOK)
 	})

@@ -46,6 +46,7 @@ func init() {
 	prom.MustRegister(httpServiceOpenConnections)
 }
 
+// Upstream represents a collection of backend targets and a load balancer.
 type Upstream struct {
 	balancer       atomic.Value
 	discovery      provider.ServiceDiscovery
@@ -56,6 +57,7 @@ type Upstream struct {
 	cancel         context.CancelFunc
 }
 
+// Close stops watching for updates and closes all associated proxies and discovery resources.
 func (u *Upstream) Close() error {
 	if u.cancel != nil {
 		u.cancel()
@@ -163,6 +165,7 @@ func newUpstream(
 	return upstream, nil
 }
 
+// Balancer returns the current load balancer for the upstream.
 func (u *Upstream) Balancer() balancer.Balancer {
 	val := u.balancer.Load()
 	if val == nil {

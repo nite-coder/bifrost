@@ -30,11 +30,11 @@ func testServer(t *testing.T) *server.Hertz {
 		server.WithSenseClientDisconnection(true),
 	)
 
-	h.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	h.GET("/proxy/backend", func(_ context.Context, ctx *app.RequestContext) {
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
 	})
 
-	h.GET("/proxy/long-task", func(cc context.Context, ctx *app.RequestContext) {
+	h.GET("/proxy/long-task", func(_ context.Context, ctx *app.RequestContext) {
 		time.Sleep(5 * time.Second)
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
 	})
@@ -223,7 +223,7 @@ func TestDynamicServiceMiddleware(t *testing.T) {
 
 	hit := 0
 	bifrost.middlewares = map[string]app.HandlerFunc{
-		"testMiddleware": func(ctx context.Context, c *app.RequestContext) {
+		"testMiddleware": func(_ context.Context, c *app.RequestContext) {
 			hit++
 			c.Abort()
 		},
@@ -326,7 +326,7 @@ func TestServiceGetters(t *testing.T) {
 		},
 	}
 
-	mockHandler := func(ctx context.Context, c *app.RequestContext) {}
+	mockHandler := func(_ context.Context, _ *app.RequestContext) {}
 
 	service := &Service{
 		options:     &config.ServiceOptions{ID: "test-service"},

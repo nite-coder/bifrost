@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// GetDNSServers returns the list of DNS servers from the local system configuration (e.g., /etc/resolv.conf).
 func GetDNSServers() (nameservers []netip.AddrPort) {
 	const filename = "/etc/resolv.conf"
 	return getLocalNameservers(filename)

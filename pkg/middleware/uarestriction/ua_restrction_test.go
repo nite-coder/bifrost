@@ -92,7 +92,7 @@ func TestUARestriction(t *testing.T) {
 
 			called := false
 			hzctx.SetIndex(-1)
-			hzctx.SetHandlers([]app.HandlerFunc{middleware.ServeHTTP, func(ctx context.Context, c *app.RequestContext) {
+			hzctx.SetHandlers([]app.HandlerFunc{middleware.ServeHTTP, func(_ context.Context, c *app.RequestContext) {
 				called = true
 				c.Response.SetStatusCode(200)
 			}})

@@ -683,7 +683,7 @@ func addRoute(r *router.Router, routeOptions RouteOptions) error {
 
 		if len(routeOptions.Methods) == 0 {
 			for _, method := range router.HTTPMethods {
-				err := r.Add(method, path, nodeType, func(c context.Context, ctx *app.RequestContext) {})
+				err := r.Add(method, path, nodeType, func(_ context.Context, _ *app.RequestContext) {})
 				if err != nil {
 					return err
 				}
@@ -696,7 +696,7 @@ func addRoute(r *router.Router, routeOptions RouteOptions) error {
 				return fmt.Errorf("HTTP method %s is not valid", method)
 			}
 
-			err := r.Add(method, path, nodeType, func(c context.Context, ctx *app.RequestContext) {})
+			err := r.Add(method, path, nodeType, func(_ context.Context, _ *app.RequestContext) {})
 			if err != nil {
 				return err
 			}

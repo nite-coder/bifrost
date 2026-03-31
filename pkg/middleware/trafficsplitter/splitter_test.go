@@ -111,7 +111,7 @@ func TestServeHTTP_RandomError(t *testing.T) {
 	originalGetRandomNumber := getRandomNumber
 	defer func() { getRandomNumber = originalGetRandomNumber }()
 
-	getRandomNumber = func(max int64) (int64, error) {
+	getRandomNumber = func(_ int64) (int64, error) {
 		return 0, errors.New("random error")
 	}
 

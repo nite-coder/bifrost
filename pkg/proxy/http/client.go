@@ -8,6 +8,7 @@ import (
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 )
 
+// DefaultClientOptions returns a set of default Hertz client options for proxying.
 func DefaultClientOptions() []hzconfig.ClientOption {
 	options := []hzconfig.ClientOption{
 		client.WithNoDefaultUserAgentHeader(true),
@@ -24,11 +25,13 @@ func DefaultClientOptions() []hzconfig.ClientOption {
 	return options
 }
 
+// ClientOptions defines the configuration for a Hertz HTTP client.
 type ClientOptions struct {
 	HZOptions []hzconfig.ClientOption
 	IsHTTP2   bool
 }
 
+// NewClient creates a new Hertz client with the given options.
 func NewClient(opts ClientOptions) (*client.Client, error) {
 	var tlsConfig *tls.Config
 	wrappedOptions := make([]hzconfig.ClientOption, len(opts.HZOptions))

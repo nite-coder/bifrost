@@ -14,22 +14,26 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
+// ContentInfo holds the content of a file and its path.
 type ContentInfo struct {
 	Content string
 	Path    string
 }
+// Options defines the configuration for the file provider.
 type Options struct {
 	Paths      []string `json:"paths"      yaml:"paths"`
 	Extensions []string `json:"extensions" yaml:"extensions"`
 	Watch      bool     `json:"watch"      yaml:"watch"`
 	Enabled    bool     `json:"enabled"    yaml:"enabled"`
 }
+// FileProvider implements a configuration provider that reads from the local filesystem.
 type FileProvider struct {
 	watcher   *fsnotify.Watcher
 	OnChanged provider.ChangeFunc
 	options   Options
 }
 
+// NewProvider creates a new FileProvider instance.
 func NewProvider(opts Options) *FileProvider {
 	if len(opts.Extensions) == 0 {
 		opts.Extensions = []string{".yaml", ".yml"}
@@ -39,14 +43,17 @@ func NewProvider(opts Options) *FileProvider {
 	}
 }
 
+// Reset clears the paths in the file provider.
 func (p *FileProvider) Reset() {
 	p.options.Paths = p.options.Paths[:0]
 }
 
+// Add adds a path to the file provider.
 func (p *FileProvider) Add(path string) {
 	p.options.Paths = append(p.options.Paths, path)
 }
 
+// Open reads all files from the configured paths and returns their content.
 func (p *FileProvider) Open() ([]*ContentInfo, error) {
 	p.options.Paths = slices.Compact(p.options.Paths)
 	var contents []*ContentInfo
@@ -96,10 +103,12 @@ func (p *FileProvider) Open() ([]*ContentInfo, error) {
 	return contents, nil
 }
 
+// SetOnChanged sets the callback function to be called when a file changes.
 func (p *FileProvider) SetOnChanged(changeFunc provider.ChangeFunc) {
 	p.OnChanged = changeFunc
 }
 
+// Watch starts watching the configured paths for changes.
 func (p *FileProvider) Watch() error {
 	if !p.options.Watch {
 		return nil
@@ -171,7 +180,7 @@ func (p *FileProvider) Watch() error {
 }
 
 func (p *FileProvider) addWatch(path string) error {
-	return filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
+	return filepath.Walk(path, func(filePath string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

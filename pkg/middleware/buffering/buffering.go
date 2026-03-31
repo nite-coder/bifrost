@@ -16,10 +16,12 @@ type Config struct {
 	MaxRequestBodySize int64 `json:"max_request_body_size" mapstructure:"max_request_body_size"`
 }
 
+// BufferingMiddleware is a middleware that buffers the request body.
 type BufferingMiddleware struct {
 	config *Config
 }
 
+// NewMiddleware creates a new BufferingMiddleware instance.
 func NewMiddleware(config Config) *BufferingMiddleware {
 	if config.MaxRequestBodySize <= 0 {
 		config.MaxRequestBodySize = 4 * 1024 * 1024 // 4MB default
@@ -49,6 +51,7 @@ func (m *BufferingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestConte
 	c.Next(ctx)
 }
 
+// Init registers the buffering middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"buffering"}, func(cfg Config) (app.HandlerFunc, error) {
 		m := NewMiddleware(cfg)

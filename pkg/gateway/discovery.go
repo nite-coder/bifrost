@@ -9,19 +9,22 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
+// ResolverDiscovery implements service discovery using the internal resolver.
 type ResolverDiscovery struct {
 	upstream *Upstream
 }
 
+// NewResolverDiscovery creates a new ResolverDiscovery instance.
 func NewResolverDiscovery(upstream *Upstream) *ResolverDiscovery {
 	return &ResolverDiscovery{
 		upstream: upstream,
 	}
 }
 
+// GetInstances resolves upstream targets using DNS and returns a list of instances.
 func (d *ResolverDiscovery) GetInstances(
-	ctx context.Context,
-	options provider.GetInstanceOptions,
+	_ context.Context,
+	_ provider.GetInstanceOptions,
 ) ([]provider.Instancer, error) {
 	instances := make([]provider.Instancer, 0)
 
@@ -68,13 +71,15 @@ func (d *ResolverDiscovery) GetInstances(
 	return instances, nil
 }
 
+// Watch is not supported by ResolverDiscovery and returns an error.
 func (d *ResolverDiscovery) Watch(
-	ctx context.Context,
-	options provider.GetInstanceOptions,
+	_ context.Context,
+	_ provider.GetInstanceOptions,
 ) (<-chan []provider.Instancer, error) {
 	return nil, fmt.Errorf("watch is not supported by resolver discovery")
 }
 
+// Close releases resources used by ResolverDiscovery.
 func (d *ResolverDiscovery) Close() error {
 	return nil
 }

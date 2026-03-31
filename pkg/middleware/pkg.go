@@ -10,6 +10,7 @@ import (
 
 var handlers map[string]CreateMiddlewareHandler = make(map[string]CreateMiddlewareHandler)
 
+// CreateMiddlewareHandler is a function that creates an app.HandlerFunc from parameters.
 type CreateMiddlewareHandler func(param any) (app.HandlerFunc, error)
 
 // Register registers a legacy middleware handler.
@@ -31,6 +32,7 @@ func Register(names []string, handler CreateMiddlewareHandler) error {
 	return nil
 }
 
+// Factory returns a middleware creator for the given kind.
 func Factory(kind string) CreateMiddlewareHandler {
 	return handlers[kind]
 }

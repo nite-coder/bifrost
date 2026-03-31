@@ -25,6 +25,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware/uarestriction"
 )
 
+// Bifrost initializes all standard middlewares and balancers.
 func Bifrost() error {
 	// middleware
 	err := addprefix.Init()

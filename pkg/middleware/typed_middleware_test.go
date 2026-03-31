@@ -16,7 +16,7 @@ type TestConfig struct {
 func TestRegisterTyped(t *testing.T) {
 	// register a typed middleware
 	err := RegisterTyped([]string{"typed_test_middleware"}, func(cfg TestConfig) (app.HandlerFunc, error) {
-		return func(ctx context.Context, c *app.RequestContext) {
+		return func(_ context.Context, c *app.RequestContext) {
 			c.Set("prefix", cfg.Prefix)
 			c.Set("retries", cfg.MaxRetries)
 		}, nil
@@ -49,7 +49,7 @@ func TestRegisterTyped(t *testing.T) {
 func TestRegisterTyped_DefaultValues(t *testing.T) {
 	// register another typed middleware
 	err := RegisterTyped([]string{"typed_test_default"}, func(cfg TestConfig) (app.HandlerFunc, error) {
-		return func(ctx context.Context, c *app.RequestContext) {
+		return func(_ context.Context, c *app.RequestContext) {
 			c.Set("prefix", cfg.Prefix)
 			c.Set("retries", cfg.MaxRetries)
 		}, nil

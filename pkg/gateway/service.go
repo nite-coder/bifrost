@@ -24,6 +24,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+// Service represents a backend service that can have multiple upstreams and middlewares.
 type Service struct {
 	bifrost         *Bifrost
 	options         *config.ServiceOptions
@@ -33,6 +34,7 @@ type Service struct {
 	middlewares     []app.HandlerFunc
 }
 
+// Close releases resources used by the service and its upstreams.
 func (s *Service) Close() error {
 	for _, upstream := range s.upstreams {
 		_ = upstream.Close()
@@ -213,10 +215,12 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	return svc, nil
 }
 
+// Upstream returns the primary upstream associated with this service.
 func (svc *Service) Upstream() *Upstream {
 	return svc.upstream
 }
 
+// Middlewares returns the list of middlewares associated with this service.
 func (svc *Service) Middlewares() []app.HandlerFunc {
 	return svc.middlewares
 }
@@ -326,6 +330,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}
 }
 
+// DynamicService handles requests for services determined dynamically at runtime.
 type DynamicService struct {
 	services map[string]*Service
 	name     string

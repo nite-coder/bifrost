@@ -18,6 +18,7 @@ import (
 
 var newNamingClientFunc = clients.NewNamingClient
 
+// NacosServiceDiscovery implements service discovery using Nacos.
 type NacosServiceDiscovery struct {
 	client  naming_client.INamingClient
 	options *Options
@@ -25,6 +26,7 @@ type NacosServiceDiscovery struct {
 	watchCh chan []provider.Instancer
 }
 
+// NewNacosServiceDiscovery creates a new NacosServiceDiscovery instance.
 func NewNacosServiceDiscovery(options Options) (*NacosServiceDiscovery, error) {
 	serverConfigs := []constant.ServerConfig{}
 
@@ -112,8 +114,9 @@ func NewNacosServiceDiscovery(options Options) (*NacosServiceDiscovery, error) {
 	}, nil
 }
 
+// GetInstances returns the current list of healthy service instances from Nacos.
 func (d *NacosServiceDiscovery) GetInstances(
-	ctx context.Context,
+	_ context.Context,
 	options provider.GetInstanceOptions,
 ) ([]provider.Instancer, error) {
 	nacosInstances, err := d.client.SelectInstances(vo.SelectInstancesParam{
@@ -137,8 +140,9 @@ func (d *NacosServiceDiscovery) GetInstances(
 	return instances, nil
 }
 
+// Watch subscribes to service changes in Nacos and returns a channel for updates.
 func (d *NacosServiceDiscovery) Watch(
-	ctx context.Context,
+	_ context.Context,
 	options provider.GetInstanceOptions,
 ) (<-chan []provider.Instancer, error) {
 	ch := make(chan []provider.Instancer, 1)
@@ -168,6 +172,7 @@ func (d *NacosServiceDiscovery) Watch(
 	return ch, nil
 }
 
+// Close stops the Nacos service discovery and cleans up resources.
 func (d *NacosServiceDiscovery) Close() error {
 	if d.stopCh != nil {
 		close(d.stopCh)

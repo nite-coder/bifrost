@@ -15,23 +15,30 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+// Limiter defines the interface for different rate limiting strategies.
 type Limiter interface {
 	Allow(ctx context.Context, key string) *AllowResult
 }
+// AllowResult contains the result of a rate limit check.
 type AllowResult struct {
 	ResetTime time.Time
 	Limit     uint64
 	Remaining uint64
 	Allow     bool
 }
+// StrategyMode defines the rate limiting strategy to use.
 type StrategyMode string
 
 const (
-	Local           StrategyMode = "local"
-	Redis           StrategyMode = "redis"
+	// Local strategy use local memory for rate limiting.
+	Local StrategyMode = "local"
+	// Redis strategy use redis for rate limiting.
+	Redis StrategyMode = "redis"
+	// LocalAsyncRedis strategy use local memory for rate limiting and sync to redis asynchronously.
 	LocalAsyncRedis StrategyMode = "local_async_redis" // #nosec G101
 )
 
+// Options defines the configuration for the rate limiting middleware.
 type Options struct {
 	Strategy                 StrategyMode  `mapstructure:"strategy"`
 	LimitBy                  string        `mapstructure:"limit_by"`
@@ -45,12 +52,14 @@ type Options struct {
 	WindowSize               time.Duration `mapstructure:"window_size"`
 	RejectedHTTPStatusCode   int           `mapstructure:"rejected_http_status_code"`
 }
+// RateLimitingMiddleware is a middleware that performs rate limiting.
 type RateLimitingMiddleware struct {
 	options    *Options
 	limiter    Limiter
 	directives []string
 }
 
+// NewMiddleware creates a new RateLimitingMiddleware instance.
 func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 	if options.RejectedHTTPStatusCode == 0 {
 		options.RejectedHTTPStatusCode = 429
@@ -141,6 +150,7 @@ func buildReplacer(directives []string, c *app.RequestContext) []string {
 	return replacements
 }
 
+// Init registers the rate_limit middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"rate_limit"}, func(option Options) (app.HandlerFunc, error) {
 		if len(option.LimitBy) == 0 {

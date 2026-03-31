@@ -156,7 +156,7 @@ func (b *HertzBridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Pre-collect all potential trailers to announce them in the "Trailer" header
 	trailerNames := make(map[string]bool)
-	trailers.VisitAll(func(k, v []byte) {
+	trailers.VisitAll(func(k, _ []byte) {
 		trailerNames[string(k)] = true
 	})
 

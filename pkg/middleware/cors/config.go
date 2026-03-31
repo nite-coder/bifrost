@@ -178,11 +178,12 @@ func Default() app.HandlerFunc {
 // NewMiddleware returns the location middleware with user-defined custom configuration.
 func NewMiddleware(config Config) app.HandlerFunc {
 	cors := newCors(config)
-	return func(ctx context.Context, c *app.RequestContext) {
+	return func(_ context.Context, c *app.RequestContext) {
 		cors.applyCors(c)
 	}
 }
 
+// Init registers the cors middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"cors"}, func(cfg Config) (app.HandlerFunc, error) {
 		// Validates if the config is valid or considered empty/invalid which implies default

@@ -78,7 +78,7 @@ func NewLogger(opts config.LoggingOptions) (*slog.Logger, error) {
 
 	// Configure the slog.HandlerOptions
 	logOptions := &slog.HandlerOptions{
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
 			// Customize the name of the level key and the output string
 			if a.Key == slog.LevelKey {
 				// Handle custom level values

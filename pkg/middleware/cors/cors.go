@@ -46,28 +46,34 @@ type cors struct {
 }
 
 var (
+	// DefaultHeaderBytes contains default HTTP methods as byte slices for CORS processing.
 	DefaultHeaderBytes = [][]byte{
 		[]byte("OPTIONS"),
 		[]byte("GET"),
 		[]byte("POST"),
 	}
+	// DefaultSchemas defines the default protocols allowed in CORS requests.
 	DefaultSchemas = []string{
 		"http://",
 		"https://",
 	}
+	// DefaultSchemasBytes defines the default protocols allowed in CORS requests as byte slices.
 	DefaultSchemasBytes = [][]byte{
 		[]byte("http://"),
 		[]byte("https://"),
 	}
+	// ExtensionSchemas defines the browser extension protocols allowed in CORS requests.
 	ExtensionSchemas = []string{
 		"chrome-extension://",
 		"safari-extension://",
 		"moz-extension://",
 		"ms-browser-extension://",
 	}
+	// FileSchemas defines the file protocol allowed in CORS requests.
 	FileSchemas = []string{
 		"file://",
 	}
+	// WebSocketSchemas defines the websocket protocols allowed in CORS requests.
 	WebSocketSchemas = []string{
 		"ws://",
 		"wss://",

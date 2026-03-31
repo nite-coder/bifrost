@@ -51,6 +51,7 @@ import (
 //	https://pkg.go.dev/net/http#example-ResponseWriter-Trailers
 const TrailerPrefix = "Trailer:"
 
+// HTTPProxy implements a reverse proxy for HTTP services.
 type HTTPProxy struct {
 	failExpireAt time.Time
 	options      *Options

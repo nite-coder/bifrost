@@ -14,12 +14,14 @@ import (
 	"github.com/nite-coder/bifrost/pkg/timecache"
 )
 
+// RedisLimiter implements rate limiting using Redis.
 type RedisLimiter struct {
 	options *Options
 	client  redis.UniversalClient
 	script  *redis.Script
 }
 
+// NewRedisLimiter creates a new RedisLimiter instance.
 func NewRedisLimiter(client redis.UniversalClient, options Options) *RedisLimiter {
 	return &RedisLimiter{
 		client:  client,
@@ -49,6 +51,7 @@ const (
     `
 )
 
+// Allow checks if the given key is allowed to proceed based on rate limits in Redis.
 func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 	logger := log.FromContext(ctx)
 

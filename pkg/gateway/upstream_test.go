@@ -277,15 +277,15 @@ func TestRefreshProxies(t *testing.T) {
 type mockErrorDiscovery struct{}
 
 func (m *mockErrorDiscovery) GetInstances(
-	ctx context.Context,
-	opts provider.GetInstanceOptions,
+	_ context.Context,
+	_ provider.GetInstanceOptions,
 ) ([]provider.Instancer, error) {
 	return nil, assert.AnError
 }
 
 func (m *mockErrorDiscovery) Watch(
-	ctx context.Context,
-	opts provider.GetInstanceOptions,
+	_ context.Context,
+	_ provider.GetInstanceOptions,
 ) (<-chan []provider.Instancer, error) {
 	return nil, assert.AnError
 }

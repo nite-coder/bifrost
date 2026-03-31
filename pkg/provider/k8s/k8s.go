@@ -20,11 +20,13 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
+// K8sDiscovery implements service discovery using Kubernetes Endpoints.
 type K8sDiscovery struct {
 	options *Options
 	client  kubernetes.Interface
 }
 
+// Options defines the configuration for the Kubernetes discovery provider.
 type Options struct {
 	// APIServer is the Kubernetes API server URL (e.g., "https://kubernetes.default.svc")
 	APIServer string
@@ -36,6 +38,7 @@ type Options struct {
 	Insecure bool
 }
 
+// NewK8sDiscovery creates a new K8sDiscovery instance.
 func NewK8sDiscovery(options Options) (*K8sDiscovery, error) {
 	var config *rest.Config
 	var err error
@@ -86,6 +89,7 @@ func NewK8sDiscovery(options Options) (*K8sDiscovery, error) {
 	}, nil
 }
 
+// GetInstances returns the current list of service instances from Kubernetes endpoints.
 func (k *K8sDiscovery) GetInstances(
 	ctx context.Context,
 	options provider.GetInstanceOptions,
@@ -144,6 +148,7 @@ func (k *K8sDiscovery) GetInstances(
 	return instances, nil
 }
 
+// Watch returns a channel that signals changes in Kubernetes endpoints.
 func (k *K8sDiscovery) Watch(
 	ctx context.Context,
 	options provider.GetInstanceOptions,
@@ -220,6 +225,7 @@ func isEndpointSliceReady(endpointSlice *discoveryv1.EndpointSlice) bool {
 	return len(endpointSlice.Ports) != 0
 }
 
+// Close cleans up resources used by the Kubernetes discovery provider.
 func (k *K8sDiscovery) Close() error {
 	return nil
 }

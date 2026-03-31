@@ -90,6 +90,7 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	c.Next(ctx)
 }
 
+// FirstRouteMiddleware is a middleware that sets the initial route information.
 type FirstRouteMiddleware struct {
 	options *variable.RequestRoute
 }
@@ -100,7 +101,7 @@ func newFirstRouteMiddleware(options *variable.RequestRoute) *FirstRouteMiddlewa
 	}
 }
 
-func (m *FirstRouteMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *FirstRouteMiddleware) ServeHTTP(_ context.Context, c *app.RequestContext) {
 	c.Set(variable.BifrostRoute, m.options)
 }
 
@@ -144,8 +145,9 @@ func loadMiddlewares(middlewareOptions map[string]config.MiddlwareOptions) (map[
 	return middlewares, nil
 }
 
+// AbortMiddleware is a middleware that aborts the request.
 type AbortMiddleware struct{}
 
-func (m *AbortMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *AbortMiddleware) ServeHTTP(_ context.Context, c *app.RequestContext) {
 	c.Abort()
 }

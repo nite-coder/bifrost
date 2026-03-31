@@ -62,13 +62,13 @@ func TestMiddlewarePipeline(t *testing.T) {
 	hit2 := 0
 	hit3 := 0
 	bifrost.middlewares = map[string]app.HandlerFunc{
-		"testMiddleware1": func(ctx context.Context, c *app.RequestContext) {
+		"testMiddleware1": func(_ context.Context, _ *app.RequestContext) {
 			hit1++
 		},
-		"testMiddleware2": func(ctx context.Context, c *app.RequestContext) {
+		"testMiddleware2": func(_ context.Context, _ *app.RequestContext) {
 			hit2++
 		},
-		"testMiddleware3": func(ctx context.Context, c *app.RequestContext) {
+		"testMiddleware3": func(_ context.Context, c *app.RequestContext) {
 			hit3++
 			c.Abort()
 		},

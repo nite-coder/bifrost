@@ -172,6 +172,7 @@ func newTraceProvider(exporter sdktrace.SpanExporter, options config.TracingOpti
 	return traceProvider, nil
 }
 
+// TracingMiddleware handles OpenTelemetry tracing for requests.
 type TracingMiddleware struct {
 	options  *config.ServerTracingOptions
 	tracer   trace.Tracer

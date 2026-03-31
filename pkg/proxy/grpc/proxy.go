@@ -38,6 +38,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+// Options defines the configuration for a GRPC proxy instance.
 type Options struct {
 	Target           string
 	DailOptions      []grpc.DialOption
@@ -50,6 +51,7 @@ type Options struct {
 	IsTracingEnabled bool
 	ServiceID        string
 }
+// GRPCProxy implements a reverse proxy for gRPC services.
 type GRPCProxy struct {
 	failExpireAt time.Time
 	client       grpc.ClientConnInterface
@@ -64,6 +66,7 @@ type GRPCProxy struct {
 	tags        map[string]string
 }
 
+// New creates a new GRPCProxy instance with the given options.
 func New(options Options) (*GRPCProxy, error) {
 	addr, err := url.Parse(options.Target)
 	if err != nil {
@@ -96,6 +99,7 @@ func New(options Options) (*GRPCProxy, error) {
 	}, nil
 }
 
+// IsAvailable returns true if the upstream gRPC server is considered healthy.
 func (p *GRPCProxy) IsAvailable() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -112,6 +116,7 @@ func (p *GRPCProxy) IsAvailable() bool {
 	return false
 }
 
+// AddFailedCount increments the failed request count for the upstream server.
 func (p *GRPCProxy) AddFailedCount(count uint) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -133,14 +138,17 @@ func (p *GRPCProxy) ID() string {
 	return p.id
 }
 
+// Weight returns the relative weight of this proxy instance for load balancing.
 func (p *GRPCProxy) Weight() uint32 {
 	return p.weight
 }
 
+// Target returns the target URL of the upstream gRPC server.
 func (p *GRPCProxy) Target() string {
 	return p.target
 }
 
+// Close closes the underlying gRPC client connection.
 func (p *GRPCProxy) Close() error {
 	if p.client != nil {
 		if closer, ok := p.client.(io.Closer); ok {
@@ -154,6 +162,7 @@ func (p *GRPCProxy) Close() error {
 	return nil
 }
 
+// Tag retrieves a specific metadata tag value from the proxy instance.
 func (p *GRPCProxy) Tag(key string) (value string, exist bool) {
 	if len(p.tags) == 0 {
 		return "", false
@@ -163,6 +172,7 @@ func (p *GRPCProxy) Tag(key string) (value string, exist bool) {
 	return val, found
 }
 
+// Tags returns all metadata tags of the proxy instance.
 func (p *GRPCProxy) Tags() map[string]string {
 	return p.tags
 }

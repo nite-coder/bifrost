@@ -42,7 +42,7 @@ func TestMirror(t *testing.T) {
 	hzCtx := app.NewContext(0)
 
 	var hit atomic.Int32
-	hzCtx.SetHandlers([]app.HandlerFunc{func(ctx context.Context, c *app.RequestContext) {
+	hzCtx.SetHandlers([]app.HandlerFunc{func(_ context.Context, _ *app.RequestContext) {
 		hit.Add(1)
 	}})
 

@@ -123,7 +123,7 @@ func TestListener(t *testing.T) {
 			return ""
 		}
 		// Mock file opener to return a valid file for FD 3
-		z.fileOpener = func(name string) (*os.File, error) {
+		z.fileOpener = func(_ string) (*os.File, error) {
 			// In test we can return any file.
 			return os.CreateTemp(t.TempDir(), "fd3")
 		}

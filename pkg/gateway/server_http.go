@@ -51,6 +51,7 @@ func init() {
 	prom.MustRegister(httpServerOpenConnections)
 }
 
+// HTTPServer represents an HTTP server instance in the gateway.
 type HTTPServer struct {
 	options          *config.ServerOptions
 	switcher         *switcher
@@ -94,7 +95,7 @@ func newHTTPServer(
 						netpollConn, ok := hzConn.Conn.(netpoll.Connection)
 						if ok {
 							httpServer.totalConnections.Add(1)
-							_ = netpollConn.AddCloseCallback(func(connection netpoll.Connection) error {
+							_ = netpollConn.AddCloseCallback(func(_ netpoll.Connection) error {
 								httpServer.totalConnections.Add(-1)
 								return nil
 							})
@@ -123,7 +124,7 @@ func newHTTPServer(
 	}
 	if !disableListener {
 		listenerConfig := &net.ListenConfig{
-			Control: func(network, address string, c syscall.RawConn) error {
+			Control: func(_, _ string, c syscall.RawConn) error {
 				var opErr error
 				err = c.Control(func(fd uintptr) {
 					if serverOptions.ReusePort {
@@ -297,7 +298,7 @@ func newHTTPServer(
 	if serverOptions.HTTP2 {
 		httpServer.stdlibServer = NewStdlibServer(h, &serverOptions, tlsConfig, tracers)
 	}
-	h.OnShutdown = append(h.OnShutdown, func(ctx context.Context) {
+	h.OnShutdown = append(h.OnShutdown, func(_ context.Context) {
 		for _, tracer := range tracers {
 			if closer, ok := tracer.(io.Closer); ok {
 				_ = closer.Close()
@@ -313,6 +314,7 @@ func newHTTPServer(
 	return httpServer, nil
 }
 
+// Run starts the HTTP server and blocks until it stops.
 func (s *HTTPServer) Run() {
 	slog.Info(
 		"starting server",
@@ -334,6 +336,7 @@ func (s *HTTPServer) Run() {
 	}
 }
 
+// Shutdown stops the HTTP server gracefully.
 func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	s.isActive.Store(false)
 	var err error
@@ -346,14 +349,17 @@ func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	return err
 }
 
+// Bind returns the address the server is bound to.
 func (s *HTTPServer) Bind() string {
 	return s.options.Bind
 }
 
+// SetEngine updates the request processing engine for the server.
 func (s *HTTPServer) SetEngine(engine *Engine) {
 	s.switcher.SetEngine(engine)
 }
 
+// Engine returns the current request processing engine.
 func (s *HTTPServer) Engine() *Engine {
 	return s.switcher.Engine()
 }

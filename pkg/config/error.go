@@ -1,5 +1,6 @@
 package config
 
+// InvalidConfigError represents an error in the configuration.
 type InvalidConfigError struct {
 	Value     any
 	Message   string

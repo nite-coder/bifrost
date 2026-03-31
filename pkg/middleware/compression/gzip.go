@@ -21,15 +21,18 @@ const (
 	headerVary            = "Vary"
 )
 
+// Options defines the configuration for the compression middleware.
 type Options struct {
 	Level         int      `mapstructure:"level"`
 	ExcludedPaths []string `mapstructure:"excluded_paths"`
 }
 
+// CompressionMiddleware is a middleware that compresses the response body.
 type CompressionMiddleware struct {
 	options *Options
 }
 
+// NewMiddleware creates a new CompressionMiddleware instance.
 func NewMiddleware(options Options) *CompressionMiddleware {
 	return &CompressionMiddleware{
 		options: &options,
@@ -76,6 +79,7 @@ func (m *CompressionMiddleware) shouldCompress(req *protocol.Request) bool {
 	return true
 }
 
+// Init registers the compression middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"compression"}, func(opts Options) (app.HandlerFunc, error) {
 		if opts.Level == 0 {

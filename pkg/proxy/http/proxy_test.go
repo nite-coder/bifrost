@@ -43,13 +43,13 @@ func TestReverseProxy(t *testing.T) {
 	// client request: /backend
 	// updatream: /proxy/backend
 
-	serv.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	serv.GET("/proxy/backend", func(_ context.Context, ctx *app.RequestContext) {
 		if ctx.Query("mode") == "hangup" {
 			_ = ctx.GetConn().Close()
 			return
 		}
 		if ctx.Request.Header.Get("X-Forwarded-For") == "" {
-			t.Errorf("didn't get X-Forwarded-For header")
+			t.Error("didn't get X-Forwarded-For header")
 		}
 		if c := ctx.Request.Header.Get("Connection"); c != "" {
 			t.Errorf("handler got Connection header value %q", c)
@@ -143,7 +143,7 @@ func TestReverseProxy(t *testing.T) {
 		t.Errorf("header Trailers = %q; want %q", g, e)
 	}
 	length := 0
-	res.Header.VisitAll(func(key, value []byte) {
+	res.Header.VisitAll(func(key, _ []byte) {
 		if string(key) == "X-Multi-Value" {
 			length++
 		}
@@ -152,7 +152,7 @@ func TestReverseProxy(t *testing.T) {
 		t.Errorf("got %d X-Multi-Value header values; expected %d", 2, length)
 	}
 	length = 0
-	res.Header.VisitAll(func(key, value []byte) {
+	res.Header.VisitAll(func(key, _ []byte) {
 		if string(key) == "Set-Cookie" {
 			length++
 		}
@@ -191,7 +191,7 @@ func TestReverseProxyStripHeadersPresentInConnection(t *testing.T) {
 		server.WithExitWaitTime(1*time.Second),
 	)
 
-	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	r.GET("/proxy/backend", func(_ context.Context, ctx *app.RequestContext) {
 		if c := ctx.Request.Header.Get("Connection"); c != "" {
 			t.Errorf("handler got header %q = %q; want empty", "Connection", c)
 		}
@@ -271,7 +271,7 @@ func TestReverseProxyStripEmptyConnection(t *testing.T) {
 		server.WithExitWaitTime(1*time.Second),
 	)
 
-	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	r.GET("/proxy/backend", func(_ context.Context, ctx *app.RequestContext) {
 		if c := ctx.Request.Header.Get("Connection"); c != "" {
 			t.Errorf("handler got header %q = %v; want empty", "Connection", c)
 		}
@@ -340,12 +340,12 @@ func TestXForwardedFor(t *testing.T) {
 		server.WithExitWaitTime(1*time.Second),
 	)
 
-	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	r.GET("/proxy/backend", func(_ context.Context, ctx *app.RequestContext) {
 		if ctx.Request.Header.Get("X-Forwarded-For") == "" {
-			t.Errorf("didn't get X-Forwarded-For header")
+			t.Error("didn't get X-Forwarded-For header")
 		}
 		if !strings.Contains(ctx.Request.Header.Get("X-Forwarded-For"), prevForwardedFor) {
-			t.Errorf("X-Forwarded-For didn't contain prior data")
+			t.Error("X-Forwarded-For didn't contain prior data")
 		}
 
 		if c := ctx.Request.Header.Get("Host"); c != "abc.com" {
@@ -412,7 +412,7 @@ func TestReverseProxyQuery(t *testing.T) {
 		server.WithExitWaitTime(1*time.Second),
 	)
 
-	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	r.GET("/proxy/backend", func(_ context.Context, ctx *app.RequestContext) {
 		ctx.Response.Header.Set("X-Got-Query", string(ctx.Request.QueryString()))
 		ctx.Data(200, "application/json", []byte("hi"))
 	})
@@ -461,7 +461,7 @@ func TestReverseProxy_Post(t *testing.T) {
 		server.WithExitWaitTime(1*time.Second),
 	)
 
-	r.POST("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	r.POST("/proxy/backend", func(_ context.Context, ctx *app.RequestContext) {
 		sluproxy := ctx.Request.Body()
 		if len(sluproxy) != len(requestBody) {
 			t.Errorf("Backend read %d request body bytes; want %d", len(sluproxy), len(requestBody))
@@ -520,7 +520,7 @@ func TestReverseProxyWebSocket(t *testing.T) {
 	)
 	wsServer.NoHijackConnPool = true
 
-	wsServer.GET("/proxy/websocket", func(cc context.Context, ctx *app.RequestContext) {
+	wsServer.GET("/proxy/websocket", func(_ context.Context, ctx *app.RequestContext) {
 		err := upgrader.Upgrade(ctx, func(conn *websocket.Conn) {
 			for {
 				mt, message, err := conn.ReadMessage()

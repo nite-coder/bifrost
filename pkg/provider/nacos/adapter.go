@@ -10,6 +10,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
+// ToProviderInstance converts Nacos instances to the internal service instance format.
 func ToProviderInstance(nacosInstances []model.Instance) []provider.Instancer {
 	instances := make([]provider.Instancer, 0)
 	for _, nacosInstance := range nacosInstances {

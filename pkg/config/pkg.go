@@ -19,9 +19,11 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+// ChangeFunc is a function called when configuration changes.
 type ChangeFunc func() error
 
 var (
+	// OnChanged is a global callback for configuration changes.
 	OnChanged        provider.ChangeFunc
 	dynamicProviders []provider.Provider
 	mainProvider     provider.Provider
@@ -29,11 +31,13 @@ var (
 	dnsResolver      *resolver.Resolver
 )
 
+// TestAndSkipResolver loads the configuration and sets SkipResolver to true, returning the config path.
 func TestAndSkipResolver(path string) (string, error) {
 	mainOptions, err := load(path, true)
 	return mainOptions.configPath, err
 }
 
+// Load reads and parses the configuration from the given path.
 func Load(path string) (Options, error) {
 	return load(path, false)
 }
@@ -212,6 +216,7 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 	return providers, mainOptions, nil
 }
 
+// Watch starts watching for configuration changes.
 func Watch() error {
 	if mainProvider != nil {
 		mainProvider.SetOnChanged(OnChanged)
@@ -407,6 +412,7 @@ func findLineNumber(lines []string, key string, value any) int {
 	return -1
 }
 
+// IsValidDomain checks if the given string is a valid domain name.
 func IsValidDomain(domain string) bool {
 	// Define the regular expression
 	// Each label: 1-63 characters, can only contain letters, numbers, and hyphens, cannot start or end with a hyphen

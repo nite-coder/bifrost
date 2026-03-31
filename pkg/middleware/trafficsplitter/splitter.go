@@ -6,21 +6,25 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
+// Options defines the configuration for the traffic splitter middleware.
 type Options struct {
 	Key          string
 	Destinations []*Destination
 }
 
+// Destination defines a single target and its weight for traffic splitting.
 type Destination struct {
 	To     string
 	Weight int64
 }
 
+// TrafficSplitterMiddleware is a middleware that splits traffic among multiple destinations.
 type TrafficSplitterMiddleware struct {
 	options     *Options
 	totalWeight int64
 }
 
+// NewMiddleware creates a new TrafficSplitterMiddleware instance.
 func NewMiddleware(options *Options) *TrafficSplitterMiddleware {
 	m := &TrafficSplitterMiddleware{
 		options: options,

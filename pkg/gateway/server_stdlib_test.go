@@ -152,7 +152,7 @@ func TestStdlibServer_GRPC_Integration(t *testing.T) {
 
 func TestStdlibServer_NonGRPC_ContentLength(t *testing.T) {
 	h := server.New()
-	h.GET("/json", func(ctx context.Context, c *app.RequestContext) {
+	h.GET("/json", func(_ context.Context, c *app.RequestContext) {
 		c.Response.Header.SetContentType("application/json")
 		c.Response.SetBody([]byte(`{"status":"ok"}`))
 	})
@@ -208,7 +208,7 @@ type capturedTraceEvents struct {
 	httpFinishAt  time.Time
 }
 
-func (s *spyTracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
+func (s *spyTracer) Start(ctx context.Context, _ *app.RequestContext) context.Context {
 	s.startCalls.Add(1)
 	return ctx
 }
@@ -245,7 +245,7 @@ func TestStdlibServer_TracerInvoked(t *testing.T) {
 	spy := &spyTracer{}
 
 	h := server.New(server.WithHostPorts(":0"))
-	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
+	h.GET("/ping", func(_ context.Context, c *app.RequestContext) {
 		c.Response.SetBodyString("pong")
 	})
 

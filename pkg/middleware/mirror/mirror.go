@@ -13,6 +13,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
+// Init registers the mirror middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"mirror"}, func(opts Options) (app.HandlerFunc, error) {
 		if opts.ServiceID == "" {
@@ -25,11 +26,13 @@ func Init() error {
 	})
 }
 
+// Options defines the configuration for the mirror middleware.
 type Options struct {
 	ServiceID string `mapstructure:"service_id"`
 	QueueSize int64  `mapstructure:"queue_size"`
 }
 
+// MirrorMiddleware is a middleware that mirrors requests to another service.
 type MirrorMiddleware struct {
 	options *Options
 	queue   chan *mirrorContext
@@ -40,6 +43,7 @@ type mirrorContext struct {
 	hzCtx  *app.RequestContext
 }
 
+// NewMiddleware creates a new MirrorMiddleware instance.
 func NewMiddleware(options Options) *MirrorMiddleware {
 	if options.QueueSize <= 0 {
 		options.QueueSize = 10000
@@ -55,6 +59,7 @@ func NewMiddleware(options Options) *MirrorMiddleware {
 	return m
 }
 
+// Run starts the worker that processes mirrored requests.
 func (m *MirrorMiddleware) Run() {
 	for mctx := range m.queue {
 		bifrost := gateway.GetBifrost()

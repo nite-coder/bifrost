@@ -44,13 +44,13 @@ import (
 func newTestRouter(c Config) *route.Engine {
 	router := route.NewEngine(config.NewOptions([]config.Option{}))
 	router.Use(NewMiddleware(c))
-	router.GET("/", func(ctx context.Context, c *app.RequestContext) {
+	router.GET("/", func(_ context.Context, c *app.RequestContext) {
 		c.String(consts.StatusOK, "get")
 	})
-	router.POST("/", func(ctx context.Context, c *app.RequestContext) {
+	router.POST("/", func(_ context.Context, c *app.RequestContext) {
 		c.String(consts.StatusOK, "post")
 	})
-	router.PATCH("/", func(ctx context.Context, c *app.RequestContext) {
+	router.PATCH("/", func(_ context.Context, c *app.RequestContext) {
 		c.String(consts.StatusOK, "patch")
 	})
 
@@ -101,7 +101,7 @@ func TestBadConfig(t *testing.T) {
 	assert.Panic(t, func() {
 		NewMiddleware(Config{
 			AllowAllOrigins: true,
-			AllowOriginFunc: func(origin string) bool { return false },
+			AllowOriginFunc: func(_ string) bool { return false },
 		})
 	})
 	assert.Panic(t, func() {

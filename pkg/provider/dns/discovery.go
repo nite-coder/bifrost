@@ -16,8 +16,10 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
+// ErrNotFound is returned when no DNS records are found for a host.
 var ErrNotFound = errors.New("no records found")
 
+// DNSServiceDiscovery implements service discovery using DNS.
 type DNSServiceDiscovery struct {
 	client  *dns.Client
 	ticker  *time.Ticker
@@ -25,6 +27,7 @@ type DNSServiceDiscovery struct {
 	valid   time.Duration
 }
 
+// NewDNSServiceDiscovery creates a new DNSServiceDiscovery instance.
 func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*DNSServiceDiscovery, error) {
 	newServers := make([]string, 0)
 	for _, server := range servers {
@@ -58,6 +61,7 @@ func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*DNSServiceD
 	return d, nil
 }
 
+// GetInstances resolves the given host to IP addresses and returns them as service instances.
 func (d *DNSServiceDiscovery) GetInstances(
 	ctx context.Context,
 	options provider.GetInstanceOptions,
@@ -88,9 +92,10 @@ func (d *DNSServiceDiscovery) GetInstances(
 	return instances, nil
 }
 
+// Watch starts a ticker that periodically signals for instance refreshes.
 func (d *DNSServiceDiscovery) Watch(
 	ctx context.Context,
-	options provider.GetInstanceOptions,
+	_ provider.GetInstanceOptions,
 ) (<-chan []provider.Instancer, error) {
 	ch := make(chan []provider.Instancer, 1)
 	go safety.Go(ctx, func() {
@@ -109,6 +114,7 @@ func (d *DNSServiceDiscovery) Watch(
 	return ch, nil
 }
 
+// Close stops the DNS service discovery ticker.
 func (d *DNSServiceDiscovery) Close() error {
 	if d.ticker != nil {
 		d.ticker.Stop()
@@ -116,6 +122,7 @@ func (d *DNSServiceDiscovery) Close() error {
 	return nil
 }
 
+// Lookup resolves the given host to a list of IP addresses.
 func (d *DNSServiceDiscovery) Lookup(ctx context.Context, host string) ([]string, error) {
 	if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]" {
 		return []string{"127.0.0.1"}, nil

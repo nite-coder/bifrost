@@ -25,6 +25,7 @@ func IsASCIIPrint(s string) bool {
 	return true
 }
 
+// JoinURLPath joins the request path with the target URL path, correctly handling slashes.
 func JoinURLPath(req *protocol.Request, target string) (path []byte) {
 	aslash := req.URI().Path()[0] == '/'
 	var bslash bool

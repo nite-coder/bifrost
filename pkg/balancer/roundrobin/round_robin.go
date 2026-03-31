@@ -41,7 +41,7 @@ func (b *Balancer) Proxies() []proxy.Proxy {
 }
 
 // Select picks the next available proxy in a round-robin fashion.
-func (b *Balancer) Select(_ context.Context, hzCtx *app.RequestContext) (proxy.Proxy, error) {
+func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (proxy.Proxy, error) {
 	if len(b.proxies) == 0 {
 		return nil, balancer.ErrNotAvailable
 	}

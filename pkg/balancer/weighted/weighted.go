@@ -11,8 +11,9 @@ import (
 	"github.com/nite-coder/bifrost/pkg/proxy"
 )
 
+// Init registers the weighted balancer.
 func Init() error {
-	return balancer.Register([]string{"weighted"}, func(proxies []proxy.Proxy, param any) (balancer.Balancer, error) {
+	return balancer.Register([]string{"weighted"}, func(proxies []proxy.Proxy, _ any) (balancer.Balancer, error) {
 		return NewBalancer(proxies)
 	})
 }
@@ -52,7 +53,7 @@ func (b *WeightedBalancer) Proxies() []proxy.Proxy {
 }
 
 // Select picks a proxy based on weights.
-func (b *WeightedBalancer) Select(ctx context.Context, hzCtx *app.RequestContext) (proxy.Proxy, error) {
+func (b *WeightedBalancer) Select(_ context.Context, _ *app.RequestContext) (proxy.Proxy, error) {
 	if len(b.proxies) == 0 {
 		return nil, balancer.ErrNotAvailable
 	}

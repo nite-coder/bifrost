@@ -11,6 +11,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
+// Options defines the configuration for the User-Agent restriction middleware.
 type Options struct {
 	RejectedHTTPContentType  string   `mapstructure:"rejected_http_content_type"`
 	RejectedHTTPResponseBody string   `mapstructure:"rejected_http_response_body"`
@@ -19,12 +20,14 @@ type Options struct {
 	RejectedHTTPStatusCode   int      `mapstructure:"rejected_http_status_code"`
 	BypassMissing            bool     `mapstructure:"bypass_missing"`
 }
+// UARestriction is a middleware that allows or denies requests based on the User-Agent header.
 type UARestriction struct {
 	options         *Options
 	allowRegexpList []*regexp.Regexp
 	denyRegexpList  []*regexp.Regexp
 }
 
+// NewMiddleware creates a new UARestriction instance.
 func NewMiddleware(options Options) (*UARestriction, error) {
 	if len(options.Allow) == 0 && len(options.Deny) == 0 {
 		return nil, errors.New("allow and deny cannot be empty")
@@ -95,6 +98,7 @@ func (m *UARestriction) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}
 }
 
+// Init registers the ua_restriction middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"ua_restriction"}, func(option Options) (app.HandlerFunc, error) {
 		m, err := NewMiddleware(option)

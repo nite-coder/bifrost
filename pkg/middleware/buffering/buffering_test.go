@@ -38,7 +38,7 @@ func TestBufferingMiddleware(t *testing.T) {
 		router := route.NewEngine(config.NewOptions([]config.Option{}))
 		m := NewMiddleware(cfg)
 		router.Use(m.ServeHTTP)
-		router.POST("/", func(ctx context.Context, c *app.RequestContext) {
+		router.POST("/", func(_ context.Context, c *app.RequestContext) {
 			c.String(consts.StatusOK, "ok")
 		})
 		return router
@@ -94,7 +94,7 @@ func TestBufferingMiddleware(t *testing.T) {
 
 		router := route.NewEngine(config.NewOptions([]config.Option{}))
 		router.Use(handler)
-		router.POST("/", func(ctx context.Context, c *app.RequestContext) {
+		router.POST("/", func(_ context.Context, c *app.RequestContext) {
 			c.String(consts.StatusOK, "ok")
 		})
 

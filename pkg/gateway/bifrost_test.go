@@ -133,7 +133,7 @@ func TestBifrost(t *testing.T) {
 		server.WithExitWaitTime(1*time.Second),
 	)
 
-	backendServ.Any("/api/v1/orders", func(ctx context.Context, c *app.RequestContext) {
+	backendServ.Any("/api/v1/orders", func(_ context.Context, c *app.RequestContext) {
 		order := &TestOrder{
 			ID:    "1",
 			Price: "100",
@@ -186,7 +186,7 @@ func TestBifrost(t *testing.T) {
 					TLSClientConfig: &tls.Config{
 						InsecureSkipVerify: true, /* #nosec G402 */
 					},
-					DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+					DialTLS: func(network, addr string, _ *tls.Config) (net.Conn, error) {
 						return net.Dial(network, addr)
 					},
 				})

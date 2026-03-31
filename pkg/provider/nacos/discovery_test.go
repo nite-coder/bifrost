@@ -170,7 +170,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 			// mock newNamingClientFunc
 			originalFunc := newNamingClientFunc
 			defer func() { newNamingClientFunc = originalFunc }()
-			newNamingClientFunc = func(param vo.NacosClientParam) (naming_client.INamingClient, error) {
+			newNamingClientFunc = func(_ vo.NacosClientParam) (naming_client.INamingClient, error) {
 				// We expect the connectivity check
 				mockClient.On("GetAllServicesInfo", mock.MatchedBy(func(param vo.GetAllServiceInfoParam) bool {
 					return param.PageNo == 1 && param.PageSize == 1
@@ -244,7 +244,7 @@ func TestNacosServiceDiscovery_Watch(t *testing.T) {
 			// mock newNamingClientFunc
 			originalFunc := newNamingClientFunc
 			defer func() { newNamingClientFunc = originalFunc }()
-			newNamingClientFunc = func(param vo.NacosClientParam) (naming_client.INamingClient, error) {
+			newNamingClientFunc = func(_ vo.NacosClientParam) (naming_client.INamingClient, error) {
 				// Check connection expectation
 				mockClient.On("GetAllServicesInfo", mock.MatchedBy(func(param vo.GetAllServiceInfoParam) bool {
 					return param.PageNo == 1 && param.PageSize == 1

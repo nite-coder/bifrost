@@ -11,10 +11,12 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+// Config defines the configuration for the add_prefix middleware.
 type Config struct {
 	Prefix string `mapstructure:"prefix"`
 }
 
+// Init registers the add_prefix middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"add_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
 		if cfg.Prefix == "" {
@@ -26,12 +28,14 @@ func Init() error {
 	})
 }
 
+// AddPrefixMiddleware is a middleware that adds a prefix to the request path.
 type AddPrefixMiddleware struct {
 	prefixStr  string
 	directives []string
 	prefix     []byte
 }
 
+// NewMiddleware creates a new AddPrefixMiddleware instance.
 func NewMiddleware(prefix string) *AddPrefixMiddleware {
 	return &AddPrefixMiddleware{
 		prefix:     []byte(prefix),

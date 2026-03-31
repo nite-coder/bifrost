@@ -10,6 +10,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
+// Options defines the configuration for the IP restriction middleware.
 type Options struct {
 	RejectedHTTPContentType  string   `mapstructure:"rejected_http_content_type"`
 	RejectedHTTPResponseBody string   `mapstructure:"rejected_http_response_body"`
@@ -17,10 +18,12 @@ type Options struct {
 	Deny                     []string `mapstructure:"deny"`
 	RejectedHTTPStatusCode   int      `mapstructure:"rejected_http_status_code"`
 }
+// IPRestriction is a middleware that allows or denies requests based on client IP.
 type IPRestriction struct {
 	options *Options
 }
 
+// NewMiddleware creates a new IPRestriction instance.
 func NewMiddleware(options Options) (*IPRestriction, error) {
 	if len(options.Allow) == 0 && len(options.Deny) == 0 {
 		return nil, errors.New("allow and deny cannot be empty")
@@ -109,6 +112,7 @@ func (m *IPRestriction) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}
 }
 
+// Init registers the ip_restriction middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"ip_restriction"}, func(option Options) (app.HandlerFunc, error) {
 		m, err := NewMiddleware(option)

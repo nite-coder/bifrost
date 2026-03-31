@@ -11,10 +11,12 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+// Config defines the configuration for the replace_path middleware.
 type Config struct {
 	Path string `mapstructure:"path"`
 }
 
+// Init registers the replace_path middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"replace_path"}, func(cfg Config) (app.HandlerFunc, error) {
 		if cfg.Path == "" {
@@ -25,12 +27,14 @@ func Init() error {
 	})
 }
 
+// ReplacePathMiddleware is a middleware that replaces the request path.
 type ReplacePathMiddleware struct {
 	newPathStr string
 	directives []string
 	newPath    []byte
 }
 
+// NewMiddleware creates a new ReplacePathMiddleware instance.
 func NewMiddleware(newPath string) *ReplacePathMiddleware {
 	if !strings.HasPrefix(newPath, "/") {
 		newPath = "/" + newPath

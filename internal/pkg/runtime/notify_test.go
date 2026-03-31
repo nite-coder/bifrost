@@ -11,7 +11,7 @@ import (
 )
 
 func TestNotifySystemdReady(t *testing.T) {
-	t.Run("no notify socket", func(t *testing.T) {
+	t.Run("no notify socket", func(_ *testing.T) {
 		os.Unsetenv("NOTIFY_SOCKET")
 		// Should not panic or error
 		NotifySystemdReady()

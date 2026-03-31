@@ -10,10 +10,12 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
+// Config defines the configuration for the strip_prefix middleware.
 type Config struct {
 	Prefixes []string `mapstructure:"prefixes"`
 }
 
+// Init registers the strip_prefix middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"strip_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
 		if len(cfg.Prefixes) == 0 {
@@ -25,10 +27,12 @@ func Init() error {
 	})
 }
 
+// StripPrefixMiddleware is a middleware that removes prefixes from the request path.
 type StripPrefixMiddleware struct {
 	prefixes [][]byte
 }
 
+// NewMiddleware creates a new StripPrefixMiddleware instance.
 func NewMiddleware(prefixs []string) *StripPrefixMiddleware {
 	m := &StripPrefixMiddleware{
 		prefixes: make([][]byte, 0),
