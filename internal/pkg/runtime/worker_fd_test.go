@@ -151,7 +151,8 @@ func TestInheritedListeners(t *testing.T) {
 	// Sanity check invalid count
 	t.Setenv("BIFROST_FD_COUNT", "0")
 	listeners, err = InheritedListeners()
-	require.NoError(t, err)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "BIFROST_FD_COUNT mismatch")
 	assert.Empty(t, listeners)
 }
 

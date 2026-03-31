@@ -127,10 +127,14 @@ func InheritedListeners() (map[string]*os.File, error) {
 
 	// 1. Decode Keys
 	keysEnv := os.Getenv("BIFROST_LISTENER_KEYS")
+	if keysEnv == "" {
+		// New mechanism not used, possibly legacy upgrade
+		return listeners, nil
+	}
+
 	keys, err := decodeListenerKeys(keysEnv)
 	if err != nil {
-		slog.Error("failed to decode BIFROST_LISTENER_KEYS", "error", err)
-		return listeners, err
+		return listeners, fmt.Errorf("failed to decode BIFROST_LISTENER_KEYS: %w", err)
 	}
 
 	// 1.5 Sanity Check: BIFROST_FD_COUNT must match key count
@@ -138,19 +142,16 @@ func InheritedListeners() (map[string]*os.File, error) {
 	// where only keys might be mocked but FDs are not actually passed.
 	fdCountEnv := os.Getenv("BIFROST_FD_COUNT")
 	if fdCountEnv == "" {
-		slog.Warn("BIFROST_FD_COUNT not set, refusing to inherit FDs for safety")
-		return listeners, nil
+		return listeners, fmt.Errorf("BIFROST_FD_COUNT not set, refusing to inherit FDs for safety")
 	}
 
 	fdCount, err := strconv.Atoi(fdCountEnv)
 	if err != nil {
-		slog.Error("invalid BIFROST_FD_COUNT", "error", err, "val", fdCountEnv)
-		return listeners, nil
+		return listeners, fmt.Errorf("invalid BIFROST_FD_COUNT '%s': %w", fdCountEnv, err)
 	}
 
 	if fdCount != len(keys) {
-		slog.Error("BIFROST_FD_COUNT mismatch", "env", fdCount, "keys", len(keys))
-		return listeners, nil
+		return listeners, fmt.Errorf("BIFROST_FD_COUNT mismatch: env=%d, keys=%d", fdCount, len(keys))
 	}
 
 	// 2. Collect FDs (ExtraFiles start at FD 3)
