@@ -40,7 +40,7 @@ func genRequestDurationLabels(c *app.RequestContext, isGRPC bool) prom.Labels {
 
 	method := variable.GetString(variable.HTTPRequestMethod, c)
 	if method == "" {
-		method = cast.B2S(c.Method())
+		method = string(c.Method())
 	}
 	labels[labelMethod] = stableLabelValue(method)
 
@@ -48,7 +48,7 @@ func genRequestDurationLabels(c *app.RequestContext, isGRPC bool) prom.Labels {
 	if path == "" {
 		path = variable.GetString(variable.HTTPRequestPath, c)
 		if path == "" {
-			path = cast.B2S(c.Request.Path())
+			path = string(c.Request.Path())
 		}
 	}
 	labels[labelPath] = stableLabelValue(path)
@@ -59,9 +59,10 @@ func genRequestDurationLabels(c *app.RequestContext, isGRPC bool) prom.Labels {
 
 		if found {
 			grpcStatusCode, _ = cast.ToString(val)
+			grpcStatusCode = strings.Clone(grpcStatusCode)
 		}
 
-		labels[labelGRPCStatusCode] = strings.Clone(grpcStatusCode)
+		labels[labelGRPCStatusCode] = grpcStatusCode
 	}
 
 	return labels

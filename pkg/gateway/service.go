@@ -263,7 +263,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 		if len(upstreamName) == 0 {
 			logger.Warn("upstream is empty",
-				slog.String("path", cast.B2S(c.Request.Path())),
+				slog.String("path", string(c.Request.Path())),
 			)
 			c.Abort()
 			return

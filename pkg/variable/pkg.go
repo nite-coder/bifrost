@@ -219,7 +219,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 		info := (val).(*RequestOriginal)
 
-		host := cast.B2S(info.Host)
+		host := string(info.Host)
 		return host, true
 	case ServerID:
 		val, found := c.Get(RequestOrig)
@@ -330,11 +330,11 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if found {
 			info := (val).(*RequestOriginal)
 
-			scheme := cast.B2S(info.Scheme)
+			scheme := string(info.Scheme)
 			return scheme, true
 		}
 
-		scheme := cast.B2S(c.Request.Scheme())
+		scheme := string(c.Request.Scheme())
 		return scheme, true
 
 	case HTTPRequestPath:
@@ -343,9 +343,9 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		val, found := c.Get(RequestOrig)
 		if found {
 			info := (val).(*RequestOriginal)
-			path = cast.B2S(info.Path)
+			path = string(info.Path)
 		} else {
-			path = cast.B2S(c.Request.Path())
+			path = string(c.Request.Path())
 		}
 
 		return path, true
@@ -364,7 +364,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return builder.String(), true
 		}
 
-		uri := cast.B2S(c.Request.RequestURI())
+		uri := string(c.Request.RequestURI())
 		return uri, true
 
 	case HTTPRequestMethod:
@@ -381,11 +381,11 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if found {
 			info := (val).(*RequestOriginal)
 
-			query := cast.B2S(info.Query)
+			query := string(info.Query)
 			return query, true
 		}
 
-		query := cast.B2S(c.Request.QueryString())
+		query := string(c.Request.QueryString())
 		return query, true
 	case HTTPRequestBody:
 		// if content type is grpc, the $request_body will be ignored
@@ -394,7 +394,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return "", true
 		}
 
-		return cast.B2S(c.Request.Body()), true
+		return string(c.Request.Body()), true
 	case HTTPRequestProtocol:
 		val, found := c.Get(RequestOrig)
 		if !found {
@@ -469,12 +469,12 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		method := string(c.Request.Method())
 		return method, true
 	case UpstreamRequestPath:
-		return cast.B2S(c.Request.Path()), true
+		return string(c.Request.Path()), true
 	case UpstreamRequestHost:
 		addr := c.GetString(UpstreamRequestHost)
 		return addr, true
 	case UpstreamRequestQuery:
-		query := cast.B2S(c.Request.QueryString())
+		query := string(c.Request.QueryString())
 		return query, true
 	case UpstreamResponoseStatusCode:
 		status := c.GetInt(UpstreamResponoseStatusCode)
@@ -557,7 +557,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			}
 
 			val := c.Cookie(cookieKey)
-			return cast.B2S(val), true
+			return string(val), true
 		}
 
 		if strings.HasPrefix(key, "$http.request.body.json.") {
