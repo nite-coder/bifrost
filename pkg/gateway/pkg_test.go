@@ -41,10 +41,10 @@ func TestGatewayRun(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", "localhost:8080", 100*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 		return false
 	}, 10*time.Second, 100*time.Millisecond, "Server failed to start")
-	shutdown(context.Background(), true)
+	_ = shutdown(context.Background(), true)
 }

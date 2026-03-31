@@ -5,6 +5,7 @@ package resolver
 import (
 	"net/netip"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -20,7 +21,8 @@ func getLocalNameservers(filename string) (nameservers []netip.AddrPort) {
 		netip.AddrPortFrom(netip.AddrFrom16([16]byte{0, 0, 0, 0, 0, 0, 0, 1}), defaultNameserverPort),
 	}
 
-	data, err := os.ReadFile(filename)
+	/* #nosec G304 */
+	data, err := os.ReadFile(filepath.Clean(filename))
 	if err != nil {
 		return defaultLocalNameservers
 	}

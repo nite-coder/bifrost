@@ -30,6 +30,7 @@ func TestLogRotation_InodeVerification(t *testing.T) {
 
 	// Run the test in a separate process to avoid global state interference
 	// (like os.Stdout redirection and signal handlers) with other tests.
+	/* #nosec G204 */
 	cmd := exec.Command(os.Args[0], "-test.run=TestLogRotation_InodeVerification")
 	cmd.Env = append(os.Environ(), "GO_WANT_LOG_HELPER=1")
 	out, err := cmd.CombinedOutput()
@@ -82,7 +83,8 @@ func runLogRotationTest(t *testing.T) {
 		fmt.Fprintln(os.Stdout, "TEST_STDOUT_PAYLOAD")
 		fmt.Fprintln(os.Stderr, "TEST_STDERR_PAYLOAD")
 
-		content, err := os.ReadFile(logFile)
+		/* #nosec G304 */
+		content, err := os.ReadFile(filepath.Clean(logFile))
 		if err != nil {
 			return false
 		}
@@ -126,11 +128,12 @@ func TestMaster_SignalForwarding(t *testing.T) {
 	// Simulate worker readiness
 	conn, err := net.Dial("unix", socketPath)
 	require.NoError(t, err)
-	json.NewEncoder(conn).Encode(&ControlMessage{
+	err = json.NewEncoder(conn).Encode(&ControlMessage{
 		Type:      MessageTypeReady,
 		WorkerPID: workerPID,
 	})
-	conn.Close()
+	require.NoError(t, err)
+	_ = conn.Close()
 
 	// Wait for Master to be truly ready-ready
 	assert.Eventually(t, func() bool {
@@ -176,12 +179,4 @@ func TestLogHelperProcess(t *testing.T) {
 		}
 		fmt.Fprintf(os.Stderr, "RECEIVED_SIGNAL_%v\n", sig)
 	}
-}
-
-func fakeLogHelperExec(ctx context.Context, command string, args ...string) *exec.Cmd {
-	cs := []string{"-test.run=TestLogHelperProcess", "--"}
-	cs = append(cs, args...)
-	cmd := exec.CommandContext(ctx, os.Args[0], cs...)
-	cmd.Env = append(os.Environ(), "GO_WANT_LOG_HELPER=1")
-	return cmd
 }

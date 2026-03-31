@@ -3,6 +3,7 @@ package hzadaptor
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -203,7 +204,7 @@ func TestBytesReader(t *testing.T) {
 			if n > 0 {
 				result.Write(buf[:n])
 			}
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			assert.NoError(t, err)

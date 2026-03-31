@@ -154,7 +154,7 @@ func TestBifrost(t *testing.T) {
 			if err != nil {
 				return false
 			}
-			conn.Close()
+			_ = conn.Close()
 		}
 		return true
 	}, 10*time.Second, 200*time.Millisecond, "Servers failed to start")
@@ -171,7 +171,7 @@ func TestBifrost(t *testing.T) {
 
 	t.Run("get order", func(t *testing.T) {
 		client := resty.New()
-		client = client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+		client = client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}) /* #nosec G402 */
 
 		urls := []string{
 			"http://localhost:8080/api/v1/orders",
@@ -184,7 +184,7 @@ func TestBifrost(t *testing.T) {
 				client.SetTransport(&http2.Transport{
 					AllowHTTP: true,
 					TLSClientConfig: &tls.Config{
-						InsecureSkipVerify: true,
+						InsecureSkipVerify: true, /* #nosec G402 */
 					},
 					DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
 						return net.Dial(network, addr)
@@ -212,18 +212,21 @@ func TestBifrost(t *testing.T) {
 	t.Run("test http2", func(t *testing.T) {
 		client := http.Client{
 			Transport: &http2.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, /* #nosec G402 */
 			},
 		}
 
 		resp, err := client.Get("https://localhost:8442/spot/orders")
 		assert.NoError(t, err)
+		if resp != nil {
+			defer resp.Body.Close()
+		}
 		assert.Equal(t, "HTTP/2.0", resp.Proto)
 	})
 
 	t.Run("test metric endpoint", func(t *testing.T) {
 		client := resty.New()
-		client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+		client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}) /* #nosec G402 */
 
 		resp, err := client.R().
 			Get("http://localhost:8080/metrics")
@@ -283,7 +286,7 @@ func TestBifrostShutdown(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", "localhost:8085", 100*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 		return false

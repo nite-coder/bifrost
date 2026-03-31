@@ -119,16 +119,22 @@ func (h *WorkerFDHandler) getListenerFile(listener net.Listener) (*os.File, erro
 // InheritedListeners returns the listener FDs and their keys inherited from Master.
 // Worker calls this on startup when UPGRADE=1.
 func InheritedListeners() (map[string]*os.File, error) {
+	listeners := make(map[string]*os.File)
+
 	if os.Getenv("UPGRADE") != "1" {
-		return nil, nil
+		return listeners, nil
 	}
 
 	// 1. Decode Keys
 	keysEnv := os.Getenv("BIFROST_LISTENER_KEYS")
+	if keysEnv == "" {
+		// New mechanism not used, possibly legacy upgrade
+		return listeners, nil
+	}
+
 	keys, err := decodeListenerKeys(keysEnv)
 	if err != nil {
-		slog.Error("failed to decode BIFROST_LISTENER_KEYS", "error", err)
-		return nil, nil
+		return listeners, fmt.Errorf("failed to decode BIFROST_LISTENER_KEYS: %w", err)
 	}
 
 	// 1.5 Sanity Check: BIFROST_FD_COUNT must match key count
@@ -136,23 +142,19 @@ func InheritedListeners() (map[string]*os.File, error) {
 	// where only keys might be mocked but FDs are not actually passed.
 	fdCountEnv := os.Getenv("BIFROST_FD_COUNT")
 	if fdCountEnv == "" {
-		slog.Warn("BIFROST_FD_COUNT not set, refusing to inherit FDs for safety")
-		return nil, nil
+		return listeners, fmt.Errorf("BIFROST_FD_COUNT not set, refusing to inherit FDs for safety")
 	}
 
 	fdCount, err := strconv.Atoi(fdCountEnv)
 	if err != nil {
-		slog.Error("invalid BIFROST_FD_COUNT", "error", err, "val", fdCountEnv)
-		return nil, nil
+		return listeners, fmt.Errorf("invalid BIFROST_FD_COUNT '%s': %w", fdCountEnv, err)
 	}
 
 	if fdCount != len(keys) {
-		slog.Error("BIFROST_FD_COUNT mismatch", "env", fdCount, "keys", len(keys))
-		return nil, nil
+		return listeners, fmt.Errorf("BIFROST_FD_COUNT mismatch: env=%d, keys=%d", fdCount, len(keys))
 	}
 
 	// 2. Collect FDs (ExtraFiles start at FD 3)
-	listeners := make(map[string]*os.File)
 	count := 0
 
 	// If we have keys, we map them 1:1 to FDs starting at startFD
@@ -181,7 +183,7 @@ func InheritedListeners() (map[string]*os.File, error) {
 		// However, for backward compatibility or simple cases, we might scan FDs.
 		// But in this context, we rely on keys.
 		slog.Warn("no listener keys found in env, FD inheritance requires keys for mapping")
-		return nil, nil
+		return listeners, nil
 	}
 
 	if count > 0 {

@@ -17,7 +17,7 @@ func TempSocketPath(t *testing.T, name string) string {
 	dir, err := os.MkdirTemp(os.TempDir(), "bifrost-*")
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 	})
 	return filepath.Join(dir, name)
 }
@@ -55,7 +55,7 @@ func TestControlPlane_Listen(t *testing.T) {
 		// Verify we can connect
 		conn, err := net.Dial("unix", path)
 		require.NoError(t, err)
-		conn.Close()
+		_ = conn.Close()
 	})
 
 	t.Run("listen cleans up existing socket", func(t *testing.T) {
@@ -180,7 +180,7 @@ func TestControlPlane_SendReceiveFDs(t *testing.T) {
 		require.Len(t, receivedFDs, 1)
 		_, err := receivedFDs[0].Stat()
 		assert.NoError(t, err)
-		receivedFDs[0].Close()
+		_ = receivedFDs[0].Close()
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for FDs")
 	}

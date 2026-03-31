@@ -54,10 +54,6 @@ func (opt *Options) UnmarshalYAML(value *yaml.Node) error {
 	}
 	*opt = Options(defaults)
 
-	if opt.Gopool {
-		// handle gopool logic if needed
-	}
-
 	// due to map is unordered in Go, therefore, we need to parse `routes` section in yaml manually
 	for idx, node := range value.Content {
 		if node.Value == "routes" && len(value.Content) >= idx+1 {

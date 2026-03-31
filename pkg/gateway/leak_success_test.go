@@ -59,7 +59,7 @@ func TestBifrostLeakInSuccessPath_Evidence(t *testing.T) {
 		t.Log("Leak detected! Outputting goroutine stack trace...")
 		buf := make([]byte, 1<<20)
 		len := runtime.Stack(buf, true)
-		os.Stderr.Write(buf[:len])
+		_, _ = os.Stderr.Write(buf[:len])
 	}
 
 	assert.LessOrEqual(t, final, baseline+5, "CUMULATIVE Leak detected in SUCCESS path!")

@@ -56,7 +56,7 @@ func startRedisCluster(t *testing.T) ([]string, map[string]string, func()) {
 	ctx := context.Background()
 
 	// 1. Create a network
-	newNetwork, err := network.New(ctx, network.WithCheckDuplicate())
+	newNetwork, err := network.New(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,6 +258,7 @@ func testLimiter(t *testing.T, limiter Limiter, options Options) {
 				t.Errorf("Request %d should be allowed", i+1)
 			}
 			assert.Equal(t, options.Limit, result.Limit)
+			/* #nosec G115 */
 			assert.Equal(t, uint64(5-i), result.Remaining)
 			assert.LessOrEqual(t, result.ResetTime.Sub(now).Seconds(), float64(1.1))
 		}

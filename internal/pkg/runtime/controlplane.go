@@ -99,7 +99,7 @@ func (cp *ControlPlane) Listen() error {
 	// For file-based sockets (not Abstract Namespace), clean up stale socket
 	if len(cp.options.SocketPath) > 0 && cp.options.SocketPath[0] != 0 {
 		// Remove stale socket file if it exists
-		os.Remove(cp.options.SocketPath)
+		_ = os.Remove(cp.options.SocketPath)
 	}
 
 	lc := net.ListenConfig{}
@@ -476,7 +476,7 @@ type FDHandler interface {
 }
 
 // Start starts the worker control plane loop to handle messages from Master.
-// It blocks until the context is cancelled or the connection is closed.
+// It blocks until the context is canceled or the connection is closed.
 func (wcp *WorkerControlPlane) Start(ctx context.Context, fdHandler FDHandler) error {
 	if wcp.conn == nil {
 		return errors.New("not connected to control plane")

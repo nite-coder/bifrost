@@ -5,6 +5,8 @@ linters:
   disable:
     - cyclop
     - noctx
+    - errcheck
+
     # TODO: Tweak for current project needs
     - depguard
     - dupl
@@ -24,13 +26,10 @@ linters:
     - wsl_v5
 
     # TODO: Disabled, because they are failing at the moment, we should fix them and enable (step by step)
-    - bodyclose
+
     - contextcheck
     - dogsled
     - embeddedstructfieldcheck
-    - errcheck
-    - errchkjson
-    - errorlint
     - exhaustive
     - forbidigo
     - forcetypeassert
@@ -42,28 +41,23 @@ linters:
     - gocyclo
     - godox
     - goprintffuncname
-    - gosec
     - govet
     - ineffassign
     - lll
     - maintidx
-    - misspell
     - mnd
     - modernize
     - nakedret
     - nestif
-    - nilnil
     - paralleltest
     - perfsprint
     - prealloc
     - predeclared
     - revive
-    - staticcheck
     - tagalign
     - testifylint
     - thelper
     - unparam
-    - unused
     - usestdlibvars
     - usetesting
     - wastedassign

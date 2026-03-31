@@ -561,6 +561,14 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 							upstreamID,
 						)
 					}
+				} else if !mainOptions.SkipResolver {
+					// dnsResolver not yet initialized; fall back to format-based validation.
+					// Reject addresses that are neither a valid IP nor a well-formed FQDN
+					// (e.g. plain single-label hostnames like "dev1").
+					ip := net.ParseIP(addr)
+					if !IsValidDomain(addr) && ip == nil {
+						return fmt.Errorf("failed to lookup host '%s' for upstream ID '%s': invalid host", addr, upstreamID)
+					}
 				}
 			}
 		}

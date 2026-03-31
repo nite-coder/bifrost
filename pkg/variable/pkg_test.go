@@ -228,11 +228,11 @@ func TestIsDirective(t *testing.T) {
 }
 
 func TestEnvDirective(t *testing.T) {
-	os.Setenv("foo", "bar")
+	assert.NoError(t, os.Setenv("foo", "bar"))
 	val, _ := Get("$env.foo", nil)
 	assert.Equal(t, "bar", val)
 
-	os.Setenv("BOO", "boo")
+	assert.NoError(t, os.Setenv("BOO", "boo"))
 	val, _ = Get("$env.BOO", nil)
 	assert.Equal(t, "boo", val)
 }

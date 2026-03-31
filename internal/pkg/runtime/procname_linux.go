@@ -17,6 +17,7 @@ func SetProcessName(name string) error {
 		name = name[:15]
 	}
 	bytes := append([]byte(name), 0)
+	/* #nosec G103 */
 	return unix.Prctl(unix.PR_SET_NAME, uintptr(unsafe.Pointer(&bytes[0])), 0, 0, 0)
 }
 

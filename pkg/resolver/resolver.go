@@ -278,8 +278,8 @@ func (r *Resolver) loadHostsFile() error {
 
 func ValidateDNSServer(servers []string) ([]string, error) {
 	m := new(dns.Msg)
-	m.SetQuestion(".", dns.TypeNS)
-	m.RecursionDesired = true
+	m.SetQuestion("localhost.", dns.TypeA)
+	m.RecursionDesired = false
 
 	c := new(dns.Client)
 	c.Timeout = 5 * time.Second
@@ -297,11 +297,11 @@ func ValidateDNSServer(servers []string) ([]string, error) {
 			continue
 		}
 
-		if resp.Rcode != dns.RcodeSuccess && resp.Rcode != dns.RcodeNameError {
-			slog.Debug("DNS server returned error code", "server", server, "code", dns.RcodeToString[resp.Rcode])
-			continue
-		}
-
+		// Any DNS protocol response (including SERVFAIL/REFUSED) means the server
+		// is reachable and speaking DNS. RCODE errors are application-level and do
+		// not indicate the server is down — restricted resolvers (e.g. WSL, corporate
+		// DNS) often return SERVFAIL for unusual probe queries.
+		slog.Debug("DNS server is valid", "server", server, "rcode", dns.RcodeToString[resp.Rcode])
 		result = append(result, server)
 	}
 

@@ -54,7 +54,7 @@ func TestBifrostLeak_Reload(t *testing.T) {
 
 		// Simulate the "swap" and discard
 		// Call Close which is the fix we implemented (simulating pkg.go logic)
-		currentBifrost.Close()
+		_ = currentBifrost.Close()
 		currentBifrost = newBifrost
 
 		// Wait a bit for things to settle
@@ -76,5 +76,5 @@ func TestBifrostLeak_Reload(t *testing.T) {
 	// Cleanup last instance
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	currentBifrost.ShutdownNow(ctx)
+	_ = currentBifrost.ShutdownNow(ctx)
 }

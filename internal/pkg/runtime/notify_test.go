@@ -28,15 +28,15 @@ func TestNotifySystemdReady(t *testing.T) {
 		defer conn.Close()
 
 		// Set env var
-		os.Setenv("NOTIFY_SOCKET", socketPath)
-		defer os.Unsetenv("NOTIFY_SOCKET")
+		_ = os.Setenv("NOTIFY_SOCKET", socketPath)
+		defer func() { _ = os.Unsetenv("NOTIFY_SOCKET") }()
 
 		// Call notify
 		NotifySystemdReady()
 
 		// Check if we received data
 		buf := make([]byte, 1024)
-		conn.SetReadDeadline(func() time.Time { return time.Now().Add(1 * time.Second) }())
+		_ = conn.SetReadDeadline(func() time.Time { return time.Now().Add(1 * time.Second) }())
 		n, _, err := conn.ReadFrom(buf)
 		require.NoError(t, err)
 

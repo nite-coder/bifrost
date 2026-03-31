@@ -53,6 +53,7 @@ func TestHelperProcess(t *testing.T) {
 func fakeExecCommandContext(ctx context.Context, command string, args ...string) *exec.Cmd {
 	cs := []string{"-test.run=TestHelperProcess", "--"}
 	cs = append(cs, args...)
+	/* #nosec G204 */
 	cmd := exec.CommandContext(ctx, os.Args[0], cs...)
 	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1", EnvBifrostRole + "=" + RoleWorker}
 	return cmd
@@ -129,7 +130,7 @@ func TestIsWorker(t *testing.T) {
 	})
 
 	t.Run("is a worker", func(t *testing.T) {
-		os.Setenv(EnvBifrostRole, RoleWorker)
+		_ = os.Setenv(EnvBifrostRole, RoleWorker)
 		defer os.Unsetenv(EnvBifrostRole)
 		assert.True(t, IsWorker())
 	})
@@ -143,13 +144,13 @@ func TestGetControlSocketPath(t *testing.T) {
 
 	t.Run("is set", func(t *testing.T) {
 		encoded := base64.StdEncoding.EncodeToString([]byte("/tmp/test.sock"))
-		os.Setenv("BIFROST_CONTROL_SOCKET", encoded)
+		_ = os.Setenv("BIFROST_CONTROL_SOCKET", encoded)
 		defer os.Unsetenv("BIFROST_CONTROL_SOCKET")
 		assert.Equal(t, "/tmp/test.sock", GetControlSocketPath())
 	})
 
 	t.Run("invalid base64", func(t *testing.T) {
-		os.Setenv("BIFROST_CONTROL_SOCKET", "not-valid-base64!!!")
+		_ = os.Setenv("BIFROST_CONTROL_SOCKET", "not-valid-base64!!!")
 		defer os.Unsetenv("BIFROST_CONTROL_SOCKET")
 		assert.Empty(t, GetControlSocketPath())
 	})
@@ -274,6 +275,7 @@ func TestMaster_SpawnWorker_UserGroup(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, cmd.SysProcAttr)
 		require.NotNil(t, cmd.SysProcAttr.Credential)
+		/* #nosec G115 */
 		assert.Equal(t, uint32(currentUID), cmd.SysProcAttr.Credential.Uid)
 		assert.Equal(t, uint32(2001), cmd.SysProcAttr.Credential.Gid)
 	})
@@ -430,11 +432,11 @@ func TestMaster_Run(t *testing.T) {
 		pid := m.WorkerPID()
 		conn, err := net.Dial("unix", socketPath)
 		require.NoError(t, err)
-		json.NewEncoder(conn).Encode(&ControlMessage{
+		_ = json.NewEncoder(conn).Encode(&ControlMessage{
 			Type:      MessageTypeReady,
 			WorkerPID: pid,
 		})
-		conn.Close()
+		_ = conn.Close()
 
 		// Wait for Master to process readiness (it will move past m.readyCh consume)
 		assert.Eventually(t, func() bool {
@@ -476,11 +478,11 @@ func TestMaster_Run(t *testing.T) {
 		pid := m.WorkerPID()
 		conn, err := net.Dial("unix", socketPath)
 		require.NoError(t, err)
-		json.NewEncoder(conn).Encode(&ControlMessage{
+		_ = json.NewEncoder(conn).Encode(&ControlMessage{
 			Type:      MessageTypeReady,
 			WorkerPID: pid,
 		})
-		conn.Close()
+		_ = conn.Close()
 
 		// Wait for Master to confirm readiness
 		assert.Eventually(t, func() bool {
@@ -535,7 +537,7 @@ func TestMaster_FDTransfer(t *testing.T) {
 	case listenerInfo := <-m.listenerDataCh:
 		assert.NotNil(t, listenerInfo)
 		assert.Equal(t, "test_key", listenerInfo.keys[0])
-		listenerInfo.fds[0].Close()
+		_ = listenerInfo.fds[0].Close()
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for FD transfer")
 	}

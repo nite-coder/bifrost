@@ -53,7 +53,7 @@ func (tc *tracerController) doStart(ctx context.Context, c *app.RequestContext) 
 }
 
 // doFinish records the HTTPFinish event and calls tracer.Finish in reverse
-// order, exactly matching Hertz's internal behaviour.
+// order, exactly matching Hertz's internal behavior.
 func (tc *tracerController) doFinish(ctx context.Context, c *app.RequestContext, err error) {
 	defer tc.tryRecover()
 	if ti := c.GetTraceInfo(); ti != nil {

@@ -2,6 +2,7 @@ package log
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -88,7 +89,8 @@ func TestSIGUSR1Reopen(t *testing.T) {
 	logger.Info("Log after SIGUSR1")
 
 	// Read the contents of the new log file
-	newLogContent, err := os.ReadFile(tmpFile.Name())
+	/* #nosec G304 */
+	newLogContent, err := os.ReadFile(filepath.Clean(tmpFile.Name()))
 	if err != nil {
 		t.Fatalf("Failed to read new log file: %v", err)
 	}
@@ -100,7 +102,8 @@ func TestSIGUSR1Reopen(t *testing.T) {
 	}
 
 	// Read the contents of the rotated log file
-	rotatedLogContent, err := os.ReadFile(rotatedFile)
+	/* #nosec G304 */
+	rotatedLogContent, err := os.ReadFile(filepath.Clean(rotatedFile))
 	if err != nil {
 		t.Fatalf("Failed to read rotated log file: %v", err)
 	}

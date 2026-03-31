@@ -41,7 +41,7 @@ func (fw *fileWriter) reopen() error {
 
 	// Open the new file first to ensure we don't lose logging if open fails
 	// Open-Swap-Close pattern
-	newFile, err := os.OpenFile(fw.file.Name(), os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0o644)
+	newFile, err := os.OpenFile(fw.file.Name(), os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0o600)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func (fw *fileWriter) reopen() error {
 
 	// Close the old file
 	if oldFile != nil {
-		oldFile.Close()
+		_ = oldFile.Close()
 	}
 
 	// Re-apply stdout/stderr redirection if enabled
@@ -122,7 +122,7 @@ func NewLogger(opts config.LoggingOptions) (*slog.Logger, error) {
 		writer = os.Stderr // Write logs to stderr
 	default:
 		// Open the log file for appending, creating it if it doesn't exist
-		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0o644)
+		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0o600)
 		if err != nil {
 			return nil, err
 		}

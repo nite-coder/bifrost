@@ -47,7 +47,8 @@ func TestNewProvider_WithNothingEnabled(t *testing.T) {
 
 	provider, err := metrics.NewProvider(context.Background(), opts)
 	assert.NoError(t, err)
-	assert.Nil(t, provider)
+	assert.NotNil(t, provider)
+	assert.Nil(t, provider.MeterProvider())
 }
 
 func TestProviderNilSafety(t *testing.T) {
