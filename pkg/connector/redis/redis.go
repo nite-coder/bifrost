@@ -121,7 +121,6 @@ func Initialize(ctx context.Context, options []config.RedisOptions) error {
 
 			clients[option.ID] = client
 		}
-
 	}
 
 	return nil

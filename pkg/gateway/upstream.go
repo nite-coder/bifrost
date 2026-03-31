@@ -189,12 +189,12 @@ func generateProxyHash(p proxy.Proxy) string {
 	sort.Strings(keys)
 
 	var builder strings.Builder
-	builder.WriteString(p.Target())
+	_, _ = builder.WriteString(p.Target())
 	for _, k := range keys {
-		builder.WriteString(";")
-		builder.WriteString(k)
-		builder.WriteString("=")
-		builder.WriteString(tags[k])
+		_, _ = builder.WriteString(";")
+		_, _ = builder.WriteString(k)
+		_, _ = builder.WriteString("=")
+		_, _ = builder.WriteString(tags[k])
 	}
 
 	hash := sha256.Sum256([]byte(builder.String()))
@@ -218,7 +218,6 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	newProxies := make([]proxy.Proxy, 0)
 
 	for _, instance := range instances {
-
 		var targetHost, targetPort string
 		targetHost, targetPort, err = net.SplitHostPort(instance.Address().String())
 		if err != nil {
@@ -298,24 +297,24 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		} else if u.bifrost.options.Default.Upstream.FailTimeout > 0 {
 			failTimeout = u.bifrost.options.Default.Upstream.FailTimeout
 		}
-		url := ""
+		myURL := ""
 		switch u.serviceOptions.Protocol {
 		case "", config.ProtocolHTTP, config.ProtocolHTTP2:
-			url = fmt.Sprintf("%s://%s%s", addr.Scheme, targetHost, addr.Path)
+			myURL = fmt.Sprintf("%s://%s%s", addr.Scheme, targetHost, addr.Path)
 			if port != "" {
-				url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
+				myURL = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
 			}
 			clientOptions := httpproxy.ClientOptions{
 				IsHTTP2:   u.serviceOptions.Protocol == config.ProtocolHTTP2,
 				HZOptions: clientOpts,
 			}
-			var client *client.Client
-			client, err = httpproxy.NewClient(clientOptions)
+			var httpClient *client.Client
+			httpClient, err = httpproxy.NewClient(clientOptions)
 			if err != nil {
 				return err
 			}
 			proxyOptions := httpproxy.Options{
-				Target:           url,
+				Target:           myURL,
 				Protocol:         u.serviceOptions.Protocol,
 				Weight:           instance.Weight(),
 				MaxFails:         maxFails,
@@ -326,19 +325,19 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				PassHostHeader:   u.serviceOptions.IsPassHostHeader(),
 				Tags:             instance.Tags(),
 			}
-			var proxy proxy.Proxy
-			proxy, err = httpproxy.New(proxyOptions, client)
+			var myProxy proxy.Proxy
+			myProxy, err = httpproxy.New(proxyOptions, httpClient)
 			if err != nil {
 				return err
 			}
-			newProxies = append(newProxies, proxy)
+			newProxies = append(newProxies, myProxy)
 		case config.ProtocolGRPC:
-			url = "grpc://" + targetHost + addr.Path
+			myURL = "grpc://" + targetHost + addr.Path
 			if port != "" {
-				url = "grpc://" + net.JoinHostPort(targetHost, port) + addr.Path
+				myURL = "grpc://" + net.JoinHostPort(targetHost, port) + addr.Path
 			}
 			grpcOptions := grpcproxy.Options{
-				Target:           url,
+				Target:           myURL,
 				TLSVerify:        u.serviceOptions.TLSVerify,
 				Weight:           instance.Weight(),
 				MaxFails:         maxFails,
@@ -353,6 +352,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				return err
 			}
 			newProxies = append(newProxies, grpcProxy)
+		default:
 		}
 	}
 	var updatedProxies []proxy.Proxy

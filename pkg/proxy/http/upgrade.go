@@ -34,7 +34,7 @@ func upgradeRespType(h *protocol.ResponseHeader) string {
 	return h.Get("Upgrade")
 }
 
-func (p *HTTPProxy) roundTrip(
+func (p *Proxy) roundTrip(
 	ctx context.Context,
 	clientCtx *app.RequestContext,
 	req *protocol.Request,
@@ -114,7 +114,7 @@ func (p *HTTPProxy) roundTrip(
 	return nil
 }
 
-func (p *HTTPProxy) handleUpgradeResponse(ctx context.Context, clientConn network.Conn, backendConn network.Conn) {
+func (p *Proxy) handleUpgradeResponse(ctx context.Context, clientConn network.Conn, backendConn network.Conn) {
 	backConnCloseCh := make(chan bool)
 	go safety.Go(ctx, func() {
 		// Ensure that the cancellation of a request closes the backend.

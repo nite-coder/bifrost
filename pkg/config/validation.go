@@ -20,8 +20,18 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+// ValidationMode defines the mode for configuration validation.
+type ValidationMode int
+
+const (
+	// ModeBasic only validates basic configuration values.
+	ModeBasic ValidationMode = iota
+	// ModeFull validates the entire configuration, including resource existence.
+	ModeFull
+)
+
 // ValidateConfig checks if the config's values are valid, but does not check if the config's value mapping is valid.
-func ValidateConfig(mainOptions Options, isFullMode bool) error {
+func ValidateConfig(mainOptions Options, mode ValidationMode) error {
 	if dnsResolver == nil && !mainOptions.SkipResolver {
 		var err error
 		dnsResolver, err = resolver.NewResolver(resolver.Options{
@@ -57,32 +67,32 @@ func ValidateConfig(mainOptions Options, isFullMode bool) error {
 		return err
 	}
 
-	err = validateMiddlewares(mainOptions, isFullMode)
+	err = validateMiddlewares(mainOptions, mode)
 	if err != nil {
 		return err
 	}
 
-	err = validateUpstreams(mainOptions, isFullMode)
+	err = validateUpstreams(mainOptions, mode)
 	if err != nil {
 		return err
 	}
 
-	err = validateServices(mainOptions, isFullMode)
+	err = validateServices(mainOptions, mode)
 	if err != nil {
 		return err
 	}
 
-	err = validateServers(mainOptions, isFullMode)
+	err = validateServers(mainOptions, mode)
 	if err != nil {
 		return err
 	}
 
-	err = validateRoutes(mainOptions, isFullMode)
+	err = validateRoutes(mainOptions, mode)
 	if err != nil {
 		return err
 	}
 
-	err = validateMetrics(mainOptions, isFullMode)
+	err = validateMetrics(mainOptions, mode)
 	if err != nil {
 		return err
 	}
@@ -227,7 +237,7 @@ func validateAccessLog(options map[string]AccessLogOptions) error {
 	return nil
 }
 
-func validateMiddlewares(mainOptions Options, isFullMode bool) error {
+func validateMiddlewares(mainOptions Options, mode ValidationMode) error {
 	for middlewareID, middlewareOptions := range mainOptions.Middlewares {
 		if len(middlewareOptions.Use) > 0 {
 			return fmt.Errorf(
@@ -241,7 +251,7 @@ func validateMiddlewares(mainOptions Options, isFullMode bool) error {
 			return fmt.Errorf("middleware type cannot be empty for middleware ID: %s", middlewareID)
 		}
 
-		if isFullMode {
+		if mode == ModeFull {
 			if len(middlewareOptions.Type) > 0 {
 				hander := middleware.Factory(middlewareOptions.Type)
 				if hander == nil {
@@ -258,7 +268,7 @@ func validateMiddlewares(mainOptions Options, isFullMode bool) error {
 	return nil
 }
 
-func validateServers(mainOptions Options, isFullMode bool) error {
+func validateServers(mainOptions Options, mode ValidationMode) error {
 	for serverID, serverOptions := range mainOptions.Servers {
 		if serverOptions.Bind == "" {
 			msg := "bind cannot be empty for server ID: " + serverID
@@ -311,7 +321,7 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 			}
 		}
 
-		if isFullMode {
+		if mode == ModeFull {
 			for _, m := range serverOptions.Middlewares {
 				if len(m.Use) > 0 {
 					if _, found := mainOptions.Middlewares[m.Use]; !found {
@@ -332,7 +342,7 @@ func validateServers(mainOptions Options, isFullMode bool) error {
 	return nil
 }
 
-func validateRoutes(mainOptions Options, isFullMode bool) error {
+func validateRoutes(mainOptions Options, mode ValidationMode) error {
 	servers := map[string]*router.Router{}
 
 	for serverID := range mainOptions.Servers {
@@ -354,7 +364,7 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 			return newInvalidConfig(structure, "", msg)
 		}
 
-		if !isFullMode {
+		if mode != ModeFull {
 			continue
 		}
 
@@ -396,16 +406,16 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 		}
 
 		if len(route.Servers) == 0 {
-			for _, router := range servers {
-				err := addRoute(router, *route)
+			for _, r := range servers {
+				err := addRoute(r, *route)
 				if err != nil {
 					return err
 				}
 			}
 		} else if len(route.Servers) > 0 {
 			for _, serverName := range route.Servers {
-				router := servers[serverName]
-				err := addRoute(router, *route)
+				r := servers[serverName]
+				err := addRoute(r, *route)
 				if err != nil {
 					return err
 				}
@@ -416,10 +426,9 @@ func validateRoutes(mainOptions Options, isFullMode bool) error {
 	return nil
 }
 
-func validateServices(mainOptions Options, isFullMode bool) error {
+func validateServices(mainOptions Options, mode ValidationMode) error {
 	for serviceID, service := range mainOptions.Services {
-
-		if !isFullMode {
+		if mode != ModeFull {
 			continue
 		}
 
@@ -485,10 +494,9 @@ func validateServices(mainOptions Options, isFullMode bool) error {
 	return nil
 }
 
-func validateUpstreams(mainOptions Options, isFullMode bool) error {
+func validateUpstreams(mainOptions Options, mode ValidationMode) error {
 	for upstreamID, upstreamOptions := range mainOptions.Upstreams {
-
-		if !isFullMode {
+		if mode != ModeFull {
 			continue
 		}
 
@@ -498,16 +506,17 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 			return newInvalidConfig(structure, "", msg)
 		}
 
-		factory := balancer.Factory(upstreamOptions.Balancer.Type)
-		if factory == nil && upstreamOptions.Balancer.Type == "" {
-		} else if factory == nil {
-			msg := fmt.Sprintf(
-				"unsupported balancer strategy '%s' for upstream ID: %s",
-				upstreamOptions.Balancer,
-				upstreamID,
-			)
-			structure := []string{"upstreams", upstreamID, "strategy"}
-			return newInvalidConfig(structure, upstreamOptions.Balancer, msg)
+		if upstreamOptions.Balancer.Type != "" {
+			factory := balancer.Factory(upstreamOptions.Balancer.Type)
+			if factory == nil {
+				msg := fmt.Sprintf(
+					"unsupported balancer strategy '%s' for upstream ID: %s",
+					upstreamOptions.Balancer.Type,
+					upstreamID,
+				)
+				structure := []string{"upstreams", upstreamID, "strategy"}
+				return newInvalidConfig(structure, upstreamOptions.Balancer.Type, msg)
+			}
 		}
 
 		switch upstreamOptions.Discovery.Type {
@@ -585,13 +594,13 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 	return nil
 }
 
-func validateMetrics(options Options, isFullMode bool) error {
+func validateMetrics(options Options, mode ValidationMode) error {
 	if options.Metrics.Prometheus.Enabled {
 		if options.Metrics.Prometheus.ServerID == "" {
 			return errors.New("server_id cannot be empty for Prometheus")
 		}
 
-		if isFullMode {
+		if mode == ModeFull {
 			_, found := options.Servers[options.Metrics.Prometheus.ServerID]
 			if !found {
 				msg := "server_id '" + options.Metrics.Prometheus.ServerID + "' not found for prometheus"

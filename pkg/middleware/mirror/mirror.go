@@ -32,8 +32,8 @@ type Options struct {
 	QueueSize int64  `mapstructure:"queue_size"`
 }
 
-// MirrorMiddleware is a middleware that mirrors requests to another service.
-type MirrorMiddleware struct {
+// Middleware is a middleware that mirrors requests to another service.
+type Middleware struct {
 	options *Options
 	queue   chan *mirrorContext
 }
@@ -44,12 +44,12 @@ type mirrorContext struct {
 }
 
 // NewMiddleware creates a new MirrorMiddleware instance.
-func NewMiddleware(options Options) *MirrorMiddleware {
+func NewMiddleware(options Options) *Middleware {
 	if options.QueueSize <= 0 {
 		options.QueueSize = 10000
 	}
 
-	m := &MirrorMiddleware{
+	m := &Middleware{
 		options: &options,
 		queue:   make(chan *mirrorContext, options.QueueSize),
 	}
@@ -60,7 +60,7 @@ func NewMiddleware(options Options) *MirrorMiddleware {
 }
 
 // Run starts the worker that processes mirrored requests.
-func (m *MirrorMiddleware) Run() {
+func (m *Middleware) Run() {
 	for mctx := range m.queue {
 		bifrost := gateway.GetBifrost()
 
@@ -91,7 +91,7 @@ func (m *MirrorMiddleware) Run() {
 	}
 }
 
-func (m *MirrorMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	mctx := &mirrorContext{
 		logger: log.FromContext(ctx),
 		hzCtx:  c.Copy(),

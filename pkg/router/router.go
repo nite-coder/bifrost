@@ -26,6 +26,7 @@ var HTTPMethods = []string{
 type methodHandler struct {
 	handlers map[string][]app.HandlerFunc // Associates HTTP methods with handler functions
 }
+
 // NodeType indicates the type of the node.
 type NodeType int32
 

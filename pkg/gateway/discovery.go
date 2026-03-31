@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -29,7 +30,6 @@ func (d *ResolverDiscovery) GetInstances(
 	instances := make([]provider.Instancer, 0)
 
 	for _, targetOptions := range d.upstream.options.Targets {
-
 		targetHost, targetPort, err := net.SplitHostPort(targetOptions.Target)
 		if err != nil {
 			targetHost = targetOptions.Target
@@ -76,7 +76,7 @@ func (d *ResolverDiscovery) Watch(
 	_ context.Context,
 	_ provider.GetInstanceOptions,
 ) (<-chan []provider.Instancer, error) {
-	return nil, fmt.Errorf("watch is not supported by resolver discovery")
+	return nil, errors.New("watch is not supported by resolver discovery")
 }
 
 // Close releases resources used by ResolverDiscovery.

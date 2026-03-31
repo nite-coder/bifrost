@@ -25,7 +25,7 @@ func TestMirror(t *testing.T) {
 		URL: "http://127.0.0.1:8000",
 	}
 
-	bifrost, err := gateway.NewBifrost(options, false)
+	bifrost, err := gateway.NewBifrost(options, gateway.ModeNormal)
 	assert.NoError(t, err)
 	gateway.SetBifrost(bifrost)
 

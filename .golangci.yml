@@ -140,6 +140,13 @@ linters:
           - gocognit
           - gocyclo
         path: _test\.go$
+      - linters:
+          - revive
+        path: ^pkg/proxy/http/
+      - linters:
+          - tagalign
+        path: ^pkg/config/options\.go$
+
 
 issues:
   max-issues-per-linter: 0

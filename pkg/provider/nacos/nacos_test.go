@@ -41,7 +41,10 @@ func (m *MockConfigClient) CancelListenConfig(param vo.ConfigParam) error {
 
 func (m *MockConfigClient) SearchConfig(param vo.SearchConfigParam) (*model.ConfigPage, error) {
 	args := m.Called(param)
-	res, _ := args.Get(0).(*model.ConfigPage)
+	res, ok := args.Get(0).(*model.ConfigPage)
+	if !ok {
+		return nil, args.Error(1)
+	}
 	return res, args.Error(1)
 }
 
@@ -81,7 +84,7 @@ func TestConfigOpen(t *testing.T) {
 		},
 	}
 
-	provider := &NacosProvider{
+	provider := &Provider{
 		client:  mockClient,
 		options: opts,
 	}
@@ -105,7 +108,7 @@ func TestSetOnChanged(t *testing.T) {
 
 	opts := Options{}
 
-	provider := &NacosProvider{
+	provider := &Provider{
 		options: opts,
 	}
 
@@ -133,7 +136,7 @@ func TestWatch(t *testing.T) {
 		},
 	}
 
-	provider := &NacosProvider{
+	provider := &Provider{
 		client:  mockClient,
 		options: opts,
 	}

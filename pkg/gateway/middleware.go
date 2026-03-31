@@ -108,7 +108,6 @@ func (m *FirstRouteMiddleware) ServeHTTP(_ context.Context, c *app.RequestContex
 func loadMiddlewares(middlewareOptions map[string]config.MiddlwareOptions) (map[string]app.HandlerFunc, error) {
 	middlewares := map[string]app.HandlerFunc{}
 	for id, middlewareOpts := range middlewareOptions {
-
 		if len(id) == 0 {
 			return nil, errors.New("middleware ID cannot be empty")
 		}

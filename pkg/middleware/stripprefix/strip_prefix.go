@@ -27,14 +27,14 @@ func Init() error {
 	})
 }
 
-// StripPrefixMiddleware is a middleware that removes prefixes from the request path.
-type StripPrefixMiddleware struct {
+// Middleware is a middleware that removes prefixes from the request path.
+type Middleware struct {
 	prefixes [][]byte
 }
 
 // NewMiddleware creates a new StripPrefixMiddleware instance.
-func NewMiddleware(prefixs []string) *StripPrefixMiddleware {
-	m := &StripPrefixMiddleware{
+func NewMiddleware(prefixs []string) *Middleware {
+	m := &Middleware{
 		prefixes: make([][]byte, 0),
 	}
 	for _, prefix := range prefixs {
@@ -44,7 +44,7 @@ func NewMiddleware(prefixs []string) *StripPrefixMiddleware {
 	return m
 }
 
-func (m *StripPrefixMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	for _, prefix := range m.prefixes {
 		if bytes.HasPrefix(c.Request.Path(), prefix) {
 			newPath := bytes.TrimPrefix(c.Request.Path(), prefix)

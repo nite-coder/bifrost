@@ -149,7 +149,7 @@ func TestGetInstances(t *testing.T) {
 				assert.NoError(t, e)
 			}
 
-			k8sDiscovery := &K8sDiscovery{
+			k8sDiscovery := &Discovery{
 				client: client,
 			}
 
@@ -171,18 +171,20 @@ func TestGetInstances(t *testing.T) {
 }
 
 func TestWatch(t *testing.T) {
+	type watchOperation struct {
+		event     watch.EventType
+		obj       any
+		expected  int
+		instance  string
+		hasWeight bool
+	}
+
 	tests := []struct {
 		name          string
 		endpointSlice *discoveryv1.EndpointSlice
 		pods          []corev1.Pod
 		options       provider.GetInstanceOptions
-		operations    []struct {
-			event     watch.EventType
-			obj       any
-			expected  int
-			instance  string
-			hasWeight bool
-		}
+		operations    []watchOperation
 	}{
 		{
 			name: "endpointslice added",
@@ -247,13 +249,7 @@ func TestWatch(t *testing.T) {
 				Name:      "test-app",
 				Namespace: "default",
 			},
-			operations: []struct {
-				event     watch.EventType
-				obj       any
-				expected  int
-				instance  string
-				hasWeight bool
-			}{
+			operations: []watchOperation{
 				{
 					event: watch.Added,
 					obj: &discoveryv1.EndpointSlice{
@@ -312,7 +308,7 @@ func TestWatch(t *testing.T) {
 				assert.NoError(t, e)
 			}
 
-			k8sDiscovery := &K8sDiscovery{
+			k8sDiscovery := &Discovery{
 				client: client,
 			}
 

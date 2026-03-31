@@ -28,11 +28,12 @@ const (
 	unknownLabelValue = "unknown"
 )
 
-// CorazaMiddleware is a middleware that provides Web Application Firewall (WAF) capabilities using Coraza.
-type CorazaMiddleware struct {
+// Middleware is a middleware that provides Web Application Firewall (WAF) capabilities using Coraza.
+type Middleware struct {
 	options *Options
 	waf     coraza.WAF
 }
+
 // Options defines the configuration for the Coraza WAF middleware.
 type Options struct {
 	Directives               string   `mapstructure:"directives"`
@@ -43,7 +44,7 @@ type Options struct {
 }
 
 // NewMiddleware creates a new CorazaMiddleware instance with the given options.
-func NewMiddleware(options Options) (*CorazaMiddleware, error) {
+func NewMiddleware(options Options) (*Middleware, error) {
 	if options.Directives == "" {
 		options.Directives = `
 			Include @coraza.conf-recommended
@@ -62,13 +63,13 @@ func NewMiddleware(options Options) (*CorazaMiddleware, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Coraza WAF: %w", err)
 	}
-	return &CorazaMiddleware{
+	return &Middleware{
 		options: &options,
 		waf:     waf,
 	}, nil
 }
 
-func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 	clientIP := c.ClientIP()
 	for _, allowIP := range m.options.IPAllowList {
@@ -116,25 +117,25 @@ func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext)
 	// Read and Process Body if exists
 	if tx.IsRequestBodyAccessible() {
 		if !c.Request.IsBodyStream() && len(c.Request.Body()) > 0 {
-			it_body, _, e := tx.WriteRequestBody(c.Request.Body())
+			itBody, _, e := tx.WriteRequestBody(c.Request.Body())
 			if e != nil {
 				logger.Warn("coraza: failed to write request body", "error", e)
 				return
 			}
-			m.processInterruption(ctx, c, tx, it_body)
+			m.processInterruption(ctx, c, tx, itBody)
 		}
 	}
-	it_res, e := tx.ProcessRequestBody()
+	itRes, e := tx.ProcessRequestBody()
 	if e != nil {
 		logger.Warn("coraza: failed to process request body", "error", e)
 		return
 	}
-	m.processInterruption(ctx, c, tx, it_res)
+	m.processInterruption(ctx, c, tx, itRes)
 	m.log(ctx, c, tx)
 	c.Next(ctx)
 }
 
-func (m *CorazaMiddleware) processInterruption(
+func (m *Middleware) processInterruption(
 	ctx context.Context,
 	c *app.RequestContext,
 	tx types.Transaction,
@@ -157,7 +158,7 @@ func (m *CorazaMiddleware) processInterruption(
 	}
 }
 
-func (m *CorazaMiddleware) log(ctx context.Context, c *app.RequestContext, tx types.Transaction) {
+func (m *Middleware) log(ctx context.Context, c *app.RequestContext, tx types.Transaction) {
 	logger := log.FromContext(ctx)
 	matchedRules := tx.MatchedRules()
 	if len(matchedRules) > 0 {

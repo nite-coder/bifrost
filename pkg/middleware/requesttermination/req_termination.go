@@ -9,8 +9,8 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
-// RequestTerminationMiddleware is a middleware that terminates the request with a specified status code and body.
-type RequestTerminationMiddleware struct {
+// Middleware is a middleware that terminates the request with a specified status code and body.
+type Middleware struct {
 	options *Options
 }
 
@@ -22,13 +22,13 @@ type Options struct {
 }
 
 // NewMiddleware creates a new RequestTerminationMiddleware instance.
-func NewMiddleware(options Options) *RequestTerminationMiddleware {
-	return &RequestTerminationMiddleware{
+func NewMiddleware(options Options) *Middleware {
+	return &Middleware{
 		options: &options,
 	}
 }
 
-func (m *RequestTerminationMiddleware) ServeHTTP(_ context.Context, c *app.RequestContext) {
+func (m *Middleware) ServeHTTP(_ context.Context, c *app.RequestContext) {
 	if m.options.StatusCode > 0 {
 		c.Response.SetStatusCode(m.options.StatusCode)
 	}

@@ -18,15 +18,15 @@ type Destination struct {
 	Weight int64
 }
 
-// TrafficSplitterMiddleware is a middleware that splits traffic among multiple destinations.
-type TrafficSplitterMiddleware struct {
+// Middleware is a middleware that splits traffic among multiple destinations.
+type Middleware struct {
 	options     *Options
 	totalWeight int64
 }
 
 // NewMiddleware creates a new TrafficSplitterMiddleware instance.
-func NewMiddleware(options *Options) *TrafficSplitterMiddleware {
-	m := &TrafficSplitterMiddleware{
+func NewMiddleware(options *Options) *Middleware {
+	m := &Middleware{
 		options: options,
 	}
 
@@ -40,7 +40,7 @@ func NewMiddleware(options *Options) *TrafficSplitterMiddleware {
 	return m
 }
 
-func (m *TrafficSplitterMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	if m.totalWeight <= 0 {
 		c.Next(ctx)
 		return

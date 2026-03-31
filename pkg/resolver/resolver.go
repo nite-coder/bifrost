@@ -234,7 +234,6 @@ func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]stri
 		default:
 			return nil, fmt.Errorf("DNS: unknown order '%s'", order)
 		}
-
 	}
 
 	return nil, fmt.Errorf("DNS: %w; cannot resolve '%s'", ErrNotFound, host)

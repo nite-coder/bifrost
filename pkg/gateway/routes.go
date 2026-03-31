@@ -28,7 +28,6 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 	route := newRoutes()
 
 	for _, routeOptions := range bifrost.options.Routes {
-
 		if len(routeOptions.Servers) > 0 && !slices.Contains(routeOptions.Servers, server.ID) {
 			continue
 		}

@@ -53,7 +53,6 @@ func newEngine(bifrost *Bifrost, serverOptions config.ServerOptions) (*Engine, e
 
 	// set server's middlewares
 	for _, m := range serverOptions.Middlewares {
-
 		if len(m.Use) > 0 {
 			val, found := bifrost.middlewares[m.Use]
 			if !found {
@@ -110,8 +109,8 @@ func (e *Engine) OnShutdown() {
 }
 
 // Use adds middlewares to the engine.
-func (e *Engine) Use(middleware ...app.HandlerFunc) {
-	e.handlers = append(e.handlers, middleware...)
+func (e *Engine) Use(middlewares ...app.HandlerFunc) {
+	e.handlers = append(e.handlers, middlewares...)
 
 	if e.notFoundHandler == nil {
 		e.middlewares = e.handlers

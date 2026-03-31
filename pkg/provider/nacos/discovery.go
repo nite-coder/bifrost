@@ -18,8 +18,8 @@ import (
 
 var newNamingClientFunc = clients.NewNamingClient
 
-// NacosServiceDiscovery implements service discovery using Nacos.
-type NacosServiceDiscovery struct {
+// Discovery implements service discovery using Nacos.
+type Discovery struct {
 	client  naming_client.INamingClient
 	options *Options
 	stopCh  chan struct{}
@@ -27,7 +27,7 @@ type NacosServiceDiscovery struct {
 }
 
 // NewNacosServiceDiscovery creates a new NacosServiceDiscovery instance.
-func NewNacosServiceDiscovery(options Options) (*NacosServiceDiscovery, error) {
+func NewNacosServiceDiscovery(options Options) (*Discovery, error) {
 	serverConfigs := []constant.ServerConfig{}
 
 	contextPath := "/nacos"
@@ -108,14 +108,14 @@ func NewNacosServiceDiscovery(options Options) (*NacosServiceDiscovery, error) {
 		return nil, fmt.Errorf("failed to verify nacos connection: %w", err)
 	}
 
-	return &NacosServiceDiscovery{
+	return &Discovery{
 		client:  client,
 		options: &options,
 	}, nil
 }
 
 // GetInstances returns the current list of healthy service instances from Nacos.
-func (d *NacosServiceDiscovery) GetInstances(
+func (d *Discovery) GetInstances(
 	_ context.Context,
 	options provider.GetInstanceOptions,
 ) ([]provider.Instancer, error) {
@@ -141,7 +141,7 @@ func (d *NacosServiceDiscovery) GetInstances(
 }
 
 // Watch subscribes to service changes in Nacos and returns a channel for updates.
-func (d *NacosServiceDiscovery) Watch(
+func (d *Discovery) Watch(
 	_ context.Context,
 	options provider.GetInstanceOptions,
 ) (<-chan []provider.Instancer, error) {
@@ -173,7 +173,7 @@ func (d *NacosServiceDiscovery) Watch(
 }
 
 // Close stops the Nacos service discovery and cleans up resources.
-func (d *NacosServiceDiscovery) Close() error {
+func (d *Discovery) Close() error {
 	if d.stopCh != nil {
 		close(d.stopCh)
 	}

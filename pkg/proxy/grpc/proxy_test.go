@@ -73,23 +73,23 @@ func (s *grpcTestServer) SayHello(ctx context.Context, in *proto.HelloRequest) (
 	return &proto.HelloReply{Message: "Hello " + name}, nil
 }
 
-func createGrpcServer() {
+func createGrpcServer(t *testing.T) {
 	lis, err := net.Listen("tcp", "127.0.0.1:8500")
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		t.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
 	proto.RegisterGreeterServer(s, &grpcTestServer{})
 	go func() {
 		err := s.Serve(lis)
 		if err != nil {
-			log.Fatalf("Server exited with error: %v", err)
+			t.Errorf("Server exited with error: %v", err)
 		}
 	}()
 }
 
 func TestGRPCProxy(t *testing.T) {
-	createGrpcServer()
+	createGrpcServer(t)
 
 	ctx := context.Background()
 
@@ -258,7 +258,7 @@ func (m *mockClientConn) Invoke(
 
 func TestGRPCProxy_PanicOnInvalidPayload(t *testing.T) {
 	// Setup
-	proxy := &GRPCProxy{
+	proxy := &Proxy{
 		client: &mockClientConn{}, // minimal mock
 		options: &Options{
 			Timeout: time.Second,
@@ -289,7 +289,7 @@ func TestGRPCProxy_PanicOnInvalidPayload(t *testing.T) {
 func TestGRPCProxy_ErrorStatusPlacement(t *testing.T) {
 	// Setup
 	mockConn := &mockClientConnError{err: status.Error(codes.Unauthenticated, "test error")}
-	proxy := &GRPCProxy{
+	proxy := &Proxy{
 		client: mockConn,
 		options: &Options{
 			Timeout: time.Second,

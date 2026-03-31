@@ -20,12 +20,14 @@ type GetInstanceOptions struct {
 	Name      string
 	Group     string
 }
+
 // ServiceDiscovery defines the interface for service discovery.
 type ServiceDiscovery interface {
 	GetInstances(ctx context.Context, options GetInstanceOptions) ([]Instancer, error)
 	Watch(ctx context.Context, options GetInstanceOptions) (<-chan []Instancer, error)
 	Close() error
 }
+
 // Instancer defines the interface for a service instance.
 type Instancer interface {
 	Address() net.Addr
@@ -33,6 +35,7 @@ type Instancer interface {
 	Tag(key string) (value string, exist bool)
 	Tags() map[string]string
 }
+
 // Instance represents a single service instance with an address and metadata.
 type Instance struct {
 	addr     net.Addr

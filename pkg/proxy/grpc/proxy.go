@@ -51,8 +51,9 @@ type Options struct {
 	IsTracingEnabled bool
 	ServiceID        string
 }
-// GRPCProxy implements a reverse proxy for gRPC services.
-type GRPCProxy struct {
+
+// Proxy implements a reverse proxy for gRPC services.
+type Proxy struct {
 	failExpireAt time.Time
 	client       grpc.ClientConnInterface
 	options      *Options
@@ -67,7 +68,7 @@ type GRPCProxy struct {
 }
 
 // New creates a new GRPCProxy instance with the given options.
-func New(options Options) (*GRPCProxy, error) {
+func New(options Options) (*Proxy, error) {
 	addr, err := url.Parse(options.Target)
 	if err != nil {
 		return nil, fmt.Errorf("proxy: gRPC proxy failed to parse target URL: %w", err)
@@ -89,7 +90,7 @@ func New(options Options) (*GRPCProxy, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial backend: %w", err)
 	}
-	return &GRPCProxy{
+	return &Proxy{
 		id:         uuid.New().String(),
 		target:     options.Target,
 		targetHost: addr.Host,
@@ -100,7 +101,7 @@ func New(options Options) (*GRPCProxy, error) {
 }
 
 // IsAvailable returns true if the upstream gRPC server is considered healthy.
-func (p *GRPCProxy) IsAvailable() bool {
+func (p *Proxy) IsAvailable() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	if p.options.MaxFails == 0 {
@@ -117,7 +118,7 @@ func (p *GRPCProxy) IsAvailable() bool {
 }
 
 // AddFailedCount increments the failed request count for the upstream server.
-func (p *GRPCProxy) AddFailedCount(count uint) error {
+func (p *Proxy) AddFailedCount(count uint) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	now := timecache.Now()
@@ -134,22 +135,22 @@ func (p *GRPCProxy) AddFailedCount(count uint) error {
 }
 
 // ID return proxy's ID.
-func (p *GRPCProxy) ID() string {
+func (p *Proxy) ID() string {
 	return p.id
 }
 
 // Weight returns the relative weight of this proxy instance for load balancing.
-func (p *GRPCProxy) Weight() uint32 {
+func (p *Proxy) Weight() uint32 {
 	return p.weight
 }
 
 // Target returns the target URL of the upstream gRPC server.
-func (p *GRPCProxy) Target() string {
+func (p *Proxy) Target() string {
 	return p.target
 }
 
 // Close closes the underlying gRPC client connection.
-func (p *GRPCProxy) Close() error {
+func (p *Proxy) Close() error {
 	if p.client != nil {
 		if closer, ok := p.client.(io.Closer); ok {
 			err := closer.Close()
@@ -163,7 +164,7 @@ func (p *GRPCProxy) Close() error {
 }
 
 // Tag retrieves a specific metadata tag value from the proxy instance.
-func (p *GRPCProxy) Tag(key string) (value string, exist bool) {
+func (p *Proxy) Tag(key string) (value string, exist bool) {
 	if len(p.tags) == 0 {
 		return "", false
 	}
@@ -173,12 +174,12 @@ func (p *GRPCProxy) Tag(key string) (value string, exist bool) {
 }
 
 // Tags returns all metadata tags of the proxy instance.
-func (p *GRPCProxy) Tags() map[string]string {
+func (p *Proxy) Tags() map[string]string {
 	return p.tags
 }
 
 // ServeHTTP implements the http.Handler interface.
-func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 	defer func() {
 		if r := recover(); r != nil {
@@ -339,7 +340,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	c.Response.SetBody(frame)
 }
 
-func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, err error) {
+func (p *Proxy) handleGRPCError(ctx context.Context, c *app.RequestContext, err error) {
 	if err == nil {
 		return
 	}

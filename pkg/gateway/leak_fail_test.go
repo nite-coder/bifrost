@@ -29,7 +29,7 @@ func TestBifrostCumulativeLeak_FinalEvidence(t *testing.T) {
 		}
 	}
 
-	runtime.GC()
+	runtime.GC() //nolint:revive
 	initialGoroutines := runtime.NumGoroutine()
 	t.Logf("[Initial] Goroutines: %d", initialGoroutines)
 
@@ -39,9 +39,9 @@ func TestBifrostCumulativeLeak_FinalEvidence(t *testing.T) {
 	failOptions.Services["fail_svc"] = config.ServiceOptions{URL: "://invalid"} // Deliberate error
 
 	for i := 1; i <= 2; i++ {
-		_, err := NewBifrost(failOptions, false)
+		_, err := NewBifrost(failOptions, ModeNormal)
 		require.Error(t, err)
-		runtime.GC()
+		runtime.GC() //nolint:revive
 		t.Logf("Try #%d (Fail) after Goroutines: %d", i, runtime.NumGoroutine())
 	}
 
@@ -54,19 +54,19 @@ func TestBifrostCumulativeLeak_FinalEvidence(t *testing.T) {
 		directOptions.Services[id] = config.ServiceOptions{ID: id, URL: "http://localhost/"}
 	}
 
-	bifrost, err := NewBifrost(directOptions, false)
+	bifrost, err := NewBifrost(directOptions, ModeNormal)
 	require.NoError(t, err)
 
-	runtime.GC()
+	runtime.GC() //nolint:revive
 	baseline := runtime.NumGoroutine()
 	t.Logf("Goroutines baseline after Direct Proxy startup: %d", baseline)
 
 	for i := 1; i <= 2; i++ {
-		newB, err := NewBifrost(directOptions, true)
+		newB, err := NewBifrost(directOptions, ModeReload)
 		require.NoError(t, err)
 		_ = bifrost.Close()
 		bifrost = newB
-		runtime.GC()
+		runtime.GC() //nolint:revive
 		t.Logf("Direct Proxy Reload #%d after Goroutines: %d", i, runtime.NumGoroutine())
 	}
 

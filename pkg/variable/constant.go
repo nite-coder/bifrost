@@ -10,6 +10,7 @@ type RequestOriginal struct {
 	Path     []byte
 	Query    []byte
 }
+
 // RequestRoute stores information about the routed request.
 type RequestRoute struct {
 	RouteID   string

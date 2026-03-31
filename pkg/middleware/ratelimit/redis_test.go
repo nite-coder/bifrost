@@ -12,7 +12,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
-	redisMod "github.com/testcontainers/testcontainers-go/modules/redis"
+	redismod "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -24,10 +24,10 @@ func startRedis(t *testing.T) (string, func()) {
 
 	ctx := context.Background()
 
-	redisContainer, err := redisMod.Run(ctx,
+	redisContainer, err := redismod.Run(ctx,
 		"redis:7.4",
-		redisMod.WithSnapshotting(10, 1),
-		redisMod.WithLogLevel(redisMod.LogLevelVerbose),
+		redismod.WithSnapshotting(10, 1),
+		redismod.WithLogLevel(redismod.LogLevelVerbose),
 	)
 	if err != nil {
 		t.Fatalf("failed to start container: %s", err)

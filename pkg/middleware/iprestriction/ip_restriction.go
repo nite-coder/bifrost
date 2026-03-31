@@ -18,6 +18,7 @@ type Options struct {
 	Deny                     []string `mapstructure:"deny"`
 	RejectedHTTPStatusCode   int      `mapstructure:"rejected_http_status_code"`
 }
+
 // IPRestriction is a middleware that allows or denies requests based on client IP.
 type IPRestriction struct {
 	options *Options

@@ -45,7 +45,10 @@ var (
 // GetBifrost retrieves the current instance of Bifrost.
 // It returns a pointer to the Bifrost instance stored in the defaultBifrost atomic value.
 func GetBifrost() *Bifrost {
-	val, _ := defaultBifrost.Load().(*Bifrost)
+	val, ok := defaultBifrost.Load().(*Bifrost)
+	if !ok {
+		return nil
+	}
 	return val
 }
 
@@ -63,7 +66,7 @@ func SetBifrost(bifrost *Bifrost) {
 // err is the error that occurred during the startup process.
 func Run(mainOptions config.Options) (err error) {
 	// validate config file
-	err = config.ValidateConfig(mainOptions, true)
+	err = config.ValidateConfig(mainOptions, config.ModeFull)
 	if err != nil {
 		return err
 	}
@@ -109,7 +112,7 @@ func Run(mainOptions config.Options) (err error) {
 		return err
 	}
 
-	bifrost, err := NewBifrost(mainOptions, false)
+	bifrost, err := NewBifrost(mainOptions, ModeNormal)
 	if err != nil {
 		slog.Error("failed to start bifrost", "error", err)
 		return err
@@ -152,12 +155,12 @@ func Run(mainOptions config.Options) (err error) {
 		}
 
 		// validate config file
-		err = config.ValidateConfig(mainOptions, true)
+		err = config.ValidateConfig(mainOptions, config.ModeFull)
 		if err != nil {
 			return err
 		}
 
-		newBifrost, e := NewBifrost(mainOptions, true)
+		newBifrost, e := NewBifrost(mainOptions, ModeReload)
 		if e != nil {
 			return e
 		}
@@ -270,10 +273,10 @@ func Run(mainOptions config.Options) (err error) {
 	defer func() {
 		// shutdown bifrost
 		if sigs == syscall.SIGINT {
-			_ = shutdown(ctx, true)
+			_ = shutdown(ctx, ShutdownImmediate)
 			return
 		}
-		_ = shutdown(ctx, false)
+		_ = shutdown(ctx, ShutdownGraceful)
 	}()
 
 	stopChan := make(chan os.Signal, 1)
@@ -284,12 +287,12 @@ func Run(mainOptions config.Options) (err error) {
 	return nil
 }
 
-func shutdown(ctx context.Context, now bool) error {
+func shutdown(ctx context.Context, mode ShutdownMode) error {
 	bifrost := GetBifrost()
 	if bifrost != nil {
 		var err error
 
-		if now {
+		if mode == ShutdownImmediate {
 			err = bifrost.ShutdownNow(ctx)
 		} else {
 			err = bifrost.Shutdown(ctx)

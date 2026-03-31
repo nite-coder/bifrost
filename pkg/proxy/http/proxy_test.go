@@ -427,7 +427,7 @@ func TestReverseProxyQuery(t *testing.T) {
 
 		r.GET("/backend", proxy.ServeHTTP)
 		go r.Spin()
-		defer func() {
+		func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
 			_ = r.Shutdown(ctx)

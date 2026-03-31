@@ -86,8 +86,8 @@ func runLogRotationTest(t *testing.T) {
 
 	// 5. Verify Stdout/Stderr output is indeed written to the NEW log file
 	assert.Eventually(t, func() bool {
-		fmt.Fprintln(os.Stdout, "TEST_STDOUT_PAYLOAD")
-		fmt.Fprintln(os.Stderr, "TEST_STDERR_PAYLOAD")
+		_, _ = fmt.Fprintln(os.Stdout, "TEST_STDOUT_PAYLOAD")
+		_, _ = fmt.Fprintln(os.Stderr, "TEST_STDERR_PAYLOAD")
 
 		/* #nosec G304 */
 		content, err := os.ReadFile(filepath.Clean(logFile))
@@ -173,7 +173,7 @@ func TestLogHelperProcess(_ *testing.T) {
 	if os.Getenv("GO_WANT_LOG_HELPER") != "1" {
 		return
 	}
-	fmt.Fprintln(os.Stdout, "LOG_HELPER_READY")
+	_, _ = fmt.Fprintln(os.Stdout, "LOG_HELPER_READY")
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGUSR1, syscall.SIGTERM)
@@ -181,8 +181,8 @@ func TestLogHelperProcess(_ *testing.T) {
 	for {
 		sig := <-sigCh
 		if sig == syscall.SIGTERM {
-			os.Exit(0)
+			os.Exit(0) //nolint:revive
 		}
-		fmt.Fprintf(os.Stderr, "RECEIVED_SIGNAL_%v\n", sig)
+		_, _ = fmt.Fprintf(os.Stderr, "RECEIVED_SIGNAL_%v\n", sig)
 	}
 }

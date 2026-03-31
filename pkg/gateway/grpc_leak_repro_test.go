@@ -38,11 +38,11 @@ func TestGRPCProxyLeak_Evidence(t *testing.T) {
 	}
 
 	// 1. Base line
-	runtime.GC()
+	runtime.GC() //nolint:revive
 	initialGoroutines := runtime.NumGoroutine()
 	t.Logf("Initial goroutines: %d", initialGoroutines)
 
-	bf, err := NewBifrost(options, false)
+	bf, err := NewBifrost(options, ModeNormal)
 	require.NoError(t, err)
 
 	svc, ok := bf.Service("grpc_svc")
@@ -63,7 +63,7 @@ func TestGRPCProxyLeak_Evidence(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		runtime.GC()
+		runtime.GC() //nolint:revive
 		t.Logf("After Refresh #%d, goroutines: %d", i, runtime.NumGoroutine())
 	}
 
@@ -73,7 +73,7 @@ func TestGRPCProxyLeak_Evidence(t *testing.T) {
 
 	// Give some time for any async cleanup (though we expect none for leaked resources)
 	time.Sleep(200 * time.Millisecond)
-	runtime.GC()
+	runtime.GC() //nolint:revive
 	finalCount := runtime.NumGoroutine()
 	t.Logf("Final goroutines after Bifrost.Close: %d", finalCount)
 

@@ -46,5 +46,5 @@ func TestGatewayRun(t *testing.T) {
 		}
 		return false
 	}, 10*time.Second, 100*time.Millisecond, "Server failed to start")
-	_ = shutdown(context.Background(), true)
+	_ = shutdown(context.Background(), ShutdownImmediate)
 }

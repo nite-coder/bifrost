@@ -28,23 +28,23 @@ func Init() error {
 	})
 }
 
-// AddPrefixMiddleware is a middleware that adds a prefix to the request path.
-type AddPrefixMiddleware struct {
+// Middleware is a middleware that adds a prefix to the request path.
+type Middleware struct {
 	prefixStr  string
 	directives []string
 	prefix     []byte
 }
 
 // NewMiddleware creates a new AddPrefixMiddleware instance.
-func NewMiddleware(prefix string) *AddPrefixMiddleware {
-	return &AddPrefixMiddleware{
+func NewMiddleware(prefix string) *Middleware {
+	return &Middleware{
 		prefix:     []byte(prefix),
 		prefixStr:  prefix,
 		directives: variable.ParseDirectives(prefix),
 	}
 }
 
-func (m *AddPrefixMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	if len(m.directives) > 0 {
 		replacements := make([]string, 0, len(m.directives)*2)
 		for _, key := range m.directives {

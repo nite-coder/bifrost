@@ -27,26 +27,26 @@ func Init() error {
 	})
 }
 
-// ReplacePathMiddleware is a middleware that replaces the request path.
-type ReplacePathMiddleware struct {
+// Middleware is a middleware that replaces the request path.
+type Middleware struct {
 	newPathStr string
 	directives []string
 	newPath    []byte
 }
 
 // NewMiddleware creates a new ReplacePathMiddleware instance.
-func NewMiddleware(newPath string) *ReplacePathMiddleware {
+func NewMiddleware(newPath string) *Middleware {
 	if !strings.HasPrefix(newPath, "/") {
 		newPath = "/" + newPath
 	}
-	return &ReplacePathMiddleware{
+	return &Middleware{
 		newPath:    []byte(newPath),
 		newPathStr: newPath,
 		directives: variable.ParseDirectives(newPath),
 	}
 }
 
-func (m *ReplacePathMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	if len(m.directives) > 0 {
 		replacements := make([]string, 0, len(m.directives)*2)
 		for _, key := range m.directives {

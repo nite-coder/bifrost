@@ -54,6 +54,7 @@ func registerByNodeType(route *Routes, nodeType router.NodeType) *Routes {
 		_ = route.Add(config.RouteOptions{
 			Paths: []string{"/market/btc", "/"},
 		}, generalkHandler)
+	default:
 	}
 
 	return route

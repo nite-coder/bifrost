@@ -71,7 +71,7 @@ func TestDNSServiceDiscovery_GetInstances(t *testing.T) {
 
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("GetInstances() expected error")
+					t.Error("GetInstances() expected error")
 				}
 				if !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("GetInstances() error = %v, want error containing %v", err, tt.errMsg)

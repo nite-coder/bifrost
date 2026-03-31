@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,8 +13,7 @@ import (
 func TestMain(m *testing.M) {
 	_ = cors.Init()
 	dnsResolver, _ = resolver.NewResolver(resolver.Options{})
-	exitCode := m.Run()
-	os.Exit(exitCode)
+	_ = m.Run()
 }
 
 func TestValidateProviders(t *testing.T) {
@@ -108,7 +106,7 @@ func TestValidateRoutes(t *testing.T) {
 		}
 		options.Routes = append(options.Routes, &route5)
 
-		err := validateRoutes(options, true)
+		err := validateRoutes(options, ModeFull)
 		assert.NoError(t, err)
 	})
 
@@ -121,7 +119,7 @@ func TestValidateRoutes(t *testing.T) {
 		}
 		options.Routes = append(options.Routes, &route1)
 
-		err := validateRoutes(options, true)
+		err := validateRoutes(options, ModeFull)
 		assert.ErrorContains(t, err, "service 'test1' not found for route ID: route1")
 	})
 
@@ -134,7 +132,7 @@ func TestValidateRoutes(t *testing.T) {
 		}
 		options.Routes = append(options.Routes, &route1)
 
-		err := validateRoutes(options, true)
+		err := validateRoutes(options, ModeFull)
 		assert.NoError(t, err)
 	})
 
@@ -162,7 +160,7 @@ func TestValidateRoutes(t *testing.T) {
 		}
 		options.Routes = append(options.Routes, test2)
 
-		err := validateRoutes(options, true)
+		err := validateRoutes(options, ModeFull)
 		assert.ErrorIs(t, err, router.ErrAlreadyExists)
 	})
 
@@ -191,7 +189,7 @@ func TestValidateRoutes(t *testing.T) {
 		}
 		options.Routes = append(options.Routes, test2)
 
-		err := validateRoutes(options, true)
+		err := validateRoutes(options, ModeFull)
 		assert.ErrorIs(t, err, router.ErrAlreadyExists)
 	})
 
@@ -221,7 +219,7 @@ func TestValidateRoutes(t *testing.T) {
 		}
 		options.Routes = append(options.Routes, &route2)
 
-		err := validateRoutes(options, true)
+		err := validateRoutes(options, ModeFull)
 		assert.NoError(t, err)
 
 		route3 := RouteOptions{
@@ -232,7 +230,7 @@ func TestValidateRoutes(t *testing.T) {
 		}
 		options.Routes = append(options.Routes, &route3)
 
-		err = validateRoutes(options, true)
+		err = validateRoutes(options, ModeFull)
 		assert.ErrorIs(t, err, router.ErrAlreadyExists)
 	})
 
@@ -259,7 +257,7 @@ func TestValidateRoutes(t *testing.T) {
 
 		options.Services["test1"] = service
 
-		err := validateRoutes(options, true)
+		err := validateRoutes(options, ModeFull)
 		assert.NoError(t, err)
 
 		noMiddleware := MiddlwareOptions{
@@ -269,7 +267,7 @@ func TestValidateRoutes(t *testing.T) {
 
 		route1.Middlewares = append(route1.Middlewares, noMiddleware)
 
-		err = validateRoutes(options, true)
+		err = validateRoutes(options, ModeFull)
 		assert.Error(t, err)
 	})
 }
@@ -281,7 +279,7 @@ func TestValidateMiddlewares(t *testing.T) {
 		options.Middlewares["cors_id"] = MiddlwareOptions{
 			Type: "cors",
 		}
-		err := validateMiddlewares(options, true)
+		err := validateMiddlewares(options, ModeFull)
 		assert.NoError(t, err)
 	})
 
@@ -291,7 +289,7 @@ func TestValidateMiddlewares(t *testing.T) {
 		options.Middlewares["cors_id"] = MiddlwareOptions{
 			Type: "cors11",
 		}
-		err := validateMiddlewares(options, true)
+		err := validateMiddlewares(options, ModeFull)
 		assert.Error(t, err)
 	})
 
@@ -301,7 +299,7 @@ func TestValidateMiddlewares(t *testing.T) {
 		options.Middlewares["cors_id"] = MiddlwareOptions{
 			Use: "cors",
 		}
-		err := validateMiddlewares(options, true)
+		err := validateMiddlewares(options, ModeFull)
 		assert.Error(t, err)
 	})
 }
@@ -316,7 +314,7 @@ func TestValidateServer(t *testing.T) {
 
 		options.Servers["apiv1"] = server
 
-		err := validateServers(options, true)
+		err := validateServers(options, ModeFull)
 		assert.ErrorContains(t, err, "bind cannot be empty for server ID: apiv1")
 	})
 
@@ -333,7 +331,7 @@ func TestValidateServer(t *testing.T) {
 
 		options.Servers["apiv1"] = server
 
-		err := validateServers(options, true)
+		err := validateServers(options, ModeFull)
 		assert.NoError(t, err)
 
 		server = ServerOptions{
@@ -345,7 +343,7 @@ func TestValidateServer(t *testing.T) {
 
 		options.Servers["apiv1"] = server
 
-		err = validateServers(options, true)
+		err = validateServers(options, ModeFull)
 		assert.Error(t, err)
 	})
 
@@ -363,7 +361,7 @@ func TestValidateServer(t *testing.T) {
 
 		options.Servers["apiv1"] = server
 
-		err := validateServers(options, true)
+		err := validateServers(options, ModeFull)
 		assert.NoError(t, err)
 
 		server = ServerOptions{
@@ -373,7 +371,7 @@ func TestValidateServer(t *testing.T) {
 
 		options.Servers["apiv1"] = server
 
-		err = validateServers(options, true)
+		err = validateServers(options, ModeFull)
 		assert.Error(t, err)
 	})
 
@@ -393,7 +391,7 @@ func TestValidateServer(t *testing.T) {
 
 		options.Servers["apiv1"] = server
 
-		err := validateServers(options, true)
+		err := validateServers(options, ModeFull)
 		assert.NoError(t, err)
 
 		noMiddleware := MiddlwareOptions{
@@ -405,7 +403,7 @@ func TestValidateServer(t *testing.T) {
 
 		options.Servers["apiv1"] = server
 
-		err = validateServers(options, true)
+		err = validateServers(options, ModeFull)
 		assert.Error(t, err)
 	})
 }
@@ -424,11 +422,11 @@ func TestValidateService(t *testing.T) {
 			URL: "http://10.1.2.16:8088",
 		}
 
-		err := validateServices(options, true)
+		err := validateServices(options, ModeFull)
 		assert.NoError(t, err)
 
 		options.SkipResolver = true
-		err = validateServices(options, true)
+		err = validateServices(options, ModeFull)
 		assert.NoError(t, err)
 	})
 
@@ -445,11 +443,11 @@ func TestValidateService(t *testing.T) {
 			URL: "http://google.com",
 		}
 
-		err := validateServices(options, true)
+		err := validateServices(options, ModeFull)
 		assert.NoError(t, err)
 
 		options.SkipResolver = true
-		err = validateServices(options, true)
+		err = validateServices(options, ModeFull)
 		assert.NoError(t, err)
 	})
 
@@ -466,11 +464,11 @@ func TestValidateService(t *testing.T) {
 			URL: "http://localhost:8888",
 		}
 
-		err := validateServices(options, true)
+		err := validateServices(options, ModeFull)
 		assert.NoError(t, err)
 
 		options.SkipResolver = true
-		err = validateServices(options, true)
+		err = validateServices(options, ModeFull)
 		assert.NoError(t, err)
 	})
 
@@ -481,11 +479,11 @@ func TestValidateService(t *testing.T) {
 			URL: "http://test1/hello",
 		}
 
-		err := validateServices(options, true)
+		err := validateServices(options, ModeFull)
 		assert.Error(t, err)
 
 		options.SkipResolver = true
-		err = validateServices(options, true)
+		err = validateServices(options, ModeFull)
 		assert.Error(t, err)
 	})
 
@@ -512,7 +510,7 @@ func TestValidateService(t *testing.T) {
 
 		options.Services["test1"] = service
 
-		err := validateServices(options, true)
+		err := validateServices(options, ModeFull)
 		assert.NoError(t, err)
 
 		noMiddleware := MiddlwareOptions{
@@ -523,7 +521,7 @@ func TestValidateService(t *testing.T) {
 		service.Middlewares = append(service.Middlewares, noMiddleware)
 		options.Services["test1"] = service
 
-		err = validateServices(options, true)
+		err = validateServices(options, ModeFull)
 		assert.Error(t, err)
 	})
 }
@@ -542,11 +540,11 @@ func TestValidateUpstream(t *testing.T) {
 			},
 		}
 
-		err := validateUpstreams(options, true)
+		err := validateUpstreams(options, ModeFull)
 		assert.NoError(t, err)
 
 		options.SkipResolver = true
-		err = validateUpstreams(options, true)
+		err = validateUpstreams(options, ModeFull)
 		assert.NoError(t, err)
 	})
 
@@ -563,11 +561,11 @@ func TestValidateUpstream(t *testing.T) {
 			},
 		}
 
-		err := validateUpstreams(options, true)
+		err := validateUpstreams(options, ModeFull)
 		assert.NoError(t, err)
 
 		options.SkipResolver = true
-		err = validateUpstreams(options, true)
+		err = validateUpstreams(options, ModeFull)
 		assert.NoError(t, err)
 	})
 
@@ -588,11 +586,11 @@ func TestValidateUpstream(t *testing.T) {
 			},
 		}
 
-		err := validateUpstreams(options, true)
+		err := validateUpstreams(options, ModeFull)
 		assert.NoError(t, err)
 
 		options.SkipResolver = true
-		err = validateUpstreams(options, true)
+		err = validateUpstreams(options, ModeFull)
 		assert.NoError(t, err)
 	})
 
@@ -609,11 +607,11 @@ func TestValidateUpstream(t *testing.T) {
 			},
 		}
 
-		err := validateUpstreams(options, true)
+		err := validateUpstreams(options, ModeFull)
 		assert.Error(t, err)
 
 		options.SkipResolver = true
-		err = validateUpstreams(options, true)
+		err = validateUpstreams(options, ModeFull)
 		assert.NoError(t, err)
 	})
 }
@@ -630,7 +628,7 @@ func TestValidateMetrics(t *testing.T) {
 			Bind: ":8080",
 		}
 
-		err := validateMetrics(options, true)
+		err := validateMetrics(options, ModeFull)
 		assert.NoError(t, err)
 	})
 
@@ -640,7 +638,7 @@ func TestValidateMetrics(t *testing.T) {
 		options.Metrics.Prometheus.Enabled = true
 		options.Metrics.Prometheus.ServerID = "test"
 
-		err := validateMetrics(options, true)
+		err := validateMetrics(options, ModeFull)
 		assert.ErrorContains(t, err, "server_id 'test' not found for prometheus")
 	})
 }
@@ -696,7 +694,7 @@ func TestConfigDNS(t *testing.T) {
 		},
 	}
 
-	err := ValidateConfig(options, true)
+	err := ValidateConfig(options, ModeFull)
 	assert.NoError(t, err)
 
 	options.Upstreams["test"] = UpstreamOptions{
@@ -707,7 +705,7 @@ func TestConfigDNS(t *testing.T) {
 		},
 	}
 
-	err = ValidateConfig(options, true)
+	err = ValidateConfig(options, ModeFull)
 	assert.ErrorIs(t, err, resolver.ErrNotFound)
 }
 
@@ -743,7 +741,7 @@ func TestValidateUpstreams(t *testing.T) {
 	t.Run("skip validation when not full mode", func(t *testing.T) {
 		options := NewOptions()
 		options.Upstreams["test"] = UpstreamOptions{}
-		err := validateUpstreams(options, false)
+		err := validateUpstreams(options, ModeBasic)
 		assert.NoError(t, err)
 	})
 
@@ -752,7 +750,7 @@ func TestValidateUpstreams(t *testing.T) {
 		options.Upstreams["$invalid"] = UpstreamOptions{
 			Targets: []TargetOptions{{Target: "localhost:8080"}},
 		}
-		err := validateUpstreams(options, true)
+		err := validateUpstreams(options, ModeFull)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "cannot start with '$'")
 	})
@@ -763,7 +761,7 @@ func TestValidateUpstreams(t *testing.T) {
 			Balancer: BalancerOptions{Type: "invalid_balancer"},
 			Targets:  []TargetOptions{{Target: "localhost:8080"}},
 		}
-		err := validateUpstreams(options, true)
+		err := validateUpstreams(options, ModeFull)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported balancer")
 	})
@@ -773,7 +771,7 @@ func TestValidateUpstreams(t *testing.T) {
 		options.Upstreams["test"] = UpstreamOptions{
 			Discovery: DiscoveryOptions{Type: "dns", Name: "example.com"},
 		}
-		err := validateUpstreams(options, true)
+		err := validateUpstreams(options, ModeFull)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "DNS provider is disabled")
 	})
@@ -784,7 +782,7 @@ func TestValidateUpstreams(t *testing.T) {
 		options.Upstreams["test"] = UpstreamOptions{
 			Discovery: DiscoveryOptions{Type: "dns"},
 		}
-		err := validateUpstreams(options, true)
+		err := validateUpstreams(options, ModeFull)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "discovery name cannot be empty")
 	})
@@ -794,7 +792,7 @@ func TestValidateUpstreams(t *testing.T) {
 		options.Upstreams["test"] = UpstreamOptions{
 			Discovery: DiscoveryOptions{Type: "nacos", Name: "service"},
 		}
-		err := validateUpstreams(options, true)
+		err := validateUpstreams(options, ModeFull)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "nacos service discovery provider is disabled")
 	})
@@ -804,7 +802,7 @@ func TestValidateUpstreams(t *testing.T) {
 		options.Upstreams["test"] = UpstreamOptions{
 			Discovery: DiscoveryOptions{Type: "k8s", Name: "service"},
 		}
-		err := validateUpstreams(options, true)
+		err := validateUpstreams(options, ModeFull)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "K8s service discovery provider is disabled")
 	})
@@ -814,7 +812,7 @@ func TestValidateUpstreams(t *testing.T) {
 		options.Upstreams["test"] = UpstreamOptions{
 			Targets: []TargetOptions{},
 		}
-		err := validateUpstreams(options, true)
+		err := validateUpstreams(options, ModeFull)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "targets cannot be empty")
 	})
@@ -824,7 +822,7 @@ func TestValidateUpstreams(t *testing.T) {
 		options.Upstreams["test"] = UpstreamOptions{
 			Discovery: DiscoveryOptions{Type: "unknown"},
 		}
-		err := validateUpstreams(options, true)
+		err := validateUpstreams(options, ModeFull)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported discovery type")
 	})
@@ -835,7 +833,7 @@ func TestValidateUpstreams(t *testing.T) {
 		options.Upstreams["test"] = UpstreamOptions{
 			Targets: []TargetOptions{{Target: "localhost:8080"}},
 		}
-		err := validateUpstreams(options, true)
+		err := validateUpstreams(options, ModeFull)
 		assert.NoError(t, err)
 	})
 }
@@ -866,7 +864,7 @@ func TestValidateServers(t *testing.T) {
 		options.Servers["test"] = ServerOptions{
 			Bind: "",
 		}
-		err := validateServers(options, true)
+		err := validateServers(options, ModeFull)
 		assert.Error(t, err)
 	})
 
@@ -875,7 +873,7 @@ func TestValidateServers(t *testing.T) {
 		options.Servers["test"] = ServerOptions{
 			Bind: ":8080",
 		}
-		err := validateServers(options, true)
+		err := validateServers(options, ModeFull)
 		assert.NoError(t, err)
 	})
 }

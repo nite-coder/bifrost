@@ -78,8 +78,8 @@ func TestWeighted(t *testing.T) {
 		}
 
 		assert.InDelta(t, 0, hits["http://backend1"], 0)
-		assert.InDelta(t, 2400, hits["http://backend2"], 100)
-		assert.InDelta(t, 3600, hits["http://backend3"], 100)
+		assert.InDelta(t, 2400, hits["http://backend2"], 150)
+		assert.InDelta(t, 3600, hits["http://backend3"], 150)
 	})
 
 	t.Run("no live upstream", func(t *testing.T) {

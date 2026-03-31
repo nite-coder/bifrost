@@ -19,6 +19,7 @@ import (
 type Limiter interface {
 	Allow(ctx context.Context, key string) *AllowResult
 }
+
 // AllowResult contains the result of a rate limit check.
 type AllowResult struct {
 	ResetTime time.Time
@@ -26,6 +27,7 @@ type AllowResult struct {
 	Remaining uint64
 	Allow     bool
 }
+
 // StrategyMode defines the rate limiting strategy to use.
 type StrategyMode string
 
@@ -52,6 +54,7 @@ type Options struct {
 	WindowSize               time.Duration `mapstructure:"window_size"`
 	RejectedHTTPStatusCode   int           `mapstructure:"rejected_http_status_code"`
 }
+
 // RateLimitingMiddleware is a middleware that performs rate limiting.
 type RateLimitingMiddleware struct {
 	options    *Options
@@ -114,26 +117,26 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 				c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
 			}
 			return
-		} else {
-			if len(m.options.HeaderLimit) > 0 {
-				c.Response.Header.Set(m.options.HeaderLimit, strconv.FormatUint(result.Limit, 10))
-			}
-			if len(m.options.HeaderRemaining) > 0 {
-				c.Response.Header.Set(m.options.HeaderRemaining, strconv.FormatUint(result.Remaining, 10))
-			}
-			if len(m.options.HeaderReset) > 0 {
-				c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
-			}
-			c.SetStatusCode(m.options.RejectedHTTPStatusCode)
-			if len(m.options.RejectedHTTPContentType) > 0 {
-				c.Response.Header.Set("Content-Type", m.options.RejectedHTTPContentType)
-			}
-			if len(m.options.RejectedHTTPResponseBody) > 0 {
-				c.Response.SetBody([]byte(m.options.RejectedHTTPResponseBody))
-			}
-			c.Abort()
-			return
 		}
+
+		if len(m.options.HeaderLimit) > 0 {
+			c.Response.Header.Set(m.options.HeaderLimit, strconv.FormatUint(result.Limit, 10))
+		}
+		if len(m.options.HeaderRemaining) > 0 {
+			c.Response.Header.Set(m.options.HeaderRemaining, strconv.FormatUint(result.Remaining, 10))
+		}
+		if len(m.options.HeaderReset) > 0 {
+			c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
+		}
+		c.SetStatusCode(m.options.RejectedHTTPStatusCode)
+		if len(m.options.RejectedHTTPContentType) > 0 {
+			c.Response.Header.Set("Content-Type", m.options.RejectedHTTPContentType)
+		}
+		if len(m.options.RejectedHTTPResponseBody) > 0 {
+			c.Response.SetBody([]byte(m.options.RejectedHTTPResponseBody))
+		}
+		c.Abort()
+		return
 	}
 	c.Next(ctx)
 }

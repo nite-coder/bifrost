@@ -174,14 +174,14 @@ func TestH2UpstreamBaseline(t *testing.T) {
 	})
 	defer ts.Close()
 
-	client := &http.Client{
+	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true}, /* #nosec G402 */
 			ForceAttemptHTTP2: true,
 		},
 	}
 
-	resp, err := client.Get(url)
+	resp, err := httpClient.Get(url)
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 

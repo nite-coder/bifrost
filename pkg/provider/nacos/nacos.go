@@ -29,21 +29,23 @@ type Options struct {
 	Timeout     time.Duration
 	Watch       bool
 }
+
 // File defines the Nacos data ID, group, and content.
 type File struct {
 	DataID  string
 	Group   string
 	Content string
 }
-// NacosProvider implements a configuration provider that reads from Nacos.
-type NacosProvider struct {
+
+// Provider implements a configuration provider that reads from Nacos.
+type Provider struct {
 	client    config_client.IConfigClient
 	OnChanged provider.ChangeFunc
 	options   Options
 }
 
 // NewProvider creates a new NacosProvider instance.
-func NewProvider(options Options) (*NacosProvider, error) {
+func NewProvider(options Options) (*Provider, error) {
 	serverConfigs := []constant.ServerConfig{}
 	clientOptions := []constant.ClientOption{
 		constant.WithNamespaceId(options.NamespaceID),
@@ -102,19 +104,19 @@ func NewProvider(options Options) (*NacosProvider, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &NacosProvider{
+	return &Provider{
 		options: options,
 		client:  client,
 	}, nil
 }
 
 // SetOnChanged sets the callback function to be called when configuration changes in Nacos.
-func (p *NacosProvider) SetOnChanged(changeFunc provider.ChangeFunc) {
+func (p *Provider) SetOnChanged(changeFunc provider.ChangeFunc) {
 	p.OnChanged = changeFunc
 }
 
 // ConfigOpen reads the configured files from Nacos and returns their content.
-func (p *NacosProvider) ConfigOpen() ([]*File, error) {
+func (p *Provider) ConfigOpen() ([]*File, error) {
 	result := make([]*File, 0, len(p.options.Files))
 	for _, file := range p.options.Files {
 		group := "DEFAULT_GROUP"
@@ -145,7 +147,7 @@ func (p *NacosProvider) ConfigOpen() ([]*File, error) {
 }
 
 // Watch starts listening for configuration changes in Nacos.
-func (p *NacosProvider) Watch() error {
+func (p *Provider) Watch() error {
 	if !p.options.Watch {
 		return nil
 	}

@@ -27,19 +27,19 @@ type Options struct {
 	ExcludedPaths []string `mapstructure:"excluded_paths"`
 }
 
-// CompressionMiddleware is a middleware that compresses the response body.
-type CompressionMiddleware struct {
+// Middleware is a middleware that compresses the response body.
+type Middleware struct {
 	options *Options
 }
 
 // NewMiddleware creates a new CompressionMiddleware instance.
-func NewMiddleware(options Options) *CompressionMiddleware {
-	return &CompressionMiddleware{
+func NewMiddleware(options Options) *Middleware {
+	return &Middleware{
 		options: &options,
 	}
 }
 
-func (m *CompressionMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	if !m.shouldCompress(&c.Request) {
 		return
 	}
@@ -60,7 +60,7 @@ func (m *CompressionMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCon
 	}
 }
 
-func (m *CompressionMiddleware) shouldCompress(req *protocol.Request) bool {
+func (m *Middleware) shouldCompress(req *protocol.Request) bool {
 	if (!strings.Contains(req.Header.Get(headerAcceptEncoding), encodingGzip) &&
 		strings.TrimSpace(req.Header.Get(headerAcceptEncoding)) != "*") ||
 		strings.Contains(req.Header.Get("Connection"), "Upgrade") ||

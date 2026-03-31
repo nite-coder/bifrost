@@ -72,22 +72,22 @@ func performRequest(r *route.Engine, method, origin string, headers ...ut.Header
 }
 
 func TestConfigAddAllow(t *testing.T) {
-	config := Config{}
-	config.AddAllowMethods("POST")
-	config.AddAllowMethods("GET", "PUT")
-	config.AddExposeHeaders()
+	myConfig := Config{}
+	myConfig.AddAllowMethods("POST")
+	myConfig.AddAllowMethods("GET", "PUT")
+	myConfig.AddExposeHeaders()
 
-	config.AddAllowHeaders("Some", " cool")
-	config.AddAllowHeaders("header")
-	config.AddExposeHeaders()
+	myConfig.AddAllowHeaders("Some", " cool")
+	myConfig.AddAllowHeaders("header")
+	myConfig.AddExposeHeaders()
 
-	config.AddExposeHeaders()
-	config.AddExposeHeaders("exposed", "header")
-	config.AddExposeHeaders("hey")
+	myConfig.AddExposeHeaders()
+	myConfig.AddExposeHeaders("exposed", "header")
+	myConfig.AddExposeHeaders("hey")
 
-	assert.DeepEqual(t, config.AllowMethods, []string{"POST", "GET", "PUT"})
-	assert.DeepEqual(t, config.AllowHeaders, []string{"Some", " cool", "header"})
-	assert.DeepEqual(t, config.ExposeHeaders, []string{"exposed", "header", "hey"})
+	assert.DeepEqual(t, myConfig.AllowMethods, []string{"POST", "GET", "PUT"})
+	assert.DeepEqual(t, myConfig.AllowHeaders, []string{"Some", " cool", "header"})
+	assert.DeepEqual(t, myConfig.ExposeHeaders, []string{"exposed", "header", "hey"})
 }
 
 func TestBadConfig(t *testing.T) {

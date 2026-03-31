@@ -30,7 +30,7 @@ import (
 	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/unix"
 
-	bifrostRuntime "github.com/nite-coder/bifrost/internal/pkg/runtime"
+	infra "github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 )
@@ -38,6 +38,16 @@ import (
 var (
 	httpServerOpenConnections *prom.GaugeVec
 	initLoggerOnce            sync.Once
+)
+
+// ListenerMode defines whether the server should listen on a network port.
+type ListenerMode int
+
+const (
+	// ListenerEnabled indicates the server should listen on the configured address.
+	ListenerEnabled ListenerMode = iota
+	// ListenerDisabled indicates the server should not open a listener.
+	ListenerDisabled
 )
 
 func init() {
@@ -66,7 +76,7 @@ func newHTTPServer(
 	bifrost *Bifrost,
 	serverOptions config.ServerOptions,
 	tracers []tracer.Tracer,
-	disableListener bool,
+	listenerMode ListenerMode,
 ) (*HTTPServer, error) {
 	ctx := context.Background()
 	var err error
@@ -122,7 +132,7 @@ func newHTTPServer(
 			}
 		})
 	}
-	if !disableListener {
+	if listenerMode == ListenerEnabled {
 		listenerConfig := &net.ListenConfig{
 			Control: func(_, _ string, c syscall.RawConn) error {
 				var opErr error
@@ -155,7 +165,7 @@ func newHTTPServer(
 				return opErr
 			},
 		}
-		listenerOptions := &bifrostRuntime.ListenerOptions{
+		listenerOptions := &infra.ListenerOptions{
 			Network: "tcp",
 			Address: serverOptions.Bind,
 			Config:  listenerConfig,
@@ -233,8 +243,8 @@ func newHTTPServer(
 		hlog.SetSilentMode(true)
 	})
 	hzOpts = append(hzOpts, engine.hzOptions...)
-	for _, tracer := range tracers {
-		hzOpts = append(hzOpts, server.WithTracer(tracer))
+	for _, tr := range tracers {
+		hzOpts = append(hzOpts, server.WithTracer(tr))
 	}
 	var tlsConfig *tls.Config
 	if len(serverOptions.TLS.CertPEM) > 0 || len(serverOptions.TLS.KeyPEM) > 0 {

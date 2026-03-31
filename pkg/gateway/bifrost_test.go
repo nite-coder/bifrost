@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -25,7 +24,7 @@ import (
 func TestMain(m *testing.M) {
 	_ = cors.Init()
 	_ = roundrobin.Init()
-	os.Exit(m.Run())
+	m.Run()
 }
 
 type TestOrder struct {
@@ -122,7 +121,7 @@ func TestBifrost(t *testing.T) {
 		},
 	}
 
-	bifrost, err := NewBifrost(options, false)
+	bifrost, err := NewBifrost(options, ModeNormal)
 	assert.NoError(t, err)
 
 	go bifrost.Run()
@@ -179,7 +178,6 @@ func TestBifrost(t *testing.T) {
 		}
 
 		for _, url := range urls {
-
 			if url == "https://localhost:8442/api/v1/orders" {
 				client.SetTransport(&http2.Transport{
 					AllowHTTP: true,
@@ -254,12 +252,12 @@ func TestBifrost(t *testing.T) {
 		// Initially should be active
 		assert.True(t, bifrost.IsActive())
 
-		// Test SetActive(false)
-		bifrost.SetActive(false)
+		// Test SetActive(StatusInactive)
+		bifrost.SetActive(StatusInactive)
 		assert.False(t, bifrost.IsActive())
 
-		// Test SetActive(true)
-		bifrost.SetActive(true)
+		// Test SetActive(StatusActive)
+		bifrost.SetActive(StatusActive)
 		assert.True(t, bifrost.IsActive())
 	})
 }
@@ -279,7 +277,7 @@ func TestBifrostShutdown(t *testing.T) {
 		Targets: []config.TargetOptions{{Target: "127.0.0.1:9999"}},
 	}
 
-	bifrost, err := NewBifrost(options, false)
+	bifrost, err := NewBifrost(options, ModeNormal)
 	assert.NoError(t, err)
 
 	go bifrost.Run()

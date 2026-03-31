@@ -13,21 +13,25 @@ import (
 type RequestTransFormaterMiddleware struct {
 	options *Options
 }
+
 // RemoveOptions defines the headers and query parameters to be removed from the request.
 type RemoveOptions struct {
 	Headers     []string
 	Querystring []string
 }
+
 // AddOptions defines the headers and query parameters to be added to the request if they are not already present.
 type AddOptions struct {
 	Headers     map[string]string
 	Querystring map[string]string
 }
+
 // SetOptions defines the headers and query parameters to be set on the request, overwriting any existing values.
 type SetOptions struct {
 	Headers     map[string]string
 	Querystring map[string]string
 }
+
 // Options defines the total configuration for the request transformer middleware.
 type Options struct {
 	Add    AddOptions

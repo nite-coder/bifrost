@@ -20,6 +20,7 @@ type Options struct {
 	RejectedHTTPStatusCode   int      `mapstructure:"rejected_http_status_code"`
 	BypassMissing            bool     `mapstructure:"bypass_missing"`
 }
+
 // UARestriction is a middleware that allows or denies requests based on the User-Agent header.
 type UARestriction struct {
 	options         *Options

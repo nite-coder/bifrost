@@ -34,27 +34,27 @@ func Init() error {
 	})
 }
 
-// ReplacePathRegexMiddleware is a middleware that replaces the request path using a regular expression.
-type ReplacePathRegexMiddleware struct {
+// Middleware is a middleware that replaces the request path using a regular expression.
+type Middleware struct {
 	regex       *regexp.Regexp
 	replacement []byte
 }
 
 // NewMiddleware creates a new ReplacePathRegexMiddleware instance.
-func NewMiddleware(regex, replacement string) (*ReplacePathRegexMiddleware, error) {
+func NewMiddleware(regex, replacement string) (*Middleware, error) {
 	if regex == "" || replacement == "" {
 		return nil, errors.New("regex or replacement is empty")
 	}
 
 	re := regexp.MustCompile(regex)
 
-	return &ReplacePathRegexMiddleware{
+	return &Middleware{
 		regex:       re,
 		replacement: []byte(replacement),
 	}, nil
 }
 
-func (m *ReplacePathRegexMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	newPath := m.regex.ReplaceAll(c.Request.Path(), m.replacement)
 	c.Request.URI().SetPathBytes(newPath)
 	c.Next(ctx)

@@ -128,7 +128,6 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	}
 
 	for _, middlewareOpts := range serviceOptions.Middlewares {
-
 		if len(middlewareOpts.Use) > 0 {
 			m, found := bifrost.middlewares[middlewareOpts.Use]
 			if !found {
@@ -216,16 +215,16 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 }
 
 // Upstream returns the primary upstream associated with this service.
-func (svc *Service) Upstream() *Upstream {
-	return svc.upstream
+func (s *Service) Upstream() *Upstream {
+	return s.upstream
 }
 
 // Middlewares returns the list of middlewares associated with this service.
-func (svc *Service) Middlewares() []app.HandlerFunc {
-	return svc.middlewares
+func (s *Service) Middlewares() []app.HandlerFunc {
+	return s.middlewares
 }
 
-func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 
 	defer func() {
@@ -264,8 +263,8 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 
-	if len(svc.dynamicUpstream) > 0 {
-		upstreamName := variable.GetString(svc.dynamicUpstream, c)
+	if len(s.dynamicUpstream) > 0 {
+		upstreamName := variable.GetString(s.dynamicUpstream, c)
 
 		if len(upstreamName) == 0 {
 			logger.Warn("upstream is empty",
@@ -276,7 +275,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 
 		var found bool
-		svc.upstream, found = svc.upstreams[upstreamName]
+		s.upstream, found = s.upstreams[upstreamName]
 		if !found {
 			logger.Warn("upstream is not found",
 				slog.String("name", upstreamName),
@@ -284,28 +283,28 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			c.Abort()
 			return
 		}
-		svc.upstream.watch()
+		s.upstream.watch()
 	}
 
-	var proxy proxy.Proxy
+	var myProxy proxy.Proxy
 	var err error
-	if svc.upstream != nil {
-		c.Set(variable.UpstreamID, svc.upstream.options.ID)
+	if s.upstream != nil {
+		c.Set(variable.UpstreamID, s.upstream.options.ID)
 
-		balaner := svc.upstream.Balancer()
+		balaner := s.upstream.Balancer()
 		if balaner == nil {
 			logger.Warn("balancer is nil, upstream may not be initialized",
-				"upstream_id", svc.upstream.options.ID,
-				"service_id", svc.options.ID,
+				"upstream_id", s.upstream.options.ID,
+				"service_id", s.options.ID,
 			)
 			c.SetStatusCode(503)
 			return
 		}
 
-		proxy, err = balaner.Select(ctx, c)
+		myProxy, err = balaner.Select(ctx, c)
 	}
 
-	if proxy == nil || err != nil {
+	if myProxy == nil || err != nil {
 		// no live upstream
 		c.SetStatusCode(503)
 
@@ -316,7 +315,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}
 
 	startTime := timecache.Now()
-	proxy.ServeHTTP(ctx, c)
+	myProxy.ServeHTTP(ctx, c)
 	endTime := timecache.Now()
 
 	dur := endTime.Sub(startTime)
@@ -343,9 +342,9 @@ func newDynamicService(name string, services map[string]*Service) *DynamicServic
 	}
 }
 
-func (svc *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (s *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
-	serviceName := variable.GetString(svc.name, c)
+	serviceName := variable.GetString(s.name, c)
 
 	if len(serviceName) == 0 {
 		routeID := variable.GetString(variable.RouteID, c)
@@ -354,13 +353,13 @@ func (svc *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext)
 			slog.String("route_id", routeID),
 			slog.String("client_ip", c.ClientIP()),
 			slog.String("full_uri", fullURI),
-			slog.String("dynamic_service_name", svc.name),
+			slog.String("dynamic_service_name", s.name),
 		)
 		c.Abort()
 		return
 	}
 
-	service, found := svc.services[serviceName]
+	service, found := s.services[serviceName]
 	if !found {
 		routeID := variable.GetString(variable.RouteID, c)
 		fullURI := fullURI(&c.Request)
@@ -368,7 +367,7 @@ func (svc *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext)
 			slog.String("route_id", routeID),
 			slog.String("client_ip", c.ClientIP()),
 			slog.String("full_uri", fullURI),
-			slog.String("service_name", svc.name),
+			slog.String("service_name", s.name),
 		)
 		c.Abort()
 		return

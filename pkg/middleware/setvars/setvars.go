@@ -38,13 +38,13 @@ type Options struct {
 	directives []string
 }
 
-// SetVarsMiddlware is a middleware that sets variables in the request context.
-type SetVarsMiddlware struct {
+// Middlware is a middleware that sets variables in the request context.
+type Middlware struct {
 	options []*Options
 }
 
 // NewMiddleware creates a new SetVarsMiddlware instance.
-func NewMiddleware(options []*Options) *SetVarsMiddlware {
+func NewMiddleware(options []*Options) *Middlware {
 	for _, v := range options {
 		if v.Key == "" {
 			continue
@@ -53,12 +53,12 @@ func NewMiddleware(options []*Options) *SetVarsMiddlware {
 		v.directives = variable.ParseDirectives(v.Value)
 	}
 
-	return &SetVarsMiddlware{
+	return &Middlware{
 		options: options,
 	}
 }
 
-func (m *SetVarsMiddlware) ServeHTTP(_ context.Context, c *app.RequestContext) {
+func (m *Middlware) ServeHTTP(_ context.Context, c *app.RequestContext) {
 	for _, varinfo := range m.options {
 		if len(varinfo.directives) > 0 {
 			replacements := make([]string, 0, len(varinfo.directives)*2)
