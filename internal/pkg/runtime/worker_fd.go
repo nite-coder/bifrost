@@ -130,7 +130,7 @@ func InheritedListeners() (map[string]*os.File, error) {
 	keys, err := decodeListenerKeys(keysEnv)
 	if err != nil {
 		slog.Error("failed to decode BIFROST_LISTENER_KEYS", "error", err)
-		return listeners, nil
+		return listeners, err
 	}
 
 	// 1.5 Sanity Check: BIFROST_FD_COUNT must match key count

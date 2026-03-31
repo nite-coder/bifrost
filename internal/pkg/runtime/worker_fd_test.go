@@ -152,7 +152,7 @@ func TestInheritedListeners(t *testing.T) {
 	t.Setenv("BIFROST_FD_COUNT", "0")
 	listeners, err = InheritedListeners()
 	require.NoError(t, err)
-	assert.Nil(t, listeners)
+	assert.Empty(t, listeners)
 }
 
 func TestWorkerFDHandler_GetListenerFile(t *testing.T) {
