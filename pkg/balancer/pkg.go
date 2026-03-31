@@ -11,17 +11,21 @@ import (
 )
 
 var (
-	ErrNotAvailable                                  = errors.New("no available upstream at the moment")
-	balancers       map[string]CreateBalancerHandler = make(map[string]CreateBalancerHandler)
+	// ErrNotAvailable is returned when no available upstream is found.
+	ErrNotAvailable = errors.New("no available upstream at the moment")
+	balancers       = make(map[string]CreateBalancerHandler)
 )
 
+// CreateBalancerHandler is a function type that creates a new Balancer.
 type CreateBalancerHandler func(proxies []proxy.Proxy, params any) (Balancer, error)
 
+// Balancer defines the interface for load balancing strategies.
 type Balancer interface {
 	Proxies() []proxy.Proxy
 	Select(ctx context.Context, hzCtx *app.RequestContext) (proxy.Proxy, error)
 }
 
+// Register registers a new balancer creation handler for the given names.
 func Register(names []string, h CreateBalancerHandler) error {
 	if len(names) == 0 {
 		return errors.New("balancer names cannot be empty")
@@ -38,6 +42,7 @@ func Register(names []string, h CreateBalancerHandler) error {
 	return nil
 }
 
+// Factory returns a CreateBalancerHandler for the given balancer name.
 func Factory(name string) CreateBalancerHandler {
 	if name == "" {
 		name = "round_robin"

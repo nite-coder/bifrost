@@ -13,8 +13,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/utils"
 	"github.com/cloudwego/hertz/pkg/network"
 	"github.com/cloudwego/hertz/pkg/protocol"
-	reqHelper "github.com/cloudwego/hertz/pkg/protocol/http1/req"
-	respHelper "github.com/cloudwego/hertz/pkg/protocol/http1/resp"
+	reqhelper "github.com/cloudwego/hertz/pkg/protocol/http1/req"
+	resphelper "github.com/cloudwego/hertz/pkg/protocol/http1/resp"
 	"golang.org/x/net/http/httpguts"
 
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
@@ -60,7 +60,7 @@ func (p *HTTPProxy) roundTrip(
 		return err
 	}
 
-	err = reqHelper.Write(req, backendConn)
+	err = reqhelper.Write(req, backendConn)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func (p *HTTPProxy) roundTrip(
 
 	backendHeader := &resp.Header
 	backendHeader.SetNoDefaultContentType(true)
-	err = respHelper.ReadHeader(backendHeader, backendConn)
+	err = resphelper.ReadHeader(backendHeader, backendConn)
 	if err != nil {
 		return err
 	}

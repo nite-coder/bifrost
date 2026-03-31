@@ -242,7 +242,10 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		if u.serviceOptions.Timeout.Read > 0 {
 			clientOpts = append(clientOpts, client.WithClientReadTimeout(u.serviceOptions.Timeout.Read))
 		} else if u.bifrost.options.Default.Service.Timeout.Read > 0 {
-			clientOpts = append(clientOpts, client.WithClientReadTimeout(u.bifrost.options.Default.Service.Timeout.Read))
+			clientOpts = append(
+				clientOpts,
+				client.WithClientReadTimeout(u.bifrost.options.Default.Service.Timeout.Read),
+			)
 		}
 		if u.serviceOptions.Timeout.Write > 0 {
 			clientOpts = append(clientOpts, client.WithWriteTimeout(u.serviceOptions.Timeout.Write))
@@ -252,12 +255,18 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		if u.serviceOptions.Timeout.MaxConnWait > 0 {
 			clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(u.serviceOptions.Timeout.MaxConnWait))
 		} else if u.bifrost.options.Default.Service.Timeout.MaxConnWait > 0 {
-			clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(u.bifrost.options.Default.Service.Timeout.MaxConnWait))
+			clientOpts = append(
+				clientOpts,
+				client.WithMaxConnWaitTimeout(u.bifrost.options.Default.Service.Timeout.MaxConnWait),
+			)
 		}
 		if u.serviceOptions.MaxConnsPerHost != nil {
 			clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*u.serviceOptions.MaxConnsPerHost))
 		} else if u.bifrost.options.Default.Service.MaxConnsPerHost != nil {
-			clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*u.bifrost.options.Default.Service.MaxConnsPerHost))
+			clientOpts = append(
+				clientOpts,
+				client.WithMaxConnsPerHost(*u.bifrost.options.Default.Service.MaxConnsPerHost),
+			)
 		}
 		if strings.EqualFold(addr.Scheme, "https") {
 			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{

@@ -72,8 +72,8 @@ func BenchmarkStatic5(b *testing.B) {
 }
 
 type RouteOptions struct {
-	Methods []string `yaml:"methods" json:"methods"`
-	Paths   []string `yaml:"paths"   json:"paths"`
+	Methods []string `json:"methods" yaml:"methods"`
+	Paths   []string `json:"paths"   yaml:"paths"`
 }
 
 func BenchmarkCode(b *testing.B) {

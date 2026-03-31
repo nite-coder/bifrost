@@ -19,10 +19,10 @@ type ContentInfo struct {
 	Path    string
 }
 type Options struct {
-	Paths      []string `yaml:"paths"      json:"paths"`
-	Extensions []string `yaml:"extensions" json:"extensions"`
-	Watch      bool
-	Enabled    bool `yaml:"enabled"    json:"enabled"`
+	Paths      []string `json:"paths"      yaml:"paths"`
+	Extensions []string `json:"extensions" yaml:"extensions"`
+	Watch      bool     `json:"watch"      yaml:"watch"`
+	Enabled    bool     `json:"enabled"    yaml:"enabled"`
 }
 type FileProvider struct {
 	watcher   *fsnotify.Watcher
@@ -113,7 +113,7 @@ func (p *FileProvider) Watch() error {
 		return err
 	}
 	go func(watcher *fsnotify.Watcher) {
-		safety.Go(context.Background(), func() {
+		go safety.Go(context.Background(), func() {
 			defer watcher.Close()
 			isUpdate := false
 			refresh := 900 * time.Millisecond

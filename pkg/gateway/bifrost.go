@@ -226,33 +226,29 @@ func (b *Bifrost) Close() error {
 
 func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 	b.SetActive(false)
-	wg := &sync.WaitGroup{}
+	var wg sync.WaitGroup
 	maxTimeout := 10 * time.Second
 	for _, server := range b.httpServers {
-		wg.Add(1)
 		if server.options.Timeout.Graceful > 0 && server.options.Timeout.Graceful > maxTimeout {
 			maxTimeout = server.options.Timeout.Graceful
 		}
-		go func(srv *HTTPServer) {
-			safety.Go(ctx, func() {
-				defer wg.Done()
-				if srv.options.Timeout.Graceful > 0 {
-					c, cancel := context.WithTimeout(ctx, server.options.Timeout.Graceful)
-					defer cancel()
-					_ = srv.Shutdown(c)
-				} else {
-					_ = srv.Shutdown(ctx)
-				}
+		wg.Go(func() {
+			if server.options.Timeout.Graceful > 0 {
+				c, cancel := context.WithTimeout(ctx, server.options.Timeout.Graceful)
+				defer cancel()
+				_ = server.Shutdown(c)
+			} else {
+				_ = server.Shutdown(ctx)
+			}
 
-				slog.Debug("http server shutdown", "id", srv.options.ID)
-			})
-		}(server)
+			slog.Debug("http server shutdown", "id", server.options.ID)
+		})
 	}
 
 	if now {
 		maxTimeout = 500 * time.Millisecond
 	}
-	waitTimeout(wg, maxTimeout)
+	waitTimeout(&wg, maxTimeout)
 
 	_ = b.Close()
 

@@ -31,7 +31,7 @@ func TestGetDirective(t *testing.T) {
 	tracerInfo := traceinfo.NewTraceInfo()
 	hzCtx.SetTraceInfo(tracerInfo)
 
-	hzCtx.SetClientIPFunc(func(ctx *app.RequestContext) string {
+	hzCtx.SetClientIPFunc(func(_ *app.RequestContext) string {
 		return "127.0.0.1"
 	})
 	hzCtx.Request.SetHost("abc.com")

@@ -35,12 +35,12 @@ linters:
     - funlen
     - gochecknoinits
     - gocognit
-    - goconst
-    - gocritic
+    #- goconst
+    #- gocritic
     - gocyclo
     - godox
     - goprintffuncname
-    - ineffassign
+    #- ineffassign
     - maintidx
     - mnd
     - modernize
@@ -48,10 +48,10 @@ linters:
     - nestif
     - paralleltest
     - perfsprint
-    - prealloc
-    - predeclared
-    - revive
-    - tagalign
+    #- prealloc
+    #- predeclared
+    #- revive
+    #- tagalign
     - testifylint
     - thelper
     - unparam

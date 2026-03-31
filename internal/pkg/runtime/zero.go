@@ -66,8 +66,8 @@ var defaultFileOpener = func(name string) (*os.File, error) {
 	return os.OpenFile(filepath.Clean(name), os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC, 0o600)
 }
 
-// listenInfo holds information about a network listener.
-type listenInfo struct {
+// ListenInfo holds information about a network listener.
+type ListenInfo struct {
 	Listener net.Listener `json:"-"`
 	Key      string       `json:"key"`
 }
@@ -93,7 +93,7 @@ type ZeroDownTime struct {
 	isShutdownCh  chan bool
 	envGetter     EnvGetter
 	fileOpener    FileOpener
-	listeners     []*listenInfo
+	listeners     []*ListenInfo
 	QuitTimeout   time.Duration
 	listenerOnce  sync.Once
 	mu            sync.Mutex
@@ -147,7 +147,7 @@ func (z *ZeroDownTime) IsWaiting() bool {
 
 // Close shuts down the ZeroDownTime instance by closing all listeners
 // and stopping the upgrade waiting goroutine if active.
-func (z *ZeroDownTime) Close(ctx context.Context) error {
+func (z *ZeroDownTime) Close(_ context.Context) error {
 	for _, info := range z.listeners {
 		_ = info.Listener.Close()
 	}
@@ -188,7 +188,7 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 						continue
 					}
 
-					info := &listenInfo{
+					info := &ListenInfo{
 						Listener: fileListener,
 						Key:      key,
 					}
@@ -260,7 +260,7 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 			return nil, err
 		}
 	}
-	info := &listenInfo{
+	info := &ListenInfo{
 		Listener: listener,
 		Key:      options.Address,
 	}
@@ -274,11 +274,11 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 }
 
 // GetListeners returns the list of active listeners.
-func (z *ZeroDownTime) GetListeners() []*listenInfo {
+func (z *ZeroDownTime) GetListeners() []*ListenInfo {
 	z.mu.Lock()
 	defer z.mu.Unlock()
 	// Return a copy to avoid race conditions
-	listeners := make([]*listenInfo, len(z.listeners))
+	listeners := make([]*ListenInfo, len(z.listeners))
 	copy(listeners, z.listeners)
 	return listeners
 }

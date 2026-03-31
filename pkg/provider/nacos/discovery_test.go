@@ -14,6 +14,10 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
+const (
+	testServiceName = "test-service"
+)
+
 type MockNamingClient struct {
 	mock.Mock
 }
@@ -100,7 +104,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 			name: "successful get instances",
 			mockSetup: func(m *MockNamingClient) {
 				m.On("SelectInstances", mock.MatchedBy(func(param vo.SelectInstancesParam) bool {
-					return param.ServiceName == "test-service"
+					return param.ServiceName == testServiceName
 				})).Return([]model.Instance{
 					{
 						Ip:     "127.0.0.1",
@@ -119,7 +123,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 				}, nil)
 			},
 			options: provider.GetInstanceOptions{
-				Name:  "test-service",
+				Name:  testServiceName,
 				Group: "test-group",
 			},
 			want:          2,
@@ -130,11 +134,11 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 			name: "empty instance list",
 			mockSetup: func(m *MockNamingClient) {
 				m.On("SelectInstances", mock.MatchedBy(func(param vo.SelectInstancesParam) bool {
-					return param.ServiceName == "test-service"
+					return param.ServiceName == testServiceName
 				})).Return([]model.Instance{}, nil)
 			},
 			options: provider.GetInstanceOptions{
-				Name:  "test-service",
+				Name:  testServiceName,
 				Group: "test-group",
 			},
 			want:          0,
@@ -145,11 +149,11 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 			name: "nacos error",
 			mockSetup: func(m *MockNamingClient) {
 				m.On("SelectInstances", mock.MatchedBy(func(param vo.SelectInstancesParam) bool {
-					return param.ServiceName == "test-service"
+					return param.ServiceName == testServiceName
 				})).Return([]model.Instance{}, fmt.Errorf("nacos error"))
 			},
 			options: provider.GetInstanceOptions{
-				Name:  "test-service",
+				Name:  testServiceName,
 				Group: "test-group",
 			},
 			want:          0,
@@ -210,11 +214,11 @@ func TestNacosServiceDiscovery_Watch(t *testing.T) {
 			name: "successful watch",
 			mockSetup: func(m *MockNamingClient) {
 				m.On("Subscribe", mock.MatchedBy(func(param *vo.SubscribeParam) bool {
-					return param.ServiceName == "test-service" && param.GroupName == "test-group"
+					return param.ServiceName == testServiceName && param.GroupName == "test-group"
 				})).Return(nil)
 			},
 			options: provider.GetInstanceOptions{
-				Name:  "test-service",
+				Name:  testServiceName,
 				Group: "test-group",
 			},
 			wantErr: false,
@@ -225,7 +229,7 @@ func TestNacosServiceDiscovery_Watch(t *testing.T) {
 				m.On("Subscribe", mock.Anything).Return(fmt.Errorf("subscription error"))
 			},
 			options: provider.GetInstanceOptions{
-				Name:  "test-service",
+				Name:  testServiceName,
 				Group: "test-group",
 			},
 			wantErr: true,

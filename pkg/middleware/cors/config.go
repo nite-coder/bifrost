@@ -133,10 +133,10 @@ func (c *Config) validateAllowedSchemas(origin string) bool {
 }
 
 func (c *Config) parseWildcardRules() [][]string {
-	var wRules [][]string
 	if !c.AllowWildcard {
-		return wRules
+		return nil
 	}
+	wRules := make([][]string, 0, len(c.AllowOrigins))
 	for _, o := range c.AllowOrigins {
 		if !strings.Contains(o, "*") {
 			continue

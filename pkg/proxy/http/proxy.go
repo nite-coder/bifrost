@@ -78,6 +78,7 @@ type HTTPProxy struct {
 	transferTrailer bool
 	tags            map[string]string
 }
+// Options contains configuration for the HTTP proxy.
 type Options struct {
 	Target           string
 	TargetHostHeader string
@@ -109,22 +110,18 @@ var hopHeaders = []string{
 }
 
 // New creates a new reverse proxy instance.
-//
-// It takes a set of options and a client as parameters, and returns a new reverse proxy instance and an error.
-// The options parameter specifies the target URL and other configuration options for the reverse proxy.
-// The client parameter specifies the client to use for making requests to the target URL.
-// The returned error is nil if the reverse proxy instance is created successfully, or an error if there is a problem.
-func New(opts Options, client *client.Client) (proxy.Proxy, error) {
+func New(opts Options, httpClient *client.Client) (proxy.Proxy, error) {
 	addr, err := url.Parse(opts.Target)
 	if err != nil {
 		return nil, fmt.Errorf("proxy: HTTP proxy failed to parse target URL: %w", err)
 	}
-	if client == nil {
+	if httpClient == nil {
 		clientOptions := ClientOptions{
 			IsHTTP2:   opts.Protocol == config.ProtocolHTTP2,
 			HZOptions: DefaultClientOptions(),
 		}
-		client, err = NewClient(clientOptions)
+		var err error
+		httpClient, err = NewClient(clientOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -169,12 +166,13 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 				req.Header.Set("Host", opts.TargetHostHeader)
 			}
 		},
-		client: client,
+		client: httpClient,
 		tags:   opts.Tags,
 	}
 	return r, nil
 }
 
+// IsAvailable checks if the proxy is currently available.
 func (p *HTTPProxy) IsAvailable() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -191,6 +189,7 @@ func (p *HTTPProxy) IsAvailable() bool {
 	return false
 }
 
+// AddFailedCount increments the failed request count for the proxy.
 func (p *HTTPProxy) AddFailedCount(count uint) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -352,9 +351,9 @@ func (p *HTTPProxy) SetDirector(director func(req *protocol.Request)) {
 	p.director = director
 }
 
-// SetClient use to customize client.
-func (p *HTTPProxy) SetClient(client *client.Client) {
-	p.client = client
+// SetClient sets the HTTP client for the proxy.
+func (p *HTTPProxy) SetClient(httpClient *client.Client) {
+	p.client = httpClient
 }
 
 // SetErrorHandler use to customize error handler.
@@ -362,18 +361,22 @@ func (p *HTTPProxy) SetErrorHandler(eh func(c *app.RequestContext, err error)) {
 	p.errorHandler = eh
 }
 
-func (r *HTTPProxy) SetTransferTrailer(b bool) {
-	r.transferTrailer = b
+// SetTransferTrailer sets whether to forward trailer headers.
+func (p *HTTPProxy) SetTransferTrailer(b bool) {
+	p.transferTrailer = b
 }
 
+// Weight returns the load balancing weight of the proxy.
 func (p *HTTPProxy) Weight() uint32 {
 	return p.weight
 }
 
+// Target returns the target URL string of the proxy.
 func (p *HTTPProxy) Target() string {
 	return p.target
 }
 
+// Close closes the proxy and its underlying idle connections.
 func (p *HTTPProxy) Close() error {
 	if p.client != nil {
 		p.client.CloseIdleConnections()
@@ -382,6 +385,7 @@ func (p *HTTPProxy) Close() error {
 	return nil
 }
 
+// Tag returns the value of a specific tag.
 func (p *HTTPProxy) Tag(key string) (value string, exist bool) {
 	if len(p.tags) == 0 {
 		return "", false
@@ -391,11 +395,12 @@ func (p *HTTPProxy) Tag(key string) (value string, exist bool) {
 	return val, found
 }
 
+// Tags returns all tags associated with the proxy.
 func (p *HTTPProxy) Tags() map[string]string {
 	return p.tags
 }
 
-func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err error) {
+func (p *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err error) {
 	if err == nil {
 		return
 	}

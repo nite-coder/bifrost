@@ -16,6 +16,10 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
+const (
+	testBody = "hello world"
+)
+
 func TestNewMiddleware(t *testing.T) {
 	t.Run("should set default MaxRequestBodySize", func(t *testing.T) {
 		m := NewMiddleware(Config{MaxRequestBodySize: 0})
@@ -46,7 +50,7 @@ func TestBufferingMiddleware(t *testing.T) {
 		}
 		router := newTestRouter(cfg)
 
-		body := "hello world"
+		body := testBody
 		w := ut.PerformRequest(router, "POST", "/", &ut.Body{Body: strings.NewReader(body), Len: len(body)})
 
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -59,7 +63,7 @@ func TestBufferingMiddleware(t *testing.T) {
 		}
 		router := newTestRouter(cfg)
 
-		body := "hello world"
+		body := testBody
 		w := ut.PerformRequest(router, "POST", "/", &ut.Body{Body: strings.NewReader(body), Len: len(body)})
 
 		assert.Equal(t, http.StatusRequestEntityTooLarge, w.Code)
@@ -71,7 +75,7 @@ func TestBufferingMiddleware(t *testing.T) {
 		}
 		router := newTestRouter(cfg)
 
-		body := "hello world"
+		body := testBody
 		// passing -1 for Len to simulate no Content-Length
 		w := ut.PerformRequest(router, "POST", "/", &ut.Body{Body: strings.NewReader(body), Len: -1})
 

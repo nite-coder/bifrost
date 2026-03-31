@@ -488,7 +488,7 @@ func TestRouteAddErrors(t *testing.T) {
 	})
 
 	t.Run("checkRegexpRoute with methods", func(t *testing.T) {
-		regex, _ := regexp.Compile("/test/(a|b)")
+		regex := regexp.MustCompile("/test/(a|b)")
 		setting := routeSetting{
 			regex:       regex,
 			route:       &config.RouteOptions{Methods: []string{"GET"}},

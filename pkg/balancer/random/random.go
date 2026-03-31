@@ -10,32 +10,33 @@ import (
 	"github.com/nite-coder/bifrost/pkg/proxy"
 )
 
+// Init registers the random balancer.
 func Init() error {
-	return balancer.Register([]string{"random"}, func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
+	return balancer.Register([]string{"random"}, func(proxies []proxy.Proxy, _ any) (balancer.Balancer, error) {
 		b := NewBalancer(proxies)
 		return b, nil
 	})
 }
 
-// RandomBalancer implements a random load balancing algorithm.
-type RandomBalancer struct {
+// Balancer implements a random load balancing strategy.
+type Balancer struct {
 	proxies []proxy.Proxy
 }
 
-// NewBalancer creates a new RandomBalancer instance.
-func NewBalancer(proxies []proxy.Proxy) *RandomBalancer {
-	return &RandomBalancer{
+// NewBalancer creates a new random Balancer instance.
+func NewBalancer(proxies []proxy.Proxy) *Balancer {
+	return &Balancer{
 		proxies: proxies,
 	}
 }
 
 // Proxies returns the list of proxies managed by the balancer.
-func (b *RandomBalancer) Proxies() []proxy.Proxy {
+func (b *Balancer) Proxies() []proxy.Proxy {
 	return b.proxies
 }
 
 // Select picks a random available proxy.
-func (b *RandomBalancer) Select(ctx context.Context, hzCtx *app.RequestContext) (proxy.Proxy, error) {
+func (b *Balancer) Select(_ context.Context, hzCtx *app.RequestContext) (proxy.Proxy, error) {
 	if len(b.proxies) == 0 {
 		return nil, balancer.ErrNotAvailable
 	}

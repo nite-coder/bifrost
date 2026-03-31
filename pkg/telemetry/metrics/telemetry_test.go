@@ -40,11 +40,11 @@ func TestTracer(t *testing.T) {
 	// Use the provider with the middleware to enable OTel metrics in the /metrics endpoint
 	h.Use(NewMetricMiddleware("/metrics", provider).ServeHTTP)
 
-	h.GET("/test_get", func(c context.Context, ctx *app.RequestContext) {
+	h.GET("/test_get", func(_ context.Context, ctx *app.RequestContext) {
 		ctx.String(200, "hello get")
 	})
 
-	h.POST("/test_post", func(ctx context.Context, c *app.RequestContext) {
+	h.POST("/test_post", func(_ context.Context, c *app.RequestContext) {
 		c.Set(variable.GRPCStatusCode, codes.OK)
 		c.String(200, "hello post")
 	})

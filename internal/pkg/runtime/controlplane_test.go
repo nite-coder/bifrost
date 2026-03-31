@@ -84,7 +84,7 @@ func TestControlPlane_Connection(t *testing.T) {
 
 		// Setup message handler
 		msgCh := make(chan *ControlMessage, 1)
-		cp.SetMessageHandler(func(conn net.Conn, msg *ControlMessage) {
+		cp.SetMessageHandler(func(_ net.Conn, msg *ControlMessage) {
 			msgCh <- msg
 		})
 
@@ -143,7 +143,7 @@ func TestControlPlane_SendReceiveFDs(t *testing.T) {
 
 	// Channel to receive FDs
 	fdCh := make(chan []*os.File, 1)
-	cp.SetFDHandler(func(fds []*os.File, keys []string) {
+	cp.SetFDHandler(func(fds []*os.File, _ []string) {
 		fdCh <- fds
 	})
 
@@ -216,7 +216,7 @@ func TestWorkerControlPlane_Start(t *testing.T) {
 
 	// Mock Signal
 	signalCh := make(chan os.Signal, 1)
-	wcp.signalFunc = func(pid int, sig os.Signal) error {
+	wcp.signalFunc = func(_ int, sig os.Signal) error {
 		signalCh <- sig
 		return nil
 	}

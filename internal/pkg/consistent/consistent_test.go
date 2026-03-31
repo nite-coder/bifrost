@@ -32,7 +32,7 @@ func TestSetReplicas(t *testing.T) {
 
 // TestSetHashFunc tests setting a custom hash function.
 func TestSetHashFunc(t *testing.T) {
-	customHash := func(data []byte) uint32 {
+	customHash := func(_ []byte) uint32 {
 		return 12345 // Simple custom hash for testing
 	}
 
@@ -354,25 +354,23 @@ func TestConcurrency(t *testing.T) {
 
 	// Concurrent reads
 	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
+		wg.Go(func() {
+			id := i
 			for j := 0; j < operationsPerGoroutine; j++ {
 				key := fmt.Sprintf("key-%d-%d", id, j)
 				_, _ = ring.Get(key)
 			}
-		}(i)
+		})
 	}
 
 	// Concurrent writes (add/remove)
 	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
+		wg.Go(func() {
+			id := i
 			nodeID := fmt.Sprintf("temp-node-%d", id)
 			_ = ring.Add(nodeID)
 			_ = ring.Remove(nodeID)
-		}(i)
+		})
 	}
 
 	wg.Wait()

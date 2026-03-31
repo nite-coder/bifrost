@@ -8,6 +8,7 @@ import (
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 )
 
+// TimeCache stores the current time and updates it periodically.
 type TimeCache struct {
 	t        atomic.Value
 	interval time.Duration
@@ -48,6 +49,7 @@ func (tc *TimeCache) Now() time.Time {
 	return t
 }
 
+// Close stops the periodic update of the time cache.
 func (tc *TimeCache) Close() {
 	close(tc.stopCh)
 }

@@ -20,7 +20,7 @@ import (
 
 // TestHelperProcess isn't a real test. It's used to mock a child process.
 // It's invoked by fakeExecCommandContext.
-func TestHelperProcess(t *testing.T) {
+func TestHelperProcess(_ *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -30,27 +30,30 @@ func TestHelperProcess(t *testing.T) {
 	args := os.Args
 	for _, arg := range args {
 		if arg == "FORCE_ERROR" {
+			//nolint:revive // deep-exit is expected in helper process
 			os.Exit(1)
 		}
 	}
 
 	// Simulate work
 	// Handle signals for graceful shutdown testing
-	fmt.Fprintln(os.Stderr, "Helper process started, setting up signal handler")
+	_, _ = fmt.Fprintln(os.Stderr, "Helper process started, setting up signal handler")
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
 
 	select {
 	case sig := <-sigCh:
-		fmt.Fprintf(os.Stderr, "Helper process received signal: %v\n", sig)
+		_, _ = fmt.Fprintf(os.Stderr, "Helper process received signal: %v\n", sig)
+		//nolint:revive // deep-exit is expected in helper process
 		os.Exit(0)
 	case <-time.After(2 * time.Second):
-		fmt.Fprintln(os.Stderr, "Helper process timeout")
+		_, _ = fmt.Fprintln(os.Stderr, "Helper process timeout")
+		//nolint:revive // deep-exit is expected in helper process
 		os.Exit(0)
 	}
 }
 
-func fakeExecCommandContext(ctx context.Context, command string, args ...string) *exec.Cmd {
+func fakeExecCommandContext(ctx context.Context, _ string, args ...string) *exec.Cmd {
 	cs := []string{"-test.run=TestHelperProcess", "--"}
 	cs = append(cs, args...)
 	/* #nosec G204 */
@@ -185,7 +188,7 @@ func TestMaster_SpawnWorker(t *testing.T) {
 	t.Run("spawn failure", func(t *testing.T) {
 		// Mock failure
 		oldExecCtx := execCommandContext
-		execCommandContext = func(ctx context.Context, name string, args ...string) *exec.Cmd {
+		execCommandContext = func(ctx context.Context, _ string, _ ...string) *exec.Cmd {
 			return exec.Command("non-existent-binary-xyz-12345")
 		}
 		defer func() { execCommandContext = oldExecCtx }()
@@ -349,7 +352,7 @@ func TestMaster_HandleControlMessage(t *testing.T) {
 		}
 	})
 
-	t.Run("register message logs only", func(t *testing.T) {
+	t.Run("register message logs only", func(_ *testing.T) {
 		msg := &ControlMessage{
 			Type:      MessageTypeRegister,
 			WorkerPID: 123,

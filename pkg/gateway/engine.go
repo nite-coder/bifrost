@@ -109,9 +109,14 @@ func (e *Engine) OnShutdown() {
 
 func (e *Engine) Use(middleware ...app.HandlerFunc) {
 	e.handlers = append(e.handlers, middleware...)
-	e.middlewares = e.handlers
 
-	if e.notFoundHandler != nil {
-		e.middlewares = append(e.handlers, e.notFoundHandler)
+	if e.notFoundHandler == nil {
+		e.middlewares = e.handlers
+		return
 	}
+
+	handlers := make(app.HandlersChain, len(e.handlers)+1)
+	copy(handlers, e.handlers)
+	handlers[len(e.handlers)] = e.notFoundHandler
+	e.middlewares = handlers
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
+// HTTPMethods is a list of supported HTTP methods.
 var HTTPMethods = []string{
 	http.MethodGet,
 	http.MethodPost,
@@ -25,15 +26,21 @@ var HTTPMethods = []string{
 type methodHandler struct {
 	handlers map[string][]app.HandlerFunc // Associates HTTP methods with handler functions
 }
+// NodeType indicates the type of the node.
 type NodeType int32
 
 const (
+	// Exact means the path must be matched exactly.
 	Exact NodeType = iota
+	// PreferentialPrefix means the path must be matched as a preferential prefix.
 	PreferentialPrefix
+	// Prefix means the path must be matched as a prefix.
 	Prefix
+	// Regex means the path must be matched as a regular expression.
 	Regex
 )
 
+// Children represents a child node with its path.
 type Children struct {
 	Node *node
 	Path string
@@ -344,6 +351,7 @@ func (r *Router) Find(method string, path string) ([]app.HandlerFunc, bool) {
 	return nil, false
 }
 
+// IsValidHTTPMethod checks if the given method is a valid HTTP method.
 func IsValidHTTPMethod(method string) bool {
 	switch method {
 	case http.MethodGet,

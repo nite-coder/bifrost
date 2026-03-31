@@ -52,7 +52,7 @@ func TestNewProvider_WithNothingEnabled(t *testing.T) {
 }
 
 func TestProviderNilSafety(t *testing.T) {
-	var provider *metrics.Provider = nil
+	var provider *metrics.Provider
 
 	// MeterProvider should return nil for nil provider
 	assert.Nil(t, provider.MeterProvider())

@@ -81,7 +81,7 @@ func parseHTTPVersion(proto string) (major, minor int) {
 	major, minor = 1, 1
 
 	if len(proto) < 8 { // "HTTP/X.Y" minimum length
-		return
+		return major, minor
 	}
 
 	// Parse "HTTP/X.Y" format
@@ -94,5 +94,5 @@ func parseHTTPVersion(proto string) (major, minor int) {
 		}
 	}
 
-	return
+	return major, minor
 }

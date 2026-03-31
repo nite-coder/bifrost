@@ -69,6 +69,7 @@ var (
 	}
 )
 
+// Get returns the value of a variable or directive.
 func Get(key string, c *app.RequestContext) (val any, found bool) {
 	key = strings.TrimSpace(key)
 
@@ -95,6 +96,7 @@ func Get(key string, c *app.RequestContext) (val any, found bool) {
 	return directive(key, c)
 }
 
+// GetString returns the string value of a variable or directive.
 func GetString(key string, c *app.RequestContext) string {
 	val, found := Get(key, c)
 	if !found {
@@ -116,6 +118,7 @@ func GetString(key string, c *app.RequestContext) string {
 	}
 }
 
+// GetInt64 returns the int64 value of a variable or directive.
 func GetInt64(key string, c *app.RequestContext) int64 {
 	val, found := Get(key, c)
 	if !found {
@@ -125,6 +128,7 @@ func GetInt64(key string, c *app.RequestContext) int64 {
 	return result
 }
 
+// GetInt32 returns the int32 value of a variable or directive.
 func GetInt32(key string, c *app.RequestContext) int32 {
 	val, found := Get(key, c)
 	if !found {
@@ -134,6 +138,7 @@ func GetInt32(key string, c *app.RequestContext) int32 {
 	return result
 }
 
+// GetFloat64 returns the float64 value of a variable or directive.
 func GetFloat64(key string, c *app.RequestContext) float64 {
 	val, found := Get(key, c)
 	if !found {
@@ -143,6 +148,7 @@ func GetFloat64(key string, c *app.RequestContext) float64 {
 	return result
 }
 
+// GetFloat32 returns the float32 value of a variable or directive.
 func GetFloat32(key string, c *app.RequestContext) float32 {
 	val, found := Get(key, c)
 	if !found {
@@ -152,6 +158,7 @@ func GetFloat32(key string, c *app.RequestContext) float32 {
 	return result
 }
 
+// GetBool returns the bool value of a variable or directive.
 func GetBool(key string, c *app.RequestContext) bool {
 	val, found := Get(key, c)
 	if !found {
@@ -161,6 +168,7 @@ func GetBool(key string, c *app.RequestContext) bool {
 	return result
 }
 
+// GetTime returns the time.Time value of a variable or directive.
 func GetTime(key string, c *app.RequestContext) time.Time {
 	val, found := Get(key, c)
 	if !found {
@@ -173,6 +181,7 @@ func GetTime(key string, c *app.RequestContext) time.Time {
 	return result
 }
 
+// IsDirective checks if a key is a known directive.
 func IsDirective(key string) bool {
 	if strings.HasPrefix(key, "$var.") ||
 		strings.HasPrefix(key, "$env.") ||
@@ -316,16 +325,16 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		}
 
 		builder := strings.Builder{}
-		builder.WriteString(info.Method)
-		builder.Write(spaceByte)
-		builder.Write(info.Path)
+		_, _ = builder.WriteString(info.Method)
+		_, _ = builder.Write(spaceByte)
+		_, _ = builder.Write(info.Path)
 		if len(info.Query) > 0 {
-			builder.Write(questionByte)
-			builder.Write(info.Query)
+			_, _ = builder.Write(questionByte)
+			_, _ = builder.Write(info.Query)
 		}
 
-		builder.Write(spaceByte)
-		builder.WriteString(info.Protocol)
+		_, _ = builder.Write(spaceByte)
+		_, _ = builder.WriteString(info.Protocol)
 		return builder.String(), true
 	case HTTPRoute:
 		val, found := c.Get(BifrostRoute)
@@ -370,10 +379,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			info, ok := (val).(*RequestOriginal)
 			if ok {
 				builder := strings.Builder{}
-				builder.Write(info.Path)
+				_, _ = builder.Write(info.Path)
 				if len(info.Query) > 0 {
-					builder.Write(questionByte)
-					builder.Write(info.Query)
+					_, _ = builder.Write(questionByte)
+					_, _ = builder.Write(info.Query)
 				}
 
 				return builder.String(), true
@@ -615,6 +624,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	}
 }
 
+// ParseDirectives parses directives from a string.
 func ParseDirectives(content string) []string {
 	variables := reIsVariable.FindAllString(content, -1)
 	sortBifrostVariables(variables)
@@ -672,6 +682,7 @@ func MethodToString(m []byte) string {
 		if string(m) == consts.MethodDelete {
 			return consts.MethodDelete
 		}
+	default:
 	}
 	return string(m)
 }

@@ -234,6 +234,8 @@ func (m *Master) Run(ctx context.Context) error {
 						slog.Error("failed to forward SIGUSR1 to worker", "error", err, "workerPID", worker.Process.Pid)
 					}
 				}
+			default:
+				// Ignore other signals
 			}
 
 		case <-m.workerDoneCh:
@@ -279,7 +281,7 @@ func (m *Master) Run(ctx context.Context) error {
 }
 
 // Shutdown gracefully stops the Master and its Worker.
-func (m *Master) Shutdown(ctx context.Context) error {
+func (m *Master) Shutdown(_ context.Context) error {
 	m.mu.Lock()
 	if m.state == MasterStateShuttingDown {
 		m.mu.Unlock()
@@ -637,7 +639,7 @@ func (m *Master) handleReload(ctx context.Context) error {
 }
 
 // handleControlMessage handles messages from workers.
-func (m *Master) handleControlMessage(conn net.Conn, msg *ControlMessage) {
+func (m *Master) handleControlMessage(_ net.Conn, msg *ControlMessage) {
 	switch msg.Type {
 	case MessageTypeRegister:
 		slog.Debug("worker registered", "workerPID", msg.WorkerPID)

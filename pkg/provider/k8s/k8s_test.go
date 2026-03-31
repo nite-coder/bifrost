@@ -323,8 +323,7 @@ func TestWatch(t *testing.T) {
 			assert.NoError(t, err)
 
 			for _, op := range tt.operations {
-				switch obj := op.obj.(type) {
-				case *discoveryv1.EndpointSlice:
+				if obj, ok := op.obj.(*discoveryv1.EndpointSlice); ok {
 					_, e := client.DiscoveryV1().EndpointSlices(tt.options.Namespace).Create(
 						context.Background(),
 						obj,

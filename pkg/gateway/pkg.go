@@ -315,7 +315,7 @@ func fullURI(req *protocol.Request) string {
 	return buf.String()
 }
 
-// waitTimeout waits for the waitgroup for the specified max timeout.
+// waitTimeout waits for the waiter for the specified max timeout.
 // Returns true if waiting timed out.
 func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	c := make(chan struct{})

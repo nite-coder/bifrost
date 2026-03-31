@@ -501,7 +501,11 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 		factory := balancer.Factory(upstreamOptions.Balancer.Type)
 		if factory == nil && upstreamOptions.Balancer.Type == "" {
 		} else if factory == nil {
-			msg := fmt.Sprintf("unsupported balancer strategy '%s' for upstream ID: %s", upstreamOptions.Balancer, upstreamID)
+			msg := fmt.Sprintf(
+				"unsupported balancer strategy '%s' for upstream ID: %s",
+				upstreamOptions.Balancer,
+				upstreamID,
+			)
 			structure := []string{"upstreams", upstreamID, "strategy"}
 			return newInvalidConfig(structure, upstreamOptions.Balancer, msg)
 		}
@@ -567,7 +571,11 @@ func validateUpstreams(mainOptions Options, isFullMode bool) error {
 					// (e.g. plain single-label hostnames like "dev1").
 					ip := net.ParseIP(addr)
 					if !IsValidDomain(addr) && ip == nil {
-						return fmt.Errorf("failed to lookup host '%s' for upstream ID '%s': invalid host", addr, upstreamID)
+						return fmt.Errorf(
+							"failed to lookup host '%s' for upstream ID '%s': invalid host",
+							addr,
+							upstreamID,
+						)
 					}
 				}
 			}

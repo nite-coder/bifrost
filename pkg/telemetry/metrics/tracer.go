@@ -25,8 +25,8 @@ const (
 	unknownLabelValue   = "unknown"
 )
 
-// genRequestDurationLabels make labels values.
-func genRequestDurationLabels(c *app.RequestContext, isGRPC bool) prom.Labels {
+// genCommonLabels creates base label values for HTTP requests.
+func genCommonLabels(c *app.RequestContext) prom.Labels {
 	labels := make(prom.Labels)
 
 	serverID := variable.GetString(variable.ServerID, c)
@@ -57,18 +57,22 @@ func genRequestDurationLabels(c *app.RequestContext, isGRPC bool) prom.Labels {
 		labels[labelPath] = stableLabelValue(path)
 	}
 
-	if isGRPC {
-		grpcStatusCode := ""
-		val, found := variable.Get(variable.GRPCStatusCode, c)
+	return labels
+}
 
-		if found {
-			grpcStatusCode, _ = cast.ToString(val)
-			grpcStatusCode = strings.Clone(grpcStatusCode)
-		}
+// genCounterLabels creates label values for request counters, including gRPC status.
+func genCounterLabels(c *app.RequestContext) prom.Labels {
+	labels := genCommonLabels(c)
 
-		labels[labelGRPCStatusCode] = grpcStatusCode
+	grpcStatusCode := ""
+	val, found := variable.Get(variable.GRPCStatusCode, c)
+
+	if found {
+		grpcStatusCode, _ = cast.ToString(val)
+		grpcStatusCode = strings.Clone(grpcStatusCode)
 	}
 
+	labels[labelGRPCStatusCode] = grpcStatusCode
 	return labels
 }
 
@@ -82,13 +86,13 @@ type serverTracer struct {
 }
 
 // Start record the beginning of server handling request from client.
-func (s *serverTracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
+func (s *serverTracer) Start(ctx context.Context, _ *app.RequestContext) context.Context {
 	s.httpServerActiveRequests.Inc()
 	return ctx
 }
 
 // Finish record the ending of server handling request from client.
-func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
+func (s *serverTracer) Finish(_ context.Context, c *app.RequestContext) {
 	if c.GetTraceInfo().Stats().Level() == stats.LevelDisabled {
 		return
 	}
@@ -105,13 +109,13 @@ func (s *serverTracer) Finish(ctx context.Context, c *app.RequestContext) {
 	s.httpServerActiveRequests.Dec()
 
 	reqDuration := httpFinish.Time().Sub(httpStart.Time())
-	_ = counterAdd(s.httpServerRequests, 1, genRequestDurationLabels(c, true))
-	_ = histogramObserve(s.httpServerRequestDuration, reqDuration, genRequestDurationLabels(c, false))
+	_ = counterAdd(s.httpServerRequests, 1, genCounterLabels(c))
+	_ = histogramObserve(s.httpServerRequestDuration, reqDuration, genCommonLabels(c))
 
 	upstreamDuration := c.GetDuration(variable.UpstreamDuration)
 
 	bifrostDuration := reqDuration - upstreamDuration
-	_ = histogramObserve(s.httpBifrostRequestDuration, bifrostDuration, genRequestDurationLabels(c, false))
+	_ = histogramObserve(s.httpBifrostRequestDuration, bifrostDuration, genCommonLabels(c))
 
 	serverLabel := make(prom.Labels)
 	serverLabel[labelServerID] = serverID

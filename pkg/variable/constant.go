@@ -1,5 +1,6 @@
 package variable
 
+// RequestOriginal stores the original request information.
 type RequestOriginal struct {
 	ServerID string
 	Method   string
@@ -9,6 +10,7 @@ type RequestOriginal struct {
 	Path     []byte
 	Query    []byte
 }
+// RequestRoute stores information about the routed request.
 type RequestRoute struct {
 	RouteID   string
 	Route     string
@@ -16,7 +18,9 @@ type RequestRoute struct {
 	Tags      []string
 }
 
+// Variable names used in directives.
 const (
+	// Time is the current time.
 	Time                        = "$time"
 	ServerID                    = "$server_id"
 	RouteID                     = "$route_id"

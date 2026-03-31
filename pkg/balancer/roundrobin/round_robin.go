@@ -10,38 +10,38 @@ import (
 	"github.com/nite-coder/bifrost/pkg/proxy"
 )
 
+// Init registers the round-robin balancer.
 func Init() error {
 	return balancer.Register(
 		[]string{"round_robin"},
-		func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
+		func(proxies []proxy.Proxy, _ any) (balancer.Balancer, error) {
 			b := NewBalancer(proxies)
 			return b, nil
 		},
 	)
 }
 
-// RoundRobinBalancer implements a round-robin load balancing algorithm.
-type RoundRobinBalancer struct {
+// Balancer implements a round-robin load balancing strategy.
+type Balancer struct {
 	counter atomic.Uint64
 	proxies []proxy.Proxy
 }
 
-// NewBalancer creates a new RoundRobinBalancer instance.
-func NewBalancer(proxies []proxy.Proxy) *RoundRobinBalancer {
-	return &RoundRobinBalancer{
+// NewBalancer creates a new round-robin Balancer instance.
+func NewBalancer(proxies []proxy.Proxy) *Balancer {
+	return &Balancer{
 		counter: atomic.Uint64{},
 		proxies: proxies,
 	}
 }
 
 // Proxies returns the list of proxies managed by the balancer.
-func (b *RoundRobinBalancer) Proxies() []proxy.Proxy {
+func (b *Balancer) Proxies() []proxy.Proxy {
 	return b.proxies
 }
 
 // Select picks the next available proxy in a round-robin fashion.
-// It handles atomic counter increments and wraps around automatically.
-func (b *RoundRobinBalancer) Select(ctx context.Context, hzCtx *app.RequestContext) (proxy.Proxy, error) {
+func (b *Balancer) Select(_ context.Context, hzCtx *app.RequestContext) (proxy.Proxy, error) {
 	if len(b.proxies) == 0 {
 		return nil, balancer.ErrNotAvailable
 	}

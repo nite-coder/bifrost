@@ -20,12 +20,14 @@ import (
 
 var grpcContentType = []byte("application/grpc")
 
+// Tracer is used to record access logs.
 type Tracer struct {
 	writer     *BufferedLogger
 	options    config.AccessLogOptions
 	directives []string
 }
 
+// NewTracer creates a new access log tracer with given options.
 func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 	if opts.TimeFormat == "" {
 		opts.TimeFormat = time.DateTime
@@ -44,11 +46,13 @@ func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 	return tracer, nil
 }
 
-func (t *Tracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
+// Start implements the tracer.Tracer interface.
+func (t *Tracer) Start(ctx context.Context, _ *app.RequestContext) context.Context {
 	return ctx
 }
 
-func (t *Tracer) Finish(ctx context.Context, c *app.RequestContext) {
+// Finish implements the tracer.Tracer interface.
+func (t *Tracer) Finish(_ context.Context, c *app.RequestContext) {
 	vals := t.buildReplacer(c)
 	if vals == nil {
 		return
@@ -58,6 +62,7 @@ func (t *Tracer) Finish(ctx context.Context, c *app.RequestContext) {
 	t.writer.Write(result)
 }
 
+// Close closes the tracer's writer.
 func (t *Tracer) Close() error {
 	if strings.EqualFold(t.options.Output, "stderr") {
 		return nil
@@ -115,15 +120,12 @@ func escape(s string, escapeType config.EscapeType) string {
 	}
 	switch escapeType {
 	case config.DefaultEscape:
-		s = escapeString(s)
+		return escapeString(s)
 	case config.JSONEscape:
-		s = escapeJSON(s)
-	case config.NoneEscape, "":
-		return s
+		return escapeJSON(s)
 	default:
 		return s
 	}
-	return s
 }
 
 // escapeString function to escape special characters.
@@ -132,12 +134,12 @@ func escapeString(s string) string {
 	for i := 0; i < len(s); {
 		c := s[i]
 		if c == '"' || c == '\\' || c < 32 || c > 126 {
-			b.WriteString(`\x`)
-			b.WriteString(strconv.FormatUint(uint64(c), 16))
+			_, _ = b.WriteString(`\x`)
+			_, _ = b.WriteString(strconv.FormatUint(uint64(c), 16))
 			i++
 		} else {
 			r, size := utf8.DecodeRuneInString(s[i:])
-			b.WriteRune(r)
+			_, _ = b.WriteRune(r)
 			i += size
 		}
 	}

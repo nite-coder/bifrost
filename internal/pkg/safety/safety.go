@@ -9,10 +9,14 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cast"
 )
 
+// Go executes the given function with panic recovery.
+// It is synchronous; it does NOT spawn a goroutine.
+// Use 'go Go(ctx, f)' to spawn a safe goroutine.
 var Go func(ctx context.Context, f func())
 
 func init() {
-	Go = func(ctx context.Context, f func()) {
+	// Default implementation runs the function synchronously with panic recovery.
+	Go = func(_ context.Context, f func()) {
 		defer func() {
 			if r := recover(); r != nil {
 				var err error

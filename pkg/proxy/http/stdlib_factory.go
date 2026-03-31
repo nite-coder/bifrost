@@ -33,7 +33,7 @@ func (f *stdlibFactory) NewHostClient() (hclient.HostClient, error) {
 				TLSClientConfig:   f.tlsConfig,
 				ForceAttemptHTTP2: true,
 			},
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
 		},
@@ -98,7 +98,7 @@ func (c *stdlibHostClient) Do(ctx context.Context, req *protocol.Request, resp *
 	return nil
 }
 
-func (c *stdlibHostClient) SetDynamicConfig(dc *hclient.DynamicConfig) {
+func (c *stdlibHostClient) SetDynamicConfig(_ *hclient.DynamicConfig) {
 }
 
 func (c *stdlibHostClient) ShouldRemove() bool {

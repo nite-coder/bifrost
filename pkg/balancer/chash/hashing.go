@@ -17,6 +17,7 @@ const (
 	defaultReplicas = 160
 )
 
+// Init registers the hashing balancers.
 func Init() error {
 	return balancer.Register(
 		[]string{"hashing", "chash"},
@@ -41,19 +42,19 @@ func Init() error {
 	)
 }
 
-// HashingBalancer implements a consistent hashing balancer using the consistent package.
-type HashingBalancer struct {
+// Balancer implements a consistent hashing load balancing strategy.
+type Balancer struct {
 	hashon  string
 	proxies []proxy.Proxy
 	ring    *consistent.Consistent
 	nodeMap map[string]proxy.Proxy // Maps node ID to proxy
 }
 
-// NewBalancer creates a new HashingBalancer instance.
+// NewBalancer creates a new consistent hashing Balancer instance.
 // It uses the consistent hashing package for better distribution and performance.
 // Each proxy's virtual nodes are scaled by its Weight() to achieve weight-based distribution.
-func NewBalancer(proxies []proxy.Proxy, hashon string, replicas int) *HashingBalancer {
-	b := &HashingBalancer{
+func NewBalancer(proxies []proxy.Proxy, hashon string, replicas int) *Balancer {
+	b := &Balancer{
 		proxies: proxies,
 		hashon:  hashon,
 		ring:    consistent.New().SetReplicas(replicas),
@@ -87,13 +88,13 @@ func NewBalancer(proxies []proxy.Proxy, hashon string, replicas int) *HashingBal
 }
 
 // Proxies returns the list of proxies managed by the balancer.
-func (b *HashingBalancer) Proxies() []proxy.Proxy {
+func (b *Balancer) Proxies() []proxy.Proxy {
 	return b.proxies
 }
 
 // Select picks a proxy from the hash ring based on a hashed value from the request.
 // If the selected proxy is unavailable, it tries the next nodes on the ring.
-func (b *HashingBalancer) Select(ctx context.Context, c *app.RequestContext) (proxy.Proxy, error) {
+func (b *Balancer) Select(_ context.Context, c *app.RequestContext) (proxy.Proxy, error) {
 	if len(b.proxies) == 0 {
 		return nil, balancer.ErrNotAvailable
 	}

@@ -13,7 +13,7 @@ import (
 type Config struct {
 	// MaxRequestBodySize limits the maximum number of bytes for the request body.
 	// Default 4194304 (4MB) if not specified or set to 0.
-	MaxRequestBodySize int64 `mapstructure:"max_request_body_size" json:"max_request_body_size"`
+	MaxRequestBodySize int64 `json:"max_request_body_size" mapstructure:"max_request_body_size"`
 }
 
 type BufferingMiddleware struct {

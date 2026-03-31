@@ -6,8 +6,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	minConfigPath = "./../../test/config/min.yaml"
+)
+
 func TestConfigLoad(t *testing.T) {
-	configPath := "./../../test/config/min.yaml"
+	configPath := minConfigPath
 
 	_, err := Load(configPath)
 	assert.NoError(t, err)
@@ -68,7 +72,7 @@ func TestDomainName(t *testing.T) {
 }
 
 func TestDefaultPath(t *testing.T) {
-	configPath := "./../../test/config/min.yaml"
+	configPath := minConfigPath
 	_, err := defaultPath(configPath)
 	assert.NoError(t, err)
 
@@ -225,7 +229,7 @@ func TestWatch(t *testing.T) {
 
 func TestAndSkipResolverFunc(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
-		configPath := "./../../test/config/min.yaml"
+		configPath := minConfigPath
 		path, err := TestAndSkipResolver(configPath)
 		assert.NoError(t, err)
 		assert.Contains(t, path, "min.yaml")
