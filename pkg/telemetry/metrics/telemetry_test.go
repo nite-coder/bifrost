@@ -63,8 +63,8 @@ func TestTracer(t *testing.T) {
 	}()
 
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", "127.0.0.1:6666", 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", "127.0.0.1:6666", 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}
@@ -72,28 +72,28 @@ func TestTracer(t *testing.T) {
 	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 
 	for i := 0; i < 10; i++ {
-		resp, err := http.Get("http://127.0.0.1:6666/test_get")
-		assert.NoError(t, err)
+		resp, e := http.Get("http://127.0.0.1:6666/test_get")
+		assert.NoError(t, e)
 		if resp != nil {
 			_ = resp.Body.Close()
 		}
-		resp, err = http.Post("http://127.0.0.1:6666/test_post", "application/json", strings.NewReader(""))
-		assert.NoError(t, err)
+		resp, e = http.Post("http://127.0.0.1:6666/test_post", "application/json", strings.NewReader(""))
+		assert.NoError(t, e)
 		if resp != nil {
 			_ = resp.Body.Close()
 		}
 	}
 
-	metricsRes, err := http.Get("http://127.0.0.1:6666/metrics")
+	metricsRes, e := http.Get("http://127.0.0.1:6666/metrics")
 
-	assert.NoError(t, err)
+	assert.NoError(t, e)
 	assert.Equal(t, http.StatusOK, metricsRes.StatusCode)
 
 	defer metricsRes.Body.Close()
 
-	metricsResBytes, err := io.ReadAll(metricsRes.Body)
+	metricsResBytes, e := io.ReadAll(metricsRes.Body)
 
-	assert.NoError(t, err)
+	assert.NoError(t, e)
 
 	metricsResStr := string(metricsResBytes)
 

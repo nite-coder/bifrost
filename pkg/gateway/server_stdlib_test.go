@@ -291,7 +291,8 @@ func TestStdlibServer_TracerInvoked(t *testing.T) {
 func TestHertzBridge_PooledContextEnablesTraceReset(t *testing.T) {
 	b := newHertzBridge(server.New(), []tracer.Tracer{&spyTracer{}})
 
-	c := b.ctxPool.Get().(*app.RequestContext)
+	c, ok := b.ctxPool.Get().(*app.RequestContext)
+	require.True(t, ok)
 	t.Cleanup(func() { b.ctxPool.Put(c) })
 
 	require.True(t, c.IsEnableTrace(), "pooled RequestContext must enable trace")

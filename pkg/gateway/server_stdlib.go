@@ -116,7 +116,10 @@ func newHertzBridge(h *server.Hertz, tracers []tracer.Tracer) *HertzBridge {
 }
 
 func (b *HertzBridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	c := b.ctxPool.Get().(*app.RequestContext)
+	c, ok := b.ctxPool.Get().(*app.RequestContext)
+	if !ok {
+		c = app.NewContext(0)
+	}
 	defer func() {
 		c.Reset()
 		b.ctxPool.Put(c)

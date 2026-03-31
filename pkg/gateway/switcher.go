@@ -19,7 +19,11 @@ func newSwitcher(engine *Engine) *switcher {
 }
 
 func (s *switcher) Engine() *Engine {
-	return s.engine.Load().(*Engine)
+	engine, ok := s.engine.Load().(*Engine)
+	if !ok {
+		return nil
+	}
+	return engine
 }
 
 func (s *switcher) SetEngine(engine *Engine) {

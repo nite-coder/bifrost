@@ -189,13 +189,13 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 			if len(expr) == 0 {
 				return fmt.Errorf("router: regular expression route cannot be empty for route ID: %s", routeOpts.ID)
 			}
-			regx, err := regexp.Compile(`(?i)` + expr)
-			if err != nil {
-				return err
+			regx1, e := regexp.Compile(`(?i)` + expr)
+			if e != nil {
+				return e
 			}
 
 			r.regexpRoutes = append(r.regexpRoutes, routeSetting{
-				regex:       regx,
+				regex:       regx1,
 				route:       &routeOpts,
 				middlewares: middlewares,
 			})
@@ -205,13 +205,13 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 			if len(expr) == 0 {
 				return fmt.Errorf("router: regular expression route cannot be empty for route ID: %s", routeOpts.ID)
 			}
-			regx, err := regexp.Compile(expr)
-			if err != nil {
-				return err
+			regx2, e := regexp.Compile(expr)
+			if e != nil {
+				return e
 			}
 
 			r.regexpRoutes = append(r.regexpRoutes, routeSetting{
-				regex:       regx,
+				regex:       regx2,
 				route:       &routeOpts,
 				middlewares: middlewares,
 			})
@@ -245,8 +245,8 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 			}
 		}
 
-		for _, method := range routeOpts.Methods {
-			method := strings.ToUpper(method)
+		for _, m := range routeOpts.Methods {
+			method := strings.ToUpper(m)
 			if !router.IsValidHTTPMethod(method) {
 				return fmt.Errorf("http method %s is not valid", method)
 			}

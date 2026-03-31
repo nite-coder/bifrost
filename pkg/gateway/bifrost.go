@@ -237,9 +237,9 @@ func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
 			safety.Go(ctx, func() {
 				defer wg.Done()
 				if srv.options.Timeout.Graceful > 0 {
-					ctx, cancel := context.WithTimeout(ctx, server.options.Timeout.Graceful)
+					c, cancel := context.WithTimeout(ctx, server.options.Timeout.Graceful)
 					defer cancel()
-					_ = srv.Shutdown(ctx)
+					_ = srv.Shutdown(c)
 				} else {
 					_ = srv.Shutdown(ctx)
 				}

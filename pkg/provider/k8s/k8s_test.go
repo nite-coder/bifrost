@@ -141,12 +141,12 @@ func TestGetInstances(t *testing.T) {
 
 			// Create test pods if any
 			for _, pod := range tt.pods {
-				_, err := client.CoreV1().Pods(tt.options.Namespace).Create(
+				_, e := client.CoreV1().Pods(tt.options.Namespace).Create(
 					context.Background(),
 					&pod,
 					metav1.CreateOptions{},
 				)
-				assert.NoError(t, err)
+				assert.NoError(t, e)
 			}
 
 			k8sDiscovery := &K8sDiscovery{
@@ -304,12 +304,12 @@ func TestWatch(t *testing.T) {
 			assert.NoError(t, err)
 
 			for _, pod := range tt.pods {
-				_, err := client.CoreV1().Pods(tt.options.Namespace).Create(
+				_, e := client.CoreV1().Pods(tt.options.Namespace).Create(
 					context.Background(),
 					&pod,
 					metav1.CreateOptions{},
 				)
-				assert.NoError(t, err)
+				assert.NoError(t, e)
 			}
 
 			k8sDiscovery := &K8sDiscovery{
@@ -325,12 +325,12 @@ func TestWatch(t *testing.T) {
 			for _, op := range tt.operations {
 				switch obj := op.obj.(type) {
 				case *discoveryv1.EndpointSlice:
-					_, err := client.DiscoveryV1().EndpointSlices(tt.options.Namespace).Create(
+					_, e := client.DiscoveryV1().EndpointSlices(tt.options.Namespace).Create(
 						context.Background(),
 						obj,
 						metav1.CreateOptions{},
 					)
-					assert.NoError(t, err)
+					assert.NoError(t, e)
 
 					select {
 					case instances := <-ch:

@@ -82,9 +82,9 @@ func NewLogger(opts config.LoggingOptions) (*slog.Logger, error) {
 			// Customize the name of the level key and the output string
 			if a.Key == slog.LevelKey {
 				// Handle custom level values
-				level := a.Value.Any().(slog.Level)
+				level, ok := a.Value.Any().(slog.Level)
 
-				if level == LevelNotice {
+				if ok && level == LevelNotice {
 					a.Value = slog.StringValue("NOTICE")
 				}
 			}

@@ -202,12 +202,12 @@ func (cp *ControlPlane) ReceiveFDsFromConn(conn net.Conn) ([]*os.File, error) {
 		oob := make([]byte, unix.CmsgSpace(4*10)) // Space for up to 10 FDs
 
 		// Use MSG_CMSG_CLOEXEC for safety? Go usually handles it.
-		n, oobn, _, _, err := unix.Recvmsg(int(fd), buf, oob, 0)
-		if err != nil {
-			if errors.Is(err, syscall.EAGAIN) {
+		n, oobn, _, _, e := unix.Recvmsg(int(fd), buf, oob, 0)
+		if e != nil {
+			if errors.Is(e, syscall.EAGAIN) {
 				return false // Try again
 			}
-			recvErr = fmt.Errorf("recvmsg failed: %w", err)
+			recvErr = fmt.Errorf("recvmsg failed: %w", e)
 			return true
 		}
 
@@ -216,15 +216,15 @@ func (cp *ControlPlane) ReceiveFDsFromConn(conn net.Conn) ([]*os.File, error) {
 			return true
 		}
 
-		scms, err := unix.ParseSocketControlMessage(oob[:oobn])
-		if err != nil {
-			recvErr = fmt.Errorf("failed to parse socket control message: %w", err)
+		scms, e := unix.ParseSocketControlMessage(oob[:oobn])
+		if e != nil {
+			recvErr = fmt.Errorf("failed to parse socket control message: %w", e)
 			return true
 		}
 
 		for _, scm := range scms {
-			fds, err := unix.ParseUnixRights(&scm)
-			if err != nil {
+			fds, e := unix.ParseUnixRights(&scm)
+			if e != nil {
 				continue
 			}
 			for _, fd := range fds {
@@ -282,24 +282,23 @@ func (cp *ControlPlane) handleConnection(ctx context.Context, conn net.Conn) {
 			// Extract Keys from Payload
 			var keys []string
 			if len(msg.Payload) > 0 {
-				err := json.Unmarshal(msg.Payload, &keys)
-				if err != nil {
-					slog.Error("failed to unmarshal listener keys", "error", err)
+				if e := json.Unmarshal(msg.Payload, &keys); e != nil {
+					slog.Error("failed to unmarshal listener keys", "error", e)
 					// Continue, but keys will be empty
 				}
 			}
 
 			// 1. Send Ack to flush any buffers and signal readiness
-			if err := encoder.Encode(&ControlMessage{Type: MessageTypeAck}); err != nil {
-				slog.Error("failed to send Ack for FD transfer", "error", err)
+			if e := encoder.Encode(&ControlMessage{Type: MessageTypeAck}); e != nil {
+				slog.Error("failed to send Ack for FD transfer", "error", e)
 				return
 			}
 
 			// 2. Switch to Raw Mode (Stop decoding JSON)
 			// Read FDs from the connection immediately
-			fds, err := cp.ReceiveFDsFromConn(conn)
-			if err != nil {
-				slog.Error("failed to receive FDs", "error", err)
+			fds, e := cp.ReceiveFDsFromConn(conn)
+			if e != nil {
+				slog.Error("failed to receive FDs", "error", e)
 				return
 			}
 
@@ -423,8 +422,8 @@ func (wcp *WorkerControlPlane) SendFDs(files []*os.File, keys []string) error {
 	// 3. Wait for Ack (Flush buffers)
 	decoder := json.NewDecoder(conn)
 	var ack ControlMessage
-	if err := decoder.Decode(&ack); err != nil {
-		return fmt.Errorf("failed to receive Ack: %w", err)
+	if e := decoder.Decode(&ack); e != nil {
+		return fmt.Errorf("failed to receive Ack: %w", e)
 	}
 	if ack.Type != MessageTypeAck {
 		return fmt.Errorf("unexpected response type: %s", ack.Type)
@@ -436,9 +435,9 @@ func (wcp *WorkerControlPlane) SendFDs(files []*os.File, keys []string) error {
 		return errors.New("connection is not a unix socket")
 	}
 
-	rawConn, err := unixConn.SyscallConn()
-	if err != nil {
-		return fmt.Errorf("failed to get syscall conn: %w", err)
+	rawConn, e := unixConn.SyscallConn()
+	if e != nil {
+		return fmt.Errorf("failed to get syscall conn: %w", e)
 	}
 
 	// Prepare FDs
@@ -451,12 +450,11 @@ func (wcp *WorkerControlPlane) SendFDs(files []*os.File, keys []string) error {
 	var sendErr error
 	err = rawConn.Write(func(fd uintptr) bool {
 		// Send 1 byte of dummy data + Rights
-		err := unix.Sendmsg(int(fd), []byte{0}, rights, nil, 0)
-		if err != nil {
-			if errors.Is(err, syscall.EAGAIN) {
+		if e := unix.Sendmsg(int(fd), []byte{0}, rights, nil, 0); e != nil {
+			if errors.Is(e, syscall.EAGAIN) {
 				return false // Try again
 			}
-			sendErr = fmt.Errorf("sendmsg failed: %w", err)
+			sendErr = fmt.Errorf("sendmsg failed: %w", e)
 		}
 		return true
 	})
@@ -508,17 +506,15 @@ func (wcp *WorkerControlPlane) Start(ctx context.Context, fdHandler FDHandler) e
 		switch msg.Type {
 		case MessageTypeFDRequest:
 			if fdHandler != nil {
-				err := fdHandler.HandleFDRequest()
-				if err != nil {
-					slog.Error("worker failed to handle FD request", "error", err)
+				if e := fdHandler.HandleFDRequest(); e != nil {
+					slog.Error("worker failed to handle FD request", "error", e)
 				}
 			}
 		case MessageTypeShutdown:
 			slog.Info("worker received shutdown request")
 			// Send SIGTERM to self to trigger graceful shutdown
-			err := wcp.signalFunc(wcp.pid, syscall.SIGTERM)
-			if err != nil {
-				slog.Error("failed to signal self", "error", err)
+			if e := wcp.signalFunc(wcp.pid, syscall.SIGTERM); e != nil {
+				slog.Error("failed to signal self", "error", e)
 			}
 			return nil
 		default:

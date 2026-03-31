@@ -68,6 +68,7 @@ func newHTTPServer(
 	disableListener bool,
 ) (*HTTPServer, error) {
 	ctx := context.Background()
+	var err error
 	httpServer := &HTTPServer{}
 	httpServer.isActive.Store(true)
 	hzOpts := []hzconfig.Option{
@@ -124,23 +125,23 @@ func newHTTPServer(
 		listenerConfig := &net.ListenConfig{
 			Control: func(network, address string, c syscall.RawConn) error {
 				var opErr error
-				err := c.Control(func(fd uintptr) {
+				err = c.Control(func(fd uintptr) {
 					if serverOptions.ReusePort {
-						err := setTCPReusePort(fd)
+						err = setTCPReusePort(fd)
 						if err != nil {
 							opErr = err
 							return
 						}
 					}
 					if serverOptions.TCPQuickAck {
-						err := setTCPQuickAck(fd)
+						err = setTCPQuickAck(fd)
 						if err != nil {
 							opErr = err
 							return
 						}
 					}
 					if serverOptions.TCPFastOpen {
-						err := setTCPFastOpen(fd)
+						err = setTCPFastOpen(fd)
 						if err != nil {
 							opErr = err
 							return
@@ -161,7 +162,8 @@ func newHTTPServer(
 		if serverOptions.ProxyProtocol {
 			listenerOptions.ProxyProtocol = true
 		}
-		listener, err := bifrost.runtime.Listener(ctx, listenerOptions)
+		var listener net.Listener
+		listener, err = bifrost.runtime.Listener(ctx, listenerOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -179,7 +181,8 @@ func newHTTPServer(
 					return nil, fmt.Errorf("only tcp listener supported, called with %#v", listener)
 				}
 			}
-			file, err := tl.File()
+			var file *os.File
+			file, err = tl.File()
 			if err != nil {
 				return nil, err
 			}
@@ -215,7 +218,8 @@ func newHTTPServer(
 	if serverOptions.ReadBufferSize > 0 {
 		hzOpts = append(hzOpts, server.WithReadBufferSize(serverOptions.ReadBufferSize))
 	}
-	engine, err := newEngine(bifrost, serverOptions)
+	var engine *Engine
+	engine, err = newEngine(bifrost, serverOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -249,15 +253,18 @@ func newHTTPServer(
 		if serverOptions.TLS.KeyPEM == "" {
 			return nil, errors.New("key_PEM cannot be empty")
 		}
-		certPEM, err := os.ReadFile(serverOptions.TLS.CertPEM)
+		var certData []byte
+		certData, err = os.ReadFile(serverOptions.TLS.CertPEM)
 		if err != nil {
 			return nil, err
 		}
-		keyPEM, err := os.ReadFile(serverOptions.TLS.KeyPEM)
+		var keyData []byte
+		keyData, err = os.ReadFile(serverOptions.TLS.KeyPEM)
 		if err != nil {
 			return nil, err
 		}
-		cert, err := tls.X509KeyPair(certPEM, keyPEM)
+		var cert tls.Certificate
+		cert, err = tls.X509KeyPair(certData, keyData)
 		if err != nil {
 			return nil, err
 		}

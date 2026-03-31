@@ -81,6 +81,7 @@ func newUpstream(
 	serviceOptions config.ServiceOptions,
 	upstreamOptions config.UpstreamOptions,
 ) (*Upstream, error) {
+	var err error
 	if len(upstreamOptions.ID) == 0 {
 		return nil, errors.New("upstream ID cannot be empty")
 	}
@@ -98,7 +99,8 @@ func newUpstream(
 		if !bifrost.options.Providers.DNS.Enabled {
 			return nil, fmt.Errorf("dns provider is disabled for upstream ID: %s", upstreamOptions.ID)
 		}
-		discovery, err := dns.NewDNSServiceDiscovery(
+		var discovery provider.ServiceDiscovery
+		discovery, err = dns.NewDNSServiceDiscovery(
 			bifrost.options.Providers.DNS.Servers,
 			bifrost.options.Providers.DNS.Valid,
 		)
@@ -131,7 +133,8 @@ func newUpstream(
 			LogDir:      bifrost.options.Providers.Nacos.Discovery.LogDir,
 			LogLevel:    bifrost.options.Providers.Nacos.Discovery.LogLevel,
 		}
-		discovery, err := nacos.NewNacosServiceDiscovery(options)
+		var discovery provider.ServiceDiscovery
+		discovery, err = nacos.NewNacosServiceDiscovery(options)
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +146,8 @@ func newUpstream(
 		option := k8s.Options{
 			APIServer: bifrost.options.Providers.K8S.APIServer,
 		}
-		discovery, err := k8s.NewK8sDiscovery(option)
+		var discovery provider.ServiceDiscovery
+		discovery, err = k8s.NewK8sDiscovery(option)
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +156,7 @@ func newUpstream(
 		discovery := NewResolverDiscovery(upstream)
 		upstream.discovery = discovery
 	}
-	err := upstream.refreshProxies(nil)
+	err = upstream.refreshProxies(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -212,12 +216,13 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 
 	for _, instance := range instances {
 
-		targetHost, targetPort, err := net.SplitHostPort(instance.Address().String())
+		var targetHost, targetPort string
+		targetHost, targetPort, err = net.SplitHostPort(instance.Address().String())
 		if err != nil {
-			fmt.Println(instance.Address().String())
 			targetHost = instance.Address().String()
 		}
-		addr, err := url.Parse(u.serviceOptions.URL)
+		var addr *url.URL
+		addr, err = url.Parse(u.serviceOptions.URL)
 		if err != nil {
 			return fmt.Errorf("failed to parse service URL '%s': %w", u.serviceOptions.URL, err)
 		}
@@ -292,7 +297,8 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				IsHTTP2:   u.serviceOptions.Protocol == config.ProtocolHTTP2,
 				HZOptions: clientOpts,
 			}
-			client, err := httpproxy.NewClient(clientOptions)
+			var client *client.Client
+			client, err = httpproxy.NewClient(clientOptions)
 			if err != nil {
 				return err
 			}
@@ -308,7 +314,8 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				PassHostHeader:   u.serviceOptions.IsPassHostHeader(),
 				Tags:             instance.Tags(),
 			}
-			proxy, err := httpproxy.New(proxyOptions, client)
+			var proxy proxy.Proxy
+			proxy, err = httpproxy.New(proxyOptions, client)
 			if err != nil {
 				return err
 			}
@@ -328,7 +335,8 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				Timeout:          u.serviceOptions.Timeout.GRPC,
 				Tags:             instance.Tags(),
 			}
-			grpcProxy, err := grpcproxy.New(grpcOptions)
+			var grpcProxy proxy.Proxy
+			grpcProxy, err = grpcproxy.New(grpcOptions)
 			if err != nil {
 				return err
 			}
@@ -392,12 +400,13 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	}
 
 	factory := balancer.Factory(u.options.Balancer.Type)
-	balancer, err := factory(updatedProxies, u.options.Balancer.Params)
+	var b balancer.Balancer
+	b, err = factory(updatedProxies, u.options.Balancer.Params)
 	if err != nil {
 		return err
 	}
 
-	u.balancer.Store(balancer)
+	u.balancer.Store(b)
 	return nil
 }
 
@@ -408,7 +417,9 @@ func (u *Upstream) watch() {
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		u.cancel = cancel
-		watchCh, err := u.discovery.Watch(ctx, options)
+		var err error
+		var watchCh <-chan []provider.Instancer
+		watchCh, err = u.discovery.Watch(ctx, options)
 		if err != nil {
 			slog.Error("failed to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
 			return

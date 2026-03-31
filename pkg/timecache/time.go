@@ -41,7 +41,11 @@ func New(interval time.Duration) *TimeCache {
 // No parameters.
 // Returns a time.Time value representing the current time.
 func (tc *TimeCache) Now() time.Time {
-	return tc.t.Load().(time.Time)
+	t, ok := tc.t.Load().(time.Time)
+	if !ok {
+		return time.Now()
+	}
+	return t
 }
 
 func (tc *TimeCache) Close() {

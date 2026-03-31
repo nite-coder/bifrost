@@ -284,8 +284,8 @@ func TestBifrostShutdown(t *testing.T) {
 
 	go bifrost.Run()
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", "localhost:8085", 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", "localhost:8085", 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}

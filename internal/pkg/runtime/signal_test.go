@@ -56,7 +56,9 @@ func runLogRotationTest(t *testing.T) {
 	// Get initial Inode
 	fi, err := os.Stat(logFile)
 	require.NoError(t, err)
-	initialInode := fi.Sys().(*syscall.Stat_t).Ino
+	stat, ok := fi.Sys().(*syscall.Stat_t)
+	require.True(t, ok)
+	initialInode := stat.Ino
 
 	// 2. Simulate external action: rename current log file (like logrotate does)
 	rotatedFile := logFile + ".1"
@@ -75,7 +77,11 @@ func runLogRotationTest(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		return fi.Sys().(*syscall.Stat_t).Ino != initialInode
+		stat, ok := fi.Sys().(*syscall.Stat_t)
+		if !ok {
+			return false
+		}
+		return stat.Ino != initialInode
 	}, 2*time.Second, 100*time.Millisecond, "Log file should be recreated with new Inode")
 
 	// 5. Verify Stdout/Stderr output is indeed written to the NEW log file

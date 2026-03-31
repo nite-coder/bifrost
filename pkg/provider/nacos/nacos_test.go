@@ -41,7 +41,8 @@ func (m *MockConfigClient) CancelListenConfig(param vo.ConfigParam) error {
 
 func (m *MockConfigClient) SearchConfig(param vo.SearchConfigParam) (*model.ConfigPage, error) {
 	args := m.Called(param)
-	return args.Get(0).(*model.ConfigPage), args.Error(1)
+	res, _ := args.Get(0).(*model.ConfigPage)
+	return res, args.Error(1)
 }
 
 func (m *MockConfigClient) CloseClient() {

@@ -135,8 +135,8 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 
 	// Wait for server to start
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}

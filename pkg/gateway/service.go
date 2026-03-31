@@ -149,22 +149,22 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 			)
 		}
 
-		appHandler, err := handler(middlewareOpts.Params)
-		if err != nil {
+		appHandler, e := handler(middlewareOpts.Params)
+		if e != nil {
 			return nil, fmt.Errorf(
 				"failed to create middleware '%s' in route: '%s', error: %w",
 				middlewareOpts.Type,
 				serviceOptions.ID,
-				err,
+				e,
 			)
 		}
 
 		svc.middlewares = append(svc.middlewares, appHandler)
 	}
 
-	addr, err := url.Parse(serviceOptions.URL)
-	if err != nil {
-		return nil, err
+	addr, e := url.Parse(serviceOptions.URL)
+	if e != nil {
+		return nil, e
 	}
 
 	hostname := addr.Hostname()
@@ -242,7 +242,9 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			httpStart, _ := variable.Get(variable.HTTPStart, c)
 			var duration time.Duration
 			if httpStart != nil {
-				duration = time.Since(httpStart.(time.Time))
+				if t, ok := httpStart.(time.Time); ok {
+					duration = time.Since(t)
+				}
 			}
 
 			logger.InfoContext(ctx, "client cancel the request",

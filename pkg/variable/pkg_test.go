@@ -1,7 +1,6 @@
 package variable
 
 import (
-	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -192,11 +191,9 @@ func TestGetDirective(t *testing.T) {
 
 	val, found = Get(HTTPRequestTags, hzCtx)
 	assert.True(t, found)
-	tags := val.([]string)
+	tags, ok := val.([]string)
+	assert.True(t, ok)
 	assert.Equal(t, 2, len(tags))
-
-	aaa := GetString(HTTPRequestTags, hzCtx)
-	fmt.Println("aaa", aaa)
 
 	cookie := GetString("$http.request.cookie.hello", hzCtx)
 	assert.Equal(t, "world", cookie)

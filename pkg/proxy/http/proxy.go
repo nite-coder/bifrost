@@ -257,7 +257,9 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		outReq.Header.Set("Te", "trailers")
 	}
 	// prepare request(replace headers and some URL host)
-	if ip, _, err := net.SplitHostPort(c.RemoteAddr().String()); err == nil {
+	var ip string
+	ip, _, err = net.SplitHostPort(c.RemoteAddr().String())
+	if err == nil {
 		tmp := outReq.Header.Peek("X-Forwarded-For")
 		if len(tmp) > 0 {
 			buf := bytebufferpool.Get()

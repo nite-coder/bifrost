@@ -66,7 +66,8 @@ func TestSIGUSR1Reopen(t *testing.T) {
 
 	// Simulate log rotation by renaming the current log file
 	rotatedFile := tmpFile.Name() + ".rotated"
-	if err := os.Rename(tmpFile.Name(), rotatedFile); err != nil {
+	err = os.Rename(tmpFile.Name(), rotatedFile)
+	if err != nil {
 		t.Fatalf("Failed to rename log file: %v", err)
 	}
 
@@ -75,14 +76,15 @@ func TestSIGUSR1Reopen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to find current process: %v", err)
 	}
-	if err := process.Signal(syscall.SIGUSR1); err != nil {
+	err = process.Signal(syscall.SIGUSR1)
+	if err != nil {
 		t.Fatalf("Failed to send SIGUSR1 signal: %v", err)
 	}
 
 	// Wait for the signal to be processed and log file to be recreated
 	assert.Eventually(t, func() bool {
-		_, err := os.Stat(tmpFile.Name())
-		return err == nil
+		_, e := os.Stat(tmpFile.Name())
+		return e == nil
 	}, 5*time.Second, 100*time.Millisecond, "Failed to detect log file recreation")
 
 	// Write more logs after the file has been reopened

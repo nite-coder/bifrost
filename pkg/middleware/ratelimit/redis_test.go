@@ -88,26 +88,26 @@ func startRedisCluster(t *testing.T) ([]string, map[string]string, func()) {
 			WaitingFor:   wait.ForLog("Ready to accept connections"),
 		}
 
-		container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		container, e := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: req,
 			Started:          true,
 		})
-		if err != nil {
-			t.Fatalf("failed to start redis node %d: %v", i, err)
+		if e != nil {
+			t.Fatalf("failed to start redis node %d: %v", i, e)
 		}
 		containers = append(containers, container)
 
 		// Get internal IP
-		ip, err := container.ContainerIP(ctx)
-		if err != nil {
-			t.Fatalf("failed to get container IP: %v", err)
+		ip, e := container.ContainerIP(ctx)
+		if e != nil {
+			t.Fatalf("failed to get container IP: %v", e)
 		}
 		nodeIPs = append(nodeIPs, ip)
 
 		// Get mapped host port
-		endpoint, err := container.PortEndpoint(ctx, "6379/tcp", "")
-		if err != nil {
-			t.Fatalf("failed to get endpoint: %v", err)
+		endpoint, e := container.PortEndpoint(ctx, "6379/tcp", "")
+		if e != nil {
+			t.Fatalf("failed to get endpoint: %v", e)
 		}
 		hostAddrs = append(hostAddrs, endpoint)
 	}

@@ -87,8 +87,8 @@ func Initialize(ctx context.Context, options []config.RedisOptions) error {
 			// multi redis
 			addrs := []string{}
 
-			for _, addr := range option.Addrs {
-				addr := strings.TrimSpace(addr)
+			for _, a := range option.Addrs {
+				addr := strings.TrimSpace(a)
 				if addr == "" {
 					return errors.New("redis addresses cannot be empty")
 				}

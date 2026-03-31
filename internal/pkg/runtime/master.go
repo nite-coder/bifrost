@@ -163,9 +163,9 @@ func (m *Master) Run(ctx context.Context) error {
 
 	// Start accepting control plane connections
 	go safety.Go(ctx, func() {
-		err := m.controlPlane.Accept(ctx)
-		if err != nil && !errors.Is(err, context.Canceled) {
-			slog.Error("control plane accept loop exited", "error", err)
+		e := m.controlPlane.Accept(ctx)
+		if e != nil && !errors.Is(e, context.Canceled) {
+			slog.Error("control plane accept loop exited", "error", e)
 		}
 	})
 

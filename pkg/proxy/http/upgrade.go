@@ -78,7 +78,7 @@ func (p *HTTPProxy) roundTrip(
 	}
 
 	if resp.StatusCode() != http.StatusSwitchingProtocols {
-		err := fmt.Errorf("backend returned unexpected status code %d (expected 101)", resp.StatusCode())
+		err = fmt.Errorf("backend returned unexpected status code %d (expected 101)", resp.StatusCode())
 		p.handleError(ctx, clientCtx, err)
 		return err
 	}
@@ -91,7 +91,7 @@ func (p *HTTPProxy) roundTrip(
 		return err
 	}
 	if !strings.EqualFold(reqUpType, resUpType) {
-		err := fmt.Errorf("backend tried to switch protocol %q when %q was requested", resUpType, reqUpType)
+		err = fmt.Errorf("backend tried to switch protocol %q when %q was requested", resUpType, reqUpType)
 		p.handleError(ctx, clientCtx, err)
 		return err
 	}

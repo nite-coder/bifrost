@@ -217,7 +217,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info := (val).(*RequestOriginal)
+		info, ok := (val).(*RequestOriginal)
+		if !ok {
+			return nil, false
+		}
 
 		host := string(info.Host)
 		return host, true
@@ -226,7 +229,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info := (val).(*RequestOriginal)
+		info, ok := (val).(*RequestOriginal)
+		if !ok {
+			return nil, false
+		}
 		return info.ServerID, true
 	case NetworkPeerAddress:
 		var ip string
@@ -304,7 +310,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info := (val).(*RequestOriginal)
+		info, ok := (val).(*RequestOriginal)
+		if !ok {
+			return nil, false
+		}
 
 		builder := strings.Builder{}
 		builder.WriteString(info.Method)
@@ -323,15 +332,19 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info := (val).(*RequestRoute)
+		info, ok := (val).(*RequestRoute)
+		if !ok {
+			return nil, false
+		}
 		return info.Route, true
 	case HTTPRequestScheme:
 		val, found := c.Get(RequestOrig)
 		if found {
-			info := (val).(*RequestOriginal)
-
-			scheme := string(info.Scheme)
-			return scheme, true
+			info, ok := (val).(*RequestOriginal)
+			if ok {
+				scheme := string(info.Scheme)
+				return scheme, true
+			}
 		}
 
 		scheme := string(c.Request.Scheme())
@@ -342,8 +355,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 		val, found := c.Get(RequestOrig)
 		if found {
-			info := (val).(*RequestOriginal)
-			path = string(info.Path)
+			info, ok := (val).(*RequestOriginal)
+			if ok {
+				path = string(info.Path)
+			}
 		} else {
 			path = string(c.Request.Path())
 		}
@@ -352,16 +367,17 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case HTTPRequestURI:
 		val, found := c.Get(RequestOrig)
 		if found {
-			info := (val).(*RequestOriginal)
+			info, ok := (val).(*RequestOriginal)
+			if ok {
+				builder := strings.Builder{}
+				builder.Write(info.Path)
+				if len(info.Query) > 0 {
+					builder.Write(questionByte)
+					builder.Write(info.Query)
+				}
 
-			builder := strings.Builder{}
-			builder.Write(info.Path)
-			if len(info.Query) > 0 {
-				builder.Write(questionByte)
-				builder.Write(info.Query)
+				return builder.String(), true
 			}
-
-			return builder.String(), true
 		}
 
 		uri := string(c.Request.RequestURI())
@@ -370,8 +386,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case HTTPRequestMethod:
 		val, found := c.Get(RequestOrig)
 		if found {
-			info := (val).(*RequestOriginal)
-			return info.Method, true
+			info, ok := (val).(*RequestOriginal)
+			if ok {
+				return info.Method, true
+			}
 		}
 
 		method := MethodToString(c.Request.Method())
@@ -379,10 +397,11 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case HTTPRequestQuery:
 		val, found := c.Get(RequestOrig)
 		if found {
-			info := (val).(*RequestOriginal)
-
-			query := string(info.Query)
-			return query, true
+			info, ok := (val).(*RequestOriginal)
+			if ok {
+				query := string(info.Query)
+				return query, true
+			}
 		}
 
 		query := string(c.Request.QueryString())
@@ -400,7 +419,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info := (val).(*RequestOriginal)
+		info, ok := (val).(*RequestOriginal)
+		if !ok {
+			return nil, false
+		}
 		return info.Protocol, true
 	case HTTPRequestTags:
 		val, found := c.Get(BifrostRoute)
@@ -408,7 +430,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return nil, false
 		}
 
-		info := (val).(*RequestRoute)
+		info, ok := (val).(*RequestRoute)
+		if !ok {
+			return nil, false
+		}
 		return info.Tags, true
 
 	case RouteID:
@@ -416,7 +441,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info := (val).(*RequestRoute)
+		info, ok := (val).(*RequestRoute)
+		if !ok {
+			return nil, false
+		}
 		return info.RouteID, true
 	case ServiceID:
 		val, found := c.Get(BifrostRoute)
@@ -424,7 +452,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return nil, false
 		}
 
-		info := (val).(*RequestRoute)
+		info, ok := (val).(*RequestRoute)
+		if !ok {
+			return nil, false
+		}
 
 		if IsDirective(info.ServiceID) {
 			svcID := GetString(info.ServiceID, c)

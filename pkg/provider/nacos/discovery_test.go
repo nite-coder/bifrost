@@ -40,22 +40,26 @@ func (m *MockNamingClient) UpdateInstance(param vo.UpdateInstanceParam) (bool, e
 
 func (m *MockNamingClient) GetService(param vo.GetServiceParam) (model.Service, error) {
 	args := m.Called(param)
-	return args.Get(0).(model.Service), args.Error(1)
+	res, _ := args.Get(0).(model.Service)
+	return res, args.Error(1)
 }
 
 func (m *MockNamingClient) SelectAllInstances(param vo.SelectAllInstancesParam) ([]model.Instance, error) {
 	args := m.Called(param)
-	return args.Get(0).([]model.Instance), args.Error(1)
+	res, _ := args.Get(0).([]model.Instance)
+	return res, args.Error(1)
 }
 
 func (m *MockNamingClient) SelectInstances(param vo.SelectInstancesParam) ([]model.Instance, error) {
 	args := m.Called(param)
-	return args.Get(0).([]model.Instance), args.Error(1)
+	res, _ := args.Get(0).([]model.Instance)
+	return res, args.Error(1)
 }
 
 func (m *MockNamingClient) SelectOneHealthyInstance(param vo.SelectOneHealthInstanceParam) (*model.Instance, error) {
 	args := m.Called(param)
-	return args.Get(0).(*model.Instance), args.Error(1)
+	res, _ := args.Get(0).(*model.Instance)
+	return res, args.Error(1)
 }
 
 func (m *MockNamingClient) Subscribe(param *vo.SubscribeParam) error {
@@ -70,7 +74,8 @@ func (m *MockNamingClient) Unsubscribe(param *vo.SubscribeParam) error {
 
 func (m *MockNamingClient) GetAllServicesInfo(param vo.GetAllServiceInfoParam) (model.ServiceList, error) {
 	args := m.Called(param)
-	return args.Get(0).(model.ServiceList), args.Error(1)
+	res, _ := args.Get(0).(model.ServiceList)
+	return res, args.Error(1)
 }
 
 func (m *MockNamingClient) ServerHealthy() bool {

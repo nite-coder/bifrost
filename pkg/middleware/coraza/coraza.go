@@ -113,20 +113,20 @@ func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext)
 	// Read and Process Body if exists
 	if tx.IsRequestBodyAccessible() {
 		if !c.Request.IsBodyStream() && len(c.Request.Body()) > 0 {
-			it, _, err := tx.WriteRequestBody(c.Request.Body())
-			if err != nil {
-				logger.Warn("coraza: failed to write request body", "error", err)
+			it_body, _, e := tx.WriteRequestBody(c.Request.Body())
+			if e != nil {
+				logger.Warn("coraza: failed to write request body", "error", e)
 				return
 			}
-			m.processInterruption(ctx, c, tx, it)
+			m.processInterruption(ctx, c, tx, it_body)
 		}
 	}
-	it, err := tx.ProcessRequestBody()
-	if err != nil {
-		logger.Warn("coraza: failed to process request body", "error", err)
+	it_res, e := tx.ProcessRequestBody()
+	if e != nil {
+		logger.Warn("coraza: failed to process request body", "error", e)
 		return
 	}
-	m.processInterruption(ctx, c, tx, it)
+	m.processInterruption(ctx, c, tx, it_res)
 	m.log(ctx, c, tx)
 	c.Next(ctx)
 }

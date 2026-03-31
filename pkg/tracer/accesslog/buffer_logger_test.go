@@ -37,14 +37,14 @@ func TestBufferedLoggerReopen(t *testing.T) {
 	logger.Write("Log before SIGUSR1\n")
 
 	// Flush the buffer to ensure logs are written to the file
-	if err := logger.Flush(); err != nil {
-		t.Fatalf("Failed to flush logs: %v", err)
+	if e := logger.Flush(); e != nil {
+		t.Fatalf("Failed to flush logs: %v", e)
 	}
 
 	// Simulate log rotation by renaming the current log file
 	rotatedFile := tmpFile.Name() + ".rotated"
-	if err := os.Rename(tmpFile.Name(), rotatedFile); err != nil {
-		t.Fatalf("Failed to rename log file: %v", err)
+	if e := os.Rename(tmpFile.Name(), rotatedFile); e != nil {
+		t.Fatalf("Failed to rename log file: %v", e)
 	}
 
 	// Send SIGUSR1 signal to the current process to trigger log file reopening
@@ -52,22 +52,22 @@ func TestBufferedLoggerReopen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to find current process: %v", err)
 	}
-	if err := process.Signal(syscall.SIGUSR1); err != nil {
-		t.Fatalf("Failed to send SIGUSR1 signal: %v", err)
+	if e := process.Signal(syscall.SIGUSR1); e != nil {
+		t.Fatalf("Failed to send SIGUSR1 signal: %v", e)
 	}
 
 	// Wait for the signal to be processed and file to be recreated
 	assert.Eventually(t, func() bool {
-		_, err := os.Stat(tmpFile.Name())
-		return err == nil
+		_, e := os.Stat(tmpFile.Name())
+		return e == nil
 	}, 2*time.Second, 50*time.Millisecond, "Log file should be recreated after SIGUSR1")
 
 	// Write more logs after the file has been reopened
 	logger.Write("Log after SIGUSR1\n")
 
 	// Flush the buffer again to ensure all logs are written to the file
-	if err := logger.Flush(); err != nil {
-		t.Fatalf("Failed to flush logs: %v", err)
+	if e := logger.Flush(); e != nil {
+		t.Fatalf("Failed to flush logs: %v", e)
 	}
 
 	// Read the contents of the new log file

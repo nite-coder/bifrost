@@ -77,16 +77,16 @@ func Run(mainOptions config.Options) (err error) {
 	if mainOptions.Gopool {
 		cgopool.SetPanicHandler(func(ctx context.Context, r any) {
 			if r := recover(); r != nil {
-				var err error
+				var e error
 				switch v := r.(type) {
 				case error:
-					err = v
+					e = v
 				default:
-					err = fmt.Errorf("%v", v)
+					e = fmt.Errorf("%v", v)
 				}
 				stackTrace := cast.B2S(debug.Stack())
 				slog.Error("netpoll panic recovered",
-					slog.String("error", err.Error()),
+					slog.String("error", e.Error()),
 					slog.String("stack", stackTrace),
 				)
 			}
@@ -122,24 +122,24 @@ func Run(mainOptions config.Options) (err error) {
 		slog.Debug("reloading...")
 
 		if mainOptions.ConfigPath() != "" {
-			newMainOptions, err := config.Load(mainOptions.ConfigPath())
-			if err != nil {
-				slog.Error("failed to load config", "error", err)
-				return err
+			newMainOptions, e := config.Load(mainOptions.ConfigPath())
+			if e != nil {
+				slog.Error("failed to load config", "error", e)
+				return e
 			}
 			mainOptions = newMainOptions
 		}
 
-		b, err := sonic.Marshal(mainOptions)
-		if err != nil {
-			return err
+		b, e := sonic.Marshal(mainOptions)
+		if e != nil {
+			return e
 		}
 
 		oldBifrost := GetBifrost()
 		if oldBifrost != nil {
-			b1, err := sonic.Marshal(oldBifrost.options)
-			if err != nil {
-				return err
+			b1, e1 := sonic.Marshal(oldBifrost.options)
+			if e1 != nil {
+				return e1
 			}
 
 			sha256sum := sha256.Sum256(b)
@@ -157,9 +157,9 @@ func Run(mainOptions config.Options) (err error) {
 			return err
 		}
 
-		newBifrost, err := NewBifrost(mainOptions, true)
-		if err != nil {
-			return err
+		newBifrost, e := NewBifrost(mainOptions, true)
+		if e != nil {
+			return e
 		}
 
 		isReloaded := false

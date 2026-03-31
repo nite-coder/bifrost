@@ -683,7 +683,7 @@ func addRoute(r *router.Router, routeOptions RouteOptions) error {
 		}
 
 		for _, method := range routeOptions.Methods {
-			method := strings.ToUpper(method)
+			method = strings.ToUpper(method)
 			if !router.IsValidHTTPMethod(method) {
 				return fmt.Errorf("HTTP method %s is not valid", method)
 			}

@@ -58,7 +58,7 @@ func TestGRPCProxyLeak_Evidence(t *testing.T) {
 		addr, _ := net.ResolveTCPAddr("tcp", addrStr)
 
 		// Call refreshProxies directly to simulate update without background goroutine
-		err := up.refreshProxies([]provider.Instancer{
+		err = up.refreshProxies([]provider.Instancer{
 			provider.NewInstance(addr, 1),
 		})
 		require.NoError(t, err)

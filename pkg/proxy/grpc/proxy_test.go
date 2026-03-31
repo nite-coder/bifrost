@@ -113,8 +113,8 @@ func TestGRPCProxy(t *testing.T) {
 	hsrv := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			c := app.NewContext(0)
-			err := adaptor.CopyToHertzRequest(r, &c.Request)
-			if err != nil {
+			e := adaptor.CopyToHertzRequest(r, &c.Request)
+			if e != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -146,13 +146,14 @@ func TestGRPCProxy(t *testing.T) {
 	hsrv.Protocols.SetHTTP2(true)
 	hsrv.Protocols.SetUnencryptedHTTP2(true)
 
-	ln, err := net.Listen("tcp", "127.0.0.1:8001")
+	var ln net.Listener
+	ln, err = net.Listen("tcp", "127.0.0.1:8001")
 	require.NoError(t, err)
 
 	go hsrv.Serve(ln)
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", "127.0.0.1:8001", 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", "127.0.0.1:8001", 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}
@@ -160,31 +161,31 @@ func TestGRPCProxy(t *testing.T) {
 	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 
 	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		closeCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
-		_ = httpServer.Shutdown(ctx)
+		_ = httpServer.Shutdown(closeCtx)
 	}()
 
-	conn, err := grpc.NewClient("127.0.0.1:8001",
+	conn, e := grpc.NewClient("127.0.0.1:8001",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
-	assert.NoError(t, err)
+	assert.NoError(t, e)
 	defer conn.Close()
 
 	t.Run("success case", func(t *testing.T) {
 		client := proto.NewGreeterClient(conn)
 
 		md := metadata.Pairs("user_id", "5478")
-		ctx := metadata.NewOutgoingContext(ctx, md)
+		c := metadata.NewOutgoingContext(ctx, md)
 
 		var header, trailer metadata.MD // variable to store header and trailer
 
-		resp, err := client.SayHello(ctx,
+		resp, e := client.SayHello(c,
 			&proto.HelloRequest{Name: "Bifrost"},
 			grpc.Header(&header),
 			grpc.Trailer(&trailer))
 
-		require.NoError(t, err)
+		require.NoError(t, e)
 		assert.Equal(t, "Hello Bifrost", resp.GetMessage())
 		assert.Equal(t, "bifrost", header["server-name"][0])
 	})
@@ -193,18 +194,18 @@ func TestGRPCProxy(t *testing.T) {
 		client := proto.NewGreeterClient(conn)
 
 		md := metadata.Pairs("user_id", "54781")
-		ctx := metadata.NewOutgoingContext(ctx, md)
+		c := metadata.NewOutgoingContext(ctx, md)
 
-		_, err := client.SayHello(ctx, &proto.HelloRequest{Name: "Bifrost"})
-		st, ok := status.FromError(err)
+		_, e := client.SayHello(c, &proto.HelloRequest{Name: "Bifrost"})
+		st, ok := status.FromError(e)
 		assert.True(t, ok)
 		assert.Equal(t, codes.Unauthenticated, st.Code())
 		assert.Equal(t, "the user_id is empty or  invalid", st.Message())
 
 		md = metadata.Pairs("user_id", "5478")
-		ctx = metadata.NewOutgoingContext(ctx, md)
-		_, err = client.SayHello(ctx, &proto.HelloRequest{Name: "err"})
-		st, ok = status.FromError(err)
+		c = metadata.NewOutgoingContext(ctx, md)
+		_, e = client.SayHello(c, &proto.HelloRequest{Name: "err"})
+		st, ok = status.FromError(e)
 		assert.True(t, ok)
 		assert.Equal(t, codes.InvalidArgument, st.Code())
 		assert.Equal(t, "oops....something wrong", st.Message())
@@ -214,9 +215,9 @@ func TestGRPCProxy(t *testing.T) {
 		client := proto.NewGreeterClient(conn)
 
 		md := metadata.Pairs("user_id", "5478")
-		ctx := metadata.NewOutgoingContext(ctx, md)
-		_, err := client.SayHello(ctx, &proto.HelloRequest{Name: "sleep"})
-		st, ok := status.FromError(err)
+		c := metadata.NewOutgoingContext(ctx, md)
+		_, e := client.SayHello(c, &proto.HelloRequest{Name: "sleep"})
+		st, ok := status.FromError(e)
 		assert.True(t, ok)
 		assert.Equal(t, codes.DeadlineExceeded, st.Code())
 	})
