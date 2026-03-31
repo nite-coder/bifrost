@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/nite-coder/blackbear/pkg/cast"
 
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/variable"
@@ -50,7 +49,7 @@ func (m *AddPrefixMiddleware) ServeHTTP(ctx context.Context, c *app.RequestConte
 		}
 		replacer := strings.NewReplacer(replacements...)
 		result := replacer.Replace(m.prefixStr)
-		c.Request.URI().SetPathBytes(append(cast.S2B(result), c.Request.Path()...))
+		c.Request.URI().SetPathBytes(append([]byte(result), c.Request.Path()...))
 	} else {
 		c.Request.URI().SetPathBytes(append(m.prefix, c.Request.Path()...))
 	}
