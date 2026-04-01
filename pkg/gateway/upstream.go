@@ -297,7 +297,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		} else if u.bifrost.options.Default.Upstream.FailTimeout > 0 {
 			failTimeout = u.bifrost.options.Default.Upstream.FailTimeout
 		}
-		myURL := ""
+		var myURL string
 		switch u.serviceOptions.Protocol {
 		case "", config.ProtocolHTTP, config.ProtocolHTTP2:
 			myURL = fmt.Sprintf("%s://%s%s", addr.Scheme, targetHost, addr.Path)

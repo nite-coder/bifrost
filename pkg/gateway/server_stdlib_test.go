@@ -52,6 +52,7 @@ func (s *testGrpcServer) SayHello(ctx context.Context, in *proto.HelloRequest) (
 }
 
 func startTestBackend(t *testing.T, port string) {
+	t.Helper()
 	lis, err := net.Listen("tcp", port)
 	require.NoError(t, err)
 	s := grpc.NewServer()

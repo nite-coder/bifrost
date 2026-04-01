@@ -12,6 +12,7 @@ import (
 )
 
 func createTestDir(t *testing.T) (string, func()) {
+	t.Helper()
 	dir := t.TempDir()
 
 	files := []struct {

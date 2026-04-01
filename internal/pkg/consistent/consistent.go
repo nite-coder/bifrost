@@ -173,7 +173,7 @@ func (c *Consistent) GetN(key string, n int) ([]string, error) {
 	seen := make(map[string]bool)
 
 	// Traverse the ring clockwise to find unique physical nodes
-	for i := 0; i < len(c.sortedNodes); i++ {
+	for i := range len(c.sortedNodes) {
 		currIdx := (idx + i) % len(c.sortedNodes)
 		nodeID := c.ring[c.sortedNodes[currIdx]]
 		if !seen[nodeID] {

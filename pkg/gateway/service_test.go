@@ -21,6 +21,7 @@ const (
 )
 
 func testServer(t *testing.T) *server.Hertz {
+	t.Helper()
 	const backendResponse = "I am the backend"
 	const backendStatus = 200
 	h := server.Default(

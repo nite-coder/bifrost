@@ -13,6 +13,7 @@ import (
 )
 
 func TempSocketPath(t *testing.T, name string) string {
+	t.Helper()
 	dir := t.TempDir()
 	return filepath.Join(dir, name)
 }

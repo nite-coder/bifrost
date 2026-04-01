@@ -74,6 +74,7 @@ func (s *grpcTestServer) SayHello(ctx context.Context, in *proto.HelloRequest) (
 }
 
 func createGrpcServer(t *testing.T) {
+	t.Helper()
 	lis, err := net.Listen("tcp", "127.0.0.1:8500")
 	if err != nil {
 		t.Fatalf("failed to listen: %v", err)
@@ -323,6 +324,7 @@ func TestGRPCProxy_ErrorStatusPlacement(t *testing.T) {
 
 type mockClientConnError struct {
 	grpc.ClientConnInterface
+
 	err error
 }
 

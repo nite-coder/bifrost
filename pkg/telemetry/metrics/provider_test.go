@@ -166,6 +166,7 @@ func TestNewProvider_BothExportersEnabled(t *testing.T) {
 }
 
 func startOTelCollector(t *testing.T) (grpcEndpoint string, httpEndpoint string, cleanup func()) {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

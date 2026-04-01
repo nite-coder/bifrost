@@ -10,42 +10,28 @@ linters:
     - noinlineerr
     - nlreturn
     - gocyclo
-
-    # TODO: Tweak for current project needs
-    - depguard
-    - dupl
-    - err113
-    - exhaustruct
-    - gochecknoglobals
-    - intrange
-    - ireturn
-    - nonamedreturns
-    - tagliatelle
     - testpackage
-    - varnamelen
-    - wrapcheck
-    - wsl
-    - wsl_v5
-
-    # TODO: Disabled, because they are failing at the moment, we should fix them and enable (step by step)
-
-    - contextcheck
-    - dogsled
-    - embeddedstructfieldcheck
-    - exhaustive
     - funlen
     - gochecknoinits
-    - gocognit
     - godox
-    - goprintffuncname
-    - maintidx
-    - nestif
+    - gocognit
+    - contextcheck
     - paralleltest
-    - thelper
-    - unparam
-    - usestdlibvars
-    - wastedassign
-    - whitespace
+    - nestif
+    - maintidx
+    - depguard
+    - exhaustruct
+    - wrapcheck
+    - varnamelen
+    - gochecknoglobals
+    - err113
+    - tagliatelle
+    - wsl
+    - wsl_v5
+    - nonamedreturns
+    - ireturn
+    - dupl
+
   settings:
     errcheck:
       check-type-assertions: true

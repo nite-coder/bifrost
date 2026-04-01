@@ -21,7 +21,7 @@ func BenchmarkTimeNowConcurrent(b *testing.B) {
 	var wg sync.WaitGroup
 	for range 10000 {
 		wg.Go(func() {
-			for j := 0; j < b.N/100; j++ {
+			for range b.N / 100 {
 				_ = time.Now()
 			}
 		})
@@ -47,7 +47,7 @@ func BenchmarkTimeCacheConcurrent(b *testing.B) {
 	var wg sync.WaitGroup
 	for range 10000 {
 		wg.Go(func() {
-			for j := 0; j < b.N/100; j++ {
+			for range b.N / 100 {
 				_ = tc.Now()
 			}
 		})

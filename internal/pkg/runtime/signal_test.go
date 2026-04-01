@@ -40,6 +40,7 @@ func TestLogRotation_InodeVerification(t *testing.T) {
 }
 
 func runLogRotationTest(t *testing.T) {
+	t.Helper()
 	logDir := t.TempDir()
 	logFile := filepath.Join(logDir, "bifrost.log")
 

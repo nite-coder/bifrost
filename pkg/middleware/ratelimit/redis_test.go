@@ -19,6 +19,7 @@ import (
 )
 
 func startRedis(t *testing.T) (string, func()) {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -50,6 +51,7 @@ func startRedis(t *testing.T) (string, func()) {
 }
 
 func startRedisCluster(t *testing.T) ([]string, map[string]string, func()) {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -249,6 +251,7 @@ func TestRedisCluster(t *testing.T) {
 }
 
 func testLimiter(t *testing.T, limiter Limiter, options Options) {
+	t.Helper()
 	t.Run("Basic functionality", func(t *testing.T) {
 		key := "test_key"
 		ctx := context.Background()

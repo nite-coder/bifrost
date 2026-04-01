@@ -162,7 +162,6 @@ func (p *Proxy) Close() error {
 			}
 		}
 	}
-	p = nil
 	return nil
 }
 
@@ -307,17 +306,18 @@ func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	c.Set(variable.GRPCStatusCode, codes.OK)
 
 	// Build the http frame
-	frame := make([]byte, len(respBody)+grpcHeaderLen)
-	// Set the first byte to 0, indicating no compression
-	frame[0] = 0
-	// Set the length of the message
 	val := len(respBody)
-	if val > math.MaxUint32 || val < 0 {
+	if val > math.MaxUint32-grpcHeaderLen {
 		logger.Error("proxy: gRPC proxy response payload overflow")
 		err := errors.New("proxy: gRPC proxy response payload overflow")
 		_ = c.Error(err)
 		return
 	}
+
+	frame := make([]byte, val+grpcHeaderLen)
+	// Set the first byte to 0, indicating no compression
+	frame[0] = 0
+	// Set the length of the message
 	binary.BigEndian.PutUint32(frame[1:grpcHeaderLen], uint32(val))
 	// Copy the response body to the frame
 	copy(frame[grpcHeaderLen:], respBody)

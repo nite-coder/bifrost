@@ -41,7 +41,7 @@ func BenchmarkStaticRoot(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	benchmark(b, router, "GET", "/foo")
+	benchmark(b, router, "/foo")
 }
 
 func BenchmarkStatic1(b *testing.B) {
@@ -50,7 +50,7 @@ func BenchmarkStatic1(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	benchmark(b, router, "GET", "/foo")
+	benchmark(b, router, "/foo")
 }
 
 func BenchmarkStatic3(b *testing.B) {
@@ -59,7 +59,7 @@ func BenchmarkStatic3(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	benchmark(b, router, "GET", "/foo/bar/baz")
+	benchmark(b, router, "/foo/bar/baz")
 }
 
 func BenchmarkStatic5(b *testing.B) {
@@ -68,7 +68,7 @@ func BenchmarkStatic5(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	benchmark(b, router, "GET", "/foo/bar/baz/qux/quux")
+	benchmark(b, router, "/foo/bar/baz/qux/quux")
 }
 
 type RouteOptions struct {
@@ -109,15 +109,16 @@ func BenchmarkStatic10(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	benchmark(b, router, "GET", "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred")
+	benchmark(b, router, "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred")
 }
 
-func benchmark(b *testing.B, router *Router, method, path string) {
+func benchmark(b *testing.B, router *Router, path string) {
+	b.Helper()
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
-		_, _ = router.Find(method, path)
+	for range b.N {
+		_, _ = router.Find("GET", path)
 	}
 }
 

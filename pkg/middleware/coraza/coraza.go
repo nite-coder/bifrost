@@ -183,16 +183,16 @@ func (m *Middleware) log(ctx context.Context, c *app.RequestContext, tx types.Tr
 					continue
 				}
 				labels := make(prom.Labels, numWafLabels)
-				labels[labelServerID] = defaultValIfEmpty(serverID, unknownLabelValue)
-				labels[labelRuleID] = defaultValIfEmpty(ruleIDStr, unknownLabelValue)
-				labels[labelClientIP] = defaultValIfEmpty(rule.ClientIPAddress(), unknownLabelValue)
+				labels[labelServerID] = defaultValIfEmpty(serverID)
+				labels[labelRuleID] = defaultValIfEmpty(ruleIDStr)
+				labels[labelClientIP] = defaultValIfEmpty(rule.ClientIPAddress())
 				method := variable.GetString(variable.HTTPRequestMethod, c)
-				labels[labelMethod] = defaultValIfEmpty(method, unknownLabelValue)
+				labels[labelMethod] = defaultValIfEmpty(method)
 				path := variable.GetString(variable.HTTPRoute, c)
 				if path == "" {
 					path = variable.GetString(variable.HTTPRequestPath, c)
 				}
-				labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
+				labels[labelPath] = defaultValIfEmpty(path)
 				_ = counterAdd(bifrostWAFCoreRulesetHits, 1, labels)
 			}
 		}
@@ -218,9 +218,9 @@ func Init() error {
 	})
 }
 
-func defaultValIfEmpty(val, def string) string {
+func defaultValIfEmpty(val string) string {
 	if val == "" {
-		return def
+		return unknownLabelValue
 	}
 	return val
 }

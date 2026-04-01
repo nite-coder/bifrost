@@ -66,13 +66,13 @@ func BenchmarkEscapeJSON(b *testing.B) {
 
 	for _, tc := range testCases {
 		b.Run("Sonic_"+tc.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				escapeJSONSonic(tc.input)
 			}
 		})
 
 		b.Run("Custom_"+tc.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				escapeJSON(tc.input)
 			}
 		})
