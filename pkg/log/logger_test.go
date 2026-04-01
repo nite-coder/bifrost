@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 )
@@ -21,7 +22,7 @@ func TestLogging(t *testing.T) {
 	}
 
 	logger, err := NewLogger(options)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	logger.Info("test")
 }
@@ -34,7 +35,7 @@ func TestLoggingStdout(t *testing.T) {
 	}
 
 	logger, err := NewLogger(options)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, logger)
 
 	logger.Info("test stdout output")
@@ -43,11 +44,10 @@ func TestLoggingStdout(t *testing.T) {
 // TestSIGUSR1Reopen tests the SIGUSR1 signal handling to reopen the log file.
 func TestSIGUSR1Reopen(t *testing.T) {
 	// Create a temporary log file for testing
-	tmpFile, err := os.CreateTemp("", "test-log-*.log")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "test-log-*.log")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name()) // Clean up the temp file after the test
 
 	// Configure the logger to write to the temp file
 	opts := config.LoggingOptions{

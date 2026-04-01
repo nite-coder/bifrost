@@ -47,7 +47,7 @@ func TestBifrostLeak_Reload(t *testing.T) {
 	t.Logf("Initial goroutines: %d", initialGoroutines)
 
 	currentBifrost := bifrost
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		// New Bifrost instance
 		newBifrost, err := NewBifrost(options, ModeReload) // isReload = true
 		require.NoError(t, err)

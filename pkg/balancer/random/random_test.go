@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -52,9 +53,9 @@ func TestRandom(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
-		for i := 0; i < 10000; i++ {
+		for range 10000 {
 			proxy, err := b.Select(context.Background(), nil)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.NotNil(t, proxy)
 			hits[proxy.Target()]++
 		}
@@ -70,9 +71,9 @@ func TestRandom(t *testing.T) {
 		_ = proxy2.AddFailedCount(100)
 
 		hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
-		for i := 0; i < 10000; i++ {
+		for range 10000 {
 			proxy, err := b.Select(context.Background(), nil)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.NotNil(t, proxy)
 			hits[proxy.Target()]++
 		}
@@ -88,22 +89,22 @@ func TestRandom(t *testing.T) {
 		_ = proxy2.AddFailedCount(100)
 		_ = proxy3.AddFailedCount(100)
 
-		for i := 0; i < 10000; i++ {
+		for range 10000 {
 			proxy, err := b.Select(context.Background(), nil)
-			assert.ErrorIs(t, err, balancer.ErrNotAvailable)
+			require.ErrorIs(t, err, balancer.ErrNotAvailable)
 			assert.Nil(t, proxy)
 		}
 	})
 
 	t.Run("proxies getter", func(t *testing.T) {
-		assert.Equal(t, 3, len(b.Proxies()))
+		assert.Len(t, b.Proxies(), 3)
 	})
 
 	t.Run("nil proxies", func(t *testing.T) {
 		b2 := NewBalancer(nil)
 		p, err := b2.Select(context.Background(), nil)
-		assert.ErrorIs(t, err, balancer.ErrNotAvailable)
-		assert.Nil(t, p)
+		require.ErrorIs(t, err, balancer.ErrNotAvailable)
+		require.Nil(t, p)
 	})
 
 	t.Run("single proxy failed", func(t *testing.T) {
@@ -119,7 +120,7 @@ func TestRandom(t *testing.T) {
 
 		bSingle := NewBalancer([]proxy.Proxy{p1})
 		p, err := bSingle.Select(context.Background(), nil)
-		assert.ErrorIs(t, err, balancer.ErrNotAvailable)
+		require.ErrorIs(t, err, balancer.ErrNotAvailable)
 		assert.Nil(t, p)
 	})
 
@@ -132,11 +133,11 @@ func TestRandom(t *testing.T) {
 		factory := balancer.Factory("random")
 		assert.NotNil(t, factory)
 		rr, err := factory([]proxy.Proxy{p1}, nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, rr)
 
 		p, err := rr.Select(context.Background(), nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "http://backend1", p.Target())
 	})
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/cloudwego/hertz/pkg/route"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
@@ -89,7 +90,7 @@ func TestBufferingMiddleware(t *testing.T) {
 		handler, err := factory(map[string]any{
 			"max_request_body_size": 1024,
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, handler)
 
 		router := route.NewEngine(config.NewOptions([]config.Option{}))

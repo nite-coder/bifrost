@@ -23,7 +23,7 @@ func TestBifrostLeakInSuccessPath_Evidence(t *testing.T) {
 	options.Providers.DNS.Enabled = true
 	options.Providers.DNS.Servers = []string{"8.8.8.8"}
 
-	for i := 0; i < numServices; i++ {
+	for i := range numServices {
 		svcID := fmt.Sprintf("direct_%d", i)
 		options.Services[svcID] = config.ServiceOptions{
 			ID:  svcID,

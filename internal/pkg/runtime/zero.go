@@ -19,6 +19,12 @@ import (
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 )
 
+const (
+	defaultFileMode    = 0o600
+	defaultQuitTimeout = 10 * time.Second
+	stdFDCount         = 3
+)
+
 // CommandRunner is an interface for creating exec.Cmd instances.
 // It allows for dependency injection in testing scenarios.
 type CommandRunner interface {
@@ -63,7 +69,7 @@ func (d *defaultProcessFinder) FindProcess(pid int) (process, error) {
 
 var defaultFileOpener = func(name string) (*os.File, error) {
 	/* #nosec G304 */
-	return os.OpenFile(filepath.Clean(name), os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC, 0o600)
+	return os.OpenFile(filepath.Clean(name), os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC, defaultFileMode)
 }
 
 // ListenInfo holds information about a network listener.
@@ -121,7 +127,7 @@ type Options struct {
 // New creates a new ZeroDownTime instance with the given options.
 // If QuitTimeout is not specified, it defaults to 10 seconds.
 func New(opts Options) *ZeroDownTime {
-	quitTimeout := 10 * time.Second
+	quitTimeout := defaultQuitTimeout
 	if opts.QuitTimout > 0 {
 		quitTimeout = opts.QuitTimout
 	}
@@ -211,7 +217,7 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 			count := len(z.listeners)
 			for index < count {
 				// fd starting from 3
-				fd := 3 + index
+				fd := stdFDCount + index
 				l := z.listeners[index]
 				index++
 				f := os.NewFile(uintptr(fd), "")

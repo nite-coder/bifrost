@@ -31,7 +31,7 @@ func TestDistributionWith5Nodes(t *testing.T) {
 			numKeys := 100000
 			distribution := make(map[string]int)
 
-			for i := 0; i < numKeys; i++ {
+			for i := range numKeys {
 				key := strconv.Itoa(i)
 				node, _ := ring.Get(key)
 				distribution[node]++
@@ -58,7 +58,7 @@ func TestDistributionWith5Nodes(t *testing.T) {
 			}
 
 			distribution2 := make(map[string]int)
-			for i := 0; i < numKeys; i++ {
+			for i := range numKeys {
 				key := strconv.Itoa(i)
 				node, _ := c.Get(key)
 				distribution2[node]++
@@ -100,7 +100,7 @@ func TestDistributionWith10Nodes(t *testing.T) {
 			numKeys := 100000
 			distribution := make(map[string]int)
 
-			for i := 0; i < numKeys; i++ {
+			for i := range numKeys {
 				key := strconv.Itoa(i)
 				node, _ := ring.Get(key)
 				distribution[node]++
@@ -127,7 +127,7 @@ func TestDistributionWith10Nodes(t *testing.T) {
 			}
 
 			distribution2 := make(map[string]int)
-			for i := 0; i < numKeys; i++ {
+			for i := range numKeys {
 				key := strconv.Itoa(i)
 				node, _ := c.Get(key)
 				distribution2[node]++

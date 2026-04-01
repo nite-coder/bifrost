@@ -49,7 +49,7 @@ func TestToHTTPRequest_Basic(t *testing.T) {
 
 		body, err := io.ReadAll(httpReq.Body)
 		require.NoError(t, err)
-		assert.Equal(t, `{"key":"value"}`, string(body))
+		assert.JSONEq(t, `{"key":"value"}`, string(body))
 	})
 
 	t.Run("request with multiple headers", func(t *testing.T) {
@@ -120,7 +120,7 @@ func TestToHTTPRequest_Context(t *testing.T) {
 		httpReq, err := ToHTTPRequest(ctx, req)
 		require.NoError(t, err)
 
-		assert.Error(t, httpReq.Context().Err())
+		require.Error(t, httpReq.Context().Err())
 	})
 }
 
@@ -187,7 +187,7 @@ func TestBytesReader(t *testing.T) {
 		buf := make([]byte, 100)
 		n, err := r.Read(buf)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, len(data), n)
 		assert.Equal(t, data, buf[:n])
 	})
@@ -207,7 +207,7 @@ func TestBytesReader(t *testing.T) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		}
 
 		assert.Equal(t, data, result.Bytes())
@@ -228,8 +228,8 @@ func TestBytesReader(t *testing.T) {
 
 		// First read
 		n, err := r.Read(buf)
+		require.NoError(t, err)
 		assert.Equal(t, 2, n)
-		assert.NoError(t, err)
 
 		// Second read should be EOF
 		n, err = r.Read(buf)

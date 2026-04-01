@@ -265,7 +265,11 @@ func (b *Bifrost) Close() error {
 func (b *Bifrost) doShutdown(ctx context.Context, mode ShutdownMode) error {
 	b.SetActive(StatusInactive)
 	var wg sync.WaitGroup
-	maxTimeout := 10 * time.Second
+	const (
+		defaultMaxShutdownTimeout = 10 * time.Second
+		immediateShutdownTimeout  = 500 * time.Millisecond
+	)
+	maxTimeout := defaultMaxShutdownTimeout
 	for _, server := range b.httpServers {
 		if server.options.Timeout.Graceful > 0 && server.options.Timeout.Graceful > maxTimeout {
 			maxTimeout = server.options.Timeout.Graceful
@@ -284,7 +288,7 @@ func (b *Bifrost) doShutdown(ctx context.Context, mode ShutdownMode) error {
 	}
 
 	if mode == ShutdownImmediate {
-		maxTimeout = 500 * time.Millisecond
+		maxTimeout = immediateShutdownTimeout
 	}
 	waitTimeout(&wg, maxTimeout)
 

@@ -67,17 +67,17 @@ func TestAddNode(t *testing.T) {
 	err := ring.Add("node1")
 	require.NoError(t, err)
 	assert.False(t, ring.IsEmpty())
-	assert.Equal(t, 1, len(ring.Nodes()))
+	assert.Len(t, ring.Nodes(), 1)
 
 	// Add second node
 	err = ring.Add("node2")
 	require.NoError(t, err)
-	assert.Equal(t, 2, len(ring.Nodes()))
+	assert.Len(t, ring.Nodes(), 2)
 
 	// Try to add duplicate node - it should replace/update now
 	err = ring.Add("node1")
 	require.NoError(t, err)
-	assert.Equal(t, 2, len(ring.Nodes()))
+	assert.Len(t, ring.Nodes(), 2)
 }
 
 // TestAddWithReplicas tests adding/updating nodes with custom replica counts.
@@ -87,17 +87,17 @@ func TestAddWithReplicas(t *testing.T) {
 	// Add node with custom replicas
 	err := ring.AddWithReplicas("node1", 10)
 	require.NoError(t, err)
-	assert.Equal(t, 10, len(ring.sortedNodes))
+	assert.Len(t, ring.sortedNodes, 10)
 
 	// Update node with different replicas
 	err = ring.AddWithReplicas("node1", 20)
 	require.NoError(t, err)
-	assert.Equal(t, 20, len(ring.sortedNodes))
+	assert.Len(t, ring.sortedNodes, 20)
 
 	// Verify other nodes are unaffected
 	err = ring.Add("node2") // Uses default (160)
 	require.NoError(t, err)
-	assert.Equal(t, 20+DefaultReplicas, len(ring.sortedNodes))
+	assert.Len(t, ring.sortedNodes, 20+DefaultReplicas)
 }
 
 // TestRemoveNode tests removing nodes from the ring.
@@ -109,11 +109,11 @@ func TestRemoveNode(t *testing.T) {
 	// Remove existing node
 	err := ring.Remove("node1")
 	require.NoError(t, err)
-	assert.Equal(t, 1, len(ring.Nodes()))
+	assert.Len(t, ring.Nodes(), 1)
 
 	// Try to remove non-existent node
 	err = ring.Remove("node3")
-	assert.ErrorIs(t, err, ErrNodeNotFound)
+	require.ErrorIs(t, err, ErrNodeNotFound)
 
 	// Remove last node
 	err = ring.Remove("node2")
@@ -127,7 +127,7 @@ func TestGet(t *testing.T) {
 
 	// Test empty ring
 	_, err := ring.Get("key1")
-	assert.ErrorIs(t, err, ErrEmptyRing)
+	require.ErrorIs(t, err, ErrEmptyRing)
 
 	// Add nodes
 	_ = ring.Add("node1")
@@ -160,7 +160,7 @@ func TestConsistency(t *testing.T) {
 
 	// Map 1000 keys and record their assignments
 	assignments := make(map[string]string)
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		key := fmt.Sprintf("key%d", i)
 		node, _ := ring.Get(key)
 		assignments[key] = node
@@ -196,7 +196,7 @@ func TestDistributionBias(t *testing.T) {
 	numKeys := 100000
 	distribution := make(map[string]int)
 
-	for i := 0; i < numKeys; i++ {
+	for i := range numKeys {
 		// Simulate userID as uint32
 		/* #nosec G115 */
 		userID := uint32(i)
@@ -219,7 +219,7 @@ func TestDistributionBias(t *testing.T) {
 	}
 
 	// Verify both nodes received keys
-	assert.Equal(t, 2, len(distribution), "Both nodes should receive keys")
+	assert.Len(t, distribution, 2, "Both nodes should receive keys")
 }
 
 // TestDistributionWithDifferentReplicas tests distribution with different replica counts.
@@ -246,7 +246,7 @@ func TestDistributionWithDifferentReplicas(t *testing.T) {
 			numKeys := 50000
 			distribution := make(map[string]int)
 
-			for i := 0; i < numKeys; i++ {
+			for i := range numKeys {
 				key := strconv.Itoa(i)
 				node, _ := ring.Get(key)
 				distribution[node]++
@@ -276,7 +276,7 @@ func TestWeightedDistribution(t *testing.T) {
 	numKeys := 100000
 	distribution := make(map[string]int)
 
-	for i := 0; i < numKeys; i++ {
+	for i := range numKeys {
 		key := strconv.Itoa(i)
 		node, _ := ring.Get(key)
 		distribution[node]++
@@ -303,7 +303,7 @@ func TestVirtualNodeDistribution(t *testing.T) {
 	_ = ring.Add("node1")
 
 	// Should have 10 virtual nodes
-	assert.Equal(t, 10, len(ring.sortedNodes))
+	assert.Len(t, ring.sortedNodes, 10)
 
 	// Verify nodes are sorted
 	for i := 1; i < len(ring.sortedNodes); i++ {
@@ -321,19 +321,19 @@ func TestGetN(t *testing.T) {
 	// Get 2 nodes
 	nodes, err := ring.GetN("user123", 2)
 	require.NoError(t, err)
-	assert.Equal(t, 2, len(nodes))
+	assert.Len(t, nodes, 2)
 	assert.NotEqual(t, nodes[0], nodes[1])
 
 	// Get more nodes than exist
 	nodes, err = ring.GetN("user123", 5)
 	require.NoError(t, err)
-	assert.Equal(t, 3, len(nodes))
+	assert.Len(t, nodes, 3)
 
 	// Verify order is clockwise on the ring
 	// If we start from some point, GetN must return unique nodes in the order they appear
 	key := "test-failover"
 	n3, _ := ring.GetN(key, 3)
-	assert.Equal(t, 3, len(n3))
+	assert.Len(t, n3, 3)
 
 	// The first node in GetN(key, 3) must be the same as Get(key)
 	first, _ := ring.Get(key)
@@ -353,10 +353,10 @@ func TestConcurrency(t *testing.T) {
 	operationsPerGoroutine := 100
 
 	// Concurrent reads
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Go(func() {
 			id := i
-			for j := 0; j < operationsPerGoroutine; j++ {
+			for j := range operationsPerGoroutine {
 				key := fmt.Sprintf("key-%d-%d", id, j)
 				_, _ = ring.Get(key)
 			}
@@ -364,7 +364,7 @@ func TestConcurrency(t *testing.T) {
 	}
 
 	// Concurrent writes (add/remove)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Go(func() {
 			id := i
 			nodeID := fmt.Sprintf("temp-node-%d", id)
@@ -389,10 +389,10 @@ func TestEdgeCases(t *testing.T) {
 		assert.Empty(t, ring.Nodes())
 
 		_, err := ring.Get("key")
-		assert.ErrorIs(t, err, ErrEmptyRing)
+		require.ErrorIs(t, err, ErrEmptyRing)
 
 		err = ring.Remove("node1")
-		assert.ErrorIs(t, err, ErrNodeNotFound)
+		require.ErrorIs(t, err, ErrNodeNotFound)
 	})
 
 	t.Run("single node", func(t *testing.T) {
@@ -400,7 +400,7 @@ func TestEdgeCases(t *testing.T) {
 		_ = ring.Add("only-node")
 
 		// All keys should map to the only node
-		for i := 0; i < 100; i++ {
+		for i := range 100 {
 			node, err := ring.Get(fmt.Sprintf("key%d", i))
 			require.NoError(t, err)
 			assert.Equal(t, "only-node", node)
@@ -413,15 +413,15 @@ func TestEdgeCases(t *testing.T) {
 		require.NoError(t, err)
 
 		// With 0 replicas, no virtual nodes are created
-		assert.Equal(t, 0, len(ring.sortedNodes))
+		assert.Empty(t, ring.sortedNodes)
 	})
 
 	t.Run("duplicate add", func(t *testing.T) {
 		ring := New()
 		_ = ring.Add("node1")
 		err := ring.Add("node1") // Should succeed by replacing
-		assert.NoError(t, err)
-		assert.Equal(t, 1, len(ring.Nodes()))
+		require.NoError(t, err)
+		assert.Len(t, ring.Nodes(), 1)
 	})
 
 	t.Run("remove non-existent", func(t *testing.T) {
@@ -470,7 +470,7 @@ func TestNodes(t *testing.T) {
 	_ = ring.Add("node3")
 
 	nodes = ring.Nodes()
-	assert.Equal(t, 3, len(nodes))
+	assert.Len(t, nodes, 3)
 	assert.Contains(t, nodes, "node1")
 	assert.Contains(t, nodes, "node2")
 	assert.Contains(t, nodes, "node3")
@@ -483,8 +483,7 @@ func BenchmarkGet(b *testing.B) {
 	_ = ring.Add("node2")
 	_ = ring.Add("node3")
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		key := fmt.Sprintf("key%d", i%10000)
 		_, _ = ring.Get(key)
 	}
@@ -492,8 +491,7 @@ func BenchmarkGet(b *testing.B) {
 
 // BenchmarkAdd benchmarks the Add operation.
 func BenchmarkAdd(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		ring := New()
 		_ = ring.Add(fmt.Sprintf("node%d", i))
 	}

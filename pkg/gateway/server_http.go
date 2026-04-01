@@ -40,6 +40,14 @@ var (
 	initLoggerOnce            sync.Once
 )
 
+const (
+	defaultHTTPReadTimeout       = 60 * time.Second
+	defaultHTTPWriteTimeout      = 60 * time.Second
+	defaultHTTPKeepAliveTimeout  = 60 * time.Second
+	defaultHTTPExitWaitTime      = 10 * time.Second
+	defaultMetricsTickerInterval = 10 * time.Second
+)
+
 // ListenerMode defines whether the server should listen on a network port.
 type ListenerMode int
 
@@ -86,10 +94,10 @@ func newHTTPServer(
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		server.WithTraceLevel(stats.LevelBase),
-		server.WithReadTimeout(time.Second * 60),
-		server.WithWriteTimeout(time.Second * 60),
-		server.WithExitWaitTime(time.Second * 10),
-		server.WithKeepAliveTimeout(time.Second * 60),
+		server.WithReadTimeout(defaultHTTPReadTimeout),
+		server.WithWriteTimeout(defaultHTTPWriteTimeout),
+		server.WithExitWaitTime(defaultHTTPExitWaitTime),
+		server.WithKeepAliveTimeout(defaultHTTPKeepAliveTimeout),
 		server.WithKeepAlive(true),
 		server.WithALPN(true),
 		server.WithStreamBody(true),
@@ -119,7 +127,7 @@ func newHTTPServer(
 	}
 	if bifrost.options.Metrics.Prometheus.Enabled {
 		go safety.Go(context.Background(), func() {
-			ticker := time.NewTicker(time.Second * 10)
+			ticker := time.NewTicker(defaultMetricsTickerInterval)
 			defer ticker.Stop()
 			for range ticker.C {
 				if !httpServer.isActive.Load() {

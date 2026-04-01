@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/middleware/cors"
 	"github.com/nite-coder/bifrost/pkg/resolver"
@@ -22,7 +23,7 @@ func TestValidateProviders(t *testing.T) {
 
 		options.Providers.File.Enabled = true
 		err := validateProviders(options)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("nacos config provider", func(t *testing.T) {
@@ -30,7 +31,7 @@ func TestValidateProviders(t *testing.T) {
 
 		options.Providers.Nacos.Config.Enabled = true
 		err := validateProviders(options)
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		options.Providers.Nacos.Config.Endpoints = []string{
 			"http://localhost:8848",
@@ -43,7 +44,7 @@ func TestValidateProviders(t *testing.T) {
 		}
 
 		err = validateProviders(options)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("nacos discovery provider", func(t *testing.T) {
@@ -51,14 +52,14 @@ func TestValidateProviders(t *testing.T) {
 
 		options.Providers.Nacos.Discovery.Enabled = true
 		err := validateProviders(options)
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		options.Providers.Nacos.Discovery.Endpoints = []string{
 			"http://localhost:8848",
 		}
 
 		err = validateProviders(options)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }
 
@@ -107,7 +108,7 @@ func TestValidateRoutes(t *testing.T) {
 		options.Routes = append(options.Routes, &route5)
 
 		err := validateRoutes(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("service not found", func(t *testing.T) {
@@ -133,7 +134,7 @@ func TestValidateRoutes(t *testing.T) {
 		options.Routes = append(options.Routes, &route1)
 
 		err := validateRoutes(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("duplicate routes1", func(t *testing.T) {
@@ -220,7 +221,7 @@ func TestValidateRoutes(t *testing.T) {
 		options.Routes = append(options.Routes, &route2)
 
 		err := validateRoutes(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		route3 := RouteOptions{
 			ID:        "route3",
@@ -258,7 +259,7 @@ func TestValidateRoutes(t *testing.T) {
 		options.Services["test1"] = service
 
 		err := validateRoutes(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		noMiddleware := MiddlwareOptions{
 			ID:  "no",
@@ -268,7 +269,7 @@ func TestValidateRoutes(t *testing.T) {
 		route1.Middlewares = append(route1.Middlewares, noMiddleware)
 
 		err = validateRoutes(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }
 
@@ -280,7 +281,7 @@ func TestValidateMiddlewares(t *testing.T) {
 			Type: "cors",
 		}
 		err := validateMiddlewares(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("not found middleware", func(t *testing.T) {
@@ -290,7 +291,7 @@ func TestValidateMiddlewares(t *testing.T) {
 			Type: "cors11",
 		}
 		err := validateMiddlewares(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("cannot run as use mode", func(t *testing.T) {
@@ -300,7 +301,7 @@ func TestValidateMiddlewares(t *testing.T) {
 			Use: "cors",
 		}
 		err := validateMiddlewares(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }
 
@@ -332,7 +333,7 @@ func TestValidateServer(t *testing.T) {
 		options.Servers["apiv1"] = server
 
 		err := validateServers(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		server = ServerOptions{
 			Bind: ":8080",
@@ -344,7 +345,7 @@ func TestValidateServer(t *testing.T) {
 		options.Servers["apiv1"] = server
 
 		err = validateServers(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("access log", func(t *testing.T) {
@@ -362,7 +363,7 @@ func TestValidateServer(t *testing.T) {
 		options.Servers["apiv1"] = server
 
 		err := validateServers(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		server = ServerOptions{
 			Bind:        ":8080",
@@ -372,7 +373,7 @@ func TestValidateServer(t *testing.T) {
 		options.Servers["apiv1"] = server
 
 		err = validateServers(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("middlewares", func(t *testing.T) {
@@ -392,7 +393,7 @@ func TestValidateServer(t *testing.T) {
 		options.Servers["apiv1"] = server
 
 		err := validateServers(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		noMiddleware := MiddlwareOptions{
 			ID:  "aaa",
@@ -404,7 +405,7 @@ func TestValidateServer(t *testing.T) {
 		options.Servers["apiv1"] = server
 
 		err = validateServers(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }
 
@@ -423,11 +424,11 @@ func TestValidateService(t *testing.T) {
 		}
 
 		err := validateServices(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		options.SkipResolver = true
 		err = validateServices(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("service url with domain", func(t *testing.T) {
@@ -444,11 +445,11 @@ func TestValidateService(t *testing.T) {
 		}
 
 		err := validateServices(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		options.SkipResolver = true
 		err = validateServices(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("service url localhost", func(t *testing.T) {
@@ -465,11 +466,11 @@ func TestValidateService(t *testing.T) {
 		}
 
 		err := validateServices(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		options.SkipResolver = true
 		err = validateServices(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("service url no upstream", func(t *testing.T) {
@@ -480,11 +481,11 @@ func TestValidateService(t *testing.T) {
 		}
 
 		err := validateServices(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		options.SkipResolver = true
 		err = validateServices(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("middlewares", func(t *testing.T) {
@@ -511,7 +512,7 @@ func TestValidateService(t *testing.T) {
 		options.Services["test1"] = service
 
 		err := validateServices(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		noMiddleware := MiddlwareOptions{
 			ID:  "no",
@@ -522,7 +523,7 @@ func TestValidateService(t *testing.T) {
 		options.Services["test1"] = service
 
 		err = validateServices(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }
 
@@ -541,11 +542,11 @@ func TestValidateUpstream(t *testing.T) {
 		}
 
 		err := validateUpstreams(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		options.SkipResolver = true
 		err = validateUpstreams(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("upstream target with domain", func(t *testing.T) {
@@ -562,11 +563,11 @@ func TestValidateUpstream(t *testing.T) {
 		}
 
 		err := validateUpstreams(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		options.SkipResolver = true
 		err = validateUpstreams(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("upstream target with localhost", func(t *testing.T) {
@@ -587,11 +588,11 @@ func TestValidateUpstream(t *testing.T) {
 		}
 
 		err := validateUpstreams(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		options.SkipResolver = true
 		err = validateUpstreams(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("target with local hostname", func(t *testing.T) {
@@ -608,11 +609,11 @@ func TestValidateUpstream(t *testing.T) {
 		}
 
 		err := validateUpstreams(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		options.SkipResolver = true
 		err = validateUpstreams(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }
 
@@ -629,7 +630,7 @@ func TestValidateMetrics(t *testing.T) {
 		}
 
 		err := validateMetrics(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("no server id", func(t *testing.T) {
@@ -651,25 +652,25 @@ func TestValidateTracing(t *testing.T) {
 	options.Tracing.Propagators = append(options.Tracing.Propagators, "tracecontext", "baggage")
 
 	err := validateTracing(options.Tracing)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestValidateResolver(t *testing.T) {
 	options := NewOptions()
 	err := validateResolver(options)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	options.Resolver.Order = []string{"last", "a", "cname"}
 	err = validateResolver(options)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	options.Resolver.Order = []string{"srv"}
 	err = validateResolver(options)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	options.Resolver.Hostsfile = "/not/exists"
 	err = validateResolver(options)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestConfigDNS(t *testing.T) {
@@ -695,7 +696,7 @@ func TestConfigDNS(t *testing.T) {
 	}
 
 	err := ValidateConfig(options, ModeFull)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	options.Upstreams["test"] = UpstreamOptions{
 		Targets: []TargetOptions{
@@ -713,26 +714,26 @@ func TestValidateLogging(t *testing.T) {
 	t.Run("valid levels", func(t *testing.T) {
 		for _, level := range []string{"", "debug", "info", "warn", "error", "DEBUG", "INFO"} {
 			err := validateLogging(LoggingOptions{Level: level})
-			assert.NoError(t, err, "level: %s", level)
+			require.NoError(t, err, "level: %s", level)
 		}
 	})
 
 	t.Run("invalid level", func(t *testing.T) {
 		err := validateLogging(LoggingOptions{Level: "invalid"})
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported logging level")
 	})
 
 	t.Run("valid handlers", func(t *testing.T) {
 		for _, handler := range []string{"", "text", "json", "TEXT", "JSON"} {
 			err := validateLogging(LoggingOptions{Handler: handler})
-			assert.NoError(t, err, "handler: %s", handler)
+			require.NoError(t, err, "handler: %s", handler)
 		}
 	})
 
 	t.Run("invalid handler", func(t *testing.T) {
 		err := validateLogging(LoggingOptions{Handler: "invalid"})
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported logging handler")
 	})
 }
@@ -742,7 +743,7 @@ func TestValidateUpstreams(t *testing.T) {
 		options := NewOptions()
 		options.Upstreams["test"] = UpstreamOptions{}
 		err := validateUpstreams(options, ModeBasic)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("upstream ID cannot start with dollar", func(t *testing.T) {
@@ -751,7 +752,7 @@ func TestValidateUpstreams(t *testing.T) {
 			Targets: []TargetOptions{{Target: "localhost:8080"}},
 		}
 		err := validateUpstreams(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "cannot start with '$'")
 	})
 
@@ -762,7 +763,7 @@ func TestValidateUpstreams(t *testing.T) {
 			Targets:  []TargetOptions{{Target: "localhost:8080"}},
 		}
 		err := validateUpstreams(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported balancer")
 	})
 
@@ -772,7 +773,7 @@ func TestValidateUpstreams(t *testing.T) {
 			Discovery: DiscoveryOptions{Type: "dns", Name: "example.com"},
 		}
 		err := validateUpstreams(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "DNS provider is disabled")
 	})
 
@@ -783,7 +784,7 @@ func TestValidateUpstreams(t *testing.T) {
 			Discovery: DiscoveryOptions{Type: "dns"},
 		}
 		err := validateUpstreams(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "discovery name cannot be empty")
 	})
 
@@ -793,7 +794,7 @@ func TestValidateUpstreams(t *testing.T) {
 			Discovery: DiscoveryOptions{Type: "nacos", Name: "service"},
 		}
 		err := validateUpstreams(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "nacos service discovery provider is disabled")
 	})
 
@@ -803,7 +804,7 @@ func TestValidateUpstreams(t *testing.T) {
 			Discovery: DiscoveryOptions{Type: "k8s", Name: "service"},
 		}
 		err := validateUpstreams(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "K8s service discovery provider is disabled")
 	})
 
@@ -813,7 +814,7 @@ func TestValidateUpstreams(t *testing.T) {
 			Targets: []TargetOptions{},
 		}
 		err := validateUpstreams(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "targets cannot be empty")
 	})
 
@@ -823,7 +824,7 @@ func TestValidateUpstreams(t *testing.T) {
 			Discovery: DiscoveryOptions{Type: "unknown"},
 		}
 		err := validateUpstreams(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported discovery type")
 	})
 
@@ -834,7 +835,7 @@ func TestValidateUpstreams(t *testing.T) {
 			Targets: []TargetOptions{{Target: "localhost:8080"}},
 		}
 		err := validateUpstreams(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }
 
@@ -845,7 +846,7 @@ func TestValidateAccessLog(t *testing.T) {
 			Template: "$http.request.method $http.request.path",
 		}
 		err := validateAccessLog(options.AccessLogs)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("invalid template variable", func(t *testing.T) {
@@ -854,7 +855,7 @@ func TestValidateAccessLog(t *testing.T) {
 			Template: "$invalid.variable",
 		}
 		err := validateAccessLog(options.AccessLogs)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }
 
@@ -865,7 +866,7 @@ func TestValidateServers(t *testing.T) {
 			Bind: "",
 		}
 		err := validateServers(options, ModeFull)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("valid server", func(t *testing.T) {
@@ -874,6 +875,6 @@ func TestValidateServers(t *testing.T) {
 			Bind: ":8080",
 		}
 		err := validateServers(options, ModeFull)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }

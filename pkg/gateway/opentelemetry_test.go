@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/trace"
 
@@ -28,7 +29,7 @@ func TestTracer(t *testing.T) {
 	}
 
 	tracer, err := initTracerProvider(options)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, tracer)
 }
 

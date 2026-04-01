@@ -30,7 +30,7 @@ func TestSplitter(t *testing.T) {
 
 	hits := map[string]int{"old_server": 0, "new_server": 0}
 
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		ctx := context.Background()
 		hzCtx := app.NewContext(0)
 		hzCtx.Request.SetMethod("POST")

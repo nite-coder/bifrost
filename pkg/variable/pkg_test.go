@@ -1,7 +1,6 @@
 package variable
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -69,13 +68,13 @@ func TestGetDirective(t *testing.T) {
 	assert.Equal(t, int32(98765), userID32)
 
 	enabled := GetBool("$var.enabled", hzCtx)
-	assert.Equal(t, true, enabled)
+	assert.True(t, enabled)
 
 	money := GetFloat64("$var.money", hzCtx)
-	assert.Equal(t, 123.456, money)
+	assert.InDelta(t, 123.456, money, 0.001)
 
 	money32 := GetFloat32("$var.money", hzCtx)
-	assert.Equal(t, float32(123.456), money32)
+	assert.InDelta(t, float32(123.456), money32, 0.001)
 
 	remoteAddr := GetString(NetworkPeerAddress, hzCtx)
 	assert.Equal(t, "0.0.0.0", remoteAddr)
@@ -168,7 +167,7 @@ func TestGetDirective(t *testing.T) {
 	assert.Equal(t, "baz", queryBar)
 
 	errType := GetString(ErrorType, hzCtx)
-	assert.Equal(t, "", errType)
+	assert.Empty(t, errType)
 
 	hostname := GetString(Hostname, hzCtx)
 	assert.NotEmpty(t, hostname)
@@ -193,7 +192,7 @@ func TestGetDirective(t *testing.T) {
 	assert.True(t, found)
 	tags, ok := val.([]string)
 	assert.True(t, ok)
-	assert.Equal(t, 2, len(tags))
+	assert.Len(t, tags, 2)
 
 	cookie := GetString("$http.request.cookie.hello", hzCtx)
 	assert.Equal(t, "world", cookie)
@@ -225,11 +224,11 @@ func TestIsDirective(t *testing.T) {
 }
 
 func TestEnvDirective(t *testing.T) {
-	assert.NoError(t, os.Setenv("foo", "bar"))
+	t.Setenv("foo", "bar")
 	val, _ := Get("$env.foo", nil)
 	assert.Equal(t, "bar", val)
 
-	assert.NoError(t, os.Setenv("BOO", "boo"))
+	t.Setenv("BOO", "boo")
 	val, _ = Get("$env.BOO", nil)
 	assert.Equal(t, "boo", val)
 }
@@ -242,11 +241,11 @@ func TestParseDirectives(t *testing.T) {
 	"req_body":"$http.request.body"}`
 
 	directives := ParseDirectives(template)
-	assert.Equal(t, 5, len(directives))
+	assert.Len(t, directives, 5)
 
 	template = "/orders/$type"
 	directives = ParseDirectives(template)
-	assert.Equal(t, 1, len(directives))
+	assert.Len(t, directives, 1)
 	assert.Equal(t, "$type", directives[0])
 }
 
@@ -263,7 +262,7 @@ func TestJSONPath(t *testing.T) {
 	assert.Equal(t, "Prichard", val)
 
 	val = GetString("$http.request.body.json.name_not_Found", hzCtx)
-	assert.Equal(t, "", val)
+	assert.Empty(t, val)
 
 	val = GetString("$http.response.body.json.age", hzCtx)
 	assert.Equal(t, "47", val)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/router"
@@ -274,28 +275,28 @@ func TestRoutes(t *testing.T) {
 	err := route.Add(config.RouteOptions{
 		Paths: []string{"^~ /market/btc", "^~ /spot"},
 	}, prefixHandler)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = route.Add(config.RouteOptions{
 		Paths:   []string{"= /spot/order"},
 		Methods: []string{"POST", "GET"},
 	}, exactkHandler)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = route.Add(config.RouteOptions{
 		Paths: []string{"~/market/(btc|usdt|eth)$"},
 	}, regexkHandler)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = route.Add(config.RouteOptions{
 		Paths: []string{"/market"},
 	}, generalkHandler)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = route.Add(config.RouteOptions{
 		Paths: []string{"/api/v1/"},
 	}, generalkHandler)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	testCases := []struct {
 		method         string
@@ -338,12 +339,12 @@ func TestRegexOrder(t *testing.T) {
 		Methods: []string{"GET"},
 		Paths:   []string{"~ ^/(api/v1/live/subtitle|api/v2/w33/live/)"},
 	}, regexkHandler)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = route.Add(config.RouteOptions{
 		Paths: []string{"/api/v1/hello", "/api/v2/world"},
 	}, generalkHandler)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	c := &app.RequestContext{}
 	c.Request.SetMethod("GET")
@@ -364,25 +365,25 @@ func TestDuplicateRoutes(t *testing.T) {
 		Methods: []string{"GET", "POST"},
 		Paths:   []string{"/foo"},
 	}, exactkHandler)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = route.Add(config.RouteOptions{
 		Methods: []string{"GET"},
 		Paths:   []string{"/foo"},
 	}, exactkHandler)
-	assert.ErrorIs(t, err, router.ErrAlreadyExists)
+	require.ErrorIs(t, err, router.ErrAlreadyExists)
 
 	err = route.Add(config.RouteOptions{
 		Methods: []string{},
 		Paths:   []string{"/foo"},
 	}, exactkHandler)
-	assert.ErrorIs(t, err, router.ErrAlreadyExists)
+	require.ErrorIs(t, err, router.ErrAlreadyExists)
 
 	err = route.Add(config.RouteOptions{
 		Methods: []string{"GET"},
 		Paths:   []string{"/"},
 	}, exactkHandler)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = route.Add(config.RouteOptions{
 		Methods: []string{"GET"},
@@ -397,8 +398,8 @@ var pattern = `/hello/world/(You|aaa|ccc)`
 
 func BenchmarkCaseSensitive(b *testing.B) {
 	re := regexp.MustCompile(pattern)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		result := re.MatchString(testString)
 		assert.False(b, result)
 	}
@@ -406,8 +407,8 @@ func BenchmarkCaseSensitive(b *testing.B) {
 
 func BenchmarkCaseInsensitive(b *testing.B) {
 	re := regexp.MustCompile(`(?i)` + pattern)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		result := re.MatchString(testString)
 		assert.True(b, result)
 	}
@@ -435,7 +436,7 @@ func TestRouteAddErrors(t *testing.T) {
 		err := route.Add(config.RouteOptions{
 			Paths: []string{},
 		}, generalkHandler)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "paths cannot be empty")
 	})
 
@@ -443,7 +444,7 @@ func TestRouteAddErrors(t *testing.T) {
 		err := route.Add(config.RouteOptions{
 			Paths: []string{"="},
 		}, generalkHandler)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "exact route cannot be empty")
 	})
 
@@ -451,7 +452,7 @@ func TestRouteAddErrors(t *testing.T) {
 		err := route.Add(config.RouteOptions{
 			Paths: []string{"^~"},
 		}, generalkHandler)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "prefix route cannot be empty")
 	})
 
@@ -459,7 +460,7 @@ func TestRouteAddErrors(t *testing.T) {
 		err := route.Add(config.RouteOptions{
 			Paths: []string{"~"},
 		}, generalkHandler)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "regular expression route cannot be empty")
 	})
 
@@ -467,7 +468,7 @@ func TestRouteAddErrors(t *testing.T) {
 		err := route.Add(config.RouteOptions{
 			Paths: []string{"~*"},
 		}, generalkHandler)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "regular expression route cannot be empty")
 	})
 
@@ -475,7 +476,7 @@ func TestRouteAddErrors(t *testing.T) {
 		err := route.Add(config.RouteOptions{
 			Paths: []string{"invalid_path"},
 		}, generalkHandler)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "is invalid path")
 	})
 
@@ -484,7 +485,7 @@ func TestRouteAddErrors(t *testing.T) {
 			Paths:   []string{"/test"},
 			Methods: []string{"INVALID"},
 		}, generalkHandler)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "not valid")
 	})
 

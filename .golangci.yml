@@ -9,6 +9,7 @@ linters:
     - lll
     - noinlineerr
     - nlreturn
+    - gocyclo
 
     # TODO: Tweak for current project needs
     - depguard
@@ -35,28 +36,14 @@ linters:
     - funlen
     - gochecknoinits
     - gocognit
-    #- goconst
-    #- gocritic
-    - gocyclo
     - godox
     - goprintffuncname
-    #- ineffassign
     - maintidx
-    - mnd
-    - modernize
-    - nakedret
     - nestif
     - paralleltest
-    - perfsprint
-    #- prealloc
-    #- predeclared
-    #- revive
-    #- tagalign
-    - testifylint
     - thelper
     - unparam
     - usestdlibvars
-    - usetesting
     - wastedassign
     - whitespace
   settings:

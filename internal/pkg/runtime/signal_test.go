@@ -162,7 +162,7 @@ func TestMaster_SignalForwarding(t *testing.T) {
 	cancel()
 	select {
 	case err := <-errCh:
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	case <-time.After(3 * time.Second):
 		t.Error("Master.Run did not exit")
 	}
@@ -181,7 +181,7 @@ func TestLogHelperProcess(_ *testing.T) {
 	for {
 		sig := <-sigCh
 		if sig == syscall.SIGTERM {
-			os.Exit(0) //nolint:revive
+			os.Exit(0) //nolint:revive // deep-exit is intentional: this is a subprocess entry point, not a regular test
 		}
 		_, _ = fmt.Fprintf(os.Stderr, "RECEIVED_SIGNAL_%v\n", sig)
 	}

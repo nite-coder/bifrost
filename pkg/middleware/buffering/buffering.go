@@ -23,8 +23,9 @@ type Middleware struct {
 
 // NewMiddleware creates a new BufferingMiddleware instance.
 func NewMiddleware(config Config) *Middleware {
+	const defaultMaxRequestBodySize = 4 * 1024 * 1024 // 4MB default
 	if config.MaxRequestBodySize <= 0 {
-		config.MaxRequestBodySize = 4 * 1024 * 1024 // 4MB default
+		config.MaxRequestBodySize = defaultMaxRequestBodySize
 	}
 	return &Middleware{
 		config: &config,

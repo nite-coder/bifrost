@@ -9,6 +9,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -73,7 +74,7 @@ func TestServices(t *testing.T) {
 	}()
 
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	bifrost := &Bifrost{
 		resolver: dnsResolver,
@@ -109,7 +110,7 @@ func TestServices(t *testing.T) {
 
 	// direct proxy
 	service, err := newService(bifrost, bifrost.options.Services["testService"])
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	hzCtx := app.NewContext(0)
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
 	service.ServeHTTP(ctx, hzCtx)
@@ -119,7 +120,7 @@ func TestServices(t *testing.T) {
 	serviceOpts := bifrost.options.Services["testService"]
 	serviceOpts.URL = "http://testUpstream"
 	service, err = newService(bifrost, serviceOpts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	hzCtx = app.NewContext(0)
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
@@ -128,7 +129,7 @@ func TestServices(t *testing.T) {
 
 	serviceOpts.URL = "http://test_upstream_no_port:8088"
 	service, err = newService(bifrost, serviceOpts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	hzCtx = app.NewContext(0)
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
 	service.ServeHTTP(ctx, hzCtx)
@@ -138,7 +139,7 @@ func TestServices(t *testing.T) {
 	serviceOpts = bifrost.options.Services["testService"]
 	serviceOpts.URL = "http://$var.test"
 	service, err = newService(bifrost, serviceOpts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	hzCtx = app.NewContext(0)
 	hzCtx.Set("test", "testUpstream")
@@ -156,7 +157,7 @@ func TestDynamicService(t *testing.T) {
 	}()
 
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	bifrost := &Bifrost{
 		resolver: dnsResolver,
@@ -190,7 +191,7 @@ func TestDynamicService(t *testing.T) {
 
 	ctx := context.Background()
 	services, err := loadServices(bifrost)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	dynamicService := newDynamicService("$var.myservice", services)
 
@@ -203,7 +204,7 @@ func TestDynamicService(t *testing.T) {
 
 func TestDynamicServiceMiddleware(t *testing.T) {
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	bifrost := &Bifrost{
 		resolver: dnsResolver,
@@ -231,7 +232,7 @@ func TestDynamicServiceMiddleware(t *testing.T) {
 
 	ctx := context.Background()
 	services, err := loadServices(bifrost)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	dynamicService := newDynamicService("$var.myservice", services)
 
@@ -272,7 +273,7 @@ func TestServiceNoUpstream(t *testing.T) {
 // TestServiceBalancerNil verifies that the service returns 503 when balancer is nil.
 func TestServiceBalancerNil(t *testing.T) {
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Create upstream with nil balancer
 	upstream := &Upstream{
@@ -307,7 +308,7 @@ func TestServiceBalancerNil(t *testing.T) {
 
 func TestServiceGetters(t *testing.T) {
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	bifrost := &Bifrost{
 		resolver: dnsResolver,

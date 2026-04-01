@@ -15,6 +15,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 )
@@ -40,7 +41,7 @@ func TestProxy_HTTP2_Basic(t *testing.T) {
 	defer ts.Close()
 
 	lst, err := net.Listen("tcp", "127.0.0.1:0")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	addr := lst.Addr().String()
 
 	r := server.New(server.WithListener(lst))
@@ -59,10 +60,10 @@ func TestProxy_HTTP2_Basic(t *testing.T) {
 		),
 	}
 	hClient, err := NewClient(clientOpts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	proxy, err := New(proxyOptions, hClient)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	r.GET("/backend", proxy.ServeHTTP)
 
@@ -81,7 +82,7 @@ func TestProxy_HTTP2_Basic(t *testing.T) {
 	req.SetRequestURI(fmt.Sprintf("http://%s/backend", addr))
 
 	err = c.Do(context.Background(), req, resp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode())
 	assert.Equal(t, backendResponse, string(resp.Body()))
 }
@@ -100,7 +101,7 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 	defer ts.Close()
 
 	lst, err := net.Listen("tcp", "127.0.0.1:0")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	addr := lst.Addr().String()
 
 	r := server.New(server.WithListener(lst))
@@ -119,10 +120,10 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 		),
 	}
 	hClient, err := NewClient(clientOpts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	proxy, err := New(proxyOptions, hClient)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	r.POST("/grpc", proxy.ServeHTTP)
 	go r.Spin()
@@ -150,7 +151,7 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 	req.SetRequestURI(fmt.Sprintf("http://%s/grpc", addr))
 
 	err = c.Do(context.Background(), req, resp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode())
 	assert.Equal(t, "application/grpc", resp.Header.Get("Content-Type"))
@@ -182,7 +183,7 @@ func TestH2UpstreamBaseline(t *testing.T) {
 	}
 
 	resp, err := httpClient.Get(url)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	assert.Equal(t, "HTTP/2.0", resp.Header.Get("X-Proto"))
@@ -205,7 +206,7 @@ func TestProxy_HTTP2_Timeout(t *testing.T) {
 		),
 	}
 	hClient, err := NewClient(clientOpts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	req := protocol.AcquireRequest()
 	resp := protocol.AcquireResponse()
@@ -215,5 +216,5 @@ func TestProxy_HTTP2_Timeout(t *testing.T) {
 	defer cancel()
 
 	err = hClient.Do(ctx, req, resp)
-	assert.Error(t, err)
+	require.Error(t, err)
 }

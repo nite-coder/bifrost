@@ -11,6 +11,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	redismod "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/network"
@@ -63,11 +64,12 @@ func startRedisCluster(t *testing.T) ([]string, map[string]string, func()) {
 	networkName := newNetwork.Name
 
 	// 2. Start 3 Redis nodes
-	var containers []testcontainers.Container
-	var nodeIPs []string
-	var hostAddrs []string
+	const numNodes = 3
+	containers := make([]testcontainers.Container, 0, numNodes)
+	nodeIPs := make([]string, 0, numNodes)
+	hostAddrs := make([]string, 0, numNodes)
 
-	for i := 0; i < 3; i++ {
+	for i := range numNodes {
 		req := testcontainers.ContainerRequest{
 			Image: "redis:7.4",
 			Cmd: []string{
@@ -116,7 +118,7 @@ func startRedisCluster(t *testing.T) ([]string, map[string]string, func()) {
 	// We run redis-cli --cluster create on the first node
 	clusterCmd := []string{"redis-cli", "-a", "bitnami", "--cluster", "create"}
 	for _, ip := range nodeIPs {
-		clusterCmd = append(clusterCmd, fmt.Sprintf("%s:6379", ip))
+		clusterCmd = append(clusterCmd, ip+":6379")
 	}
 	clusterCmd = append(clusterCmd, "--cluster-replicas", "0", "--cluster-yes")
 
@@ -182,7 +184,7 @@ func TestRedis(t *testing.T) {
 	ctx := context.Background()
 	client := redis.NewClient(&redis.Options{Addr: addr})
 	_, e := client.Ping(ctx).Result()
-	assert.NoError(t, e)
+	require.NoError(t, e)
 
 	options := Options{
 		Limit:      5,
@@ -235,7 +237,7 @@ func TestRedisCluster(t *testing.T) {
 		},
 	})
 	_, e := client.Ping(ctx).Result()
-	assert.NoError(t, e)
+	require.NoError(t, e)
 
 	options := Options{
 		Limit:      5,
@@ -271,7 +273,7 @@ func testLimiter(t *testing.T, limiter Limiter, options Options) {
 	t.Run("Different keys", func(t *testing.T) {
 		ctx := context.Background()
 
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			key := fmt.Sprintf("key_%d", i)
 			result := limiter.Allow(ctx, key)
 			if !result.Allow {
@@ -284,7 +286,7 @@ func testLimiter(t *testing.T, limiter Limiter, options Options) {
 		ctx := context.Background()
 
 		key := "reset_key"
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			result := limiter.Allow(ctx, key)
 			if !result.Allow {
 				t.Errorf("Request %d should be allowed", i+1)
@@ -310,7 +312,7 @@ func testLimiter(t *testing.T, limiter Limiter, options Options) {
 		var wg sync.WaitGroup
 
 		wg.Add(concurrentRequests)
-		for i := 0; i < concurrentRequests; i++ {
+		for range concurrentRequests {
 			go func() {
 				defer wg.Done()
 

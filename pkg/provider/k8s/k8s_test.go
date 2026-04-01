@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -137,7 +138,7 @@ func TestGetInstances(t *testing.T) {
 				tt.endpointSlice,
 				metav1.CreateOptions{},
 			)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// Create test pods if any
 			for _, pod := range tt.pods {
@@ -146,7 +147,7 @@ func TestGetInstances(t *testing.T) {
 					&pod,
 					metav1.CreateOptions{},
 				)
-				assert.NoError(t, e)
+				require.NoError(t, e)
 			}
 
 			k8sDiscovery := &Discovery{
@@ -155,11 +156,11 @@ func TestGetInstances(t *testing.T) {
 
 			instances, err := k8sDiscovery.GetInstances(context.Background(), tt.options)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Len(t, instances, tt.expectedCount)
 
 			// Verify instances are correct
@@ -297,7 +298,7 @@ func TestWatch(t *testing.T) {
 				tt.endpointSlice,
 				metav1.CreateOptions{},
 			)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			for _, pod := range tt.pods {
 				_, e := client.CoreV1().Pods(tt.options.Namespace).Create(
@@ -305,7 +306,7 @@ func TestWatch(t *testing.T) {
 					&pod,
 					metav1.CreateOptions{},
 				)
-				assert.NoError(t, e)
+				require.NoError(t, e)
 			}
 
 			k8sDiscovery := &Discovery{
@@ -316,7 +317,7 @@ func TestWatch(t *testing.T) {
 			defer cancel()
 
 			ch, err := k8sDiscovery.Watch(ctx, tt.options)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			for _, op := range tt.operations {
 				if obj, ok := op.obj.(*discoveryv1.EndpointSlice); ok {
@@ -325,7 +326,7 @@ func TestWatch(t *testing.T) {
 						obj,
 						metav1.CreateOptions{},
 					)
-					assert.NoError(t, e)
+					require.NoError(t, e)
 
 					select {
 					case instances := <-ch:

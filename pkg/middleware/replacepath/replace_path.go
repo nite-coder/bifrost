@@ -46,9 +46,11 @@ func NewMiddleware(newPath string) *Middleware {
 	}
 }
 
+const allocationFactor = 2
+
 func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	if len(m.directives) > 0 {
-		replacements := make([]string, 0, len(m.directives)*2)
+		replacements := make([]string, 0, len(m.directives)*allocationFactor)
 		for _, key := range m.directives {
 			val := variable.GetString(key, c)
 			replacements = append(replacements, key, val)

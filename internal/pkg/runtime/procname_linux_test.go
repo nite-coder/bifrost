@@ -3,10 +3,10 @@
 package runtime
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Note: Testing SetProcessName is challenging because:
@@ -23,13 +23,10 @@ func TestInitSetsProcessName(t *testing.T) {
 	// and that IsWorker() function correctly detects the worker role.
 
 	t.Run("worker role detection", func(t *testing.T) {
-		originalRole := os.Getenv(EnvBifrostRole)
-		defer func() { _ = os.Setenv(EnvBifrostRole, originalRole) }()
-
-		_ = os.Setenv(EnvBifrostRole, RoleWorker)
+		t.Setenv(EnvBifrostRole, RoleWorker)
 		assert.True(t, IsWorker())
 
-		_ = os.Setenv(EnvBifrostRole, "")
+		t.Setenv(EnvBifrostRole, "")
 		assert.False(t, IsWorker())
 	})
 
@@ -46,12 +43,12 @@ func TestSetProcessNameTruncation(t *testing.T) {
 	t.Run("name under 15 chars is unchanged", func(t *testing.T) {
 		// SetProcessName should not error for valid names
 		err := SetProcessName("short")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("name over 15 chars is handled without error", func(t *testing.T) {
 		// SetProcessName should not error for long names (they get truncated internally)
 		err := SetProcessName("this-is-a-very-long-process-name")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }

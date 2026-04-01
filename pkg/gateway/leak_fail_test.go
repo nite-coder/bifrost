@@ -21,7 +21,7 @@ func TestBifrostCumulativeLeak_FinalEvidence(t *testing.T) {
 		Discovery: config.DiscoveryOptions{Type: "dns", Name: "localhost"},
 	}
 
-	for i := 0; i < numServices; i++ {
+	for i := range numServices {
 		svcID := fmt.Sprintf("service_%d", i)
 		baseOptions.Services[svcID] = config.ServiceOptions{
 			ID:  svcID,
@@ -49,7 +49,7 @@ func TestBifrostCumulativeLeak_FinalEvidence(t *testing.T) {
 	t.Log("--- Evidence 2: Simulate Direct Proxy Reload Success ---")
 	directOptions := config.NewOptions()
 	directOptions.Servers["test_server"] = config.ServerOptions{Bind: "127.0.0.1:0"}
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		id := fmt.Sprintf("direct_%d", i)
 		directOptions.Services[id] = config.ServiceOptions{ID: id, URL: "http://localhost/"}
 	}

@@ -23,6 +23,12 @@ import (
 	"github.com/nite-coder/bifrost/pkg/log"
 )
 
+const (
+	defaultGracefulTimeout = 30 * time.Second
+	readyWaitTimeout       = 30 * time.Second
+	fdWaitTimeout          = 5 * time.Second
+)
+
 // Allow mocking for tests.
 var (
 	lookupUser  = user.Lookup
@@ -128,7 +134,7 @@ func NewMaster(opts *MasterOptions) *Master {
 		opts.Binary = os.Args[0]
 	}
 	if opts.GracefulTimeout <= 0 {
-		opts.GracefulTimeout = 30 * time.Second
+		opts.GracefulTimeout = defaultGracefulTimeout
 	}
 
 	return &Master{
@@ -190,7 +196,7 @@ func (m *Master) Run(ctx context.Context) error {
 	select {
 	case <-m.readyCh:
 		slog.Info("initial worker is ready")
-	case <-time.After(30 * time.Second):
+	case <-time.After(readyWaitTimeout):
 		slog.Warn("initial worker ready timeout, proceeding anyway")
 	}
 
@@ -572,7 +578,7 @@ func (m *Master) handleReload(ctx context.Context) error {
 			case data := <-m.listenerDataCh:
 				fds = data.fds
 				keys = data.keys
-			case <-time.After(5 * time.Second):
+			case <-time.After(fdWaitTimeout):
 				slog.Warn("timeout waiting for FDs from old worker")
 			}
 		}
@@ -594,7 +600,7 @@ func (m *Master) handleReload(ctx context.Context) error {
 	}
 
 	// Step 3: Wait for new worker ready signal (with timeout)
-	readyTimeout := 30 * time.Second
+	readyTimeout := readyWaitTimeout
 	select {
 	case <-m.readyCh:
 		slog.Info("new worker is ready", "newWorkerPID", newCmd.Process.Pid)

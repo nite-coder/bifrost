@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
@@ -19,9 +20,8 @@ func BenchmarkSaveByte(b *testing.B) {
 	c := app.NewContext(0)
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		b := []byte{}
 		copy(b, path)
 		c.Set(variable.HTTPRequestPath, b)
@@ -34,9 +34,8 @@ func BenchmarkSaveString(b *testing.B) {
 	c := app.NewContext(0)
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		p := string(path)
 		c.Set(variable.HTTPRequestPath, p)
 	}
@@ -71,7 +70,7 @@ func TestLoadMiddlewares(t *testing.T) {
 		}
 
 		_, err := loadMiddlewares(middlewareOptions)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "middleware ID cannot be empty")
 	})
 
@@ -83,7 +82,7 @@ func TestLoadMiddlewares(t *testing.T) {
 		}
 
 		_, err := loadMiddlewares(middlewareOptions)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "middleware type cannot be empty")
 	})
 
@@ -95,7 +94,7 @@ func TestLoadMiddlewares(t *testing.T) {
 		}
 
 		_, err := loadMiddlewares(middlewareOptions)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "was not found")
 	})
 
@@ -107,7 +106,7 @@ func TestLoadMiddlewares(t *testing.T) {
 		}
 
 		middlewares, err := loadMiddlewares(middlewareOptions)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, middlewares, 1)
 		assert.NotNil(t, middlewares["cors_middleware"])
 	})

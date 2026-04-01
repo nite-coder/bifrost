@@ -16,6 +16,12 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cache/v2"
 )
 
+const (
+	defaultDNSCacheTTL      = 5 * time.Minute
+	minHostsFields          = 2
+	defaultDNSVerifyTimeout = 5 * time.Second
+)
+
 // ErrNotFound is returned when no DNS records are found.
 var ErrNotFound = errors.New("no records found")
 
@@ -83,7 +89,7 @@ func NewResolver(option Options) (*Resolver, error) {
 		options:    &option,
 		client:     client,
 		hostsCache: make(map[string][]string),
-		dnsCache:   cache.NewCache[string, []string](5 * time.Minute),
+		dnsCache:   cache.NewCache[string, []string](defaultDNSCacheTTL),
 	}
 
 	err := r.loadHostsFile()
@@ -260,7 +266,7 @@ func (r *Resolver) loadHostsFile() error {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
-		if len(fields) < 2 {
+		if len(fields) < minHostsFields {
 			continue
 		}
 		ip := net.ParseIP(fields[0])
@@ -284,7 +290,7 @@ func ValidateDNSServer(servers []string) ([]string, error) {
 	m.RecursionDesired = false
 
 	c := new(dns.Client)
-	c.Timeout = 5 * time.Second
+	c.Timeout = defaultDNSVerifyTimeout
 
 	result := make([]string, 0)
 	for _, server := range servers {

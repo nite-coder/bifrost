@@ -9,12 +9,14 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const maxProcessNameLen = 15
+
 // SetProcessName sets the process name visible in /proc/[pid]/comm.
 // This name appears in tools like top, htop, and ps -o comm.
 // Maximum 15 characters (Linux kernel limitation for PR_SET_NAME).
 func SetProcessName(name string) error {
-	if len(name) > 15 {
-		name = name[:15]
+	if len(name) > maxProcessNameLen {
+		name = name[:maxProcessNameLen]
 	}
 	bytes := append([]byte(name), 0)
 	/* #nosec G103 */

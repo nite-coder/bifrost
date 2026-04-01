@@ -263,14 +263,7 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 
 func checkRegexpRoute(setting routeSetting, method string, path string) bool {
 	if len(setting.route.Methods) > 0 {
-		isMethodFound := false
-
-		for _, m := range setting.route.Methods {
-			if m == method {
-				isMethodFound = true
-				break
-			}
-		}
+		isMethodFound := slices.Contains(setting.route.Methods, method)
 
 		if !isMethodFound {
 			return false

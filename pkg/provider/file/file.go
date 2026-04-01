@@ -127,11 +127,11 @@ func (p *Provider) Watch() error {
 		go safety.Go(context.Background(), func() {
 			defer watcher.Close()
 			isUpdate := false
-			refresh := 900 * time.Millisecond
-			timer := time.NewTimer(refresh)
+			const defaultRefreshInterval = 900 * time.Millisecond
+			timer := time.NewTimer(defaultRefreshInterval)
 			defer timer.Stop()
 			for {
-				timer.Reset(refresh)
+				timer.Reset(defaultRefreshInterval)
 				select {
 				case event, ok := <-watcher.Events:
 					if !ok {

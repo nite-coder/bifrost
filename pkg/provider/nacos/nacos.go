@@ -56,7 +56,7 @@ func NewProvider(options Options) (*Provider, error) {
 	}
 	timeout := options.Timeout.Milliseconds()
 	if timeout <= 0 {
-		clientOptions = append(clientOptions, constant.WithTimeoutMs(10000))
+		clientOptions = append(clientOptions, constant.WithTimeoutMs(defaultNacosTimeoutMS))
 	} else {
 		clientOptions = append(clientOptions, constant.WithTimeoutMs(uint64(timeout)))
 	}
@@ -84,7 +84,7 @@ func NewProvider(options Options) (*Provider, error) {
 		ipaddr := uri.Hostname()
 		port, _ := cast.ToUint64(uri.Port())
 		if port == 0 {
-			port = uint64(8848)
+			port = uint64(defaultNacosPort)
 		}
 		serverConfigs = append(serverConfigs, *constant.NewServerConfig(
 			ipaddr,

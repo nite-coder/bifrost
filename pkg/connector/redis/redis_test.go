@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 )
@@ -123,7 +124,7 @@ func TestInitializeSingleRedis(t *testing.T) {
 	}
 
 	err := Initialize(context.Background(), options)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	client, ok := Get("test")
 	assert.True(t, ok)
@@ -149,7 +150,7 @@ func TestInitializeMultiRedis(t *testing.T) {
 	}
 
 	err := Initialize(context.Background(), options)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	client, ok := Get("test")
 	assert.True(t, ok)

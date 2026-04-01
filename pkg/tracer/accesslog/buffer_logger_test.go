@@ -14,11 +14,10 @@ import (
 
 func TestBufferedLoggerReopen(t *testing.T) {
 	// Create a temporary log file for testing
-	tmpFile, err := os.CreateTemp("", "test-log-*.log")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "test-log-*.log")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name()) // Clean up the temp file after the test
 
 	// Configure the BufferedLogger
 	opts := config.AccessLogOptions{

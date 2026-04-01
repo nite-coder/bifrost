@@ -46,8 +46,8 @@ func NewMiddleware(prefixs []string) *Middleware {
 
 func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	for _, prefix := range m.prefixes {
-		if bytes.HasPrefix(c.Request.Path(), prefix) {
-			newPath := bytes.TrimPrefix(c.Request.Path(), prefix)
+		if after, ok := bytes.CutPrefix(c.Request.Path(), prefix); ok {
+			newPath := after
 			c.Request.URI().SetPathBytes(newPath)
 			break
 		}

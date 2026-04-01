@@ -10,6 +10,7 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/v2/vo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
@@ -196,7 +197,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 			d, err := NewNacosServiceDiscovery(Options{
 				Endpoints: []string{"http://127.0.0.1:8848"},
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// d.client is already set correctly by our mock constructor
 			// d.client = mockClient
@@ -213,7 +214,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 				assert.Equal(t, "123", id)
 			}
 
-			assert.Equal(t, tt.want, len(got))
+			assert.Len(t, got, tt.want)
 		})
 	}
 }
@@ -270,7 +271,7 @@ func TestNacosServiceDiscovery_Watch(t *testing.T) {
 			d, err := NewNacosServiceDiscovery(Options{
 				Endpoints: []string{"http://127.0.0.1:8848"},
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// d.client = mockClient
 

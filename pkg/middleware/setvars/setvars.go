@@ -59,9 +59,10 @@ func NewMiddleware(options []*Options) *Middlware {
 }
 
 func (m *Middlware) ServeHTTP(_ context.Context, c *app.RequestContext) {
+	const allocationFactor = 2
 	for _, varinfo := range m.options {
 		if len(varinfo.directives) > 0 {
-			replacements := make([]string, 0, len(varinfo.directives)*2)
+			replacements := make([]string, 0, len(varinfo.directives)*allocationFactor)
 
 			for _, key := range varinfo.directives {
 				val := variable.GetString(key, c)

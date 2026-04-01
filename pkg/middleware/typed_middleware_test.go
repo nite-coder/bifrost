@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type TestConfig struct {
@@ -21,7 +22,7 @@ func TestRegisterTyped(t *testing.T) {
 			c.Set("retries", cfg.MaxRetries)
 		}, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// simulate gateway factory usage
 	factory := Factory("typed_test_middleware")
@@ -34,7 +35,7 @@ func TestRegisterTyped(t *testing.T) {
 	}
 
 	handler, err := factory(params)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// execute handler
 	ctx := context.Background()
@@ -54,17 +55,17 @@ func TestRegisterTyped_DefaultValues(t *testing.T) {
 			c.Set("retries", cfg.MaxRetries)
 		}, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	factory := Factory("typed_test_default")
 
 	// test with empty params
 	handler, err := factory(nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	c := app.NewContext(0)
 	handler(context.Background(), c)
 
-	assert.Equal(t, "", c.GetString("prefix"))
+	assert.Empty(t, c.GetString("prefix"))
 	assert.Equal(t, 0, c.GetInt("retries"))
 }

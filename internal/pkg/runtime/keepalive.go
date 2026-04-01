@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+const (
+	defaultInitialBackoff       = 1 * time.Second
+	defaultMaxBackoff           = 32 * time.Second
+	defaultMaxRestartsPerMinute = 5
+)
+
 // ErrRestartLimitExceeded is returned when the maximum restart rate is exceeded.
 var ErrRestartLimitExceeded = errors.New("restart limit exceeded: too many restarts in the last minute")
 
@@ -22,9 +28,9 @@ type KeepAliveOptions struct {
 // DefaultKeepAliveOptions returns the default KeepAlive configuration.
 func DefaultKeepAliveOptions() *KeepAliveOptions {
 	return &KeepAliveOptions{
-		InitialBackoff:       1 * time.Second,
-		MaxBackoff:           32 * time.Second,
-		MaxRestartsPerMinute: 5,
+		InitialBackoff:       defaultInitialBackoff,
+		MaxBackoff:           defaultMaxBackoff,
+		MaxRestartsPerMinute: defaultMaxRestartsPerMinute,
 	}
 }
 
@@ -43,13 +49,13 @@ func NewKeepAlive(opts *KeepAliveOptions) *KeepAlive {
 		opts = DefaultKeepAliveOptions()
 	}
 	if opts.InitialBackoff <= 0 {
-		opts.InitialBackoff = 1 * time.Second
+		opts.InitialBackoff = defaultInitialBackoff
 	}
 	if opts.MaxBackoff <= 0 {
-		opts.MaxBackoff = 32 * time.Second
+		opts.MaxBackoff = defaultMaxBackoff
 	}
 	if opts.MaxRestartsPerMinute <= 0 {
-		opts.MaxRestartsPerMinute = 5
+		opts.MaxRestartsPerMinute = defaultMaxRestartsPerMinute
 	}
 
 	return &KeepAlive{

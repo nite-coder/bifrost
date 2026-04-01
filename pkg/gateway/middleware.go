@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"runtime/debug"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -55,7 +56,7 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 				slog.String("error", err.Error()),
 				slog.String("stack", stackTrace),
 			)
-			c.SetStatusCode(500)
+			c.SetStatusCode(http.StatusInternalServerError)
 			c.Abort()
 		}
 	}()

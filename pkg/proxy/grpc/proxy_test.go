@@ -101,7 +101,7 @@ func TestGRPCProxy(t *testing.T) {
 		Weight:           1,
 	}
 	proxy, err := New(proxyOptions)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	httpServer := server.New(
 		server.WithH2C(true),
@@ -169,7 +169,7 @@ func TestGRPCProxy(t *testing.T) {
 	conn, e := grpc.NewClient("127.0.0.1:8001",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
-	assert.NoError(t, e)
+	require.NoError(t, e)
 	defer conn.Close()
 
 	t.Run("success case", func(t *testing.T) {
@@ -235,7 +235,7 @@ func TestProxyTags(t *testing.T) {
 		},
 	}
 	proxy, err := New(proxyOptions)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	val, found := proxy.Tag("id")
 	assert.True(t, found)
@@ -307,8 +307,8 @@ func TestGRPCProxy_ErrorStatusPlacement(t *testing.T) {
 
 	// Assert
 	// grpc-status should NOT be in the regular headers
-	assert.Equal(t, "", string(c.Response.Header.Peek("grpc-status")), "grpc-status should not be in headers")
-	assert.Equal(t, "", string(c.Response.Header.Peek("grpc-message")), "grpc-message should not be in headers")
+	assert.Empty(t, string(c.Response.Header.Peek("grpc-status")), "grpc-status should not be in headers")
+	assert.Empty(t, string(c.Response.Header.Peek("grpc-message")), "grpc-message should not be in headers")
 
 	// grpc-status SHOULD be in the trailers
 	trailers := c.Response.Header.Trailer()

@@ -3,10 +3,10 @@ package initialize
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInit(t *testing.T) {
 	err := Bifrost()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }

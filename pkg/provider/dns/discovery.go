@@ -48,8 +48,9 @@ func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*Discovery, 
 	if len(newServers) == 0 {
 		return nil, errors.New("no valid DNS servers found")
 	}
+	const defaultDNSTTL = 30 * time.Second
 	if valid.Seconds() <= 0 {
-		valid = 30 * time.Second
+		valid = defaultDNSTTL
 	}
 	client := new(dns.Client)
 	d := &Discovery{

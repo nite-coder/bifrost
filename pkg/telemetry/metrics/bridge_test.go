@@ -40,7 +40,7 @@ func TestBridge_Smoke(t *testing.T) {
 	// 4. Force collection
 	var rm metricdata.ResourceMetrics
 	err = reader.Collect(context.Background(), &rm)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// 5. Assertion verification: Check if OTel's data structure contains the recorded metrics
 	found := false
@@ -51,7 +51,7 @@ func TestBridge_Smoke(t *testing.T) {
 				// Verify if numerical values are correctly converted
 				data, ok := m.Data.(metricdata.Sum[float64])
 				assert.True(t, ok)
-				assert.Equal(t, float64(10), data.DataPoints[0].Value)
+				assert.InDelta(t, float64(10), data.DataPoints[0].Value, 0.0001)
 			}
 		}
 	}

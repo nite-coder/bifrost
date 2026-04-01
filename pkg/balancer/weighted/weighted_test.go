@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -53,9 +54,9 @@ func TestWeighted(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
-		for i := 0; i < 6000; i++ {
+		for range 6000 {
 			proxy, err := b.Select(context.Background(), nil)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.NotNil(t, proxy)
 			hits[proxy.Target()]++
 		}
@@ -70,9 +71,9 @@ func TestWeighted(t *testing.T) {
 		_ = proxy1.AddFailedCount(100)
 
 		hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
-		for i := 0; i < 6000; i++ {
+		for range 6000 {
 			proxy, err := b.Select(context.Background(), nil)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.NotNil(t, proxy)
 			hits[proxy.Target()]++
 		}
@@ -87,22 +88,22 @@ func TestWeighted(t *testing.T) {
 		_ = proxy2.AddFailedCount(1000)
 		_ = proxy3.AddFailedCount(1000)
 
-		for i := 0; i < 6000; i++ {
+		for range 6000 {
 			proxy, err := b.Select(context.Background(), nil)
-			assert.ErrorIs(t, err, balancer.ErrNotAvailable)
+			require.ErrorIs(t, err, balancer.ErrNotAvailable)
 			assert.Nil(t, proxy)
 		}
 	})
 
 	t.Run("proxies getter", func(t *testing.T) {
-		assert.Equal(t, 3, len(b.Proxies()))
+		assert.Len(t, b.Proxies(), 3)
 	})
 
 	t.Run("nil proxies", func(t *testing.T) {
 		b2, _ := NewBalancer(nil)
 		p, err := b2.Select(context.Background(), nil)
-		assert.ErrorIs(t, err, balancer.ErrNotAvailable)
-		assert.Nil(t, p)
+		require.ErrorIs(t, err, balancer.ErrNotAvailable)
+		require.Nil(t, p)
 	})
 
 	t.Run("single proxy failed", func(t *testing.T) {
@@ -118,8 +119,8 @@ func TestWeighted(t *testing.T) {
 
 		bSingle, _ := NewBalancer([]proxy.Proxy{p1})
 		p, err := bSingle.Select(context.Background(), nil)
-		assert.ErrorIs(t, err, balancer.ErrNotAvailable)
-		assert.Nil(t, p)
+		require.ErrorIs(t, err, balancer.ErrNotAvailable)
+		require.Nil(t, p)
 	})
 
 	t.Run("registration", func(t *testing.T) {
@@ -131,11 +132,11 @@ func TestWeighted(t *testing.T) {
 		factory := balancer.Factory("weighted")
 		assert.NotNil(t, factory)
 		rr, err := factory([]proxy.Proxy{p1}, nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, rr)
 
 		p, err := rr.Select(context.Background(), nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "http://backend1", p.Target())
 	})
 
@@ -153,10 +154,10 @@ func TestWeighted(t *testing.T) {
 		p2, _ := httpproxy.New(p2Options, nil)
 
 		bLarge, err := NewBalancer([]proxy.Proxy{p1, p2})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		p, err := bLarge.Select(context.Background(), nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, p)
 
 		assert.GreaterOrEqual(t, bLarge.totalWeight, uint32(math.MaxInt32))

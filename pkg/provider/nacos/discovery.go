@@ -16,6 +16,11 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
+const (
+	defaultNacosPort      = 8848
+	defaultNacosTimeoutMS = 10000
+)
+
 var newNamingClientFunc = clients.NewNamingClient
 
 // Discovery implements service discovery using Nacos.
@@ -59,7 +64,7 @@ func NewNacosServiceDiscovery(options Options) (*Discovery, error) {
 		port, _ := cast.ToUint64(uri.Port())
 
 		if port == 0 {
-			port = uint64(8848)
+			port = uint64(defaultNacosPort)
 		}
 
 		serverConfigs = append(serverConfigs, *constant.NewServerConfig(
@@ -72,7 +77,7 @@ func NewNacosServiceDiscovery(options Options) (*Discovery, error) {
 	var timeoutMS uint64
 	timeout := options.Timeout.Milliseconds()
 	if timeout <= 0 {
-		timeoutMS = 10000
+		timeoutMS = defaultNacosTimeoutMS
 	} else {
 		timeoutMS = uint64(timeout)
 	}

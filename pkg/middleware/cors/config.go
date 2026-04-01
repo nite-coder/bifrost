@@ -160,11 +160,12 @@ func (c *Config) parseWildcardRules() [][]string {
 
 // DefaultConfig returns a generic default configuration mapped to localhost.
 func DefaultConfig() Config {
+	const defaultMaxAge = 12 * time.Hour
 	return Config{
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type"},
 		AllowCredentials: false,
-		MaxAge:           12 * time.Hour,
+		MaxAge:           defaultMaxAge,
 	}
 }
 

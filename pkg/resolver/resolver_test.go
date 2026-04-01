@@ -17,8 +17,8 @@ func TestLocalNameServer(t *testing.T) {
 	if err != nil {
 		t.Skip("skipping test due to DNS validation failure: " + err.Error())
 	}
-	assert.NoError(t, err)
-	assert.Equal(t, len(validServers), 1)
+	require.NoError(t, err)
+	assert.Len(t, validServers, 1)
 }
 
 func TestQueryHost(t *testing.T) {
@@ -31,15 +31,15 @@ func TestQueryHost(t *testing.T) {
 			t.Logf("lookup failed (expected in offline env): %v", err)
 			return // stop here if lookup fails, don't fail test
 		}
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(result), 1)
 
 		result, err = r.Lookup(context.Background(), "192.168.1.1")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(result), 1)
 
 		result, err = r.Lookup(context.Background(), "127.0.0.1")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(result), 1)
 
 		_, err = r.Lookup(context.Background(), "www.xxx.xxxssssssss")
@@ -59,7 +59,7 @@ func TestQueryHost(t *testing.T) {
 			t.Logf("lookup failed (expected in offline env): %v", err)
 			return
 		}
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		t.Log(result)
 		assert.GreaterOrEqual(t, len(result), 1)
 
@@ -75,7 +75,7 @@ func TestQueryHost(t *testing.T) {
 		require.NoError(t, err)
 
 		result, err := r.Lookup(context.Background(), "test-cname-cloaking.testpanw.com")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(result), 1)
 	})
 }

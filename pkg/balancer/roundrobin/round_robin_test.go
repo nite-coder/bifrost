@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -25,7 +26,7 @@ func TestRoundRobin(t *testing.T) {
 	}
 	proxy1, _ := httpproxy.New(proxyOptions1, nil)
 	err := proxy1.AddFailedCount(1)
-	assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
+	require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
 	assert.Eventually(t, func() bool {
 		return proxy1.IsAvailable()
 	}, 2*time.Second, 100*time.Millisecond, "proxy1 should be available after fail timeout")
@@ -61,32 +62,32 @@ func TestRoundRobin(t *testing.T) {
 
 		for _, e := range expected {
 			p, e1 := b.Select(context.Background(), nil)
-			assert.NotNil(t, p)
-			assert.NoError(t, e1)
+			require.NotNil(t, p)
+			require.NoError(t, e1)
 			assert.Equal(t, e, p.Target())
 		}
 	})
 
 	t.Run("one proxy failed", func(t *testing.T) {
 		err = proxy2.AddFailedCount(1) // proxy 2 is failed
-		assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
+		require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
 		err = proxy3.AddFailedCount(1000) // proxy should be available because it turns off max_fail check
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		expected := []string{"http://backend1", "http://backend3"}
 		for _, e := range expected {
 			p, e1 := b.Select(context.Background(), nil)
-			assert.NoError(t, e1)
-			assert.NotNil(t, p)
+			require.NoError(t, e1)
+			require.NotNil(t, p)
 			assert.Equal(t, e, p.Target())
 		}
 	})
 
 	t.Run("no live upstream", func(t *testing.T) {
 		err = proxy1.AddFailedCount(100)
-		assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
+		require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
 		err = proxy2.AddFailedCount(100)
-		assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
+		require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
 
 		proxyOptions3 := httpproxy.Options{
 			Target:      "http://backend3",
@@ -97,26 +98,26 @@ func TestRoundRobin(t *testing.T) {
 		}
 		proxy3, _ := httpproxy.New(proxyOptions3, nil)
 		err = proxy3.AddFailedCount(100)
-		assert.ErrorIs(t, err, proxy.ErrMaxFailedCount)
+		require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
 
 		proxies := []proxy.Proxy{proxy1, proxy2, proxy3}
 		b.proxies = proxies
 
-		for i := 0; i < 6000; i++ {
+		for range 6000 {
 			p, e := b.Select(context.Background(), nil)
-			assert.ErrorIs(t, e, balancer.ErrNotAvailable)
-			assert.Nil(t, p)
+			require.ErrorIs(t, e, balancer.ErrNotAvailable)
+			require.Nil(t, p)
 		}
 	})
 
 	t.Run("proxies getter", func(t *testing.T) {
-		assert.Equal(t, 3, len(b.Proxies()))
+		assert.Len(t, b.Proxies(), 3)
 	})
 
 	t.Run("nil proxies", func(t *testing.T) {
 		b2 := NewBalancer(nil)
 		p, e := b2.Select(context.Background(), nil)
-		assert.ErrorIs(t, e, balancer.ErrNotAvailable)
+		require.ErrorIs(t, e, balancer.ErrNotAvailable)
 		assert.Nil(t, p)
 	})
 
@@ -133,7 +134,7 @@ func TestRoundRobin(t *testing.T) {
 
 		bSingle := NewBalancer([]proxy.Proxy{p1})
 		p, e := bSingle.Select(context.Background(), nil)
-		assert.ErrorIs(t, e, balancer.ErrNotAvailable)
+		require.ErrorIs(t, e, balancer.ErrNotAvailable)
 		assert.Nil(t, p)
 	})
 
@@ -146,11 +147,11 @@ func TestRoundRobin(t *testing.T) {
 		factory := balancer.Factory("round_robin")
 		assert.NotNil(t, factory)
 		rr, err := factory([]proxy.Proxy{p1}, nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, rr)
 
 		p, e := rr.Select(context.Background(), nil)
-		assert.NoError(t, e)
+		require.NoError(t, e)
 		assert.Equal(t, "http://backend1", p.Target())
 	})
 
@@ -171,19 +172,19 @@ func TestRoundRobin(t *testing.T) {
 		b.counter.Store(math.MaxUint64 - 1)
 
 		p, e := b.Select(context.Background(), nil)
-		assert.NoError(t, e)
+		require.NoError(t, e)
 		assert.Equal(t, "http://backend1", p.Target())
 		assert.Equal(t, uint64(math.MaxUint64), b.counter.Load())
 
 		// trigger natural wrap-around to 0
 		p, e = b.Select(context.Background(), nil)
-		assert.NoError(t, e)
+		require.NoError(t, e)
 		assert.Equal(t, "http://backend2", p.Target()) // index (0-1)%2 = MaxUint64%2 = 1 -> backend2
 		assert.Equal(t, uint64(0), b.counter.Load())
 
 		// next increment to 1
 		p, e = b.Select(context.Background(), nil)
-		assert.NoError(t, e)
+		require.NoError(t, e)
 		assert.Equal(t, "http://backend1", p.Target()) // index (1-1)%2 = 0 -> backend1
 		assert.Equal(t, uint64(1), b.counter.Load())
 	})

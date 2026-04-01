@@ -15,6 +15,11 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+const (
+	allocationFactor       = 2
+	defaultLimitStatusCode = 429
+)
+
 // Limiter defines the interface for different rate limiting strategies.
 type Limiter interface {
 	Allow(ctx context.Context, key string) *AllowResult
@@ -65,7 +70,7 @@ type RateLimitingMiddleware struct {
 // NewMiddleware creates a new RateLimitingMiddleware instance.
 func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 	if options.RejectedHTTPStatusCode == 0 {
-		options.RejectedHTTPStatusCode = 429
+		options.RejectedHTTPStatusCode = defaultLimitStatusCode
 	}
 	if options.WindowSize == 0 {
 		return nil, errors.New("window_size must be greater than 0")
@@ -145,7 +150,7 @@ func buildReplacer(directives []string, c *app.RequestContext) []string {
 	if len(directives) == 0 {
 		return nil
 	}
-	replacements := make([]string, 0, len(directives)*2)
+	replacements := make([]string, 0, len(directives)*allocationFactor)
 	for _, key := range directives {
 		val := variable.GetString(key, c)
 		replacements = append(replacements, key, val)

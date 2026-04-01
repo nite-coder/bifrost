@@ -30,7 +30,7 @@ func TestNewProvider_WithPrometheusEnabled(t *testing.T) {
 	require.NotNil(t, provider.MeterProvider())
 
 	// Verify Prometheus options are stored correctly
-	assert.Equal(t, true, provider.PrometheusOptions().Enabled)
+	assert.True(t, provider.PrometheusOptions().Enabled)
 	assert.Equal(t, "api", provider.PrometheusOptions().ServerID)
 	assert.Equal(t, "/metrics", provider.PrometheusOptions().Path)
 
@@ -39,14 +39,14 @@ func TestNewProvider_WithPrometheusEnabled(t *testing.T) {
 
 	// Shutdown should not error
 	err = provider.Shutdown(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestNewProvider_WithNothingEnabled(t *testing.T) {
 	opts := config.MetricsOptions{}
 
 	provider, err := metrics.NewProvider(context.Background(), opts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, provider)
 	assert.Nil(t, provider.MeterProvider())
 }
@@ -59,7 +59,7 @@ func TestProviderNilSafety(t *testing.T) {
 
 	// Shutdown should not error for nil provider
 	err := provider.Shutdown(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// PrometheusOptions should return empty struct
 	opts := provider.PrometheusOptions()
@@ -83,7 +83,7 @@ func TestNewProvider_WithCustomBuckets(t *testing.T) {
 	require.NotNil(t, provider)
 
 	err = provider.Shutdown(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // Note: OTLP tests are typically integration tests or skipped in unit tests
@@ -110,7 +110,7 @@ func TestNewProvider_OTLPCreation_GRPC(t *testing.T) {
 	require.NotNil(t, provider)
 
 	err = provider.Shutdown(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestNewProvider_OTLPCreation_HTTP(t *testing.T) {
@@ -132,7 +132,7 @@ func TestNewProvider_OTLPCreation_HTTP(t *testing.T) {
 	require.NotNil(t, provider)
 
 	err = provider.Shutdown(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestNewProvider_BothExportersEnabled(t *testing.T) {
@@ -162,7 +162,7 @@ func TestNewProvider_BothExportersEnabled(t *testing.T) {
 	assert.NotNil(t, provider.MetricsHandler())
 
 	err = provider.Shutdown(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func startOTelCollector(t *testing.T) (grpcEndpoint string, httpEndpoint string, cleanup func()) {

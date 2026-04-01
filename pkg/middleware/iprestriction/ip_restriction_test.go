@@ -7,6 +7,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
@@ -122,7 +123,7 @@ func TestIPRestriction(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			middleware, err := NewMiddleware(tt.options)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			ctx := context.Background()
 			hzctx := app.RequestContext{
@@ -145,7 +146,7 @@ func TestIPRestriction(t *testing.T) {
 			assert.Equal(t, tt.wantAborted, hzctx.IsAborted())
 			assert.Equal(t, tt.wantContinue, continueExec)
 			if tt.wantContentLen > 0 {
-				assert.Equal(t, tt.wantContentLen, len(hzctx.Response.Body()))
+				assert.Len(t, hzctx.Response.Body(), tt.wantContentLen)
 			}
 		})
 	}
@@ -163,5 +164,5 @@ func TestNewMiddleware(t *testing.T) {
 	}
 
 	_, err := h(params)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }

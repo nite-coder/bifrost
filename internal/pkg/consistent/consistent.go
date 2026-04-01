@@ -85,7 +85,7 @@ func (c *Consistent) AddWithReplicas(nodeID string, replicas int) error {
 	}
 
 	// Add virtual nodes for this physical node
-	for i := 0; i < replicas; i++ {
+	for i := range replicas {
 		// Virtual node IDs are hashed to distribute them along the ring
 		// Using idx+nodeID pattern for better distribution (same as stathat/consistent)
 		virtualNodeKey := strconv.Itoa(i) + nodeID
@@ -213,7 +213,7 @@ func (c *Consistent) removeUnsafe(nodeID string) {
 	replicas := c.nodes[nodeID]
 
 	// Remove all virtual nodes for this physical node
-	for i := 0; i < replicas; i++ {
+	for i := range replicas {
 		virtualNodeKey := strconv.Itoa(i) + nodeID
 		hash := c.hashFunc([]byte(virtualNodeKey))
 		delete(c.ring, hash)

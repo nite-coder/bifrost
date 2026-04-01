@@ -11,6 +11,8 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+const allocationFactor = 2
+
 // Config defines the configuration for the add_prefix middleware.
 type Config struct {
 	Prefix string `mapstructure:"prefix"`
@@ -46,7 +48,7 @@ func NewMiddleware(prefix string) *Middleware {
 
 func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	if len(m.directives) > 0 {
-		replacements := make([]string, 0, len(m.directives)*2)
+		replacements := make([]string, 0, len(m.directives)*allocationFactor)
 		for _, key := range m.directives {
 			val := variable.GetString(key, c)
 			replacements = append(replacements, key, val)

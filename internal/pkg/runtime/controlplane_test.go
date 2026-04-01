@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"context"
 	"net"
 	"os"
 	"path/filepath"
@@ -14,11 +13,7 @@ import (
 )
 
 func TempSocketPath(t *testing.T, name string) string {
-	dir, err := os.MkdirTemp(os.TempDir(), "bifrost-*")
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		_ = os.RemoveAll(dir)
-	})
+	dir := t.TempDir()
 	return filepath.Join(dir, name)
 }
 
@@ -50,7 +45,7 @@ func TestControlPlane_Listen(t *testing.T) {
 
 		// Verify file exists
 		_, err = os.Stat(path)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Verify we can connect
 		conn, err := net.Dial("unix", path)
@@ -91,8 +86,7 @@ func TestControlPlane_Connection(t *testing.T) {
 		require.NoError(t, cp.Listen())
 		defer cp.Close()
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 
 		// Accept connections in background
 		go func() {
@@ -150,8 +144,7 @@ func TestControlPlane_SendReceiveFDs(t *testing.T) {
 	require.NoError(t, cp.Listen())
 	defer cp.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	go func() {
 		_ = cp.Accept(ctx)
@@ -179,7 +172,7 @@ func TestControlPlane_SendReceiveFDs(t *testing.T) {
 	case receivedFDs := <-fdCh:
 		require.Len(t, receivedFDs, 1)
 		_, err := receivedFDs[0].Stat()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		_ = receivedFDs[0].Close()
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for FDs")
@@ -202,8 +195,7 @@ func TestWorkerControlPlane_Start(t *testing.T) {
 	require.NoError(t, cp.Listen())
 	defer cp.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	go func() {
 		_ = cp.Accept(ctx)
@@ -260,7 +252,7 @@ func TestWorkerControlPlane_Start(t *testing.T) {
 	// Note: Start loop returns nil when shutdown message is received
 	select {
 	case err := <-errCh:
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	case <-time.After(1 * time.Second):
 		t.Fatal("Start loop did not exit")
 	}

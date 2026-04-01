@@ -26,6 +26,8 @@ const (
 	labelMethod       = "method"
 	labelPath         = "path"
 	unknownLabelValue = "unknown"
+	crsScoreRuleID    = 949110
+	numWafLabels      = 5
 )
 
 // Middleware is a middleware that provides Web Application Firewall (WAF) capabilities using Coraza.
@@ -177,10 +179,10 @@ func (m *Middleware) log(ctx context.Context, c *app.RequestContext, tx types.Tr
 					"data", rule.Data(),
 				)
 				// rule 949110 It is only used to calculate the final score, so it does not count as an attack.
-				if ruleID == 949110 {
+				if ruleID == crsScoreRuleID {
 					continue
 				}
-				labels := make(prom.Labels, 5)
+				labels := make(prom.Labels, numWafLabels)
 				labels[labelServerID] = defaultValIfEmpty(serverID, unknownLabelValue)
 				labels[labelRuleID] = defaultValIfEmpty(ruleIDStr, unknownLabelValue)
 				labels[labelClientIP] = defaultValIfEmpty(rule.ClientIPAddress(), unknownLabelValue)

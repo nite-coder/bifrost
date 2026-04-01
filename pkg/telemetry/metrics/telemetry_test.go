@@ -12,6 +12,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -25,7 +26,7 @@ func TestTracer(t *testing.T) {
 		},
 	}
 	provider, err := NewProvider(context.Background(), opts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 
 	promOpts := []Option{}
@@ -52,7 +53,7 @@ func TestTracer(t *testing.T) {
 	// Record a custom OTel metric
 	meter := provider.MeterProvider().Meter("test-meter")
 	counter, err := meter.Int64Counter("otel_custom_counter")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	counter.Add(context.Background(), 5)
 
 	go h.Spin()
@@ -71,14 +72,14 @@ func TestTracer(t *testing.T) {
 		return false
 	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		resp, e := http.Get("http://127.0.0.1:6666/test_get")
-		assert.NoError(t, e)
+		require.NoError(t, e)
 		if resp != nil {
 			_ = resp.Body.Close()
 		}
 		resp, e = http.Post("http://127.0.0.1:6666/test_post", "application/json", strings.NewReader(""))
-		assert.NoError(t, e)
+		require.NoError(t, e)
 		if resp != nil {
 			_ = resp.Body.Close()
 		}
@@ -86,14 +87,14 @@ func TestTracer(t *testing.T) {
 
 	metricsRes, e := http.Get("http://127.0.0.1:6666/metrics")
 
-	assert.NoError(t, e)
+	require.NoError(t, e)
 	assert.Equal(t, http.StatusOK, metricsRes.StatusCode)
 
 	defer metricsRes.Body.Close()
 
 	metricsResBytes, e := io.ReadAll(metricsRes.Body)
 
-	assert.NoError(t, e)
+	require.NoError(t, e)
 
 	metricsResStr := string(metricsResBytes)
 

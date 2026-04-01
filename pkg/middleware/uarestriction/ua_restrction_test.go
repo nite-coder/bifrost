@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
@@ -81,7 +82,7 @@ func TestUARestriction(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			middleware, err := NewMiddleware(tt.options)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			ctx := context.Background()
 			hzctx := app.NewContext(0)
@@ -116,7 +117,7 @@ func TestNewMiddleware(t *testing.T) {
 	initErr := Init()
 	// Ignore "already exists" error in case tests run in parallel or order matters
 	if initErr != nil && initErr.Error() != "middleware handler 'ua_restriction' already exists" {
-		assert.NoError(t, initErr)
+		require.NoError(t, initErr)
 	}
 
 	h := middleware.Factory("ua_restriction")
@@ -131,5 +132,5 @@ func TestNewMiddleware(t *testing.T) {
 	}
 
 	_, err := h(params)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }

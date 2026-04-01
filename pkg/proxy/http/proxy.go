@@ -36,6 +36,8 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+const statusClientClosedRequest = 499
+
 // TrailerPrefix is a magic prefix for [ResponseWriter.Header] map keys
 // that, if present, signals that the map entry is actually for
 // the response trailers, and not the response headers. The prefix
@@ -222,7 +224,7 @@ func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			c.Abort()
 		}
 		// check upstream health
-		if c.Response.StatusCode() >= 500 {
+		if c.Response.StatusCode() >= http.StatusInternalServerError {
 			_ = p.AddFailedCount(1)
 		}
 	}()
@@ -309,7 +311,7 @@ func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 				if c.Response.StatusCode() > 0 {
 					labels = append(labels, semconv.HTTPResponseStatusCode(c.Response.StatusCode()))
 				}
-				if c.Response.StatusCode() >= 500 {
+				if c.Response.StatusCode() >= http.StatusInternalServerError {
 					span.SetStatus(codes.Error, "")
 				}
 				if c.GetBool(variable.TargetTimeout) {
@@ -428,7 +430,7 @@ func (p *Proxy) handleError(ctx context.Context, c *app.RequestContext, err erro
 	}
 	if errors.Is(err, context.Canceled) {
 		// client canceled the request
-		c.Response.SetStatusCode(499)
+		c.Response.SetStatusCode(statusClientClosedRequest)
 		return
 	}
 	c.Response.Header.SetStatusCode(http.StatusBadGateway)
@@ -439,7 +441,7 @@ func (p *Proxy) handleError(ctx context.Context, c *app.RequestContext, err erro
 func removeRequestConnHeaders(c *app.RequestContext) {
 	c.Request.Header.VisitAll(func(k, v []byte) {
 		if cast.B2S(k) == "Connection" {
-			for _, sf := range strings.Split(cast.B2S(v), ",") {
+			for sf := range strings.SplitSeq(cast.B2S(v), ",") {
 				if sf = textproto.TrimString(sf); sf != "" {
 					c.Request.Header.DelBytes(cast.S2B(sf))
 				}
@@ -453,7 +455,7 @@ func removeRequestConnHeaders(c *app.RequestContext) {
 func removeResponseConnHeaders(c *app.RequestContext) {
 	c.Response.Header.VisitAll(func(k, v []byte) {
 		if cast.B2S(k) == "Connection" {
-			for _, sf := range strings.Split(cast.B2S(v), ",") {
+			for sf := range strings.SplitSeq(cast.B2S(v), ",") {
 				if sf = textproto.TrimString(sf); sf != "" {
 					c.Response.Header.DelBytes(cast.S2B(sf))
 				}

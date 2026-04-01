@@ -21,6 +21,10 @@ import (
 	"github.com/nite-coder/bifrost/pkg/timecache"
 )
 
+const (
+	microsecondsPerSecond = 1e6
+)
+
 var (
 	reIsVariable    = regexp.MustCompile(`\$\w+(?:[._-]\w+)*`)
 	grpcContentType = []byte("application/grpc")
@@ -522,7 +526,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case UpstreamDuration:
 		dur := c.GetDuration(UpstreamDuration)
 		mic := dur.Microseconds()
-		duration := float64(mic) / 1e6
+		duration := float64(mic) / microsecondsPerSecond
 		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
 		return responseTime, true
 
@@ -546,8 +550,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return nil, false
 		}
 
-		dur := httpFinish.Time().Sub(httpStart.Time()).Microseconds()
-		duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
+		start := httpStart.Time()
+		finish := httpFinish.Time()
+		dur := finish.Sub(start).Microseconds()
+		duration := strconv.FormatFloat(float64(dur)/microsecondsPerSecond, 'f', -1, 64)
 		return duration, true
 	case GRPCStatusCode:
 		return c.Get(GRPCStatusCode)

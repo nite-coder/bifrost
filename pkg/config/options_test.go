@@ -14,7 +14,7 @@ func TestConfigPath(t *testing.T) {
 
 	t.Run("returns empty string when not set", func(t *testing.T) {
 		opts := Options{}
-		assert.Equal(t, "", opts.ConfigPath())
+		assert.Empty(t, opts.ConfigPath())
 	})
 }
 

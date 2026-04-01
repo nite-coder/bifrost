@@ -24,9 +24,10 @@ type item struct {
 
 // NewLocalLimiter creates a new LocalLimiter instance.
 func NewLocalLimiter(options Options) *LocalLimiter {
+	const defaultCacheCleanupInterval = 10 * time.Minute
 	return &LocalLimiter{
 		options: &options,
-		cache:   cache.NewCache[string, *item](10 * time.Minute),
+		cache:   cache.NewCache[string, *item](defaultCacheCleanupInterval),
 	}
 }
 

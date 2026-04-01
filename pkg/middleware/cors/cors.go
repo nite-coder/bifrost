@@ -29,6 +29,7 @@ package cors
 
 import (
 	"bytes"
+	"slices"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -162,10 +163,8 @@ func (cors *cors) validateOrigin(origin string) bool {
 	if cors.allowAllOrigins {
 		return true
 	}
-	for _, value := range cors.allowOrigins {
-		if value == origin {
-			return true
-		}
+	if slices.Contains(cors.allowOrigins, origin) {
+		return true
 	}
 	if len(cors.wildcardOrigins) > 0 && cors.validateWildcardOrigin(origin) {
 		return true

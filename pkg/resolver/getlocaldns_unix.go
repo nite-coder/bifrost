@@ -28,8 +28,7 @@ func getLocalNameservers(filename string) (nameservers []netip.AddrPort) {
 		return defaultLocalNameservers
 	}
 
-	lines := strings.Split(string(data), "\n")
-	for _, line := range lines {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		if line == "" {
 			continue
 		}

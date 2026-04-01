@@ -35,6 +35,13 @@ const (
 	MessageTypeShutdown MessageType = "shutdown"
 )
 
+const (
+	// maxFDs is the maximum number of file descriptors that can be transferred in a single session.
+	maxFDs = 10
+	// sizeofInt is the byte size of an integer (32-bit used in SCM_RIGHTS).
+	sizeofInt = 4
+)
+
 // ControlMessage represents a message exchanged between Master and Worker.
 type ControlMessage struct {
 	// Type is the message type.
@@ -198,8 +205,8 @@ func (cp *ControlPlane) ReceiveFDsFromConn(conn net.Conn) ([]*os.File, error) {
 	// We expect the peer to send OOB data now.
 	// Since we are synced via Ack, the next bytes on the wire should be the OOB msg.
 	err = rawConn.Read(func(fd uintptr) bool {
-		buf := make([]byte, 1)                    // Dummy byte
-		oob := make([]byte, unix.CmsgSpace(4*10)) // Space for up to 10 FDs
+		buf := make([]byte, 1)                                // Dummy byte
+		oob := make([]byte, unix.CmsgSpace(sizeofInt*maxFDs)) // Space for up to 10 FDs
 
 		// Use MSG_CMSG_CLOEXEC for safety? Go usually handles it.
 		n, oobn, _, _, e := unix.Recvmsg(int(fd), buf, oob, 0)

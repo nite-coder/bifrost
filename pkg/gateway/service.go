@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"runtime/debug"
 	"sync"
@@ -23,6 +24,8 @@ import (
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
+
+const statusClientClosedRequest = 499
 
 // Service represents a backend service that can have multiple upstreams and middlewares.
 type Service struct {
@@ -231,7 +234,7 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		if r := recover(); r != nil {
 			stackTrace := cast.B2S(debug.Stack())
 			logger.ErrorContext(ctx, "service panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
-			c.SetStatusCode(500)
+			c.SetStatusCode(http.StatusInternalServerError)
 			c.Abort()
 		}
 	}()
@@ -258,7 +261,7 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			)
 
 			// client canceled the request
-			c.Response.SetStatusCode(499)
+			c.Response.SetStatusCode(statusClientClosedRequest)
 			return
 		}
 	}
@@ -297,7 +300,7 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 				"upstream_id", s.upstream.options.ID,
 				"service_id", s.options.ID,
 			)
-			c.SetStatusCode(503)
+			c.SetStatusCode(http.StatusServiceUnavailable)
 			return
 		}
 
@@ -306,7 +309,7 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	if myProxy == nil || err != nil {
 		// no live upstream
-		c.SetStatusCode(503)
+		c.SetStatusCode(http.StatusServiceUnavailable)
 
 		if !errors.Is(err, balancer.ErrNotAvailable) {
 			_ = c.Error(err)
@@ -323,7 +326,7 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	// the upstream target timeout and we need to response http status 504 back to client
 	if c.GetBool(variable.TargetTimeout) {
-		c.Response.SetStatusCode(504)
+		c.Response.SetStatusCode(http.StatusGatewayTimeout)
 	} else {
 		c.Set(variable.UpstreamResponoseStatusCode, c.Response.StatusCode())
 	}

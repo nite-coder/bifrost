@@ -207,7 +207,12 @@ func Run(mainOptions config.Options) (err error) {
 
 	go safety.Go(context.Background(), func() {
 		// Readiness check: verify all HTTP servers are accepting connections
-		readinessTimeout := 30 * time.Second
+		const (
+			defaultReadinessTimeout = 30 * time.Second
+			defaultProbeTimeout     = 2 * time.Second
+			readinessRetryInterval  = 500 * time.Millisecond
+		)
+		readinessTimeout := defaultReadinessTimeout
 		readinessStart := time.Now()
 		readinessDeadline := readinessStart.Add(readinessTimeout)
 
@@ -226,7 +231,7 @@ func Run(mainOptions config.Options) (err error) {
 			for time.Now().Before(readinessDeadline) {
 				attempts++
 				dialer := &net.Dialer{
-					Timeout: 2 * time.Second,
+					Timeout: defaultProbeTimeout,
 				}
 				conn, err := dialer.DialContext(ctx, "tcp", httpServer.Bind())
 				if err == nil {
@@ -240,7 +245,7 @@ func Run(mainOptions config.Options) (err error) {
 					)
 					break
 				}
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(readinessRetryInterval)
 			}
 
 			if !serverReady {

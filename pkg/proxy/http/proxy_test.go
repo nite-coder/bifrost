@@ -17,6 +17,7 @@ import (
 	gwebsocket "github.com/gorilla/websocket"
 	"github.com/hertz-contrib/websocket"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 )
@@ -579,7 +580,7 @@ func TestReverseProxyWebSocket(t *testing.T) {
 
 	_ = connect.WriteMessage(websocket.TextMessage, []byte("hello"))
 	_, message, err := connect.ReadMessage()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "hello", string(message))
 }
 
@@ -596,7 +597,7 @@ func TestProxyTags(t *testing.T) {
 	}
 
 	proxy, err := New(proxyOptions, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	val, found := proxy.Tag("id")
 	assert.True(t, found)

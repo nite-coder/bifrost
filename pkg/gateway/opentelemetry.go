@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
 	"os"
 	"runtime/debug"
 	"strings"
@@ -44,7 +45,8 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 	}
 
 	if opts.Flush.Seconds() <= 0 {
-		opts.Flush = 5 * time.Second
+		const defaultFlushInterval = 5 * time.Second
+		opts.Flush = defaultFlushInterval
 	}
 
 	if opts.QueueSize <= 0 {
@@ -52,7 +54,8 @@ func initTracerProvider(opts config.TracingOptions) (*sdktrace.TracerProvider, e
 	}
 
 	if opts.Timeout.Seconds() <= 0 {
-		opts.Timeout = 10 * time.Second
+		const defaultTimeout = 10 * time.Second
+		opts.Timeout = defaultTimeout
 	}
 
 	opts.Endpoint = strings.ToLower(opts.Endpoint)
@@ -246,7 +249,7 @@ func (m *TracingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext
 			labels = append(labels, semconv.HTTPResponseStatusCode(c.Response.StatusCode()))
 		}
 
-		if c.Response.StatusCode() >= 500 {
+		if c.Response.StatusCode() >= http.StatusInternalServerError {
 			span.SetStatus(codes.Error, "")
 		}
 

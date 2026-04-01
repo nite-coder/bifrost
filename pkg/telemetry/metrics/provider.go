@@ -199,12 +199,14 @@ func createOTLPReader(
 
 	flush := opts.Flush
 	if flush == 0 {
-		flush = 15 * time.Second
+		const defaultFlushInterval = 15 * time.Second
+		flush = defaultFlushInterval
 	}
 
 	timeout := opts.Timeout
 	if timeout == 0 {
-		timeout = 10 * time.Second
+		const defaultTimeout = 10 * time.Second
+		timeout = defaultTimeout
 	}
 
 	var exporter sdkmetric.Exporter

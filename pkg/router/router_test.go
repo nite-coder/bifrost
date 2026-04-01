@@ -89,9 +89,8 @@ func BenchmarkCode(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		func() app.HandlerFunc {
 			isFound := slices.Contains(routeSetting.Paths, path10) || slices.Contains(routeSetting.Methods, method)
 
@@ -124,7 +123,7 @@ func benchmark(b *testing.B, router *Router, method, path string) {
 
 func setupMap() map[string]*node {
 	m := make(map[string]*node)
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		key := fmt.Sprintf("futures%d", i)
 		m[key] = &node{}
 	}
@@ -135,8 +134,7 @@ func setupMap() map[string]*node {
 func BenchmarkMapLookup(b *testing.B) {
 	m := setupMap()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, found := m[""]
 		if !found {
 			b.Error("key not found")
@@ -173,7 +171,7 @@ func TestDuplicatedRoutes(t *testing.T) {
 	middlewares, isDefered := router.Find(http.MethodGet, "/foo")
 	assert.False(t, isDefered)
 	assert.Len(t, middlewares, 1)
-	assert.True(t, reflect.ValueOf(middlewares[0]).Pointer() == reflect.ValueOf(exactHandler).Pointer())
+	assert.Equal(t, reflect.ValueOf(exactHandler).Pointer(), reflect.ValueOf(middlewares[0]).Pointer())
 }
 
 func TestIsValidHTTPMethod(t *testing.T) {

@@ -109,7 +109,7 @@ func TestMaster_Shutdown(t *testing.T) {
 		defer cancel()
 
 		err := m.Shutdown(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, MasterStateShuttingDown, m.State())
 	})
 
@@ -118,11 +118,11 @@ func TestMaster_Shutdown(t *testing.T) {
 
 		ctx := context.Background()
 		err := m.Shutdown(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Second shutdown should be no-op
 		err = m.Shutdown(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }
 
@@ -133,8 +133,7 @@ func TestIsWorker(t *testing.T) {
 	})
 
 	t.Run("is a worker", func(t *testing.T) {
-		_ = os.Setenv(EnvBifrostRole, RoleWorker)
-		defer os.Unsetenv(EnvBifrostRole)
+		t.Setenv(EnvBifrostRole, RoleWorker)
 		assert.True(t, IsWorker())
 	})
 }
@@ -147,14 +146,12 @@ func TestGetControlSocketPath(t *testing.T) {
 
 	t.Run("is set", func(t *testing.T) {
 		encoded := base64.StdEncoding.EncodeToString([]byte("/tmp/test.sock"))
-		_ = os.Setenv("BIFROST_CONTROL_SOCKET", encoded)
-		defer os.Unsetenv("BIFROST_CONTROL_SOCKET")
+		t.Setenv("BIFROST_CONTROL_SOCKET", encoded)
 		assert.Equal(t, "/tmp/test.sock", GetControlSocketPath())
 	})
 
 	t.Run("invalid base64", func(t *testing.T) {
-		_ = os.Setenv("BIFROST_CONTROL_SOCKET", "not-valid-base64!!!")
-		defer os.Unsetenv("BIFROST_CONTROL_SOCKET")
+		t.Setenv("BIFROST_CONTROL_SOCKET", "not-valid-base64!!!")
 		assert.Empty(t, GetControlSocketPath())
 	})
 }
@@ -181,7 +178,7 @@ func TestMaster_SpawnWorker(t *testing.T) {
 
 		// Wait for process to exit
 		state, err := cmd.Process.Wait()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 0, state.ExitCode())
 	})
 
@@ -199,7 +196,7 @@ func TestMaster_SpawnWorker(t *testing.T) {
 		m.controlPlane = NewControlPlane(nil)
 
 		cmd, err := m.spawnWorker(context.Background(), nil, nil)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, cmd)
 	})
 }
@@ -321,7 +318,7 @@ func TestMaster_SpawnWorker_UserGroup(t *testing.T) {
 		m.controlPlane = NewControlPlane(nil)
 
 		_, err := m.spawnWorker(context.Background(), nil, nil)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }
 
@@ -330,7 +327,7 @@ func TestMaster_HandleReload_NotRunning(t *testing.T) {
 
 	ctx := context.Background()
 	err := m.handleReload(ctx)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "cannot reload in state")
 }
 
@@ -394,7 +391,7 @@ func TestMaster_HandleReload(t *testing.T) {
 		}()
 
 		err = m.handleReload(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, MasterStateRunning, m.State())
 
 		// Trigger shutdown
@@ -455,7 +452,7 @@ func TestMaster_Run(t *testing.T) {
 		// Wait for exit
 		select {
 		case err := <-errCh:
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		case <-time.After(5 * time.Second):
 			t.Fatal("Run did not exit")
 		}
@@ -497,7 +494,7 @@ func TestMaster_Run(t *testing.T) {
 
 		select {
 		case err := <-errCh:
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		case <-time.After(5 * time.Second):
 			t.Fatal("Run did not exit")
 		}
@@ -516,8 +513,7 @@ func TestMaster_FDTransfer(t *testing.T) {
 	require.NoError(t, m.controlPlane.Listen())
 	defer m.controlPlane.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	go func() {
 		_ = m.controlPlane.Accept(ctx)
