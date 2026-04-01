@@ -2,7 +2,7 @@ package nacos
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/nacos-group/nacos-sdk-go/v2/clients/naming_client"
@@ -10,8 +10,13 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/v2/vo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/provider"
+)
+
+const (
+	testServiceName = "test-service"
 )
 
 type MockNamingClient struct {
@@ -40,22 +45,38 @@ func (m *MockNamingClient) UpdateInstance(param vo.UpdateInstanceParam) (bool, e
 
 func (m *MockNamingClient) GetService(param vo.GetServiceParam) (model.Service, error) {
 	args := m.Called(param)
-	return args.Get(0).(model.Service), args.Error(1)
+	res, ok := args.Get(0).(model.Service)
+	if !ok {
+		return model.Service{}, args.Error(1)
+	}
+	return res, args.Error(1)
 }
 
 func (m *MockNamingClient) SelectAllInstances(param vo.SelectAllInstancesParam) ([]model.Instance, error) {
 	args := m.Called(param)
-	return args.Get(0).([]model.Instance), args.Error(1)
+	res, ok := args.Get(0).([]model.Instance)
+	if !ok {
+		return nil, args.Error(1)
+	}
+	return res, args.Error(1)
 }
 
 func (m *MockNamingClient) SelectInstances(param vo.SelectInstancesParam) ([]model.Instance, error) {
 	args := m.Called(param)
-	return args.Get(0).([]model.Instance), args.Error(1)
+	res, ok := args.Get(0).([]model.Instance)
+	if !ok {
+		return nil, args.Error(1)
+	}
+	return res, args.Error(1)
 }
 
 func (m *MockNamingClient) SelectOneHealthyInstance(param vo.SelectOneHealthInstanceParam) (*model.Instance, error) {
 	args := m.Called(param)
-	return args.Get(0).(*model.Instance), args.Error(1)
+	res, ok := args.Get(0).(*model.Instance)
+	if !ok {
+		return nil, args.Error(1)
+	}
+	return res, args.Error(1)
 }
 
 func (m *MockNamingClient) Subscribe(param *vo.SubscribeParam) error {
@@ -70,7 +91,11 @@ func (m *MockNamingClient) Unsubscribe(param *vo.SubscribeParam) error {
 
 func (m *MockNamingClient) GetAllServicesInfo(param vo.GetAllServiceInfoParam) (model.ServiceList, error) {
 	args := m.Called(param)
-	return args.Get(0).(model.ServiceList), args.Error(1)
+	res, ok := args.Get(0).(model.ServiceList)
+	if !ok {
+		return model.ServiceList{}, args.Error(1)
+	}
+	return res, args.Error(1)
 }
 
 func (m *MockNamingClient) ServerHealthy() bool {
@@ -95,7 +120,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 			name: "successful get instances",
 			mockSetup: func(m *MockNamingClient) {
 				m.On("SelectInstances", mock.MatchedBy(func(param vo.SelectInstancesParam) bool {
-					return param.ServiceName == "test-service"
+					return param.ServiceName == testServiceName
 				})).Return([]model.Instance{
 					{
 						Ip:     "127.0.0.1",
@@ -114,7 +139,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 				}, nil)
 			},
 			options: provider.GetInstanceOptions{
-				Name:  "test-service",
+				Name:  testServiceName,
 				Group: "test-group",
 			},
 			want:          2,
@@ -125,11 +150,11 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 			name: "empty instance list",
 			mockSetup: func(m *MockNamingClient) {
 				m.On("SelectInstances", mock.MatchedBy(func(param vo.SelectInstancesParam) bool {
-					return param.ServiceName == "test-service"
+					return param.ServiceName == testServiceName
 				})).Return([]model.Instance{}, nil)
 			},
 			options: provider.GetInstanceOptions{
-				Name:  "test-service",
+				Name:  testServiceName,
 				Group: "test-group",
 			},
 			want:          0,
@@ -140,11 +165,11 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 			name: "nacos error",
 			mockSetup: func(m *MockNamingClient) {
 				m.On("SelectInstances", mock.MatchedBy(func(param vo.SelectInstancesParam) bool {
-					return param.ServiceName == "test-service"
-				})).Return([]model.Instance{}, fmt.Errorf("nacos error"))
+					return param.ServiceName == testServiceName
+				})).Return([]model.Instance{}, errors.New("nacos error"))
 			},
 			options: provider.GetInstanceOptions{
-				Name:  "test-service",
+				Name:  testServiceName,
 				Group: "test-group",
 			},
 			want:          0,
@@ -161,7 +186,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 			// mock newNamingClientFunc
 			originalFunc := newNamingClientFunc
 			defer func() { newNamingClientFunc = originalFunc }()
-			newNamingClientFunc = func(param vo.NacosClientParam) (naming_client.INamingClient, error) {
+			newNamingClientFunc = func(_ vo.NacosClientParam) (naming_client.INamingClient, error) {
 				// We expect the connectivity check
 				mockClient.On("GetAllServicesInfo", mock.MatchedBy(func(param vo.GetAllServiceInfoParam) bool {
 					return param.PageNo == 1 && param.PageSize == 1
@@ -172,7 +197,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 			d, err := NewNacosServiceDiscovery(Options{
 				Endpoints: []string{"http://127.0.0.1:8848"},
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// d.client is already set correctly by our mock constructor
 			// d.client = mockClient
@@ -189,7 +214,7 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 				assert.Equal(t, "123", id)
 			}
 
-			assert.Equal(t, tt.want, len(got))
+			assert.Len(t, got, tt.want)
 		})
 	}
 }
@@ -205,11 +230,11 @@ func TestNacosServiceDiscovery_Watch(t *testing.T) {
 			name: "successful watch",
 			mockSetup: func(m *MockNamingClient) {
 				m.On("Subscribe", mock.MatchedBy(func(param *vo.SubscribeParam) bool {
-					return param.ServiceName == "test-service" && param.GroupName == "test-group"
+					return param.ServiceName == testServiceName && param.GroupName == "test-group"
 				})).Return(nil)
 			},
 			options: provider.GetInstanceOptions{
-				Name:  "test-service",
+				Name:  testServiceName,
 				Group: "test-group",
 			},
 			wantErr: false,
@@ -217,10 +242,10 @@ func TestNacosServiceDiscovery_Watch(t *testing.T) {
 		{
 			name: "subscribe error",
 			mockSetup: func(m *MockNamingClient) {
-				m.On("Subscribe", mock.Anything).Return(fmt.Errorf("subscription error"))
+				m.On("Subscribe", mock.Anything).Return(errors.New("subscription error"))
 			},
 			options: provider.GetInstanceOptions{
-				Name:  "test-service",
+				Name:  testServiceName,
 				Group: "test-group",
 			},
 			wantErr: true,
@@ -235,7 +260,7 @@ func TestNacosServiceDiscovery_Watch(t *testing.T) {
 			// mock newNamingClientFunc
 			originalFunc := newNamingClientFunc
 			defer func() { newNamingClientFunc = originalFunc }()
-			newNamingClientFunc = func(param vo.NacosClientParam) (naming_client.INamingClient, error) {
+			newNamingClientFunc = func(_ vo.NacosClientParam) (naming_client.INamingClient, error) {
 				// Check connection expectation
 				mockClient.On("GetAllServicesInfo", mock.MatchedBy(func(param vo.GetAllServiceInfoParam) bool {
 					return param.PageNo == 1 && param.PageSize == 1
@@ -246,7 +271,7 @@ func TestNacosServiceDiscovery_Watch(t *testing.T) {
 			d, err := NewNacosServiceDiscovery(Options{
 				Endpoints: []string{"http://127.0.0.1:8848"},
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// d.client = mockClient
 

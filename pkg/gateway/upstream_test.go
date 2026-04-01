@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/provider"
@@ -40,7 +41,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 	}
 
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	bifrost := &Bifrost{
 		options: &config.Options{
@@ -58,7 +59,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 	}
 
 	upstreamsMap, err := loadUpstreams(bifrost, testService)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, upstreamsMap, 1)
 
 	upstream, err := newUpstream(
@@ -73,7 +74,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 		},
 	)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	proxiies := upstream.Balancer().Proxies()
 	assert.Len(t, proxiies, 3)
 
@@ -103,7 +104,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 			Targets: targetOptions,
 		},
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	proxiies = upstream.Balancer().Proxies()
 	assert.Len(t, proxiies, 3)
 }
@@ -111,7 +112,7 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 func TestRefreshProxies(t *testing.T) {
 	t.Run("success with initial DNS instances", func(t *testing.T) {
 		dnsResolver, err := resolver.NewResolver(resolver.Options{})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		upstream := &Upstream{
 			bifrost: &Bifrost{
@@ -134,24 +135,24 @@ func TestRefreshProxies(t *testing.T) {
 		}
 
 		addr1, err := net.ResolveTCPAddr("tcp", "127.0.0.1:8080")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		ins1 := provider.NewInstance(addr1, 2)
 
 		addr2, err := net.ResolveTCPAddr("tcp", "127.0.0.2:8080")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		ins2 := provider.NewInstance(addr2, 3)
 
 		instances := []provider.Instancer{ins1, ins2}
 
 		err = upstream.refreshProxies(instances)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		plist1 := upstream.Balancer().Proxies()
 		assert.Len(t, plist1, 2)
 
 		// should be no update
 		err = upstream.refreshProxies(instances)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		plist2 := upstream.Balancer().Proxies()
 		assert.Len(t, plist2, 2)
@@ -171,7 +172,7 @@ func TestRefreshProxies(t *testing.T) {
 
 	t.Run("success with updated tags", func(t *testing.T) {
 		dnsResolver, err := resolver.NewResolver(resolver.Options{})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		upstream := &Upstream{
 			bifrost: &Bifrost{
@@ -194,18 +195,18 @@ func TestRefreshProxies(t *testing.T) {
 		}
 
 		addr1, err := net.ResolveTCPAddr("tcp", "127.0.0.1:8080")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		ins1 := provider.NewInstance(addr1, 2)
 		ins1.SetTag("version", "v1")
 
 		addr2, err := net.ResolveTCPAddr("tcp", "127.0.0.2:8080")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		ins2 := provider.NewInstance(addr2, 3)
 
 		// first refresh
 		instances1 := []provider.Instancer{ins1, ins2}
 		err = upstream.refreshProxies(instances1)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		plist1 := upstream.Balancer().Proxies()
 		assert.Len(t, plist1, 2)
 
@@ -214,7 +215,7 @@ func TestRefreshProxies(t *testing.T) {
 		ins1WithNewTags.SetTag("version", "v2")
 		instances2 := []provider.Instancer{ins1WithNewTags, ins2}
 		err = upstream.refreshProxies(instances2)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		plist2 := upstream.Balancer().Proxies()
 		assert.Len(t, plist2, 2)
 
@@ -246,7 +247,7 @@ func TestRefreshProxies(t *testing.T) {
 
 	t.Run("fail with no instances", func(t *testing.T) {
 		dnsResolver, err := resolver.NewResolver(resolver.Options{})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		upstream := &Upstream{
 			bifrost: &Bifrost{
@@ -269,7 +270,7 @@ func TestRefreshProxies(t *testing.T) {
 		}
 
 		err = upstream.refreshProxies([]provider.Instancer{})
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }
 
@@ -277,15 +278,15 @@ func TestRefreshProxies(t *testing.T) {
 type mockErrorDiscovery struct{}
 
 func (m *mockErrorDiscovery) GetInstances(
-	ctx context.Context,
-	opts provider.GetInstanceOptions,
+	_ context.Context,
+	_ provider.GetInstanceOptions,
 ) ([]provider.Instancer, error) {
 	return nil, assert.AnError
 }
 
 func (m *mockErrorDiscovery) Watch(
-	ctx context.Context,
-	opts provider.GetInstanceOptions,
+	_ context.Context,
+	_ provider.GetInstanceOptions,
 ) (<-chan []provider.Instancer, error) {
 	return nil, assert.AnError
 }
@@ -297,7 +298,7 @@ func (m *mockErrorDiscovery) Close() error {
 // TestWatchErrorHandling verifies that watch() returns early when Watch() fails.
 func TestWatchErrorHandling(t *testing.T) {
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	upstream := &Upstream{
 		bifrost: &Bifrost{
@@ -323,14 +324,11 @@ func TestWatchErrorHandling(t *testing.T) {
 	// This should not panic or block indefinitely
 	// The watch() should return early after logging the error
 	upstream.watch()
-
-	// If we reach here without blocking, the test passes
-	assert.True(t, true, "watch() should return early on error")
 }
 
 func TestNewUpstreamValidation(t *testing.T) {
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	bifrost := &Bifrost{
 		options: &config.Options{
@@ -348,7 +346,7 @@ func TestNewUpstreamValidation(t *testing.T) {
 				Targets: []config.TargetOptions{{Target: "127.0.0.1:8080"}},
 			},
 		)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "upstream ID cannot be empty")
 	})
 
@@ -361,7 +359,7 @@ func TestNewUpstreamValidation(t *testing.T) {
 				Targets: []config.TargetOptions{},
 			},
 		)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "targets cannot be empty")
 	})
 
@@ -387,7 +385,7 @@ func TestNewUpstreamValidation(t *testing.T) {
 				},
 			},
 		)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "dns provider is disabled")
 	})
 
@@ -415,7 +413,7 @@ func TestNewUpstreamValidation(t *testing.T) {
 				},
 			},
 		)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "nacos discovery provider is disabled")
 	})
 
@@ -441,7 +439,7 @@ func TestNewUpstreamValidation(t *testing.T) {
 				},
 			},
 		)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "k8s provider is disabled")
 	})
 }

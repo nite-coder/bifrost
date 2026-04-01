@@ -52,7 +52,7 @@ func TestKeepAlive_ShouldRestart(t *testing.T) {
 		shouldRestart, backoff, err := k.ShouldRestart()
 		assert.True(t, shouldRestart)
 		assert.Equal(t, 1*time.Second, backoff)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("returns error when limit exceeded", func(t *testing.T) {
@@ -172,9 +172,9 @@ func TestKeepAlive_ConcurrencySafety(t *testing.T) {
 	})
 
 	done := make(chan bool)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		go func() {
-			for j := 0; j < 100; j++ {
+			for range 100 {
 				k.RecordRestart()
 				_, _, _ = k.ShouldRestart()
 				_ = k.CurrentBackoff()
@@ -184,7 +184,7 @@ func TestKeepAlive_ConcurrencySafety(t *testing.T) {
 		}()
 	}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 

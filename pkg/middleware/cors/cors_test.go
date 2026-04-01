@@ -44,13 +44,13 @@ import (
 func newTestRouter(c Config) *route.Engine {
 	router := route.NewEngine(config.NewOptions([]config.Option{}))
 	router.Use(NewMiddleware(c))
-	router.GET("/", func(ctx context.Context, c *app.RequestContext) {
+	router.GET("/", func(_ context.Context, c *app.RequestContext) {
 		c.String(consts.StatusOK, "get")
 	})
-	router.POST("/", func(ctx context.Context, c *app.RequestContext) {
+	router.POST("/", func(_ context.Context, c *app.RequestContext) {
 		c.String(consts.StatusOK, "post")
 	})
-	router.PATCH("/", func(ctx context.Context, c *app.RequestContext) {
+	router.PATCH("/", func(_ context.Context, c *app.RequestContext) {
 		c.String(consts.StatusOK, "patch")
 	})
 
@@ -72,22 +72,22 @@ func performRequest(r *route.Engine, method, origin string, headers ...ut.Header
 }
 
 func TestConfigAddAllow(t *testing.T) {
-	config := Config{}
-	config.AddAllowMethods("POST")
-	config.AddAllowMethods("GET", "PUT")
-	config.AddExposeHeaders()
+	myConfig := Config{}
+	myConfig.AddAllowMethods("POST")
+	myConfig.AddAllowMethods("GET", "PUT")
+	myConfig.AddExposeHeaders()
 
-	config.AddAllowHeaders("Some", " cool")
-	config.AddAllowHeaders("header")
-	config.AddExposeHeaders()
+	myConfig.AddAllowHeaders("Some", " cool")
+	myConfig.AddAllowHeaders("header")
+	myConfig.AddExposeHeaders()
 
-	config.AddExposeHeaders()
-	config.AddExposeHeaders("exposed", "header")
-	config.AddExposeHeaders("hey")
+	myConfig.AddExposeHeaders()
+	myConfig.AddExposeHeaders("exposed", "header")
+	myConfig.AddExposeHeaders("hey")
 
-	assert.DeepEqual(t, config.AllowMethods, []string{"POST", "GET", "PUT"})
-	assert.DeepEqual(t, config.AllowHeaders, []string{"Some", " cool", "header"})
-	assert.DeepEqual(t, config.ExposeHeaders, []string{"exposed", "header", "hey"})
+	assert.DeepEqual(t, myConfig.AllowMethods, []string{"POST", "GET", "PUT"})
+	assert.DeepEqual(t, myConfig.AllowHeaders, []string{"Some", " cool", "header"})
+	assert.DeepEqual(t, myConfig.ExposeHeaders, []string{"exposed", "header", "hey"})
 }
 
 func TestBadConfig(t *testing.T) {
@@ -101,7 +101,7 @@ func TestBadConfig(t *testing.T) {
 	assert.Panic(t, func() {
 		NewMiddleware(Config{
 			AllowAllOrigins: true,
-			AllowOriginFunc: func(origin string) bool { return false },
+			AllowOriginFunc: func(_ string) bool { return false },
 		})
 	})
 	assert.Panic(t, func() {

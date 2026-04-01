@@ -13,15 +13,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func exactHandler(c context.Context, ctx *app.RequestContext) {
+func exactHandler(_ context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(201)
 }
 
-func prefixHandler(c context.Context, ctx *app.RequestContext) {
+func prefixHandler(_ context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(202)
 }
 
-func generalkHandler(c context.Context, ctx *app.RequestContext) {
+func generalkHandler(_ context.Context, ctx *app.RequestContext) {
 	ctx.SetStatusCode(204)
 }
 
@@ -41,7 +41,7 @@ func BenchmarkStaticRoot(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	benchmark(b, router, "GET", "/foo")
+	benchmark(b, router, "/foo")
 }
 
 func BenchmarkStatic1(b *testing.B) {
@@ -50,7 +50,7 @@ func BenchmarkStatic1(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	benchmark(b, router, "GET", "/foo")
+	benchmark(b, router, "/foo")
 }
 
 func BenchmarkStatic3(b *testing.B) {
@@ -59,7 +59,7 @@ func BenchmarkStatic3(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	benchmark(b, router, "GET", "/foo/bar/baz")
+	benchmark(b, router, "/foo/bar/baz")
 }
 
 func BenchmarkStatic5(b *testing.B) {
@@ -68,12 +68,12 @@ func BenchmarkStatic5(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	benchmark(b, router, "GET", "/foo/bar/baz/qux/quux")
+	benchmark(b, router, "/foo/bar/baz/qux/quux")
 }
 
 type RouteOptions struct {
-	Methods []string `yaml:"methods" json:"methods"`
-	Paths   []string `yaml:"paths"   json:"paths"`
+	Methods []string `json:"methods" yaml:"methods"`
+	Paths   []string `json:"paths"   yaml:"paths"`
 }
 
 func BenchmarkCode(b *testing.B) {
@@ -89,9 +89,8 @@ func BenchmarkCode(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		func() app.HandlerFunc {
 			isFound := slices.Contains(routeSetting.Paths, path10) || slices.Contains(routeSetting.Methods, method)
 
@@ -110,21 +109,22 @@ func BenchmarkStatic10(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	benchmark(b, router, "GET", "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred")
+	benchmark(b, router, "/foo/bar/baz/qux/quux/corge/grault/garply/waldo/fred")
 }
 
-func benchmark(b *testing.B, router *Router, method, path string) {
+func benchmark(b *testing.B, router *Router, path string) {
+	b.Helper()
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
-		_, _ = router.Find(method, path)
+	for range b.N {
+		_, _ = router.Find("GET", path)
 	}
 }
 
 func setupMap() map[string]*node {
 	m := make(map[string]*node)
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		key := fmt.Sprintf("futures%d", i)
 		m[key] = &node{}
 	}
@@ -135,11 +135,10 @@ func setupMap() map[string]*node {
 func BenchmarkMapLookup(b *testing.B) {
 	m := setupMap()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, found := m[""]
 		if !found {
-			b.Errorf("key not found")
+			b.Error("key not found")
 		}
 	}
 }
@@ -173,7 +172,7 @@ func TestDuplicatedRoutes(t *testing.T) {
 	middlewares, isDefered := router.Find(http.MethodGet, "/foo")
 	assert.False(t, isDefered)
 	assert.Len(t, middlewares, 1)
-	assert.True(t, reflect.ValueOf(middlewares[0]).Pointer() == reflect.ValueOf(exactHandler).Pointer())
+	assert.Equal(t, reflect.ValueOf(exactHandler).Pointer(), reflect.ValueOf(middlewares[0]).Pointer())
 }
 
 func TestIsValidHTTPMethod(t *testing.T) {

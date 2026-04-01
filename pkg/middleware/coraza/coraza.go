@@ -26,12 +26,17 @@ const (
 	labelMethod       = "method"
 	labelPath         = "path"
 	unknownLabelValue = "unknown"
+	crsScoreRuleID    = 949110
+	numWafLabels      = 5
 )
 
-type CorazaMiddleware struct {
+// Middleware is a middleware that provides Web Application Firewall (WAF) capabilities using Coraza.
+type Middleware struct {
 	options *Options
 	waf     coraza.WAF
 }
+
+// Options defines the configuration for the Coraza WAF middleware.
 type Options struct {
 	Directives               string   `mapstructure:"directives"`
 	RejectedHTTPContentType  string   `mapstructure:"rejected_http_content_type"`
@@ -40,7 +45,8 @@ type Options struct {
 	RejectedHTTPStatusCode   int      `mapstructure:"rejected_http_status_code"`
 }
 
-func NewMiddleware(options Options) (*CorazaMiddleware, error) {
+// NewMiddleware creates a new CorazaMiddleware instance with the given options.
+func NewMiddleware(options Options) (*Middleware, error) {
 	if options.Directives == "" {
 		options.Directives = `
 			Include @coraza.conf-recommended
@@ -59,13 +65,13 @@ func NewMiddleware(options Options) (*CorazaMiddleware, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Coraza WAF: %w", err)
 	}
-	return &CorazaMiddleware{
+	return &Middleware{
 		options: &options,
 		waf:     waf,
 	}, nil
 }
 
-func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 	clientIP := c.ClientIP()
 	for _, allowIP := range m.options.IPAllowList {
@@ -113,25 +119,25 @@ func (m *CorazaMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext)
 	// Read and Process Body if exists
 	if tx.IsRequestBodyAccessible() {
 		if !c.Request.IsBodyStream() && len(c.Request.Body()) > 0 {
-			it, _, err := tx.WriteRequestBody(c.Request.Body())
-			if err != nil {
-				logger.Warn("coraza: failed to write request body", "error", err)
+			itBody, _, e := tx.WriteRequestBody(c.Request.Body())
+			if e != nil {
+				logger.Warn("coraza: failed to write request body", "error", e)
 				return
 			}
-			m.processInterruption(ctx, c, tx, it)
+			m.processInterruption(ctx, c, tx, itBody)
 		}
 	}
-	it, err := tx.ProcessRequestBody()
-	if err != nil {
-		logger.Warn("coraza: failed to process request body", "error", err)
+	itRes, e := tx.ProcessRequestBody()
+	if e != nil {
+		logger.Warn("coraza: failed to process request body", "error", e)
 		return
 	}
-	m.processInterruption(ctx, c, tx, it)
+	m.processInterruption(ctx, c, tx, itRes)
 	m.log(ctx, c, tx)
 	c.Next(ctx)
 }
 
-func (m *CorazaMiddleware) processInterruption(
+func (m *Middleware) processInterruption(
 	ctx context.Context,
 	c *app.RequestContext,
 	tx types.Transaction,
@@ -154,7 +160,7 @@ func (m *CorazaMiddleware) processInterruption(
 	}
 }
 
-func (m *CorazaMiddleware) log(ctx context.Context, c *app.RequestContext, tx types.Transaction) {
+func (m *Middleware) log(ctx context.Context, c *app.RequestContext, tx types.Transaction) {
 	logger := log.FromContext(ctx)
 	matchedRules := tx.MatchedRules()
 	if len(matchedRules) > 0 {
@@ -173,26 +179,27 @@ func (m *CorazaMiddleware) log(ctx context.Context, c *app.RequestContext, tx ty
 					"data", rule.Data(),
 				)
 				// rule 949110 It is only used to calculate the final score, so it does not count as an attack.
-				if ruleID == 949110 {
+				if ruleID == crsScoreRuleID {
 					continue
 				}
-				labels := make(prom.Labels, 5)
-				labels[labelServerID] = defaultValIfEmpty(serverID, unknownLabelValue)
-				labels[labelRuleID] = defaultValIfEmpty(ruleIDStr, unknownLabelValue)
-				labels[labelClientIP] = defaultValIfEmpty(rule.ClientIPAddress(), unknownLabelValue)
+				labels := make(prom.Labels, numWafLabels)
+				labels[labelServerID] = defaultValIfEmpty(serverID)
+				labels[labelRuleID] = defaultValIfEmpty(ruleIDStr)
+				labels[labelClientIP] = defaultValIfEmpty(rule.ClientIPAddress())
 				method := variable.GetString(variable.HTTPRequestMethod, c)
-				labels[labelMethod] = defaultValIfEmpty(method, unknownLabelValue)
+				labels[labelMethod] = defaultValIfEmpty(method)
 				path := variable.GetString(variable.HTTPRoute, c)
 				if path == "" {
 					path = variable.GetString(variable.HTTPRequestPath, c)
 				}
-				labels[labelPath] = defaultValIfEmpty(path, unknownLabelValue)
+				labels[labelPath] = defaultValIfEmpty(path)
 				_ = counterAdd(bifrostWAFCoreRulesetHits, 1, labels)
 			}
 		}
 	}
 }
 
+// Init initializes metrics and registers the coraza middleware.
 func Init() error {
 	bifrostWAFCoreRulesetHits = prom.NewCounterVec(
 		prom.CounterOpts{
@@ -211,9 +218,9 @@ func Init() error {
 	})
 }
 
-func defaultValIfEmpty(val, def string) string {
+func defaultValIfEmpty(val string) string {
 	if val == "" {
-		return def
+		return unknownLabelValue
 	}
 	return val
 }

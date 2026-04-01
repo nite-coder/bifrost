@@ -11,21 +11,22 @@ import (
 	"github.com/nite-coder/bifrost/pkg/proxy"
 )
 
+// Init registers the weighted balancer.
 func Init() error {
-	return balancer.Register([]string{"weighted"}, func(proxies []proxy.Proxy, param any) (balancer.Balancer, error) {
+	return balancer.Register([]string{"weighted"}, func(proxies []proxy.Proxy, _ any) (balancer.Balancer, error) {
 		return NewBalancer(proxies)
 	})
 }
 
-// WeightedBalancer implements a weighted random load balancing algorithm.
-type WeightedBalancer struct {
+// Balancer implements a weighted random load balancing algorithm.
+type Balancer struct {
 	totalWeight uint32
 	proxies     []proxy.Proxy
 }
 
 // NewBalancer creates a new WeightedBalancer instance.
 // It calculates the total weight and ensures it doesn't exceed MaxInt32.
-func NewBalancer(proxies []proxy.Proxy) (*WeightedBalancer, error) {
+func NewBalancer(proxies []proxy.Proxy) (*Balancer, error) {
 	var totalWeight uint32
 	for _, p := range proxies {
 		weight := p.Weight()
@@ -40,19 +41,19 @@ func NewBalancer(proxies []proxy.Proxy) (*WeightedBalancer, error) {
 		totalWeight = math.MaxInt32
 	}
 
-	return &WeightedBalancer{
+	return &Balancer{
 		proxies:     proxies,
 		totalWeight: totalWeight,
 	}, nil
 }
 
 // Proxies returns the list of proxies managed by the balancer.
-func (b *WeightedBalancer) Proxies() []proxy.Proxy {
+func (b *Balancer) Proxies() []proxy.Proxy {
 	return b.proxies
 }
 
 // Select picks a proxy based on weights.
-func (b *WeightedBalancer) Select(ctx context.Context, hzCtx *app.RequestContext) (proxy.Proxy, error) {
+func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (proxy.Proxy, error) {
 	if len(b.proxies) == 0 {
 		return nil, balancer.ErrNotAvailable
 	}

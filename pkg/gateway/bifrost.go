@@ -22,6 +22,37 @@ import (
 	"github.com/nite-coder/bifrost/pkg/tracer/accesslog"
 )
 
+// BifrostMode defines whether Bifrost is starting normally or reloading.
+type BifrostMode int
+
+const (
+	// ModeNormal represents a normal startup.
+	ModeNormal BifrostMode = iota
+	// ModeReload represents a reload operation.
+	ModeReload
+)
+
+// BifrostStatus defines whether the Bifrost is active or not.
+type BifrostStatus int
+
+const (
+	// StatusInactive represents an inactive state.
+	StatusInactive BifrostStatus = iota
+	// StatusActive represents an active state.
+	StatusActive
+)
+
+// ShutdownMode defines whether to shutdown gracefully or immediately.
+type ShutdownMode int
+
+const (
+	// ShutdownGraceful represents a graceful shutdown.
+	ShutdownGraceful ShutdownMode = iota
+	// ShutdownImmediate represents an immediate shutdown.
+	ShutdownImmediate
+)
+
+// Bifrost is the main gateway engine.
 type Bifrost struct {
 	tracerProvider  *sdktrace.TracerProvider
 	metricsProvider *metrics.Provider
@@ -40,7 +71,7 @@ type Bifrost struct {
 // The mainOptions parameter contains the main configuration options for the Bifrost instance.
 // The isReload parameter indicates whether the function is being called during a reload operation.
 // The function returns a pointer to Bifrost and an error.
-func NewBifrost(mainOptions config.Options, isReload bool) (bifrost *Bifrost, err error) {
+func NewBifrost(mainOptions config.Options, mode BifrostMode) (bifrost *Bifrost, err error) {
 	tCache := timecache.New(mainOptions.TimerResolution)
 	timecache.Set(tCache)
 
@@ -83,7 +114,7 @@ func NewBifrost(mainOptions config.Options, isReload bool) (bifrost *Bifrost, er
 	bifrost.services = services
 	tracers := []tracer.Tracer{}
 	// metrics (OTel with Prometheus and/or OTLP exporters)
-	if (mainOptions.Metrics.Prometheus.Enabled || mainOptions.Metrics.OTLP.Enabled) && !isReload {
+	if (mainOptions.Metrics.Prometheus.Enabled || mainOptions.Metrics.OTLP.Enabled) && mode != ModeReload {
 		metricsProvider, err := metrics.NewProvider(context.Background(), mainOptions.Metrics)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create metrics provider: %w", err)
@@ -104,7 +135,7 @@ func NewBifrost(mainOptions config.Options, isReload bool) (bifrost *Bifrost, er
 	}
 	// access log
 	accessLogTracers := map[string]*accesslog.Tracer{}
-	if len(mainOptions.AccessLogs) > 0 && !isReload {
+	if len(mainOptions.AccessLogs) > 0 && mode != ModeReload {
 		for id, accessLogOptions := range mainOptions.AccessLogs {
 			accessLogTracer, err := accesslog.NewTracer(accessLogOptions)
 			if err != nil {
@@ -148,13 +179,17 @@ func NewBifrost(mainOptions config.Options, isReload bool) (bifrost *Bifrost, er
 				myTracers = append(myTracers, accessLogTracer)
 			}
 		}
-		httpServer, err := newHTTPServer(bifrost, server, myTracers, isReload)
+		listenerMode := ListenerEnabled
+		if mode == ModeReload {
+			listenerMode = ListenerDisabled
+		}
+		httpServer, err := newHTTPServer(bifrost, server, myTracers, listenerMode)
 		if err != nil {
 			return nil, err
 		}
 		bifrost.httpServers[id] = httpServer
 	}
-	bifrost.SetActive(true)
+	bifrost.SetActive(StatusActive)
 	return bifrost, nil
 }
 
@@ -174,6 +209,7 @@ func (b *Bifrost) Run() {
 	}
 }
 
+// ZeroDownTime returns the zero-downtime runtime manager.
 func (b *Bifrost) ZeroDownTime() *runtime.ZeroDownTime {
 	return b.runtime
 }
@@ -182,11 +218,12 @@ func (b *Bifrost) ZeroDownTime() *runtime.ZeroDownTime {
 // It blocks until all servers finish their shutdown process.
 // The function returns an error if any server fails to shut down.
 func (b *Bifrost) Shutdown(ctx context.Context) error {
-	return b.shutdown(ctx, false)
+	return b.doShutdown(ctx, ShutdownGraceful)
 }
 
+// ShutdownNow shuts down all servers immediately.
 func (b *Bifrost) ShutdownNow(ctx context.Context) error {
-	return b.shutdown(ctx, true)
+	return b.doShutdown(ctx, ShutdownImmediate)
 }
 
 // Service retrieves a service by its ID from the Bifrost instance.
@@ -203,15 +240,16 @@ func (b *Bifrost) IsActive() bool {
 	return atomic.LoadUint32(&b.state) == 1
 }
 
-// SetActive sets whether the Bifrost is active or not. If the value is true, Bifrost will be set to active, otherwise it will be set to inactive.
-func (b *Bifrost) SetActive(value bool) {
-	if value {
+// SetActive sets whether the Bifrost is active or not.
+func (b *Bifrost) SetActive(status BifrostStatus) {
+	if status == StatusActive {
 		atomic.StoreUint32(&b.state, 1)
 	} else {
 		atomic.StoreUint32(&b.state, 0)
 	}
 }
 
+// Close releases resources used by Bifrost.
 func (b *Bifrost) Close() error {
 	for _, service := range b.services {
 		_ = service.Close()
@@ -224,35 +262,35 @@ func (b *Bifrost) Close() error {
 	return nil
 }
 
-func (b *Bifrost) shutdown(ctx context.Context, now bool) error {
-	b.SetActive(false)
-	wg := &sync.WaitGroup{}
-	maxTimeout := 10 * time.Second
+func (b *Bifrost) doShutdown(ctx context.Context, mode ShutdownMode) error {
+	b.SetActive(StatusInactive)
+	var wg sync.WaitGroup
+	const (
+		defaultMaxShutdownTimeout = 10 * time.Second
+		immediateShutdownTimeout  = 500 * time.Millisecond
+	)
+	maxTimeout := defaultMaxShutdownTimeout
 	for _, server := range b.httpServers {
-		wg.Add(1)
 		if server.options.Timeout.Graceful > 0 && server.options.Timeout.Graceful > maxTimeout {
 			maxTimeout = server.options.Timeout.Graceful
 		}
-		go func(srv *HTTPServer) {
-			safety.Go(ctx, func() {
-				defer wg.Done()
-				if srv.options.Timeout.Graceful > 0 {
-					ctx, cancel := context.WithTimeout(ctx, server.options.Timeout.Graceful)
-					defer cancel()
-					_ = srv.Shutdown(ctx)
-				} else {
-					_ = srv.Shutdown(ctx)
-				}
+		wg.Go(func() {
+			if server.options.Timeout.Graceful > 0 {
+				c, cancel := context.WithTimeout(ctx, server.options.Timeout.Graceful)
+				defer cancel()
+				_ = server.Shutdown(c)
+			} else {
+				_ = server.Shutdown(ctx)
+			}
 
-				slog.Debug("http server shutdown", "id", srv.options.ID)
-			})
-		}(server)
+			slog.Debug("http server shutdown", "id", server.options.ID)
+		})
 	}
 
-	if now {
-		maxTimeout = 500 * time.Millisecond
+	if mode == ShutdownImmediate {
+		maxTimeout = immediateShutdownTimeout
 	}
-	waitTimeout(wg, maxTimeout)
+	waitTimeout(&wg, maxTimeout)
 
 	_ = b.Close()
 

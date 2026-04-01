@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
@@ -27,7 +28,7 @@ func TestCompressesResponse(t *testing.T) {
 	_ = Init()
 	h := middleware.Factory("compression")
 	mw, err := h(nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ctx := context.Background()
 
@@ -44,7 +45,7 @@ func TestCompressesResponse(t *testing.T) {
 	assert.Equal(t, "gzip", string(c.Response.Header.Peek(headerContentEncoding)))
 	assert.Equal(t, "Accept-Encoding", string(c.Response.Header.Peek(headerVary)))
 	assert.NotEqual(t, []byte("hello world"), c.Response.Body())
-	assert.True(t, len(c.Response.Body()) > 0)
+	assert.NotEmpty(t, c.Response.Body())
 }
 
 func TestSkipsIfAlreadyCompressed(t *testing.T) {
@@ -159,7 +160,7 @@ func TestNoBody(t *testing.T) {
 
 	assert.Equal(t, "gzip", string(c.Response.Header.Peek(headerContentEncoding)))
 	assert.Equal(t, "Accept-Encoding", string(c.Response.Header.Peek(headerVary)))
-	assert.Equal(t, 0, len(c.Response.Body()))
+	assert.Empty(t, c.Response.Body())
 }
 
 func TestWildcardAcceptEncoding(t *testing.T) {
@@ -179,5 +180,5 @@ func TestWildcardAcceptEncoding(t *testing.T) {
 	assert.Equal(t, "gzip", string(c.Response.Header.Peek(headerContentEncoding)))
 	assert.Equal(t, "Accept-Encoding", string(c.Response.Header.Peek(headerVary)))
 	assert.NotEqual(t, []byte("hello world"), c.Response.Body())
-	assert.True(t, len(c.Response.Body()) > 0)
+	assert.NotEmpty(t, c.Response.Body())
 }

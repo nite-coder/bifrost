@@ -12,6 +12,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -25,7 +26,7 @@ func TestTracer(t *testing.T) {
 		},
 	}
 	provider, err := NewProvider(context.Background(), opts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 
 	promOpts := []Option{}
@@ -40,11 +41,11 @@ func TestTracer(t *testing.T) {
 	// Use the provider with the middleware to enable OTel metrics in the /metrics endpoint
 	h.Use(NewMetricMiddleware("/metrics", provider).ServeHTTP)
 
-	h.GET("/test_get", func(c context.Context, ctx *app.RequestContext) {
+	h.GET("/test_get", func(_ context.Context, ctx *app.RequestContext) {
 		ctx.String(200, "hello get")
 	})
 
-	h.POST("/test_post", func(ctx context.Context, c *app.RequestContext) {
+	h.POST("/test_post", func(_ context.Context, c *app.RequestContext) {
 		c.Set(variable.GRPCStatusCode, codes.OK)
 		c.String(200, "hello post")
 	})
@@ -52,7 +53,7 @@ func TestTracer(t *testing.T) {
 	// Record a custom OTel metric
 	meter := provider.MeterProvider().Meter("test-meter")
 	counter, err := meter.Int64Counter("otel_custom_counter")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	counter.Add(context.Background(), 5)
 
 	go h.Spin()
@@ -63,37 +64,37 @@ func TestTracer(t *testing.T) {
 	}()
 
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", "127.0.0.1:6666", 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", "127.0.0.1:6666", 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}
 		return false
 	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 
-	for i := 0; i < 10; i++ {
-		resp, err := http.Get("http://127.0.0.1:6666/test_get")
-		assert.NoError(t, err)
+	for range 10 {
+		resp, e := http.Get("http://127.0.0.1:6666/test_get")
+		require.NoError(t, e)
 		if resp != nil {
 			_ = resp.Body.Close()
 		}
-		resp, err = http.Post("http://127.0.0.1:6666/test_post", "application/json", strings.NewReader(""))
-		assert.NoError(t, err)
+		resp, e = http.Post("http://127.0.0.1:6666/test_post", "application/json", strings.NewReader(""))
+		require.NoError(t, e)
 		if resp != nil {
 			_ = resp.Body.Close()
 		}
 	}
 
-	metricsRes, err := http.Get("http://127.0.0.1:6666/metrics")
+	metricsRes, e := http.Get("http://127.0.0.1:6666/metrics")
 
-	assert.NoError(t, err)
+	require.NoError(t, e)
 	assert.Equal(t, http.StatusOK, metricsRes.StatusCode)
 
 	defer metricsRes.Body.Close()
 
-	metricsResBytes, err := io.ReadAll(metricsRes.Body)
+	metricsResBytes, e := io.ReadAll(metricsRes.Body)
 
-	assert.NoError(t, err)
+	require.NoError(t, e)
 
 	metricsResStr := string(metricsResBytes)
 

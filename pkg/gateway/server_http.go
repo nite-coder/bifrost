@@ -30,7 +30,7 @@ import (
 	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/unix"
 
-	bifrostRuntime "github.com/nite-coder/bifrost/internal/pkg/runtime"
+	infra "github.com/nite-coder/bifrost/internal/pkg/runtime"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 )
@@ -38,6 +38,24 @@ import (
 var (
 	httpServerOpenConnections *prom.GaugeVec
 	initLoggerOnce            sync.Once
+)
+
+const (
+	defaultHTTPReadTimeout       = 60 * time.Second
+	defaultHTTPWriteTimeout      = 60 * time.Second
+	defaultHTTPKeepAliveTimeout  = 60 * time.Second
+	defaultHTTPExitWaitTime      = 10 * time.Second
+	defaultMetricsTickerInterval = 10 * time.Second
+)
+
+// ListenerMode defines whether the server should listen on a network port.
+type ListenerMode int
+
+const (
+	// ListenerEnabled indicates the server should listen on the configured address.
+	ListenerEnabled ListenerMode = iota
+	// ListenerDisabled indicates the server should not open a listener.
+	ListenerDisabled
 )
 
 func init() {
@@ -51,6 +69,7 @@ func init() {
 	prom.MustRegister(httpServerOpenConnections)
 }
 
+// HTTPServer represents an HTTP server instance in the gateway.
 type HTTPServer struct {
 	options          *config.ServerOptions
 	switcher         *switcher
@@ -65,19 +84,20 @@ func newHTTPServer(
 	bifrost *Bifrost,
 	serverOptions config.ServerOptions,
 	tracers []tracer.Tracer,
-	disableListener bool,
+	listenerMode ListenerMode,
 ) (*HTTPServer, error) {
 	ctx := context.Background()
+	var err error
 	httpServer := &HTTPServer{}
 	httpServer.isActive.Store(true)
 	hzOpts := []hzconfig.Option{
 		server.WithDisableDefaultDate(true),
 		server.WithDisablePrintRoute(true),
 		server.WithTraceLevel(stats.LevelBase),
-		server.WithReadTimeout(time.Second * 60),
-		server.WithWriteTimeout(time.Second * 60),
-		server.WithExitWaitTime(time.Second * 10),
-		server.WithKeepAliveTimeout(time.Second * 60),
+		server.WithReadTimeout(defaultHTTPReadTimeout),
+		server.WithWriteTimeout(defaultHTTPWriteTimeout),
+		server.WithExitWaitTime(defaultHTTPExitWaitTime),
+		server.WithKeepAliveTimeout(defaultHTTPKeepAliveTimeout),
 		server.WithKeepAlive(true),
 		server.WithALPN(true),
 		server.WithStreamBody(true),
@@ -93,7 +113,7 @@ func newHTTPServer(
 						netpollConn, ok := hzConn.Conn.(netpoll.Connection)
 						if ok {
 							httpServer.totalConnections.Add(1)
-							_ = netpollConn.AddCloseCallback(func(connection netpoll.Connection) error {
+							_ = netpollConn.AddCloseCallback(func(_ netpoll.Connection) error {
 								httpServer.totalConnections.Add(-1)
 								return nil
 							})
@@ -107,7 +127,7 @@ func newHTTPServer(
 	}
 	if bifrost.options.Metrics.Prometheus.Enabled {
 		go safety.Go(context.Background(), func() {
-			ticker := time.NewTicker(time.Second * 10)
+			ticker := time.NewTicker(defaultMetricsTickerInterval)
 			defer ticker.Stop()
 			for range ticker.C {
 				if !httpServer.isActive.Load() {
@@ -120,27 +140,27 @@ func newHTTPServer(
 			}
 		})
 	}
-	if !disableListener {
+	if listenerMode == ListenerEnabled {
 		listenerConfig := &net.ListenConfig{
-			Control: func(network, address string, c syscall.RawConn) error {
+			Control: func(_, _ string, c syscall.RawConn) error {
 				var opErr error
-				err := c.Control(func(fd uintptr) {
+				err = c.Control(func(fd uintptr) {
 					if serverOptions.ReusePort {
-						err := setTCPReusePort(fd)
+						err = setTCPReusePort(fd)
 						if err != nil {
 							opErr = err
 							return
 						}
 					}
 					if serverOptions.TCPQuickAck {
-						err := setTCPQuickAck(fd)
+						err = setTCPQuickAck(fd)
 						if err != nil {
 							opErr = err
 							return
 						}
 					}
 					if serverOptions.TCPFastOpen {
-						err := setTCPFastOpen(fd)
+						err = setTCPFastOpen(fd)
 						if err != nil {
 							opErr = err
 							return
@@ -153,7 +173,7 @@ func newHTTPServer(
 				return opErr
 			},
 		}
-		listenerOptions := &bifrostRuntime.ListenerOptions{
+		listenerOptions := &infra.ListenerOptions{
 			Network: "tcp",
 			Address: serverOptions.Bind,
 			Config:  listenerConfig,
@@ -161,7 +181,8 @@ func newHTTPServer(
 		if serverOptions.ProxyProtocol {
 			listenerOptions.ProxyProtocol = true
 		}
-		listener, err := bifrost.runtime.Listener(ctx, listenerOptions)
+		var listener net.Listener
+		listener, err = bifrost.runtime.Listener(ctx, listenerOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -179,7 +200,8 @@ func newHTTPServer(
 					return nil, fmt.Errorf("only tcp listener supported, called with %#v", listener)
 				}
 			}
-			file, err := tl.File()
+			var file *os.File
+			file, err = tl.File()
 			if err != nil {
 				return nil, err
 			}
@@ -215,7 +237,8 @@ func newHTTPServer(
 	if serverOptions.ReadBufferSize > 0 {
 		hzOpts = append(hzOpts, server.WithReadBufferSize(serverOptions.ReadBufferSize))
 	}
-	engine, err := newEngine(bifrost, serverOptions)
+	var engine *Engine
+	engine, err = newEngine(bifrost, serverOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -228,8 +251,8 @@ func newHTTPServer(
 		hlog.SetSilentMode(true)
 	})
 	hzOpts = append(hzOpts, engine.hzOptions...)
-	for _, tracer := range tracers {
-		hzOpts = append(hzOpts, server.WithTracer(tracer))
+	for _, tr := range tracers {
+		hzOpts = append(hzOpts, server.WithTracer(tr))
 	}
 	var tlsConfig *tls.Config
 	if len(serverOptions.TLS.CertPEM) > 0 || len(serverOptions.TLS.KeyPEM) > 0 {
@@ -249,15 +272,18 @@ func newHTTPServer(
 		if serverOptions.TLS.KeyPEM == "" {
 			return nil, errors.New("key_PEM cannot be empty")
 		}
-		certPEM, err := os.ReadFile(serverOptions.TLS.CertPEM)
+		var certData []byte
+		certData, err = os.ReadFile(serverOptions.TLS.CertPEM)
 		if err != nil {
 			return nil, err
 		}
-		keyPEM, err := os.ReadFile(serverOptions.TLS.KeyPEM)
+		var keyData []byte
+		keyData, err = os.ReadFile(serverOptions.TLS.KeyPEM)
 		if err != nil {
 			return nil, err
 		}
-		cert, err := tls.X509KeyPair(certPEM, keyPEM)
+		var cert tls.Certificate
+		cert, err = tls.X509KeyPair(certData, keyData)
 		if err != nil {
 			return nil, err
 		}
@@ -290,7 +316,7 @@ func newHTTPServer(
 	if serverOptions.HTTP2 {
 		httpServer.stdlibServer = NewStdlibServer(h, &serverOptions, tlsConfig, tracers)
 	}
-	h.OnShutdown = append(h.OnShutdown, func(ctx context.Context) {
+	h.OnShutdown = append(h.OnShutdown, func(_ context.Context) {
 		for _, tracer := range tracers {
 			if closer, ok := tracer.(io.Closer); ok {
 				_ = closer.Close()
@@ -306,6 +332,7 @@ func newHTTPServer(
 	return httpServer, nil
 }
 
+// Run starts the HTTP server and blocks until it stops.
 func (s *HTTPServer) Run() {
 	slog.Info(
 		"starting server",
@@ -327,6 +354,7 @@ func (s *HTTPServer) Run() {
 	}
 }
 
+// Shutdown stops the HTTP server gracefully.
 func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	s.isActive.Store(false)
 	var err error
@@ -339,14 +367,17 @@ func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	return err
 }
 
+// Bind returns the address the server is bound to.
 func (s *HTTPServer) Bind() string {
 	return s.options.Bind
 }
 
+// SetEngine updates the request processing engine for the server.
 func (s *HTTPServer) SetEngine(engine *Engine) {
 	s.switcher.SetEngine(engine)
 }
 
+// Engine returns the current request processing engine.
 func (s *HTTPServer) Engine() *Engine {
 	return s.switcher.Engine()
 }

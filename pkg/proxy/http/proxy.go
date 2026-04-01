@@ -36,6 +36,8 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+const statusClientClosedRequest = 499
+
 // TrailerPrefix is a magic prefix for [ResponseWriter.Header] map keys
 // that, if present, signals that the map entry is actually for
 // the response trailers, and not the response headers. The prefix
@@ -51,7 +53,8 @@ import (
 //	https://pkg.go.dev/net/http#example-ResponseWriter-Trailers
 const TrailerPrefix = "Trailer:"
 
-type HTTPProxy struct {
+// Proxy implements a reverse proxy for HTTP services.
+type Proxy struct {
 	failExpireAt time.Time
 	options      *Options
 	client       *client.Client
@@ -78,6 +81,8 @@ type HTTPProxy struct {
 	transferTrailer bool
 	tags            map[string]string
 }
+
+// Options contains configuration for the HTTP proxy.
 type Options struct {
 	Target           string
 	TargetHostHeader string
@@ -109,22 +114,18 @@ var hopHeaders = []string{
 }
 
 // New creates a new reverse proxy instance.
-//
-// It takes a set of options and a client as parameters, and returns a new reverse proxy instance and an error.
-// The options parameter specifies the target URL and other configuration options for the reverse proxy.
-// The client parameter specifies the client to use for making requests to the target URL.
-// The returned error is nil if the reverse proxy instance is created successfully, or an error if there is a problem.
-func New(opts Options, client *client.Client) (proxy.Proxy, error) {
+func New(opts Options, httpClient *client.Client) (proxy.Proxy, error) {
 	addr, err := url.Parse(opts.Target)
 	if err != nil {
 		return nil, fmt.Errorf("proxy: HTTP proxy failed to parse target URL: %w", err)
 	}
-	if client == nil {
+	if httpClient == nil {
 		clientOptions := ClientOptions{
 			IsHTTP2:   opts.Protocol == config.ProtocolHTTP2,
 			HZOptions: DefaultClientOptions(),
 		}
-		client, err = NewClient(clientOptions)
+		var err error
+		httpClient, err = NewClient(clientOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +133,7 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 	if opts.Weight == 0 {
 		opts.Weight = 1
 	}
-	r := &HTTPProxy{
+	r := &Proxy{
 		id:              uuid.New().String(),
 		transferTrailer: true,
 		options:         &opts,
@@ -169,13 +170,14 @@ func New(opts Options, client *client.Client) (proxy.Proxy, error) {
 				req.Header.Set("Host", opts.TargetHostHeader)
 			}
 		},
-		client: client,
+		client: httpClient,
 		tags:   opts.Tags,
 	}
 	return r, nil
 }
 
-func (p *HTTPProxy) IsAvailable() bool {
+// IsAvailable checks if the proxy is currently available.
+func (p *Proxy) IsAvailable() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	if p.options.MaxFails == 0 {
@@ -191,7 +193,8 @@ func (p *HTTPProxy) IsAvailable() bool {
 	return false
 }
 
-func (p *HTTPProxy) AddFailedCount(count uint) error {
+// AddFailedCount increments the failed request count for the proxy.
+func (p *Proxy) AddFailedCount(count uint) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	now := timecache.Now()
@@ -207,7 +210,7 @@ func (p *HTTPProxy) AddFailedCount(count uint) error {
 	return nil
 }
 
-func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 	defer func() {
 		if r := recover(); r != nil {
@@ -221,7 +224,7 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			c.Abort()
 		}
 		// check upstream health
-		if c.Response.StatusCode() >= 500 {
+		if c.Response.StatusCode() >= http.StatusInternalServerError {
 			_ = p.AddFailedCount(1)
 		}
 	}()
@@ -257,7 +260,9 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		outReq.Header.Set("Te", "trailers")
 	}
 	// prepare request(replace headers and some URL host)
-	if ip, _, err := net.SplitHostPort(c.RemoteAddr().String()); err == nil {
+	var ip string
+	ip, _, err = net.SplitHostPort(c.RemoteAddr().String())
+	if err == nil {
 		tmp := outReq.Header.Peek("X-Forwarded-For")
 		if len(tmp) > 0 {
 			buf := bytebufferpool.Get()
@@ -306,7 +311,7 @@ func (p *HTTPProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 				if c.Response.StatusCode() > 0 {
 					labels = append(labels, semconv.HTTPResponseStatusCode(c.Response.StatusCode()))
 				}
-				if c.Response.StatusCode() >= 500 {
+				if c.Response.StatusCode() >= http.StatusInternalServerError {
 					span.SetStatus(codes.Error, "")
 				}
 				if c.GetBool(variable.TargetTimeout) {
@@ -341,38 +346,42 @@ ProxyPassLoop:
 }
 
 // ID return proxy's ID.
-func (p *HTTPProxy) ID() string {
+func (p *Proxy) ID() string {
 	return p.id
 }
 
 // SetDirector use to customize protocol.Request.
-func (p *HTTPProxy) SetDirector(director func(req *protocol.Request)) {
+func (p *Proxy) SetDirector(director func(req *protocol.Request)) {
 	p.director = director
 }
 
-// SetClient use to customize client.
-func (p *HTTPProxy) SetClient(client *client.Client) {
-	p.client = client
+// SetClient sets the HTTP client for the proxy.
+func (p *Proxy) SetClient(httpClient *client.Client) {
+	p.client = httpClient
 }
 
 // SetErrorHandler use to customize error handler.
-func (p *HTTPProxy) SetErrorHandler(eh func(c *app.RequestContext, err error)) {
+func (p *Proxy) SetErrorHandler(eh func(c *app.RequestContext, err error)) {
 	p.errorHandler = eh
 }
 
-func (r *HTTPProxy) SetTransferTrailer(b bool) {
-	r.transferTrailer = b
+// SetTransferTrailer sets whether to forward trailer headers.
+func (p *Proxy) SetTransferTrailer(b bool) {
+	p.transferTrailer = b
 }
 
-func (p *HTTPProxy) Weight() uint32 {
+// Weight returns the load balancing weight of the proxy.
+func (p *Proxy) Weight() uint32 {
 	return p.weight
 }
 
-func (p *HTTPProxy) Target() string {
+// Target returns the target URL string of the proxy.
+func (p *Proxy) Target() string {
 	return p.target
 }
 
-func (p *HTTPProxy) Close() error {
+// Close closes the proxy and its underlying idle connections.
+func (p *Proxy) Close() error {
 	if p.client != nil {
 		p.client.CloseIdleConnections()
 		p.client = nil
@@ -380,7 +389,8 @@ func (p *HTTPProxy) Close() error {
 	return nil
 }
 
-func (p *HTTPProxy) Tag(key string) (value string, exist bool) {
+// Tag returns the value of a specific tag.
+func (p *Proxy) Tag(key string) (value string, exist bool) {
 	if len(p.tags) == 0 {
 		return "", false
 	}
@@ -389,11 +399,12 @@ func (p *HTTPProxy) Tag(key string) (value string, exist bool) {
 	return val, found
 }
 
-func (p *HTTPProxy) Tags() map[string]string {
+// Tags returns all tags associated with the proxy.
+func (p *Proxy) Tags() map[string]string {
 	return p.tags
 }
 
-func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err error) {
+func (p *Proxy) handleError(ctx context.Context, c *app.RequestContext, err error) {
 	if err == nil {
 		return
 	}
@@ -419,7 +430,7 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 	}
 	if errors.Is(err, context.Canceled) {
 		// client canceled the request
-		c.Response.SetStatusCode(499)
+		c.Response.SetStatusCode(statusClientClosedRequest)
 		return
 	}
 	c.Response.Header.SetStatusCode(http.StatusBadGateway)
@@ -430,7 +441,7 @@ func (r *HTTPProxy) handleError(ctx context.Context, c *app.RequestContext, err 
 func removeRequestConnHeaders(c *app.RequestContext) {
 	c.Request.Header.VisitAll(func(k, v []byte) {
 		if cast.B2S(k) == "Connection" {
-			for _, sf := range strings.Split(cast.B2S(v), ",") {
+			for sf := range strings.SplitSeq(cast.B2S(v), ",") {
 				if sf = textproto.TrimString(sf); sf != "" {
 					c.Request.Header.DelBytes(cast.S2B(sf))
 				}
@@ -444,7 +455,7 @@ func removeRequestConnHeaders(c *app.RequestContext) {
 func removeResponseConnHeaders(c *app.RequestContext) {
 	c.Response.Header.VisitAll(func(k, v []byte) {
 		if cast.B2S(k) == "Connection" {
-			for _, sf := range strings.Split(cast.B2S(v), ",") {
+			for sf := range strings.SplitSeq(cast.B2S(v), ",") {
 				if sf = textproto.TrimString(sf); sf != "" {
 					c.Response.Header.DelBytes(cast.S2B(sf))
 				}

@@ -16,16 +16,19 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
+// ErrNotFound is returned when no DNS records are found for a host.
 var ErrNotFound = errors.New("no records found")
 
-type DNSServiceDiscovery struct {
+// Discovery implements service discovery using DNS.
+type Discovery struct {
 	client  *dns.Client
 	ticker  *time.Ticker
 	servers []string
 	valid   time.Duration
 }
 
-func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*DNSServiceDiscovery, error) {
+// NewDNSServiceDiscovery creates a new DNSServiceDiscovery instance.
+func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*Discovery, error) {
 	newServers := make([]string, 0)
 	for _, server := range servers {
 		server = strings.TrimSpace(server)
@@ -45,11 +48,12 @@ func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*DNSServiceD
 	if len(newServers) == 0 {
 		return nil, errors.New("no valid DNS servers found")
 	}
+	const defaultDNSTTL = 30 * time.Second
 	if valid.Seconds() <= 0 {
-		valid = 30 * time.Second
+		valid = defaultDNSTTL
 	}
 	client := new(dns.Client)
-	d := &DNSServiceDiscovery{
+	d := &Discovery{
 		client:  client,
 		servers: newServers,
 		valid:   valid,
@@ -58,7 +62,8 @@ func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*DNSServiceD
 	return d, nil
 }
 
-func (d *DNSServiceDiscovery) GetInstances(
+// GetInstances resolves the given host to IP addresses and returns them as service instances.
+func (d *Discovery) GetInstances(
 	ctx context.Context,
 	options provider.GetInstanceOptions,
 ) ([]provider.Instancer, error) {
@@ -88,9 +93,10 @@ func (d *DNSServiceDiscovery) GetInstances(
 	return instances, nil
 }
 
-func (d *DNSServiceDiscovery) Watch(
+// Watch starts a ticker that periodically signals for instance refreshes.
+func (d *Discovery) Watch(
 	ctx context.Context,
-	options provider.GetInstanceOptions,
+	_ provider.GetInstanceOptions,
 ) (<-chan []provider.Instancer, error) {
 	ch := make(chan []provider.Instancer, 1)
 	go safety.Go(ctx, func() {
@@ -109,14 +115,16 @@ func (d *DNSServiceDiscovery) Watch(
 	return ch, nil
 }
 
-func (d *DNSServiceDiscovery) Close() error {
+// Close stops the DNS service discovery ticker.
+func (d *Discovery) Close() error {
 	if d.ticker != nil {
 		d.ticker.Stop()
 	}
 	return nil
 }
 
-func (d *DNSServiceDiscovery) Lookup(ctx context.Context, host string) ([]string, error) {
+// Lookup resolves the given host to a list of IP addresses.
+func (d *Discovery) Lookup(ctx context.Context, host string) ([]string, error) {
 	if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]" {
 		return []string{"127.0.0.1"}, nil
 	}
@@ -127,7 +135,7 @@ func (d *DNSServiceDiscovery) Lookup(ctx context.Context, host string) ([]string
 	m := new(dns.Msg)
 	m.SetQuestion(dns.Fqdn(host), dns.TypeA)
 	var ips []string
-	var minTTL uint32 = 0
+	var minTTL uint32
 	for _, server := range d.servers {
 		in, _, err := d.client.ExchangeContext(ctx, m, server)
 		if err != nil {

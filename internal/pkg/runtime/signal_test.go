@@ -40,6 +40,7 @@ func TestLogRotation_InodeVerification(t *testing.T) {
 }
 
 func runLogRotationTest(t *testing.T) {
+	t.Helper()
 	logDir := t.TempDir()
 	logFile := filepath.Join(logDir, "bifrost.log")
 
@@ -56,7 +57,9 @@ func runLogRotationTest(t *testing.T) {
 	// Get initial Inode
 	fi, err := os.Stat(logFile)
 	require.NoError(t, err)
-	initialInode := fi.Sys().(*syscall.Stat_t).Ino
+	stat, ok := fi.Sys().(*syscall.Stat_t)
+	require.True(t, ok)
+	initialInode := stat.Ino
 
 	// 2. Simulate external action: rename current log file (like logrotate does)
 	rotatedFile := logFile + ".1"
@@ -75,13 +78,17 @@ func runLogRotationTest(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		return fi.Sys().(*syscall.Stat_t).Ino != initialInode
+		stat, ok := fi.Sys().(*syscall.Stat_t)
+		if !ok {
+			return false
+		}
+		return stat.Ino != initialInode
 	}, 2*time.Second, 100*time.Millisecond, "Log file should be recreated with new Inode")
 
 	// 5. Verify Stdout/Stderr output is indeed written to the NEW log file
 	assert.Eventually(t, func() bool {
-		fmt.Fprintln(os.Stdout, "TEST_STDOUT_PAYLOAD")
-		fmt.Fprintln(os.Stderr, "TEST_STDERR_PAYLOAD")
+		_, _ = fmt.Fprintln(os.Stdout, "TEST_STDOUT_PAYLOAD")
+		_, _ = fmt.Fprintln(os.Stderr, "TEST_STDERR_PAYLOAD")
 
 		/* #nosec G304 */
 		content, err := os.ReadFile(filepath.Clean(logFile))
@@ -156,18 +163,18 @@ func TestMaster_SignalForwarding(t *testing.T) {
 	cancel()
 	select {
 	case err := <-errCh:
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	case <-time.After(3 * time.Second):
 		t.Error("Master.Run did not exit")
 	}
 }
 
 // TestLogHelperProcess is a mock worker that reports its actions.
-func TestLogHelperProcess(t *testing.T) {
+func TestLogHelperProcess(_ *testing.T) {
 	if os.Getenv("GO_WANT_LOG_HELPER") != "1" {
 		return
 	}
-	fmt.Fprintln(os.Stdout, "LOG_HELPER_READY")
+	_, _ = fmt.Fprintln(os.Stdout, "LOG_HELPER_READY")
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGUSR1, syscall.SIGTERM)
@@ -175,8 +182,8 @@ func TestLogHelperProcess(t *testing.T) {
 	for {
 		sig := <-sigCh
 		if sig == syscall.SIGTERM {
-			os.Exit(0)
+			os.Exit(0) //nolint:revive // deep-exit is intentional: this is a subprocess entry point, not a regular test
 		}
-		fmt.Fprintf(os.Stderr, "RECEIVED_SIGNAL_%v\n", sig)
+		_, _ = fmt.Fprintf(os.Stderr, "RECEIVED_SIGNAL_%v\n", sig)
 	}
 }

@@ -123,7 +123,7 @@ func TestListener(t *testing.T) {
 			return ""
 		}
 		// Mock file opener to return a valid file for FD 3
-		z.fileOpener = func(name string) (*os.File, error) {
+		z.fileOpener = func(_ string) (*os.File, error) {
 			// In test we can return any file.
 			return os.CreateTemp(t.TempDir(), "fd3")
 		}
@@ -252,7 +252,7 @@ func TestListener_CreateError(t *testing.T) {
 	}
 
 	_, err := z.Listener(context.Background(), listenOptions)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestClose_NotWaiting(t *testing.T) {
@@ -268,7 +268,7 @@ func TestClose_NotWaiting(t *testing.T) {
 
 	// Close without being in waiting state
 	err = z.Close(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify listener is closed
 	assert.Len(t, z.listeners, 1)
@@ -302,7 +302,7 @@ func TestClose_WhileWaiting(t *testing.T) {
 	}()
 
 	err = z.Close(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	select {
 	case <-done:
@@ -322,7 +322,7 @@ func TestWaitForUpgrade_InvalidState(t *testing.T) {
 
 	// Calling WaitForUpgrade should fail
 	err := z.WaitForUpgrade(context.Background())
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "state is not default")
 }
 
@@ -346,7 +346,7 @@ func TestWaitForUpgrade_CloseTriggersStop(t *testing.T) {
 	// WaitForUpgrade should return
 	select {
 	case err := <-errCh:
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	case <-time.After(2 * time.Second):
 		t.Error("WaitForUpgrade did not return after Close")
 	}

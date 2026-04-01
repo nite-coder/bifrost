@@ -60,7 +60,7 @@ func (m *httpHeaderCarrier) Set(key, value string) {
 func (m *httpHeaderCarrier) Keys() []string {
 	out := make([]string, 0, len(m.metadata))
 
-	m.headers.VisitAll(func(key, value []byte) {
+	m.headers.VisitAll(func(key, _ []byte) {
 		out = append(out, string(key))
 	})
 

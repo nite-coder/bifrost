@@ -56,18 +56,18 @@ func TestHashing(t *testing.T) {
 			params := map[string]any{"hash_on": "$var.uid"}
 
 			b, err := factory(proxies, params)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			hzctx := app.NewContext(0)
 			hzctx.Set("uid", key)
 
 			// Call multiple times and ensure it always returns the same proxy
 			p1, err := b.Select(context.Background(), hzctx)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.NotNil(t, p1)
 
 			p2, err := b.Select(context.Background(), hzctx)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, p1.Target(), p2.Target())
 		}
 	})
@@ -80,11 +80,11 @@ func TestHashing(t *testing.T) {
 		for i := range 100 {
 			t.Run(fmt.Sprintf("worker-%d", i), func(t *testing.T) {
 				t.Parallel()
-				for j := 0; j < 100; j++ {
+				for range 100 {
 					hzctx := app.NewContext(0)
 					hzctx.Set("uid", "some-key")
 					p, err := b.Select(ctx, hzctx)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.NotNil(t, p)
 				}
 			})
@@ -102,7 +102,7 @@ func TestHashing(t *testing.T) {
 			hzctx := app.NewContext(0)
 			hzctx.Set("uid", key)
 			proxy, err := b.Select(context.Background(), hzctx)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.NotNil(t, proxy)
 			assert.Equal(t, "http://backend3", proxy.Target())
 		}
@@ -120,7 +120,7 @@ func TestHashing(t *testing.T) {
 			hzctx := app.NewContext(0)
 			hzctx.Set("uid", key)
 			proxy, err := b.Select(context.Background(), hzctx)
-			assert.ErrorIs(t, err, balancer.ErrNotAvailable)
+			require.ErrorIs(t, err, balancer.ErrNotAvailable)
 			assert.Nil(t, proxy)
 		}
 	})
@@ -131,29 +131,29 @@ func TestHashing(t *testing.T) {
 
 		// nil params
 		b, err := factory(proxies, nil)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, b)
 
 		// invalid hash_on type
 		b, err = factory(proxies, map[string]any{"hash_on": 123})
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, b)
 
 		// missing hash_on
 		b, err = factory(proxies, map[string]any{"other": "val"})
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, b)
 	})
 
 	t.Run("proxies getter", func(t *testing.T) {
 		b := NewBalancer(proxies, "$var.uid", defaultReplicas)
-		assert.Equal(t, 3, len(b.Proxies()))
+		assert.Len(t, b.Proxies(), 3)
 	})
 
 	t.Run("nil proxies", func(t *testing.T) {
 		b := NewBalancer(nil, "$var.uid", defaultReplicas)
 		p, err := b.Select(context.Background(), nil)
-		assert.ErrorIs(t, err, balancer.ErrNotAvailable)
+		require.ErrorIs(t, err, balancer.ErrNotAvailable)
 		assert.Nil(t, p)
 	})
 
@@ -169,7 +169,7 @@ func TestHashing(t *testing.T) {
 
 		b := NewBalancer([]proxy.Proxy{p1}, "$var.uid", defaultReplicas)
 		p, err := b.Select(context.Background(), nil)
-		assert.ErrorIs(t, err, balancer.ErrNotAvailable)
+		require.ErrorIs(t, err, balancer.ErrNotAvailable)
 		assert.Nil(t, p)
 	})
 
@@ -184,7 +184,7 @@ func TestHashing(t *testing.T) {
 
 		// 2. Map 1000 keys and record their assignments
 		assignments := make(map[int]string)
-		for i := 0; i < 1000; i++ {
+		for i := range 1000 {
 			hzctx := app.NewContext(0)
 			hzctx.Set("uid", i)
 			p, _ := b.Select(context.Background(), hzctx)
@@ -196,7 +196,7 @@ func TestHashing(t *testing.T) {
 
 		// 4. Map the same 1000 keys again and see how many moved
 		changedOnAliveNodes := 0
-		for i := 0; i < 1000; i++ {
+		for i := range 1000 {
 			hzctx := app.NewContext(0)
 			hzctx.Set("uid", i)
 			p, _ := b.Select(context.Background(), hzctx)
@@ -227,7 +227,7 @@ func TestHashing(t *testing.T) {
 		// 2. Map 100,000 keys and record their assignments
 		distribution := make(map[string]int)
 		numKeys := 100000
-		for i := 0; i < numKeys; i++ {
+		for i := range numKeys {
 			hzctx := app.NewContext(0)
 			hzctx.Set("uid", i)
 			p, _ := b.Select(context.Background(), hzctx)
@@ -264,7 +264,7 @@ func TestHashing(t *testing.T) {
 		// 1. Get the candidate order from the ring
 		candidates, err := b.ring.GetN(key, 3)
 		require.NoError(t, err)
-		require.Equal(t, 3, len(candidates))
+		require.Len(t, candidates, 3)
 
 		// 2. Initial selection should be the first candidate
 		p, err := b.Select(context.Background(), hzctx)
@@ -302,8 +302,8 @@ func TestHashing(t *testing.T) {
 		sel1, err1 := b1.Select(context.Background(), hzctx)
 		sel2, err2 := b2.Select(context.Background(), hzctx)
 
-		assert.NoError(t, err1)
-		assert.NoError(t, err2)
+		require.NoError(t, err1)
+		require.NoError(t, err2)
 		assert.Equal(t, sel1.Target(), sel2.Target(), "Selection should be identical regardless of proxy input order")
 
 		// Also verify the internal ring nodes are sorted

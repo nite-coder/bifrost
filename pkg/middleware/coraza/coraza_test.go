@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCorazaMiddleware_ServeHTTP(t *testing.T) {
@@ -128,7 +128,7 @@ func TestCorazaMiddleware_SQLInjection(t *testing.T) {
 			`,
 	}
 	middleware, err := NewMiddleware(options)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	t.Run("SQL Injection Blocked", func(t *testing.T) {
 		uri := "/test?input=1' UNION SELECT 1,2,3 FROM users WHERE 1=1 AND (SELECT 1 FROM users LIMIT 1) LIKE '1' OR SLEEP(5)-- " // SQLi payload
@@ -187,7 +187,7 @@ func TestCorazaCustomRules(t *testing.T) {
 			`,
 	}
 	middleware, err := NewMiddleware(options)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	t.Run("IP HOST", func(t *testing.T) {
 		path := "/test"
@@ -233,7 +233,7 @@ func TestCorazaIPAllowList(t *testing.T) {
 		IPAllowList: []string{"10.1.1.1"},
 	}
 	middleware, err := NewMiddleware(options)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	t.Run("Simple SQL Injection Blocked", func(t *testing.T) {
 		path := "/test?input=1%20OR%201=1" // SQLi payload

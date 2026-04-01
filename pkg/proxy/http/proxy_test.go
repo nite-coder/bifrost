@@ -17,6 +17,7 @@ import (
 	gwebsocket "github.com/gorilla/websocket"
 	"github.com/hertz-contrib/websocket"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 )
@@ -43,13 +44,13 @@ func TestReverseProxy(t *testing.T) {
 	// client request: /backend
 	// updatream: /proxy/backend
 
-	serv.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	serv.GET("/proxy/backend", func(_ context.Context, ctx *app.RequestContext) {
 		if ctx.Query("mode") == "hangup" {
 			_ = ctx.GetConn().Close()
 			return
 		}
 		if ctx.Request.Header.Get("X-Forwarded-For") == "" {
-			t.Errorf("didn't get X-Forwarded-For header")
+			t.Error("didn't get X-Forwarded-For header")
 		}
 		if c := ctx.Request.Header.Get("Connection"); c != "" {
 			t.Errorf("handler got Connection header value %q", c)
@@ -101,8 +102,8 @@ func TestReverseProxy(t *testing.T) {
 	})
 	go serv.Spin()
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", "127.0.0.1:9990", 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", "127.0.0.1:9990", 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}
@@ -143,7 +144,7 @@ func TestReverseProxy(t *testing.T) {
 		t.Errorf("header Trailers = %q; want %q", g, e)
 	}
 	length := 0
-	res.Header.VisitAll(func(key, value []byte) {
+	res.Header.VisitAll(func(key, _ []byte) {
 		if string(key) == "X-Multi-Value" {
 			length++
 		}
@@ -152,7 +153,7 @@ func TestReverseProxy(t *testing.T) {
 		t.Errorf("got %d X-Multi-Value header values; expected %d", 2, length)
 	}
 	length = 0
-	res.Header.VisitAll(func(key, value []byte) {
+	res.Header.VisitAll(func(key, _ []byte) {
 		if string(key) == "Set-Cookie" {
 			length++
 		}
@@ -191,7 +192,7 @@ func TestReverseProxyStripHeadersPresentInConnection(t *testing.T) {
 		server.WithExitWaitTime(1*time.Second),
 	)
 
-	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	r.GET("/proxy/backend", func(_ context.Context, ctx *app.RequestContext) {
 		if c := ctx.Request.Header.Get("Connection"); c != "" {
 			t.Errorf("handler got header %q = %q; want empty", "Connection", c)
 		}
@@ -223,8 +224,8 @@ func TestReverseProxyStripHeadersPresentInConnection(t *testing.T) {
 	})
 	go r.Spin()
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", "127.0.0.1:9991", 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", "127.0.0.1:9991", 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}
@@ -271,7 +272,7 @@ func TestReverseProxyStripEmptyConnection(t *testing.T) {
 		server.WithExitWaitTime(1*time.Second),
 	)
 
-	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	r.GET("/proxy/backend", func(_ context.Context, ctx *app.RequestContext) {
 		if c := ctx.Request.Header.Get("Connection"); c != "" {
 			t.Errorf("handler got header %q = %v; want empty", "Connection", c)
 		}
@@ -298,8 +299,8 @@ func TestReverseProxyStripEmptyConnection(t *testing.T) {
 	})
 	go r.Spin()
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", "127.0.0.1:9992", 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", "127.0.0.1:9992", 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}
@@ -340,12 +341,12 @@ func TestXForwardedFor(t *testing.T) {
 		server.WithExitWaitTime(1*time.Second),
 	)
 
-	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	r.GET("/proxy/backend", func(_ context.Context, ctx *app.RequestContext) {
 		if ctx.Request.Header.Get("X-Forwarded-For") == "" {
-			t.Errorf("didn't get X-Forwarded-For header")
+			t.Error("didn't get X-Forwarded-For header")
 		}
 		if !strings.Contains(ctx.Request.Header.Get("X-Forwarded-For"), prevForwardedFor) {
-			t.Errorf("X-Forwarded-For didn't contain prior data")
+			t.Error("X-Forwarded-For didn't contain prior data")
 		}
 
 		if c := ctx.Request.Header.Get("Host"); c != "abc.com" {
@@ -369,8 +370,8 @@ func TestXForwardedFor(t *testing.T) {
 	r.GET("/backend", proxy.ServeHTTP)
 	go r.Spin()
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", "127.0.0.1:9993", 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", "127.0.0.1:9993", 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}
@@ -412,7 +413,7 @@ func TestReverseProxyQuery(t *testing.T) {
 		server.WithExitWaitTime(1*time.Second),
 	)
 
-	r.GET("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	r.GET("/proxy/backend", func(_ context.Context, ctx *app.RequestContext) {
 		ctx.Response.Header.Set("X-Got-Query", string(ctx.Request.QueryString()))
 		ctx.Data(200, "application/json", []byte("hi"))
 	})
@@ -427,14 +428,14 @@ func TestReverseProxyQuery(t *testing.T) {
 
 		r.GET("/backend", proxy.ServeHTTP)
 		go r.Spin()
-		defer func() {
+		func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
 			_ = r.Shutdown(ctx)
 		}()
 		assert.Eventually(t, func() bool {
-			conn, err := net.DialTimeout("tcp", "127.0.0.1:9995", 100*time.Millisecond)
-			if err == nil {
+			conn, e := net.DialTimeout("tcp", "127.0.0.1:9995", 100*time.Millisecond)
+			if e == nil {
 				_ = conn.Close()
 				return true
 			}
@@ -461,7 +462,7 @@ func TestReverseProxy_Post(t *testing.T) {
 		server.WithExitWaitTime(1*time.Second),
 	)
 
-	r.POST("/proxy/backend", func(cc context.Context, ctx *app.RequestContext) {
+	r.POST("/proxy/backend", func(_ context.Context, ctx *app.RequestContext) {
 		sluproxy := ctx.Request.Body()
 		if len(sluproxy) != len(requestBody) {
 			t.Errorf("Backend read %d request body bytes; want %d", len(sluproxy), len(requestBody))
@@ -482,8 +483,8 @@ func TestReverseProxy_Post(t *testing.T) {
 	r.POST("/backend", proxy.ServeHTTP)
 	go r.Spin()
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", "127.0.0.1:9996", 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", "127.0.0.1:9996", 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}
@@ -520,7 +521,7 @@ func TestReverseProxyWebSocket(t *testing.T) {
 	)
 	wsServer.NoHijackConnPool = true
 
-	wsServer.GET("/proxy/websocket", func(cc context.Context, ctx *app.RequestContext) {
+	wsServer.GET("/proxy/websocket", func(_ context.Context, ctx *app.RequestContext) {
 		err := upgrader.Upgrade(ctx, func(conn *websocket.Conn) {
 			for {
 				mt, message, err := conn.ReadMessage()
@@ -552,8 +553,8 @@ func TestReverseProxyWebSocket(t *testing.T) {
 	wsServer.GET("/websocket", proxy.ServeHTTP)
 	go wsServer.Spin()
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", "127.0.0.1:9998", 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", "127.0.0.1:9998", 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}
@@ -579,7 +580,7 @@ func TestReverseProxyWebSocket(t *testing.T) {
 
 	_ = connect.WriteMessage(websocket.TextMessage, []byte("hello"))
 	_, message, err := connect.ReadMessage()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "hello", string(message))
 }
 
@@ -596,7 +597,7 @@ func TestProxyTags(t *testing.T) {
 	}
 
 	proxy, err := New(proxyOptions, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	val, found := proxy.Tag("id")
 	assert.True(t, found)

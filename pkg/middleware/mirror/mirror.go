@@ -13,6 +13,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
+// Init registers the mirror middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"mirror"}, func(opts Options) (app.HandlerFunc, error) {
 		if opts.ServiceID == "" {
@@ -25,12 +26,14 @@ func Init() error {
 	})
 }
 
+// Options defines the configuration for the mirror middleware.
 type Options struct {
 	ServiceID string `mapstructure:"service_id"`
 	QueueSize int64  `mapstructure:"queue_size"`
 }
 
-type MirrorMiddleware struct {
+// Middleware is a middleware that mirrors requests to another service.
+type Middleware struct {
 	options *Options
 	queue   chan *mirrorContext
 }
@@ -40,12 +43,13 @@ type mirrorContext struct {
 	hzCtx  *app.RequestContext
 }
 
-func NewMiddleware(options Options) *MirrorMiddleware {
+// NewMiddleware creates a new MirrorMiddleware instance.
+func NewMiddleware(options Options) *Middleware {
 	if options.QueueSize <= 0 {
 		options.QueueSize = 10000
 	}
 
-	m := &MirrorMiddleware{
+	m := &Middleware{
 		options: &options,
 		queue:   make(chan *mirrorContext, options.QueueSize),
 	}
@@ -55,7 +59,8 @@ func NewMiddleware(options Options) *MirrorMiddleware {
 	return m
 }
 
-func (m *MirrorMiddleware) Run() {
+// Run starts the worker that processes mirrored requests.
+func (m *Middleware) Run() {
 	for mctx := range m.queue {
 		bifrost := gateway.GetBifrost()
 
@@ -86,7 +91,7 @@ func (m *MirrorMiddleware) Run() {
 	}
 }
 
-func (m *MirrorMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	mctx := &mirrorContext{
 		logger: log.FromContext(ctx),
 		hzCtx:  c.Copy(),

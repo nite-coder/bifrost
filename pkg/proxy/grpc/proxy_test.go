@@ -73,23 +73,24 @@ func (s *grpcTestServer) SayHello(ctx context.Context, in *proto.HelloRequest) (
 	return &proto.HelloReply{Message: "Hello " + name}, nil
 }
 
-func createGrpcServer() {
+func createGrpcServer(t *testing.T) {
+	t.Helper()
 	lis, err := net.Listen("tcp", "127.0.0.1:8500")
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		t.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
 	proto.RegisterGreeterServer(s, &grpcTestServer{})
 	go func() {
 		err := s.Serve(lis)
 		if err != nil {
-			log.Fatalf("Server exited with error: %v", err)
+			t.Errorf("Server exited with error: %v", err)
 		}
 	}()
 }
 
 func TestGRPCProxy(t *testing.T) {
-	createGrpcServer()
+	createGrpcServer(t)
 
 	ctx := context.Background()
 
@@ -101,7 +102,7 @@ func TestGRPCProxy(t *testing.T) {
 		Weight:           1,
 	}
 	proxy, err := New(proxyOptions)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	httpServer := server.New(
 		server.WithH2C(true),
@@ -113,8 +114,8 @@ func TestGRPCProxy(t *testing.T) {
 	hsrv := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			c := app.NewContext(0)
-			err := adaptor.CopyToHertzRequest(r, &c.Request)
-			if err != nil {
+			e := adaptor.CopyToHertzRequest(r, &c.Request)
+			if e != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -125,7 +126,7 @@ func TestGRPCProxy(t *testing.T) {
 
 			// Handle Trailers
 			trailers := c.Response.Header.Trailer()
-			trailers.VisitAll(func(k, v []byte) {
+			trailers.VisitAll(func(k, _ []byte) {
 				w.Header().Add("Trailer", string(k))
 			})
 
@@ -146,13 +147,14 @@ func TestGRPCProxy(t *testing.T) {
 	hsrv.Protocols.SetHTTP2(true)
 	hsrv.Protocols.SetUnencryptedHTTP2(true)
 
-	ln, err := net.Listen("tcp", "127.0.0.1:8001")
+	var ln net.Listener
+	ln, err = net.Listen("tcp", "127.0.0.1:8001")
 	require.NoError(t, err)
 
 	go hsrv.Serve(ln)
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", "127.0.0.1:8001", 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", "127.0.0.1:8001", 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}
@@ -160,31 +162,31 @@ func TestGRPCProxy(t *testing.T) {
 	}, 5*time.Second, 100*time.Millisecond, "Server failed to start")
 
 	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		closeCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
-		_ = httpServer.Shutdown(ctx)
+		_ = httpServer.Shutdown(closeCtx)
 	}()
 
-	conn, err := grpc.NewClient("127.0.0.1:8001",
+	conn, e := grpc.NewClient("127.0.0.1:8001",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, e)
 	defer conn.Close()
 
 	t.Run("success case", func(t *testing.T) {
 		client := proto.NewGreeterClient(conn)
 
 		md := metadata.Pairs("user_id", "5478")
-		ctx := metadata.NewOutgoingContext(ctx, md)
+		c := metadata.NewOutgoingContext(ctx, md)
 
 		var header, trailer metadata.MD // variable to store header and trailer
 
-		resp, err := client.SayHello(ctx,
+		resp, e := client.SayHello(c,
 			&proto.HelloRequest{Name: "Bifrost"},
 			grpc.Header(&header),
 			grpc.Trailer(&trailer))
 
-		require.NoError(t, err)
+		require.NoError(t, e)
 		assert.Equal(t, "Hello Bifrost", resp.GetMessage())
 		assert.Equal(t, "bifrost", header["server-name"][0])
 	})
@@ -193,18 +195,18 @@ func TestGRPCProxy(t *testing.T) {
 		client := proto.NewGreeterClient(conn)
 
 		md := metadata.Pairs("user_id", "54781")
-		ctx := metadata.NewOutgoingContext(ctx, md)
+		c := metadata.NewOutgoingContext(ctx, md)
 
-		_, err := client.SayHello(ctx, &proto.HelloRequest{Name: "Bifrost"})
-		st, ok := status.FromError(err)
+		_, e := client.SayHello(c, &proto.HelloRequest{Name: "Bifrost"})
+		st, ok := status.FromError(e)
 		assert.True(t, ok)
 		assert.Equal(t, codes.Unauthenticated, st.Code())
 		assert.Equal(t, "the user_id is empty or  invalid", st.Message())
 
 		md = metadata.Pairs("user_id", "5478")
-		ctx = metadata.NewOutgoingContext(ctx, md)
-		_, err = client.SayHello(ctx, &proto.HelloRequest{Name: "err"})
-		st, ok = status.FromError(err)
+		c = metadata.NewOutgoingContext(ctx, md)
+		_, e = client.SayHello(c, &proto.HelloRequest{Name: "err"})
+		st, ok = status.FromError(e)
 		assert.True(t, ok)
 		assert.Equal(t, codes.InvalidArgument, st.Code())
 		assert.Equal(t, "oops....something wrong", st.Message())
@@ -214,9 +216,9 @@ func TestGRPCProxy(t *testing.T) {
 		client := proto.NewGreeterClient(conn)
 
 		md := metadata.Pairs("user_id", "5478")
-		ctx := metadata.NewOutgoingContext(ctx, md)
-		_, err := client.SayHello(ctx, &proto.HelloRequest{Name: "sleep"})
-		st, ok := status.FromError(err)
+		c := metadata.NewOutgoingContext(ctx, md)
+		_, e := client.SayHello(c, &proto.HelloRequest{Name: "sleep"})
+		st, ok := status.FromError(e)
 		assert.True(t, ok)
 		assert.Equal(t, codes.DeadlineExceeded, st.Code())
 	})
@@ -234,7 +236,7 @@ func TestProxyTags(t *testing.T) {
 		},
 	}
 	proxy, err := New(proxyOptions)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	val, found := proxy.Tag("id")
 	assert.True(t, found)
@@ -246,18 +248,18 @@ type mockClientConn struct {
 }
 
 func (m *mockClientConn) Invoke(
-	ctx context.Context,
-	method string,
-	args any,
-	reply any,
-	opts ...grpc.CallOption,
+	_ context.Context,
+	_ string,
+	_ any,
+	_ any,
+	_ ...grpc.CallOption,
 ) error {
 	return nil
 }
 
 func TestGRPCProxy_PanicOnInvalidPayload(t *testing.T) {
 	// Setup
-	proxy := &GRPCProxy{
+	proxy := &Proxy{
 		client: &mockClientConn{}, // minimal mock
 		options: &Options{
 			Timeout: time.Second,
@@ -288,7 +290,7 @@ func TestGRPCProxy_PanicOnInvalidPayload(t *testing.T) {
 func TestGRPCProxy_ErrorStatusPlacement(t *testing.T) {
 	// Setup
 	mockConn := &mockClientConnError{err: status.Error(codes.Unauthenticated, "test error")}
-	proxy := &GRPCProxy{
+	proxy := &Proxy{
 		client: mockConn,
 		options: &Options{
 			Timeout: time.Second,
@@ -306,8 +308,8 @@ func TestGRPCProxy_ErrorStatusPlacement(t *testing.T) {
 
 	// Assert
 	// grpc-status should NOT be in the regular headers
-	assert.Equal(t, "", string(c.Response.Header.Peek("grpc-status")), "grpc-status should not be in headers")
-	assert.Equal(t, "", string(c.Response.Header.Peek("grpc-message")), "grpc-message should not be in headers")
+	assert.Empty(t, string(c.Response.Header.Peek("grpc-status")), "grpc-status should not be in headers")
+	assert.Empty(t, string(c.Response.Header.Peek("grpc-message")), "grpc-message should not be in headers")
 
 	// grpc-status SHOULD be in the trailers
 	trailers := c.Response.Header.Trailer()
@@ -322,15 +324,16 @@ func TestGRPCProxy_ErrorStatusPlacement(t *testing.T) {
 
 type mockClientConnError struct {
 	grpc.ClientConnInterface
+
 	err error
 }
 
 func (m *mockClientConnError) Invoke(
-	ctx context.Context,
-	method string,
-	args any,
-	reply any,
-	opts ...grpc.CallOption,
+	_ context.Context,
+	_ string,
+	_ any,
+	_ any,
+	_ ...grpc.CallOption,
 ) error {
 	return m.err
 }

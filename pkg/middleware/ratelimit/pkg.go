@@ -14,7 +14,11 @@ var allowResultPool = sync.Pool{
 
 // GetAllowResult gets an AllowResult from the pool.
 func GetAllowResult() *AllowResult {
-	return allowResultPool.Get().(*AllowResult)
+	res, ok := allowResultPool.Get().(*AllowResult)
+	if !ok {
+		return &AllowResult{}
+	}
+	return res
 }
 
 // PutAllowResult returns an AllowResult to the pool.

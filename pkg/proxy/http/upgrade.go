@@ -13,8 +13,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/utils"
 	"github.com/cloudwego/hertz/pkg/network"
 	"github.com/cloudwego/hertz/pkg/protocol"
-	reqHelper "github.com/cloudwego/hertz/pkg/protocol/http1/req"
-	respHelper "github.com/cloudwego/hertz/pkg/protocol/http1/resp"
+	reqhelper "github.com/cloudwego/hertz/pkg/protocol/http1/req"
+	resphelper "github.com/cloudwego/hertz/pkg/protocol/http1/resp"
 	"golang.org/x/net/http/httpguts"
 
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
@@ -34,7 +34,7 @@ func upgradeRespType(h *protocol.ResponseHeader) string {
 	return h.Get("Upgrade")
 }
 
-func (p *HTTPProxy) roundTrip(
+func (p *Proxy) roundTrip(
 	ctx context.Context,
 	clientCtx *app.RequestContext,
 	req *protocol.Request,
@@ -60,7 +60,7 @@ func (p *HTTPProxy) roundTrip(
 		return err
 	}
 
-	err = reqHelper.Write(req, backendConn)
+	err = reqhelper.Write(req, backendConn)
 	if err != nil {
 		return err
 	}
@@ -72,13 +72,13 @@ func (p *HTTPProxy) roundTrip(
 
 	backendHeader := &resp.Header
 	backendHeader.SetNoDefaultContentType(true)
-	err = respHelper.ReadHeader(backendHeader, backendConn)
+	err = resphelper.ReadHeader(backendHeader, backendConn)
 	if err != nil {
 		return err
 	}
 
 	if resp.StatusCode() != http.StatusSwitchingProtocols {
-		err := fmt.Errorf("backend returned unexpected status code %d (expected 101)", resp.StatusCode())
+		err = fmt.Errorf("backend returned unexpected status code %d (expected 101)", resp.StatusCode())
 		p.handleError(ctx, clientCtx, err)
 		return err
 	}
@@ -91,7 +91,7 @@ func (p *HTTPProxy) roundTrip(
 		return err
 	}
 	if !strings.EqualFold(reqUpType, resUpType) {
-		err := fmt.Errorf("backend tried to switch protocol %q when %q was requested", resUpType, reqUpType)
+		err = fmt.Errorf("backend tried to switch protocol %q when %q was requested", resUpType, reqUpType)
 		p.handleError(ctx, clientCtx, err)
 		return err
 	}
@@ -114,7 +114,7 @@ func (p *HTTPProxy) roundTrip(
 	return nil
 }
 
-func (p *HTTPProxy) handleUpgradeResponse(ctx context.Context, clientConn network.Conn, backendConn network.Conn) {
+func (p *Proxy) handleUpgradeResponse(ctx context.Context, clientConn network.Conn, backendConn network.Conn) {
 	backConnCloseCh := make(chan bool)
 	go safety.Go(ctx, func() {
 		// Ensure that the cancellation of a request closes the backend.

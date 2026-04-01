@@ -80,12 +80,15 @@ func parseHTTPVersion(proto string) (major, minor int) {
 	// Default to HTTP/1.1
 	major, minor = 1, 1
 
-	if len(proto) < 8 { // "HTTP/X.Y" minimum length
-		return
+	const minHTTPProtoLen = 8 // "HTTP/X.Y" minimum length
+
+	if len(proto) < minHTTPProtoLen {
+		return major, minor
 	}
 
 	// Parse "HTTP/X.Y" format
-	if proto[0:5] == "HTTP/" && len(proto) >= 8 {
+	const httpPrefix = "HTTP/"
+	if proto[0:len(httpPrefix)] == httpPrefix && len(proto) >= minHTTPProtoLen {
 		if proto[5] >= '0' && proto[5] <= '9' {
 			major = int(proto[5] - '0')
 		}
@@ -94,5 +97,5 @@ func parseHTTPVersion(proto string) (major, minor int) {
 		}
 	}
 
-	return
+	return major, minor
 }

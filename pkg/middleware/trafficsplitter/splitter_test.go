@@ -30,7 +30,7 @@ func TestSplitter(t *testing.T) {
 
 	hits := map[string]int{"old_server": 0, "new_server": 0}
 
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		ctx := context.Background()
 		hzCtx := app.NewContext(0)
 		hzCtx.Request.SetMethod("POST")
@@ -111,7 +111,7 @@ func TestServeHTTP_RandomError(t *testing.T) {
 	originalGetRandomNumber := getRandomNumber
 	defer func() { getRandomNumber = originalGetRandomNumber }()
 
-	getRandomNumber = func(max int64) (int64, error) {
+	getRandomNumber = func(_ int64) (int64, error) {
 		return 0, errors.New("random error")
 	}
 

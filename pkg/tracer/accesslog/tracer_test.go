@@ -8,6 +8,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/tracer/stats"
 	"github.com/cloudwego/hertz/pkg/common/tracer/traceinfo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 )
@@ -65,13 +66,13 @@ func BenchmarkEscapeJSON(b *testing.B) {
 
 	for _, tc := range testCases {
 		b.Run("Sonic_"+tc.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				escapeJSONSonic(tc.input)
 			}
 		})
 
 		b.Run("Custom_"+tc.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				escapeJSON(tc.input)
 			}
 		})
@@ -83,7 +84,7 @@ func TestPrintVariable(t *testing.T) {
 		Template: "aa:$error.type, time:$time, body:$http.request.body, status_code:$http.response.status_code, user_id: $var.user_id, http_start: $http.start, http_finish: $http.finish",
 	}
 	tracer, err := NewTracer(options)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	hzCtx := app.NewContext(0)
 	info := traceinfo.NewTraceInfo()

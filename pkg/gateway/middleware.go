@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"runtime/debug"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -55,7 +56,7 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 				slog.String("error", err.Error()),
 				slog.String("stack", stackTrace),
 			)
-			c.SetStatusCode(500)
+			c.SetStatusCode(http.StatusInternalServerError)
 			c.Abort()
 		}
 	}()
@@ -90,6 +91,7 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	c.Next(ctx)
 }
 
+// FirstRouteMiddleware is a middleware that sets the initial route information.
 type FirstRouteMiddleware struct {
 	options *variable.RequestRoute
 }
@@ -100,14 +102,13 @@ func newFirstRouteMiddleware(options *variable.RequestRoute) *FirstRouteMiddlewa
 	}
 }
 
-func (m *FirstRouteMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *FirstRouteMiddleware) ServeHTTP(_ context.Context, c *app.RequestContext) {
 	c.Set(variable.BifrostRoute, m.options)
 }
 
 func loadMiddlewares(middlewareOptions map[string]config.MiddlwareOptions) (map[string]app.HandlerFunc, error) {
 	middlewares := map[string]app.HandlerFunc{}
 	for id, middlewareOpts := range middlewareOptions {
-
 		if len(id) == 0 {
 			return nil, errors.New("middleware ID cannot be empty")
 		}
@@ -144,8 +145,9 @@ func loadMiddlewares(middlewareOptions map[string]config.MiddlwareOptions) (map[
 	return middlewares, nil
 }
 
+// AbortMiddleware is a middleware that aborts the request.
 type AbortMiddleware struct{}
 
-func (m *AbortMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *AbortMiddleware) ServeHTTP(_ context.Context, c *app.RequestContext) {
 	c.Abort()
 }

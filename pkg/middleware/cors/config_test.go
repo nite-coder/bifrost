@@ -41,7 +41,7 @@ import (
 func TestDefault(t *testing.T) {
 	router := route.NewEngine(config.NewOptions([]config.Option{}))
 	router.Use(Default())
-	router.GET("/", func(ctx context.Context, c *app.RequestContext) {
+	router.GET("/", func(_ context.Context, c *app.RequestContext) {
 		c.String(http.StatusOK, "get")
 	})
 	w := performRequest(router, "GET", "http://facebook.com")

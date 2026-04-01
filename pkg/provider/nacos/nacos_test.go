@@ -8,6 +8,7 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/v2/vo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type MockConfigClient struct {
@@ -41,7 +42,11 @@ func (m *MockConfigClient) CancelListenConfig(param vo.ConfigParam) error {
 
 func (m *MockConfigClient) SearchConfig(param vo.SearchConfigParam) (*model.ConfigPage, error) {
 	args := m.Called(param)
-	return args.Get(0).(*model.ConfigPage), args.Error(1)
+	res, ok := args.Get(0).(*model.ConfigPage)
+	if !ok {
+		return nil, args.Error(1)
+	}
+	return res, args.Error(1)
 }
 
 func (m *MockConfigClient) CloseClient() {
@@ -62,7 +67,7 @@ func TestNewProvider(t *testing.T) {
 	}
 
 	provider, err := NewProvider(opts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, provider)
 	assert.Equal(t, opts, provider.options)
 }
@@ -80,13 +85,13 @@ func TestConfigOpen(t *testing.T) {
 		},
 	}
 
-	provider := &NacosProvider{
+	provider := &Provider{
 		client:  mockClient,
 		options: opts,
 	}
 
 	files, err := provider.ConfigOpen()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, files, 1)
 	assert.Equal(t, "test-data-id", files[0].DataID)
 	assert.Equal(t, "test-group", files[0].Group)
@@ -104,7 +109,7 @@ func TestSetOnChanged(t *testing.T) {
 
 	opts := Options{}
 
-	provider := &NacosProvider{
+	provider := &Provider{
 		options: opts,
 	}
 
@@ -112,7 +117,7 @@ func TestSetOnChanged(t *testing.T) {
 	assert.NotNil(t, provider.OnChanged)
 
 	err := provider.OnChanged()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, called)
 }
 
@@ -132,13 +137,13 @@ func TestWatch(t *testing.T) {
 		},
 	}
 
-	provider := &NacosProvider{
+	provider := &Provider{
 		client:  mockClient,
 		options: opts,
 	}
 
 	err := provider.Watch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	mockClient.AssertExpectations(t)
 }

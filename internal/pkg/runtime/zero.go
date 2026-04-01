@@ -19,6 +19,12 @@ import (
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 )
 
+const (
+	defaultFileMode    = 0o600
+	defaultQuitTimeout = 10 * time.Second
+	stdFDCount         = 3
+)
+
 // CommandRunner is an interface for creating exec.Cmd instances.
 // It allows for dependency injection in testing scenarios.
 type CommandRunner interface {
@@ -63,11 +69,11 @@ func (d *defaultProcessFinder) FindProcess(pid int) (process, error) {
 
 var defaultFileOpener = func(name string) (*os.File, error) {
 	/* #nosec G304 */
-	return os.OpenFile(filepath.Clean(name), os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC, 0o600)
+	return os.OpenFile(filepath.Clean(name), os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC, defaultFileMode)
 }
 
-// listenInfo holds information about a network listener.
-type listenInfo struct {
+// ListenInfo holds information about a network listener.
+type ListenInfo struct {
 	Listener net.Listener `json:"-"`
 	Key      string       `json:"key"`
 }
@@ -93,7 +99,7 @@ type ZeroDownTime struct {
 	isShutdownCh  chan bool
 	envGetter     EnvGetter
 	fileOpener    FileOpener
-	listeners     []*listenInfo
+	listeners     []*ListenInfo
 	QuitTimeout   time.Duration
 	listenerOnce  sync.Once
 	mu            sync.Mutex
@@ -121,7 +127,7 @@ type Options struct {
 // New creates a new ZeroDownTime instance with the given options.
 // If QuitTimeout is not specified, it defaults to 10 seconds.
 func New(opts Options) *ZeroDownTime {
-	quitTimeout := 10 * time.Second
+	quitTimeout := defaultQuitTimeout
 	if opts.QuitTimout > 0 {
 		quitTimeout = opts.QuitTimout
 	}
@@ -147,7 +153,7 @@ func (z *ZeroDownTime) IsWaiting() bool {
 
 // Close shuts down the ZeroDownTime instance by closing all listeners
 // and stopping the upgrade waiting goroutine if active.
-func (z *ZeroDownTime) Close(ctx context.Context) error {
+func (z *ZeroDownTime) Close(_ context.Context) error {
 	for _, info := range z.listeners {
 		_ = info.Listener.Close()
 	}
@@ -174,21 +180,21 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 	z.listenerOnce.Do(func() {
 		if z.IsUpgraded() {
 			// Try new BIFROST_LISTENER_KEYS mechanism first
-			listeners, err := InheritedListeners()
-			if err != nil {
-				slog.Error("failed to get inherited listeners", "error", err)
+			listeners, e := InheritedListeners()
+			if e != nil {
+				slog.Error("failed to get inherited listeners", "error", e)
 			}
 
 			if len(listeners) > 0 {
 				for key, file := range listeners {
-					fileListener, err := net.FileListener(file)
-					if err != nil {
-						slog.Error("failed to create file listener", "error", err, "key", key)
+					fileListener, e := net.FileListener(file)
+					if e != nil {
+						slog.Error("failed to create file listener", "error", e, "key", key)
 						_ = file.Close()
 						continue
 					}
 
-					info := &listenInfo{
+					info := &ListenInfo{
 						Listener: fileListener,
 						Key:      key,
 					}
@@ -211,16 +217,16 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 			count := len(z.listeners)
 			for index < count {
 				// fd starting from 3
-				fd := 3 + index
+				fd := stdFDCount + index
 				l := z.listeners[index]
 				index++
 				f := os.NewFile(uintptr(fd), "")
 				if f == nil {
 					break
 				}
-				fileListener, err := net.FileListener(f)
-				if err != nil {
-					slog.Error("failed to create file listener", "error", err, "fd", fd)
+				fileListener, e := net.FileListener(f)
+				if e != nil {
+					slog.Error("failed to create file listener", "error", e, "fd", fd)
 					continue
 				}
 				l.Listener = fileListener
@@ -260,7 +266,7 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 			return nil, err
 		}
 	}
-	info := &listenInfo{
+	info := &ListenInfo{
 		Listener: listener,
 		Key:      options.Address,
 	}
@@ -274,11 +280,11 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 }
 
 // GetListeners returns the list of active listeners.
-func (z *ZeroDownTime) GetListeners() []*listenInfo {
+func (z *ZeroDownTime) GetListeners() []*ListenInfo {
 	z.mu.Lock()
 	defer z.mu.Unlock()
 	// Return a copy to avoid race conditions
-	listeners := make([]*listenInfo, len(z.listeners))
+	listeners := make([]*ListenInfo, len(z.listeners))
 	copy(listeners, z.listeners)
 	return listeners
 }
@@ -326,7 +332,12 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 				for _, l := range z.listeners {
 					proxylistener, ok := l.Listener.(*proxyproto.Listener)
 					if ok {
-						f, err := proxylistener.Listener.(*net.TCPListener).File()
+						tcpListener, ok := proxylistener.Listener.(*net.TCPListener)
+						if !ok {
+							slog.ErrorContext(ctx, "failed to get tcp listener from proxy", "key", l.Key)
+							continue
+						}
+						f, err := tcpListener.File()
 						if err != nil {
 							slog.ErrorContext(ctx, "failed to get listener file", "error", err, "key", l.Key)
 							continue
@@ -334,7 +345,12 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 						files = append(files, f)
 						slog.Debug("listener file descriptor collected", "key", l.Key, "fd", f.Fd())
 					} else {
-						f, err := l.Listener.(*net.TCPListener).File()
+						tcpListener, ok := l.Listener.(*net.TCPListener)
+						if !ok {
+							slog.ErrorContext(ctx, "failed to get tcp listener", "key", l.Key)
+							continue
+						}
+						f, err := tcpListener.File()
 						if err != nil {
 							slog.ErrorContext(ctx, "failed to get listener file", "error", err, "key", l.Key)
 							continue

@@ -16,8 +16,16 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cache/v2"
 )
 
+const (
+	defaultDNSCacheTTL      = 5 * time.Minute
+	minHostsFields          = 2
+	defaultDNSVerifyTimeout = 5 * time.Second
+)
+
+// ErrNotFound is returned when no DNS records are found.
 var ErrNotFound = errors.New("no records found")
 
+// Resolver is a DNS resolver that supports hosts file and caching.
 type Resolver struct {
 	options    *Options
 	client     *dns.Client
@@ -81,7 +89,7 @@ func NewResolver(option Options) (*Resolver, error) {
 		options:    &option,
 		client:     client,
 		hostsCache: make(map[string][]string),
-		dnsCache:   cache.NewCache[string, []string](5 * time.Minute),
+		dnsCache:   cache.NewCache[string, []string](defaultDNSCacheTTL),
 	}
 
 	err := r.loadHostsFile()
@@ -92,12 +100,14 @@ func NewResolver(option Options) (*Resolver, error) {
 	return r, nil
 }
 
+// Close stops the DNS cache cleanup.
 func (r *Resolver) Close() {
 	if r.dnsCache != nil {
 		r.dnsCache.StopCleanup()
 	}
 }
 
+// Options contains configuration for the Resolver.
 type Options struct {
 	// dns server for querying
 	Servers   []string
@@ -107,6 +117,7 @@ type Options struct {
 	SkipTest  bool
 }
 
+// Lookup returns a list of IP addresses for the given host.
 func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]string) ([]string, error) {
 	if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]" {
 		return []string{"127.0.0.1"}, nil
@@ -130,7 +141,6 @@ func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]stri
 	if len(queryOrder) == 0 {
 		queryOrder = [][]string{r.options.Order}
 	}
-
 	for _, order := range queryOrder[0] {
 		order = strings.TrimSpace(order)
 		switch strings.ToLower(order) {
@@ -141,7 +151,7 @@ func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]stri
 		case "a":
 			// A record
 			var ips []string
-			var minTTL uint32 = 0
+			var minTTL uint32
 
 			m := new(dns.Msg)
 			m.SetQuestion(dns.Fqdn(host), dns.TypeA)
@@ -179,7 +189,7 @@ func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]stri
 		case "cname":
 			// CNAME record
 			var ips []string
-			var minTTL uint32 = 0
+			var minTTL uint32
 
 			m := new(dns.Msg)
 			m.SetQuestion(dns.Fqdn(host), dns.TypeCNAME)
@@ -230,7 +240,6 @@ func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]stri
 		default:
 			return nil, fmt.Errorf("DNS: unknown order '%s'", order)
 		}
-
 	}
 
 	return nil, fmt.Errorf("DNS: %w; cannot resolve '%s'", ErrNotFound, host)
@@ -257,7 +266,7 @@ func (r *Resolver) loadHostsFile() error {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
-		if len(fields) < 2 {
+		if len(fields) < minHostsFields {
 			continue
 		}
 		ip := net.ParseIP(fields[0])
@@ -275,14 +284,13 @@ func (r *Resolver) loadHostsFile() error {
 // ValidateDNSServer validates a list of DNS servers by sending a query to each of them
 // and checking if they respond with a valid answer. It returns a list of valid servers
 // and an error if no valid server is found.
-
 func ValidateDNSServer(servers []string) ([]string, error) {
 	m := new(dns.Msg)
 	m.SetQuestion("localhost.", dns.TypeA)
 	m.RecursionDesired = false
 
 	c := new(dns.Client)
-	c.Timeout = 5 * time.Second
+	c.Timeout = defaultDNSVerifyTimeout
 
 	result := make([]string, 0)
 	for _, server := range servers {

@@ -17,6 +17,11 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+const (
+	defaultFileMode     = 0o600
+	defaultBufferSizeKB = 64
+)
+
 // BufferedLogger is a logger that buffers log entries and writes them to a file or stderr.
 type BufferedLogger struct {
 	writer     *bufio.Writer
@@ -41,7 +46,7 @@ func NewBufferedLogger(opts config.AccessLogOptions) (*BufferedLogger, error) {
 		writer = os.Stderr // Write logs to stderr
 	default:
 		// Open the log file for appending, creating it if it doesn't exist
-		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0o600)
+		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, defaultFileMode)
 		if err != nil {
 			return nil, err
 		}
@@ -50,7 +55,7 @@ func NewBufferedLogger(opts config.AccessLogOptions) (*BufferedLogger, error) {
 	}
 	// Set the buffer size (default to 64KB if not specified)
 	if opts.BufferSize <= 0 {
-		opts.BufferSize = 64 * variable.KB
+		opts.BufferSize = defaultBufferSizeKB * variable.KB
 	}
 	logger.writer = bufio.NewWriterSize(writer, opts.BufferSize)
 	// Set up periodic flushing if a flush interval is specified
@@ -132,7 +137,7 @@ func (l *BufferedLogger) reopenFile() error {
 		}
 	}
 	// Reopen the file
-	file, err := os.OpenFile(l.options.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0o600)
+	file, err := os.OpenFile(l.options.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, defaultFileMode)
 	if err != nil {
 		return fmt.Errorf("failed to reopen file: %w", err)
 	}

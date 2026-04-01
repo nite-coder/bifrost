@@ -8,6 +8,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -25,8 +26,8 @@ func TestMirror(t *testing.T) {
 		URL: "http://127.0.0.1:8000",
 	}
 
-	bifrost, err := gateway.NewBifrost(options, false)
-	assert.NoError(t, err)
+	bifrost, err := gateway.NewBifrost(options, gateway.ModeNormal)
+	require.NoError(t, err)
 	gateway.SetBifrost(bifrost)
 
 	h := middleware.Factory("mirror")
@@ -36,13 +37,13 @@ func TestMirror(t *testing.T) {
 	}
 
 	m, err := h(params)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ctx := context.Background()
 	hzCtx := app.NewContext(0)
 
 	var hit atomic.Int32
-	hzCtx.SetHandlers([]app.HandlerFunc{func(ctx context.Context, c *app.RequestContext) {
+	hzCtx.SetHandlers([]app.HandlerFunc{func(_ context.Context, _ *app.RequestContext) {
 		hit.Add(1)
 	}})
 

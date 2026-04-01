@@ -14,40 +14,49 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
+// ContentInfo holds the content of a file and its path.
 type ContentInfo struct {
 	Content string
 	Path    string
 }
+
+// Options defines the configuration for the file provider.
 type Options struct {
-	Paths      []string `yaml:"paths"      json:"paths"`
-	Extensions []string `yaml:"extensions" json:"extensions"`
-	Watch      bool
-	Enabled    bool `yaml:"enabled"    json:"enabled"`
+	Paths      []string `json:"paths"      yaml:"paths"`
+	Extensions []string `json:"extensions" yaml:"extensions"`
+	Watch      bool     `json:"watch"      yaml:"watch"`
+	Enabled    bool     `json:"enabled"    yaml:"enabled"`
 }
-type FileProvider struct {
+
+// Provider implements a configuration provider that reads from the local filesystem.
+type Provider struct {
 	watcher   *fsnotify.Watcher
 	OnChanged provider.ChangeFunc
 	options   Options
 }
 
-func NewProvider(opts Options) *FileProvider {
+// NewProvider creates a new FileProvider instance.
+func NewProvider(opts Options) *Provider {
 	if len(opts.Extensions) == 0 {
 		opts.Extensions = []string{".yaml", ".yml"}
 	}
-	return &FileProvider{
+	return &Provider{
 		options: opts,
 	}
 }
 
-func (p *FileProvider) Reset() {
+// Reset clears the paths in the file provider.
+func (p *Provider) Reset() {
 	p.options.Paths = p.options.Paths[:0]
 }
 
-func (p *FileProvider) Add(path string) {
+// Add adds a path to the file provider.
+func (p *Provider) Add(path string) {
 	p.options.Paths = append(p.options.Paths, path)
 }
 
-func (p *FileProvider) Open() ([]*ContentInfo, error) {
+// Open reads all files from the configured paths and returns their content.
+func (p *Provider) Open() ([]*ContentInfo, error) {
 	p.options.Paths = slices.Compact(p.options.Paths)
 	var contents []*ContentInfo
 	for _, path := range p.options.Paths {
@@ -96,11 +105,13 @@ func (p *FileProvider) Open() ([]*ContentInfo, error) {
 	return contents, nil
 }
 
-func (p *FileProvider) SetOnChanged(changeFunc provider.ChangeFunc) {
+// SetOnChanged sets the callback function to be called when a file changes.
+func (p *Provider) SetOnChanged(changeFunc provider.ChangeFunc) {
 	p.OnChanged = changeFunc
 }
 
-func (p *FileProvider) Watch() error {
+// Watch starts watching the configured paths for changes.
+func (p *Provider) Watch() error {
 	if !p.options.Watch {
 		return nil
 	}
@@ -113,14 +124,14 @@ func (p *FileProvider) Watch() error {
 		return err
 	}
 	go func(watcher *fsnotify.Watcher) {
-		safety.Go(context.Background(), func() {
+		go safety.Go(context.Background(), func() {
 			defer watcher.Close()
 			isUpdate := false
-			refresh := 900 * time.Millisecond
-			timer := time.NewTimer(refresh)
+			const defaultRefreshInterval = 900 * time.Millisecond
+			timer := time.NewTimer(defaultRefreshInterval)
 			defer timer.Stop()
 			for {
-				timer.Reset(refresh)
+				timer.Reset(defaultRefreshInterval)
 				select {
 				case event, ok := <-watcher.Events:
 					if !ok {
@@ -140,6 +151,7 @@ func (p *FileProvider) Watch() error {
 							}
 						}
 						isUpdate = true
+					default:
 					}
 				case err, ok := <-watcher.Errors:
 					if !ok {
@@ -170,8 +182,8 @@ func (p *FileProvider) Watch() error {
 	return nil
 }
 
-func (p *FileProvider) addWatch(path string) error {
-	return filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
+func (p *Provider) addWatch(path string) error {
+	return filepath.Walk(path, func(filePath string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

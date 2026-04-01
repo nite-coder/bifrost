@@ -15,6 +15,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
+// Options defines the configuration for the Nacos configuration provider.
 type Options struct {
 	Username    string
 	Password    string
@@ -28,18 +29,23 @@ type Options struct {
 	Timeout     time.Duration
 	Watch       bool
 }
+
+// File defines the Nacos data ID, group, and content.
 type File struct {
 	DataID  string
 	Group   string
 	Content string
 }
-type NacosProvider struct {
+
+// Provider implements a configuration provider that reads from Nacos.
+type Provider struct {
 	client    config_client.IConfigClient
 	OnChanged provider.ChangeFunc
 	options   Options
 }
 
-func NewProvider(options Options) (*NacosProvider, error) {
+// NewProvider creates a new NacosProvider instance.
+func NewProvider(options Options) (*Provider, error) {
 	serverConfigs := []constant.ServerConfig{}
 	clientOptions := []constant.ClientOption{
 		constant.WithNamespaceId(options.NamespaceID),
@@ -50,7 +56,7 @@ func NewProvider(options Options) (*NacosProvider, error) {
 	}
 	timeout := options.Timeout.Milliseconds()
 	if timeout <= 0 {
-		clientOptions = append(clientOptions, constant.WithTimeoutMs(10000))
+		clientOptions = append(clientOptions, constant.WithTimeoutMs(defaultNacosTimeoutMS))
 	} else {
 		clientOptions = append(clientOptions, constant.WithTimeoutMs(uint64(timeout)))
 	}
@@ -78,7 +84,7 @@ func NewProvider(options Options) (*NacosProvider, error) {
 		ipaddr := uri.Hostname()
 		port, _ := cast.ToUint64(uri.Port())
 		if port == 0 {
-			port = uint64(8848)
+			port = uint64(defaultNacosPort)
 		}
 		serverConfigs = append(serverConfigs, *constant.NewServerConfig(
 			ipaddr,
@@ -98,17 +104,19 @@ func NewProvider(options Options) (*NacosProvider, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &NacosProvider{
+	return &Provider{
 		options: options,
 		client:  client,
 	}, nil
 }
 
-func (p *NacosProvider) SetOnChanged(changeFunc provider.ChangeFunc) {
+// SetOnChanged sets the callback function to be called when configuration changes in Nacos.
+func (p *Provider) SetOnChanged(changeFunc provider.ChangeFunc) {
 	p.OnChanged = changeFunc
 }
 
-func (p *NacosProvider) ConfigOpen() ([]*File, error) {
+// ConfigOpen reads the configured files from Nacos and returns their content.
+func (p *Provider) ConfigOpen() ([]*File, error) {
 	result := make([]*File, 0, len(p.options.Files))
 	for _, file := range p.options.Files {
 		group := "DEFAULT_GROUP"
@@ -138,7 +146,8 @@ func (p *NacosProvider) ConfigOpen() ([]*File, error) {
 	return result, nil
 }
 
-func (p *NacosProvider) Watch() error {
+// Watch starts listening for configuration changes in Nacos.
+func (p *Provider) Watch() error {
 	if !p.options.Watch {
 		return nil
 	}
@@ -146,7 +155,7 @@ func (p *NacosProvider) Watch() error {
 		err := p.client.ListenConfig(vo.ConfigParam{
 			DataId: file.DataID,
 			Group:  file.Group,
-			OnChange: func(namespace, group, dataId, data string) {
+			OnChange: func(_, _, _, _ string) {
 				_ = p.OnChanged()
 			},
 		})

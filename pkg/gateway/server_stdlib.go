@@ -41,7 +41,11 @@ func (tc *tracerController) hasTracer() bool {
 // tracer.Start on every registered tracer.
 func (tc *tracerController) doStart(ctx context.Context, c *app.RequestContext) (startCtx context.Context) {
 	startCtx = ctx
-	defer tc.tryRecover()
+	defer func() {
+		if r := recover(); r != nil {
+			tc.handleRecover(r)
+		}
+	}()
 	if ti := c.GetTraceInfo(); ti != nil {
 		ti.Stats().Record(stats.HTTPStart, stats.StatusInfo, "")
 	}
@@ -55,7 +59,11 @@ func (tc *tracerController) doStart(ctx context.Context, c *app.RequestContext) 
 // doFinish records the HTTPFinish event and calls tracer.Finish in reverse
 // order, exactly matching Hertz's internal behavior.
 func (tc *tracerController) doFinish(ctx context.Context, c *app.RequestContext, err error) {
-	defer tc.tryRecover()
+	defer func() {
+		if r := recover(); r != nil {
+			tc.handleRecover(r)
+		}
+	}()
 	if ti := c.GetTraceInfo(); ti != nil {
 		st := stats.StatusInfo
 		if err != nil {
@@ -69,13 +77,11 @@ func (tc *tracerController) doFinish(ctx context.Context, c *app.RequestContext,
 	}
 }
 
-func (tc *tracerController) tryRecover() {
-	if r := recover(); r != nil {
-		slog.Warn("panic in tracer call (HTTP2 bridge); metrics/logs may be incomplete",
-			"panic", r,
-			"stack", string(debug.Stack()),
-		)
-	}
+func (tc *tracerController) handleRecover(r any) {
+	slog.Warn("panic in tracer call (HTTP2 bridge); metrics/logs may be incomplete",
+		"panic", r,
+		"stack", string(debug.Stack()),
+	)
 }
 
 // HertzBridge implements http.Handler by bridging to a Hertz instance.
@@ -116,7 +122,10 @@ func newHertzBridge(h *server.Hertz, tracers []tracer.Tracer) *HertzBridge {
 }
 
 func (b *HertzBridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	c := b.ctxPool.Get().(*app.RequestContext)
+	c, ok := b.ctxPool.Get().(*app.RequestContext)
+	if !ok {
+		c = app.NewContext(0)
+	}
 	defer func() {
 		c.Reset()
 		b.ctxPool.Put(c)
@@ -153,7 +162,7 @@ func (b *HertzBridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Pre-collect all potential trailers to announce them in the "Trailer" header
 	trailerNames := make(map[string]bool)
-	trailers.VisitAll(func(k, v []byte) {
+	trailers.VisitAll(func(k, _ []byte) {
 		trailerNames[string(k)] = true
 	})
 

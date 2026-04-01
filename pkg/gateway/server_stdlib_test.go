@@ -52,6 +52,7 @@ func (s *testGrpcServer) SayHello(ctx context.Context, in *proto.HelloRequest) (
 }
 
 func startTestBackend(t *testing.T, port string) {
+	t.Helper()
 	lis, err := net.Listen("tcp", port)
 	require.NoError(t, err)
 	s := grpc.NewServer()
@@ -152,7 +153,7 @@ func TestStdlibServer_GRPC_Integration(t *testing.T) {
 
 func TestStdlibServer_NonGRPC_ContentLength(t *testing.T) {
 	h := server.New()
-	h.GET("/json", func(ctx context.Context, c *app.RequestContext) {
+	h.GET("/json", func(_ context.Context, c *app.RequestContext) {
 		c.Response.Header.SetContentType("application/json")
 		c.Response.SetBody([]byte(`{"status":"ok"}`))
 	})
@@ -208,7 +209,7 @@ type capturedTraceEvents struct {
 	httpFinishAt  time.Time
 }
 
-func (s *spyTracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
+func (s *spyTracer) Start(ctx context.Context, _ *app.RequestContext) context.Context {
 	s.startCalls.Add(1)
 	return ctx
 }
@@ -245,7 +246,7 @@ func TestStdlibServer_TracerInvoked(t *testing.T) {
 	spy := &spyTracer{}
 
 	h := server.New(server.WithHostPorts(":0"))
-	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
+	h.GET("/ping", func(_ context.Context, c *app.RequestContext) {
 		c.Response.SetBodyString("pong")
 	})
 
@@ -291,7 +292,8 @@ func TestStdlibServer_TracerInvoked(t *testing.T) {
 func TestHertzBridge_PooledContextEnablesTraceReset(t *testing.T) {
 	b := newHertzBridge(server.New(), []tracer.Tracer{&spyTracer{}})
 
-	c := b.ctxPool.Get().(*app.RequestContext)
+	c, ok := b.ctxPool.Get().(*app.RequestContext)
+	require.True(t, ok)
 	t.Cleanup(func() { b.ctxPool.Put(c) })
 
 	require.True(t, c.IsEnableTrace(), "pooled RequestContext must enable trace")

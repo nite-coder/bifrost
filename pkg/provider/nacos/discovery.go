@@ -16,16 +16,23 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
+const (
+	defaultNacosPort      = 8848
+	defaultNacosTimeoutMS = 10000
+)
+
 var newNamingClientFunc = clients.NewNamingClient
 
-type NacosServiceDiscovery struct {
+// Discovery implements service discovery using Nacos.
+type Discovery struct {
 	client  naming_client.INamingClient
 	options *Options
 	stopCh  chan struct{}
 	watchCh chan []provider.Instancer
 }
 
-func NewNacosServiceDiscovery(options Options) (*NacosServiceDiscovery, error) {
+// NewNacosServiceDiscovery creates a new NacosServiceDiscovery instance.
+func NewNacosServiceDiscovery(options Options) (*Discovery, error) {
 	serverConfigs := []constant.ServerConfig{}
 
 	contextPath := "/nacos"
@@ -57,7 +64,7 @@ func NewNacosServiceDiscovery(options Options) (*NacosServiceDiscovery, error) {
 		port, _ := cast.ToUint64(uri.Port())
 
 		if port == 0 {
-			port = uint64(8848)
+			port = uint64(defaultNacosPort)
 		}
 
 		serverConfigs = append(serverConfigs, *constant.NewServerConfig(
@@ -70,7 +77,7 @@ func NewNacosServiceDiscovery(options Options) (*NacosServiceDiscovery, error) {
 	var timeoutMS uint64
 	timeout := options.Timeout.Milliseconds()
 	if timeout <= 0 {
-		timeoutMS = 10000
+		timeoutMS = defaultNacosTimeoutMS
 	} else {
 		timeoutMS = uint64(timeout)
 	}
@@ -106,14 +113,15 @@ func NewNacosServiceDiscovery(options Options) (*NacosServiceDiscovery, error) {
 		return nil, fmt.Errorf("failed to verify nacos connection: %w", err)
 	}
 
-	return &NacosServiceDiscovery{
+	return &Discovery{
 		client:  client,
 		options: &options,
 	}, nil
 }
 
-func (d *NacosServiceDiscovery) GetInstances(
-	ctx context.Context,
+// GetInstances returns the current list of healthy service instances from Nacos.
+func (d *Discovery) GetInstances(
+	_ context.Context,
 	options provider.GetInstanceOptions,
 ) ([]provider.Instancer, error) {
 	nacosInstances, err := d.client.SelectInstances(vo.SelectInstancesParam{
@@ -137,8 +145,9 @@ func (d *NacosServiceDiscovery) GetInstances(
 	return instances, nil
 }
 
-func (d *NacosServiceDiscovery) Watch(
-	ctx context.Context,
+// Watch subscribes to service changes in Nacos and returns a channel for updates.
+func (d *Discovery) Watch(
+	_ context.Context,
 	options provider.GetInstanceOptions,
 ) (<-chan []provider.Instancer, error) {
 	ch := make(chan []provider.Instancer, 1)
@@ -168,7 +177,8 @@ func (d *NacosServiceDiscovery) Watch(
 	return ch, nil
 }
 
-func (d *NacosServiceDiscovery) Close() error {
+// Close stops the Nacos service discovery and cleans up resources.
+func (d *Discovery) Close() error {
 	if d.stopCh != nil {
 		close(d.stopCh)
 	}

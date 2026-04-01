@@ -35,21 +35,21 @@ func TestBifrostLeak_Reload(t *testing.T) {
 	}
 
 	// Create initial Bifrost
-	bifrost, err := NewBifrost(options, false)
+	bifrost, err := NewBifrost(options, ModeNormal)
 	require.NoError(t, err)
 
 	go bifrost.Run()
 	time.Sleep(500 * time.Millisecond) // Wait for startup
 
 	// Capture initial goroutine count
-	runtime.GC()
+	runtime.GC() //nolint:revive
 	initialGoroutines := runtime.NumGoroutine()
 	t.Logf("Initial goroutines: %d", initialGoroutines)
 
 	currentBifrost := bifrost
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		// New Bifrost instance
-		newBifrost, err := NewBifrost(options, true) // isReload = true
+		newBifrost, err := NewBifrost(options, ModeReload) // isReload = true
 		require.NoError(t, err)
 
 		// Simulate the "swap" and discard
@@ -62,7 +62,7 @@ func TestBifrostLeak_Reload(t *testing.T) {
 	}
 
 	// Force GC again
-	runtime.GC()
+	runtime.GC() //nolint:revive
 
 	// Assert that we have NOT leaked goroutines (with fix)
 	// We utilize assert.Eventually to wait for goroutines to settle down

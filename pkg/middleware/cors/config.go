@@ -133,10 +133,10 @@ func (c *Config) validateAllowedSchemas(origin string) bool {
 }
 
 func (c *Config) parseWildcardRules() [][]string {
-	var wRules [][]string
 	if !c.AllowWildcard {
-		return wRules
+		return nil
 	}
+	wRules := make([][]string, 0, len(c.AllowOrigins))
 	for _, o := range c.AllowOrigins {
 		if !strings.Contains(o, "*") {
 			continue
@@ -160,11 +160,12 @@ func (c *Config) parseWildcardRules() [][]string {
 
 // DefaultConfig returns a generic default configuration mapped to localhost.
 func DefaultConfig() Config {
+	const defaultMaxAge = 12 * time.Hour
 	return Config{
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type"},
 		AllowCredentials: false,
-		MaxAge:           12 * time.Hour,
+		MaxAge:           defaultMaxAge,
 	}
 }
 
@@ -178,11 +179,12 @@ func Default() app.HandlerFunc {
 // NewMiddleware returns the location middleware with user-defined custom configuration.
 func NewMiddleware(config Config) app.HandlerFunc {
 	cors := newCors(config)
-	return func(ctx context.Context, c *app.RequestContext) {
+	return func(_ context.Context, c *app.RequestContext) {
 		cors.applyCors(c)
 	}
 }
 
+// Init registers the cors middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"cors"}, func(cfg Config) (app.HandlerFunc, error) {
 		// Validates if the config is valid or considered empty/invalid which implies default

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
@@ -59,7 +59,7 @@ func TestDNSServiceDiscovery_GetInstances(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d, err := NewDNSServiceDiscovery(tt.servers, tt.valid)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			ctx := context.Background()
 
@@ -71,7 +71,7 @@ func TestDNSServiceDiscovery_GetInstances(t *testing.T) {
 
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("GetInstances() expected error")
+					t.Error("GetInstances() expected error")
 				}
 				if !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("GetInstances() error = %v, want error containing %v", err, tt.errMsg)

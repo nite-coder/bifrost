@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/resolver"
@@ -25,7 +26,7 @@ func TestMiddlewarePipeline(t *testing.T) {
 	}
 
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	bifrost := &Bifrost{
 		resolver: dnsResolver,
@@ -62,13 +63,13 @@ func TestMiddlewarePipeline(t *testing.T) {
 	hit2 := 0
 	hit3 := 0
 	bifrost.middlewares = map[string]app.HandlerFunc{
-		"testMiddleware1": func(ctx context.Context, c *app.RequestContext) {
+		"testMiddleware1": func(_ context.Context, _ *app.RequestContext) {
 			hit1++
 		},
-		"testMiddleware2": func(ctx context.Context, c *app.RequestContext) {
+		"testMiddleware2": func(_ context.Context, _ *app.RequestContext) {
 			hit2++
 		},
-		"testMiddleware3": func(ctx context.Context, c *app.RequestContext) {
+		"testMiddleware3": func(_ context.Context, c *app.RequestContext) {
 			hit3++
 			c.Abort()
 		},
@@ -76,13 +77,13 @@ func TestMiddlewarePipeline(t *testing.T) {
 
 	// services
 	services, err := loadServices(bifrost)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	bifrost.services = services
 
-	_, _ = NewBifrost(*bifrost.options, false)
+	_, _ = NewBifrost(*bifrost.options, ModeNormal)
 
 	engine, err := newEngine(bifrost, bifrost.options.Servers["testServer"])
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	hzCtx := app.NewContext(0)
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/test")

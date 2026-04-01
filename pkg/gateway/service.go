@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"runtime/debug"
 	"sync"
@@ -24,6 +25,9 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+const statusClientClosedRequest = 499
+
+// Service represents a backend service that can have multiple upstreams and middlewares.
 type Service struct {
 	bifrost         *Bifrost
 	options         *config.ServiceOptions
@@ -33,6 +37,7 @@ type Service struct {
 	middlewares     []app.HandlerFunc
 }
 
+// Close releases resources used by the service and its upstreams.
 func (s *Service) Close() error {
 	for _, upstream := range s.upstreams {
 		_ = upstream.Close()
@@ -126,7 +131,6 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	}
 
 	for _, middlewareOpts := range serviceOptions.Middlewares {
-
 		if len(middlewareOpts.Use) > 0 {
 			m, found := bifrost.middlewares[middlewareOpts.Use]
 			if !found {
@@ -149,22 +153,22 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 			)
 		}
 
-		appHandler, err := handler(middlewareOpts.Params)
-		if err != nil {
+		appHandler, e := handler(middlewareOpts.Params)
+		if e != nil {
 			return nil, fmt.Errorf(
 				"failed to create middleware '%s' in route: '%s', error: %w",
 				middlewareOpts.Type,
 				serviceOptions.ID,
-				err,
+				e,
 			)
 		}
 
 		svc.middlewares = append(svc.middlewares, appHandler)
 	}
 
-	addr, err := url.Parse(serviceOptions.URL)
-	if err != nil {
-		return nil, err
+	addr, e := url.Parse(serviceOptions.URL)
+	if e != nil {
+		return nil, e
 	}
 
 	hostname := addr.Hostname()
@@ -213,22 +217,24 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	return svc, nil
 }
 
-func (svc *Service) Upstream() *Upstream {
-	return svc.upstream
+// Upstream returns the primary upstream associated with this service.
+func (s *Service) Upstream() *Upstream {
+	return s.upstream
 }
 
-func (svc *Service) Middlewares() []app.HandlerFunc {
-	return svc.middlewares
+// Middlewares returns the list of middlewares associated with this service.
+func (s *Service) Middlewares() []app.HandlerFunc {
+	return s.middlewares
 }
 
-func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 
 	defer func() {
 		if r := recover(); r != nil {
 			stackTrace := cast.B2S(debug.Stack())
 			logger.ErrorContext(ctx, "service panic recovered", slog.Any("panic", r), slog.String("stack", stackTrace))
-			c.SetStatusCode(500)
+			c.SetStatusCode(http.StatusInternalServerError)
 			c.Abort()
 		}
 	}()
@@ -242,7 +248,9 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			httpStart, _ := variable.Get(variable.HTTPStart, c)
 			var duration time.Duration
 			if httpStart != nil {
-				duration = time.Since(httpStart.(time.Time))
+				if t, ok := httpStart.(time.Time); ok {
+					duration = time.Since(t)
+				}
 			}
 
 			logger.InfoContext(ctx, "client cancel the request",
@@ -253,13 +261,13 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			)
 
 			// client canceled the request
-			c.Response.SetStatusCode(499)
+			c.Response.SetStatusCode(statusClientClosedRequest)
 			return
 		}
 	}
 
-	if len(svc.dynamicUpstream) > 0 {
-		upstreamName := variable.GetString(svc.dynamicUpstream, c)
+	if len(s.dynamicUpstream) > 0 {
+		upstreamName := variable.GetString(s.dynamicUpstream, c)
 
 		if len(upstreamName) == 0 {
 			logger.Warn("upstream is empty",
@@ -270,7 +278,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 
 		var found bool
-		svc.upstream, found = svc.upstreams[upstreamName]
+		s.upstream, found = s.upstreams[upstreamName]
 		if !found {
 			logger.Warn("upstream is not found",
 				slog.String("name", upstreamName),
@@ -278,30 +286,30 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			c.Abort()
 			return
 		}
-		svc.upstream.watch()
+		s.upstream.watch()
 	}
 
-	var proxy proxy.Proxy
+	var myProxy proxy.Proxy
 	var err error
-	if svc.upstream != nil {
-		c.Set(variable.UpstreamID, svc.upstream.options.ID)
+	if s.upstream != nil {
+		c.Set(variable.UpstreamID, s.upstream.options.ID)
 
-		balaner := svc.upstream.Balancer()
+		balaner := s.upstream.Balancer()
 		if balaner == nil {
 			logger.Warn("balancer is nil, upstream may not be initialized",
-				"upstream_id", svc.upstream.options.ID,
-				"service_id", svc.options.ID,
+				"upstream_id", s.upstream.options.ID,
+				"service_id", s.options.ID,
 			)
-			c.SetStatusCode(503)
+			c.SetStatusCode(http.StatusServiceUnavailable)
 			return
 		}
 
-		proxy, err = balaner.Select(ctx, c)
+		myProxy, err = balaner.Select(ctx, c)
 	}
 
-	if proxy == nil || err != nil {
+	if myProxy == nil || err != nil {
 		// no live upstream
-		c.SetStatusCode(503)
+		c.SetStatusCode(http.StatusServiceUnavailable)
 
 		if !errors.Is(err, balancer.ErrNotAvailable) {
 			_ = c.Error(err)
@@ -310,7 +318,7 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}
 
 	startTime := timecache.Now()
-	proxy.ServeHTTP(ctx, c)
+	myProxy.ServeHTTP(ctx, c)
 	endTime := timecache.Now()
 
 	dur := endTime.Sub(startTime)
@@ -318,12 +326,13 @@ func (svc *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	// the upstream target timeout and we need to response http status 504 back to client
 	if c.GetBool(variable.TargetTimeout) {
-		c.Response.SetStatusCode(504)
+		c.Response.SetStatusCode(http.StatusGatewayTimeout)
 	} else {
 		c.Set(variable.UpstreamResponoseStatusCode, c.Response.StatusCode())
 	}
 }
 
+// DynamicService handles requests for services determined dynamically at runtime.
 type DynamicService struct {
 	services map[string]*Service
 	name     string
@@ -336,9 +345,9 @@ func newDynamicService(name string, services map[string]*Service) *DynamicServic
 	}
 }
 
-func (svc *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (s *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
-	serviceName := variable.GetString(svc.name, c)
+	serviceName := variable.GetString(s.name, c)
 
 	if len(serviceName) == 0 {
 		routeID := variable.GetString(variable.RouteID, c)
@@ -347,13 +356,13 @@ func (svc *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext)
 			slog.String("route_id", routeID),
 			slog.String("client_ip", c.ClientIP()),
 			slog.String("full_uri", fullURI),
-			slog.String("dynamic_service_name", svc.name),
+			slog.String("dynamic_service_name", s.name),
 		)
 		c.Abort()
 		return
 	}
 
-	service, found := svc.services[serviceName]
+	service, found := s.services[serviceName]
 	if !found {
 		routeID := variable.GetString(variable.RouteID, c)
 		fullURI := fullURI(&c.Request)
@@ -361,7 +370,7 @@ func (svc *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext)
 			slog.String("route_id", routeID),
 			slog.String("client_ip", c.ClientIP()),
 			slog.String("full_uri", fullURI),
-			slog.String("service_name", svc.name),
+			slog.String("service_name", s.name),
 		)
 		c.Abort()
 		return
@@ -369,7 +378,9 @@ func (svc *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext)
 	c.Set(variable.ServiceID, serviceName)
 
 	// Create a new slice to avoid modifying the original service.middlewares
-	middlewares := append(service.middlewares, service.ServeHTTP)
+	middlewares := make([]app.HandlerFunc, len(service.middlewares)+1)
+	copy(middlewares, service.middlewares)
+	middlewares[len(service.middlewares)] = service.ServeHTTP
 	c.SetIndex(-1)
 	c.SetHandlers(middlewares)
 	c.Next(ctx)

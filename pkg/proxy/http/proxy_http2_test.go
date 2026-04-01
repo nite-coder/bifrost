@@ -15,12 +15,13 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/config"
 )
 
 // setupHTTP2Server starts a test server that supports ONLY HTTP/2 (via TLS).
-func setupHTTP2Server(t *testing.T, handler http.HandlerFunc) (*httptest.Server, string) {
+func setupHTTP2Server(_ *testing.T, handler http.HandlerFunc) (*httptest.Server, string) {
 	ts := httptest.NewUnstartedServer(handler)
 	ts.EnableHTTP2 = true
 	ts.StartTLS()
@@ -40,7 +41,7 @@ func TestProxy_HTTP2_Basic(t *testing.T) {
 	defer ts.Close()
 
 	lst, err := net.Listen("tcp", "127.0.0.1:0")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	addr := lst.Addr().String()
 
 	r := server.New(server.WithListener(lst))
@@ -59,10 +60,10 @@ func TestProxy_HTTP2_Basic(t *testing.T) {
 		),
 	}
 	hClient, err := NewClient(clientOpts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	proxy, err := New(proxyOptions, hClient)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	r.GET("/backend", proxy.ServeHTTP)
 
@@ -81,13 +82,13 @@ func TestProxy_HTTP2_Basic(t *testing.T) {
 	req.SetRequestURI(fmt.Sprintf("http://%s/backend", addr))
 
 	err = c.Do(context.Background(), req, resp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode())
 	assert.Equal(t, backendResponse, string(resp.Body()))
 }
 
 func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
-	ts, url := setupHTTP2Server(t, func(w http.ResponseWriter, r *http.Request) {
+	ts, url := setupHTTP2Server(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/grpc")
 		w.Header().Set("Trailer", "Grpc-Status, Grpc-Message")
 		w.WriteHeader(http.StatusOK)
@@ -100,7 +101,7 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 	defer ts.Close()
 
 	lst, err := net.Listen("tcp", "127.0.0.1:0")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	addr := lst.Addr().String()
 
 	r := server.New(server.WithListener(lst))
@@ -119,10 +120,10 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 		),
 	}
 	hClient, err := NewClient(clientOpts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	proxy, err := New(proxyOptions, hClient)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	r.POST("/grpc", proxy.ServeHTTP)
 	go r.Spin()
@@ -135,8 +136,8 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 
 	// Wait for server to start
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}
@@ -150,7 +151,7 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 	req.SetRequestURI(fmt.Sprintf("http://%s/grpc", addr))
 
 	err = c.Do(context.Background(), req, resp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode())
 	assert.Equal(t, "application/grpc", resp.Header.Get("Content-Type"))
@@ -174,15 +175,15 @@ func TestH2UpstreamBaseline(t *testing.T) {
 	})
 	defer ts.Close()
 
-	client := &http.Client{
+	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true}, /* #nosec G402 */
 			ForceAttemptHTTP2: true,
 		},
 	}
 
-	resp, err := client.Get(url)
-	assert.NoError(t, err)
+	resp, err := httpClient.Get(url)
+	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	assert.Equal(t, "HTTP/2.0", resp.Header.Get("X-Proto"))
@@ -192,7 +193,7 @@ func TestH2UpstreamBaseline(t *testing.T) {
 }
 
 func TestProxy_HTTP2_Timeout(t *testing.T) {
-	ts, url := setupHTTP2Server(t, func(w http.ResponseWriter, r *http.Request) {
+	ts, url := setupHTTP2Server(t, func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(200 * time.Millisecond) // Longer than client timeout
 		w.WriteHeader(http.StatusOK)
 	})
@@ -205,7 +206,7 @@ func TestProxy_HTTP2_Timeout(t *testing.T) {
 		),
 	}
 	hClient, err := NewClient(clientOpts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	req := protocol.AcquireRequest()
 	resp := protocol.AcquireResponse()
@@ -215,5 +216,5 @@ func TestProxy_HTTP2_Timeout(t *testing.T) {
 	defer cancel()
 
 	err = hClient.Do(ctx, req, resp)
-	assert.Error(t, err)
+	require.Error(t, err)
 }

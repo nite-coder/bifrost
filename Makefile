@@ -20,7 +20,7 @@ lintd:
 	docker run -it --rm -v "${LOCAL_WORKSPACE_FOLDER}:/app" -w /app golangci/golangci-lint:v2.7.2-alpine golangci-lint run --timeout 5m --verbose ./pkg/...
 
 fix:
-	go tool golangci-lint run --fix
+	go tool golangci-lint run --fix ./pkg/... ./internal/pkg/...
 
 build:
 	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -o bin/bifrost server/bifrost/main.go

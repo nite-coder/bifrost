@@ -43,7 +43,7 @@ func TestLocalLimiter(t *testing.T) {
 	t.Run("Different keys", func(t *testing.T) {
 		ctx := context.Background()
 
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			key := fmt.Sprintf("key_%d", i)
 			result := limiter.Allow(ctx, key)
 			if !result.Allow {
@@ -56,7 +56,7 @@ func TestLocalLimiter(t *testing.T) {
 		ctx := context.Background()
 
 		key := "reset_key"
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			result := limiter.Allow(ctx, key)
 			if !result.Allow {
 				t.Errorf("Request %d should be allowed", i+1)
@@ -82,7 +82,7 @@ func TestLocalLimiter(t *testing.T) {
 		var wg sync.WaitGroup
 
 		wg.Add(concurrentRequests)
-		for i := 0; i < concurrentRequests; i++ {
+		for range concurrentRequests {
 			go func() {
 				defer wg.Done()
 

@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 
 	"github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
@@ -25,7 +25,7 @@ import (
 func TestMain(m *testing.M) {
 	_ = cors.Init()
 	_ = roundrobin.Init()
-	os.Exit(m.Run())
+	m.Run()
 }
 
 type TestOrder struct {
@@ -122,8 +122,8 @@ func TestBifrost(t *testing.T) {
 		},
 	}
 
-	bifrost, err := NewBifrost(options, false)
-	assert.NoError(t, err)
+	bifrost, err := NewBifrost(options, ModeNormal)
+	require.NoError(t, err)
 
 	go bifrost.Run()
 
@@ -133,7 +133,7 @@ func TestBifrost(t *testing.T) {
 		server.WithExitWaitTime(1*time.Second),
 	)
 
-	backendServ.Any("/api/v1/orders", func(ctx context.Context, c *app.RequestContext) {
+	backendServ.Any("/api/v1/orders", func(_ context.Context, c *app.RequestContext) {
 		order := &TestOrder{
 			ID:    "1",
 			Price: "100",
@@ -179,14 +179,13 @@ func TestBifrost(t *testing.T) {
 		}
 
 		for _, url := range urls {
-
 			if url == "https://localhost:8442/api/v1/orders" {
 				client.SetTransport(&http2.Transport{
 					AllowHTTP: true,
 					TLSClientConfig: &tls.Config{
 						InsecureSkipVerify: true, /* #nosec G402 */
 					},
-					DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+					DialTLS: func(network, addr string, _ *tls.Config) (net.Conn, error) {
 						return net.Dial(network, addr)
 					},
 				})
@@ -195,11 +194,11 @@ func TestBifrost(t *testing.T) {
 			resp, err := client.R().
 				Get(url)
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			testOrder := &TestOrder{}
 			err = sonic.Unmarshal(resp.Body(), testOrder)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			assert.Equal(t, 200, resp.StatusCode())
 			assert.Equal(t, "1", testOrder.ID)
@@ -217,7 +216,7 @@ func TestBifrost(t *testing.T) {
 		}
 
 		resp, err := client.Get("https://localhost:8442/spot/orders")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		if resp != nil {
 			defer resp.Body.Close()
 		}
@@ -231,7 +230,7 @@ func TestBifrost(t *testing.T) {
 		resp, err := client.R().
 			Get("http://localhost:8080/metrics")
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode())
 
 		isUnknown := strings.Contains(resp.String(), "unknown")
@@ -254,12 +253,12 @@ func TestBifrost(t *testing.T) {
 		// Initially should be active
 		assert.True(t, bifrost.IsActive())
 
-		// Test SetActive(false)
-		bifrost.SetActive(false)
+		// Test SetActive(StatusInactive)
+		bifrost.SetActive(StatusInactive)
 		assert.False(t, bifrost.IsActive())
 
-		// Test SetActive(true)
-		bifrost.SetActive(true)
+		// Test SetActive(StatusActive)
+		bifrost.SetActive(StatusActive)
 		assert.True(t, bifrost.IsActive())
 	})
 }
@@ -279,13 +278,13 @@ func TestBifrostShutdown(t *testing.T) {
 		Targets: []config.TargetOptions{{Target: "127.0.0.1:9999"}},
 	}
 
-	bifrost, err := NewBifrost(options, false)
-	assert.NoError(t, err)
+	bifrost, err := NewBifrost(options, ModeNormal)
+	require.NoError(t, err)
 
 	go bifrost.Run()
 	assert.Eventually(t, func() bool {
-		conn, err := net.DialTimeout("tcp", "localhost:8085", 100*time.Millisecond)
-		if err == nil {
+		conn, e := net.DialTimeout("tcp", "localhost:8085", 100*time.Millisecond)
+		if e == nil {
 			_ = conn.Close()
 			return true
 		}
@@ -297,6 +296,6 @@ func TestBifrostShutdown(t *testing.T) {
 	defer cancel()
 
 	err = bifrost.Shutdown(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, bifrost.IsActive())
 }

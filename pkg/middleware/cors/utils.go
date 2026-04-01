@@ -103,7 +103,7 @@ func normalize(values []string) []string {
 }
 
 func convert(s []string, c converter) []string {
-	var out []string
+	out := make([]string, 0, len(s))
 	for _, i := range s {
 		out = append(out, c(i))
 	}

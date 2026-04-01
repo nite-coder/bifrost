@@ -13,6 +13,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 )
 
+// Engine handles request processing and middleware execution.
 type Engine struct {
 	ID              string
 	bifrost         *Bifrost
@@ -52,7 +53,6 @@ func newEngine(bifrost *Bifrost, serverOptions config.ServerOptions) (*Engine, e
 
 	// set server's middlewares
 	for _, m := range serverOptions.Middlewares {
-
 		if len(m.Use) > 0 {
 			val, found := bifrost.middlewares[m.Use]
 			if !found {
@@ -104,14 +104,21 @@ func (e *Engine) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	c.Abort()
 }
 
+// OnShutdown is called when the engine is shutting down.
 func (e *Engine) OnShutdown() {
 }
 
-func (e *Engine) Use(middleware ...app.HandlerFunc) {
-	e.handlers = append(e.handlers, middleware...)
-	e.middlewares = e.handlers
+// Use adds middlewares to the engine.
+func (e *Engine) Use(middlewares ...app.HandlerFunc) {
+	e.handlers = append(e.handlers, middlewares...)
 
-	if e.notFoundHandler != nil {
-		e.middlewares = append(e.handlers, e.notFoundHandler)
+	if e.notFoundHandler == nil {
+		e.middlewares = e.handlers
+		return
 	}
+
+	handlers := make(app.HandlersChain, len(e.handlers)+1)
+	copy(handlers, e.handlers)
+	handlers[len(e.handlers)] = e.notFoundHandler
+	e.middlewares = handlers
 }

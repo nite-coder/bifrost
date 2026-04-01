@@ -23,6 +23,12 @@ import (
 	"github.com/nite-coder/bifrost/pkg/log"
 )
 
+const (
+	defaultGracefulTimeout = 30 * time.Second
+	readyWaitTimeout       = 30 * time.Second
+	fdWaitTimeout          = 5 * time.Second
+)
+
 // Allow mocking for tests.
 var (
 	lookupUser  = user.Lookup
@@ -128,7 +134,7 @@ func NewMaster(opts *MasterOptions) *Master {
 		opts.Binary = os.Args[0]
 	}
 	if opts.GracefulTimeout <= 0 {
-		opts.GracefulTimeout = 30 * time.Second
+		opts.GracefulTimeout = defaultGracefulTimeout
 	}
 
 	return &Master{
@@ -163,9 +169,9 @@ func (m *Master) Run(ctx context.Context) error {
 
 	// Start accepting control plane connections
 	go safety.Go(ctx, func() {
-		err := m.controlPlane.Accept(ctx)
-		if err != nil && !errors.Is(err, context.Canceled) {
-			slog.Error("control plane accept loop exited", "error", err)
+		e := m.controlPlane.Accept(ctx)
+		if e != nil && !errors.Is(e, context.Canceled) {
+			slog.Error("control plane accept loop exited", "error", e)
 		}
 	})
 
@@ -190,7 +196,7 @@ func (m *Master) Run(ctx context.Context) error {
 	select {
 	case <-m.readyCh:
 		slog.Info("initial worker is ready")
-	case <-time.After(30 * time.Second):
+	case <-time.After(readyWaitTimeout):
 		slog.Warn("initial worker ready timeout, proceeding anyway")
 	}
 
@@ -200,7 +206,6 @@ func (m *Master) Run(ctx context.Context) error {
 
 	for {
 		select {
-
 		case <-ctx.Done():
 			return m.Shutdown(ctx)
 
@@ -234,6 +239,8 @@ func (m *Master) Run(ctx context.Context) error {
 						slog.Error("failed to forward SIGUSR1 to worker", "error", err, "workerPID", worker.Process.Pid)
 					}
 				}
+			default:
+				// Ignore other signals
 			}
 
 		case <-m.workerDoneCh:
@@ -279,7 +286,7 @@ func (m *Master) Run(ctx context.Context) error {
 }
 
 // Shutdown gracefully stops the Master and its Worker.
-func (m *Master) Shutdown(ctx context.Context) error {
+func (m *Master) Shutdown(_ context.Context) error {
 	m.mu.Lock()
 	if m.state == MasterStateShuttingDown {
 		m.mu.Unlock()
@@ -571,7 +578,7 @@ func (m *Master) handleReload(ctx context.Context) error {
 			case data := <-m.listenerDataCh:
 				fds = data.fds
 				keys = data.keys
-			case <-time.After(5 * time.Second):
+			case <-time.After(fdWaitTimeout):
 				slog.Warn("timeout waiting for FDs from old worker")
 			}
 		}
@@ -593,7 +600,7 @@ func (m *Master) handleReload(ctx context.Context) error {
 	}
 
 	// Step 3: Wait for new worker ready signal (with timeout)
-	readyTimeout := 30 * time.Second
+	readyTimeout := readyWaitTimeout
 	select {
 	case <-m.readyCh:
 		slog.Info("new worker is ready", "newWorkerPID", newCmd.Process.Pid)
@@ -637,7 +644,7 @@ func (m *Master) handleReload(ctx context.Context) error {
 }
 
 // handleControlMessage handles messages from workers.
-func (m *Master) handleControlMessage(conn net.Conn, msg *ControlMessage) {
+func (m *Master) handleControlMessage(_ net.Conn, msg *ControlMessage) {
 	switch msg.Type {
 	case MessageTypeRegister:
 		slog.Debug("worker registered", "workerPID", msg.WorkerPID)

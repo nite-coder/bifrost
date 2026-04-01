@@ -15,23 +15,37 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+const (
+	allocationFactor       = 2
+	defaultLimitStatusCode = 429
+)
+
+// Limiter defines the interface for different rate limiting strategies.
 type Limiter interface {
 	Allow(ctx context.Context, key string) *AllowResult
 }
+
+// AllowResult contains the result of a rate limit check.
 type AllowResult struct {
 	ResetTime time.Time
 	Limit     uint64
 	Remaining uint64
 	Allow     bool
 }
+
+// StrategyMode defines the rate limiting strategy to use.
 type StrategyMode string
 
 const (
-	Local           StrategyMode = "local"
-	Redis           StrategyMode = "redis"
+	// Local strategy use local memory for rate limiting.
+	Local StrategyMode = "local"
+	// Redis strategy use redis for rate limiting.
+	Redis StrategyMode = "redis"
+	// LocalAsyncRedis strategy use local memory for rate limiting and sync to redis asynchronously.
 	LocalAsyncRedis StrategyMode = "local_async_redis" // #nosec G101
 )
 
+// Options defines the configuration for the rate limiting middleware.
 type Options struct {
 	Strategy                 StrategyMode  `mapstructure:"strategy"`
 	LimitBy                  string        `mapstructure:"limit_by"`
@@ -45,15 +59,18 @@ type Options struct {
 	WindowSize               time.Duration `mapstructure:"window_size"`
 	RejectedHTTPStatusCode   int           `mapstructure:"rejected_http_status_code"`
 }
+
+// RateLimitingMiddleware is a middleware that performs rate limiting.
 type RateLimitingMiddleware struct {
 	options    *Options
 	limiter    Limiter
 	directives []string
 }
 
+// NewMiddleware creates a new RateLimitingMiddleware instance.
 func NewMiddleware(options Options) (*RateLimitingMiddleware, error) {
 	if options.RejectedHTTPStatusCode == 0 {
-		options.RejectedHTTPStatusCode = 429
+		options.RejectedHTTPStatusCode = defaultLimitStatusCode
 	}
 	if options.WindowSize == 0 {
 		return nil, errors.New("window_size must be greater than 0")
@@ -105,26 +122,26 @@ func (m *RateLimitingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestCo
 				c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
 			}
 			return
-		} else {
-			if len(m.options.HeaderLimit) > 0 {
-				c.Response.Header.Set(m.options.HeaderLimit, strconv.FormatUint(result.Limit, 10))
-			}
-			if len(m.options.HeaderRemaining) > 0 {
-				c.Response.Header.Set(m.options.HeaderRemaining, strconv.FormatUint(result.Remaining, 10))
-			}
-			if len(m.options.HeaderReset) > 0 {
-				c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
-			}
-			c.SetStatusCode(m.options.RejectedHTTPStatusCode)
-			if len(m.options.RejectedHTTPContentType) > 0 {
-				c.Response.Header.Set("Content-Type", m.options.RejectedHTTPContentType)
-			}
-			if len(m.options.RejectedHTTPResponseBody) > 0 {
-				c.Response.SetBody([]byte(m.options.RejectedHTTPResponseBody))
-			}
-			c.Abort()
-			return
 		}
+
+		if len(m.options.HeaderLimit) > 0 {
+			c.Response.Header.Set(m.options.HeaderLimit, strconv.FormatUint(result.Limit, 10))
+		}
+		if len(m.options.HeaderRemaining) > 0 {
+			c.Response.Header.Set(m.options.HeaderRemaining, strconv.FormatUint(result.Remaining, 10))
+		}
+		if len(m.options.HeaderReset) > 0 {
+			c.Response.Header.Set(m.options.HeaderReset, strconv.FormatInt(result.ResetTime.Unix(), 10))
+		}
+		c.SetStatusCode(m.options.RejectedHTTPStatusCode)
+		if len(m.options.RejectedHTTPContentType) > 0 {
+			c.Response.Header.Set("Content-Type", m.options.RejectedHTTPContentType)
+		}
+		if len(m.options.RejectedHTTPResponseBody) > 0 {
+			c.Response.SetBody([]byte(m.options.RejectedHTTPResponseBody))
+		}
+		c.Abort()
+		return
 	}
 	c.Next(ctx)
 }
@@ -133,7 +150,7 @@ func buildReplacer(directives []string, c *app.RequestContext) []string {
 	if len(directives) == 0 {
 		return nil
 	}
-	replacements := make([]string, 0, len(directives)*2)
+	replacements := make([]string, 0, len(directives)*allocationFactor)
 	for _, key := range directives {
 		val := variable.GetString(key, c)
 		replacements = append(replacements, key, val)
@@ -141,6 +158,7 @@ func buildReplacer(directives []string, c *app.RequestContext) []string {
 	return replacements
 }
 
+// Init registers the rate_limit middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"rate_limit"}, func(option Options) (app.HandlerFunc, error) {
 		if len(option.LimitBy) == 0 {

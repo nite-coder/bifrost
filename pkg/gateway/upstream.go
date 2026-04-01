@@ -46,6 +46,7 @@ func init() {
 	prom.MustRegister(httpServiceOpenConnections)
 }
 
+// Upstream represents a collection of backend targets and a load balancer.
 type Upstream struct {
 	balancer       atomic.Value
 	discovery      provider.ServiceDiscovery
@@ -56,6 +57,7 @@ type Upstream struct {
 	cancel         context.CancelFunc
 }
 
+// Close stops watching for updates and closes all associated proxies and discovery resources.
 func (u *Upstream) Close() error {
 	if u.cancel != nil {
 		u.cancel()
@@ -81,6 +83,7 @@ func newUpstream(
 	serviceOptions config.ServiceOptions,
 	upstreamOptions config.UpstreamOptions,
 ) (*Upstream, error) {
+	var err error
 	if len(upstreamOptions.ID) == 0 {
 		return nil, errors.New("upstream ID cannot be empty")
 	}
@@ -98,7 +101,8 @@ func newUpstream(
 		if !bifrost.options.Providers.DNS.Enabled {
 			return nil, fmt.Errorf("dns provider is disabled for upstream ID: %s", upstreamOptions.ID)
 		}
-		discovery, err := dns.NewDNSServiceDiscovery(
+		var discovery provider.ServiceDiscovery
+		discovery, err = dns.NewDNSServiceDiscovery(
 			bifrost.options.Providers.DNS.Servers,
 			bifrost.options.Providers.DNS.Valid,
 		)
@@ -131,7 +135,8 @@ func newUpstream(
 			LogDir:      bifrost.options.Providers.Nacos.Discovery.LogDir,
 			LogLevel:    bifrost.options.Providers.Nacos.Discovery.LogLevel,
 		}
-		discovery, err := nacos.NewNacosServiceDiscovery(options)
+		var discovery provider.ServiceDiscovery
+		discovery, err = nacos.NewNacosServiceDiscovery(options)
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +148,8 @@ func newUpstream(
 		option := k8s.Options{
 			APIServer: bifrost.options.Providers.K8S.APIServer,
 		}
-		discovery, err := k8s.NewK8sDiscovery(option)
+		var discovery provider.ServiceDiscovery
+		discovery, err = k8s.NewK8sDiscovery(option)
 		if err != nil {
 			return nil, err
 		}
@@ -152,13 +158,14 @@ func newUpstream(
 		discovery := NewResolverDiscovery(upstream)
 		upstream.discovery = discovery
 	}
-	err := upstream.refreshProxies(nil)
+	err = upstream.refreshProxies(nil)
 	if err != nil {
 		return nil, err
 	}
 	return upstream, nil
 }
 
+// Balancer returns the current load balancer for the upstream.
 func (u *Upstream) Balancer() balancer.Balancer {
 	val := u.balancer.Load()
 	if val == nil {
@@ -182,12 +189,12 @@ func generateProxyHash(p proxy.Proxy) string {
 	sort.Strings(keys)
 
 	var builder strings.Builder
-	builder.WriteString(p.Target())
+	_, _ = builder.WriteString(p.Target())
 	for _, k := range keys {
-		builder.WriteString(";")
-		builder.WriteString(k)
-		builder.WriteString("=")
-		builder.WriteString(tags[k])
+		_, _ = builder.WriteString(";")
+		_, _ = builder.WriteString(k)
+		_, _ = builder.WriteString("=")
+		_, _ = builder.WriteString(tags[k])
 	}
 
 	hash := sha256.Sum256([]byte(builder.String()))
@@ -211,13 +218,13 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	newProxies := make([]proxy.Proxy, 0)
 
 	for _, instance := range instances {
-
-		targetHost, targetPort, err := net.SplitHostPort(instance.Address().String())
+		var targetHost, targetPort string
+		targetHost, targetPort, err = net.SplitHostPort(instance.Address().String())
 		if err != nil {
-			fmt.Println(instance.Address().String())
 			targetHost = instance.Address().String()
 		}
-		addr, err := url.Parse(u.serviceOptions.URL)
+		var addr *url.URL
+		addr, err = url.Parse(u.serviceOptions.URL)
 		if err != nil {
 			return fmt.Errorf("failed to parse service URL '%s': %w", u.serviceOptions.URL, err)
 		}
@@ -237,7 +244,10 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		if u.serviceOptions.Timeout.Read > 0 {
 			clientOpts = append(clientOpts, client.WithClientReadTimeout(u.serviceOptions.Timeout.Read))
 		} else if u.bifrost.options.Default.Service.Timeout.Read > 0 {
-			clientOpts = append(clientOpts, client.WithClientReadTimeout(u.bifrost.options.Default.Service.Timeout.Read))
+			clientOpts = append(
+				clientOpts,
+				client.WithClientReadTimeout(u.bifrost.options.Default.Service.Timeout.Read),
+			)
 		}
 		if u.serviceOptions.Timeout.Write > 0 {
 			clientOpts = append(clientOpts, client.WithWriteTimeout(u.serviceOptions.Timeout.Write))
@@ -247,12 +257,18 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		if u.serviceOptions.Timeout.MaxConnWait > 0 {
 			clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(u.serviceOptions.Timeout.MaxConnWait))
 		} else if u.bifrost.options.Default.Service.Timeout.MaxConnWait > 0 {
-			clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(u.bifrost.options.Default.Service.Timeout.MaxConnWait))
+			clientOpts = append(
+				clientOpts,
+				client.WithMaxConnWaitTimeout(u.bifrost.options.Default.Service.Timeout.MaxConnWait),
+			)
 		}
 		if u.serviceOptions.MaxConnsPerHost != nil {
 			clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*u.serviceOptions.MaxConnsPerHost))
 		} else if u.bifrost.options.Default.Service.MaxConnsPerHost != nil {
-			clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*u.bifrost.options.Default.Service.MaxConnsPerHost))
+			clientOpts = append(
+				clientOpts,
+				client.WithMaxConnsPerHost(*u.bifrost.options.Default.Service.MaxConnsPerHost),
+			)
 		}
 		if strings.EqualFold(addr.Scheme, "https") {
 			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
@@ -281,23 +297,24 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 		} else if u.bifrost.options.Default.Upstream.FailTimeout > 0 {
 			failTimeout = u.bifrost.options.Default.Upstream.FailTimeout
 		}
-		url := ""
+		var myURL string
 		switch u.serviceOptions.Protocol {
 		case "", config.ProtocolHTTP, config.ProtocolHTTP2:
-			url = fmt.Sprintf("%s://%s%s", addr.Scheme, targetHost, addr.Path)
+			myURL = fmt.Sprintf("%s://%s%s", addr.Scheme, targetHost, addr.Path)
 			if port != "" {
-				url = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
+				myURL = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
 			}
 			clientOptions := httpproxy.ClientOptions{
 				IsHTTP2:   u.serviceOptions.Protocol == config.ProtocolHTTP2,
 				HZOptions: clientOpts,
 			}
-			client, err := httpproxy.NewClient(clientOptions)
+			var httpClient *client.Client
+			httpClient, err = httpproxy.NewClient(clientOptions)
 			if err != nil {
 				return err
 			}
 			proxyOptions := httpproxy.Options{
-				Target:           url,
+				Target:           myURL,
 				Protocol:         u.serviceOptions.Protocol,
 				Weight:           instance.Weight(),
 				MaxFails:         maxFails,
@@ -308,18 +325,19 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				PassHostHeader:   u.serviceOptions.IsPassHostHeader(),
 				Tags:             instance.Tags(),
 			}
-			proxy, err := httpproxy.New(proxyOptions, client)
+			var myProxy proxy.Proxy
+			myProxy, err = httpproxy.New(proxyOptions, httpClient)
 			if err != nil {
 				return err
 			}
-			newProxies = append(newProxies, proxy)
+			newProxies = append(newProxies, myProxy)
 		case config.ProtocolGRPC:
-			url = "grpc://" + targetHost + addr.Path
+			myURL = "grpc://" + targetHost + addr.Path
 			if port != "" {
-				url = "grpc://" + net.JoinHostPort(targetHost, port) + addr.Path
+				myURL = "grpc://" + net.JoinHostPort(targetHost, port) + addr.Path
 			}
 			grpcOptions := grpcproxy.Options{
-				Target:           url,
+				Target:           myURL,
 				TLSVerify:        u.serviceOptions.TLSVerify,
 				Weight:           instance.Weight(),
 				MaxFails:         maxFails,
@@ -328,11 +346,13 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				Timeout:          u.serviceOptions.Timeout.GRPC,
 				Tags:             instance.Tags(),
 			}
-			grpcProxy, err := grpcproxy.New(grpcOptions)
+			var grpcProxy proxy.Proxy
+			grpcProxy, err = grpcproxy.New(grpcOptions)
 			if err != nil {
 				return err
 			}
 			newProxies = append(newProxies, grpcProxy)
+		default:
 		}
 	}
 	var updatedProxies []proxy.Proxy
@@ -392,12 +412,13 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	}
 
 	factory := balancer.Factory(u.options.Balancer.Type)
-	balancer, err := factory(updatedProxies, u.options.Balancer.Params)
+	var b balancer.Balancer
+	b, err = factory(updatedProxies, u.options.Balancer.Params)
 	if err != nil {
 		return err
 	}
 
-	u.balancer.Store(balancer)
+	u.balancer.Store(b)
 	return nil
 }
 
@@ -408,7 +429,9 @@ func (u *Upstream) watch() {
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		u.cancel = cancel
-		watchCh, err := u.discovery.Watch(ctx, options)
+		var err error
+		var watchCh <-chan []provider.Instancer
+		watchCh, err = u.discovery.Watch(ctx, options)
 		if err != nil {
 			slog.Error("failed to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
 			return

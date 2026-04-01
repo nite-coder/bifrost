@@ -7,6 +7,7 @@ import (
 
 var cache atomic.Value
 
+// Set sets the global time cache instance.
 func Set(timeCache *TimeCache) {
 	val, ok := cache.Load().(*TimeCache)
 	if ok && val != nil {
@@ -15,6 +16,7 @@ func Set(timeCache *TimeCache) {
 	cache.Store(timeCache)
 }
 
+// Now returns the cached current time.
 func Now() time.Time {
 	val, ok := cache.Load().(*TimeCache)
 	if !ok {

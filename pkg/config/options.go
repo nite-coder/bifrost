@@ -6,29 +6,30 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Options defines the global configuration for Bifrost.
 type Options struct {
-	Watch           *bool                       `yaml:"watch"            json:"watch"`
-	AccessLogs      map[string]AccessLogOptions `yaml:"access_logs"      json:"access_logs"`
-	Servers         map[string]ServerOptions    `yaml:"servers"          json:"servers"`
-	RoutesMap       *yaml.Node                  `yaml:"routes"`
-	Middlewares     map[string]MiddlwareOptions `yaml:"middlewares"      json:"middlewares"`
-	Services        map[string]ServiceOptions   `yaml:"services"         json:"services"`
-	Upstreams       map[string]UpstreamOptions  `yaml:"upstreams"        json:"upstreams"`
-	Providers       ProviderOptions             `yaml:"providers"        json:"providers"`
-	configPath      string                      `yaml:"-"                json:"-"`
-	User            string                      `yaml:"user"             json:"user"`
-	Group           string                      `yaml:"group"            json:"group"`
-	Metrics         MetricsOptions              `yaml:"metrics"          json:"metrics"`
-	Logging         LoggingOptions              `yaml:"logging"          json:"logging"`
-	Routes          []*RouteOptions             `yaml:"-"`
-	Redis           []RedisOptions              `yaml:"redis"            json:"redis"`
-	Resolver        ResolverOptions             `yaml:"resolver"         json:"resolver"`
-	Tracing         TracingOptions              `yaml:"tracing"          json:"tracing"`
-	Default         DefaultOptions              `yaml:"default"          json:"default"`
-	EventLoops      int                         `yaml:"event_loops"      json:"event_loops"`
-	TimerResolution time.Duration               `yaml:"timer_resolution" json:"timer_resolution"`
-	SkipResolver    bool                        `yaml:"-"                json:"-"`
-	Gopool          bool                        `yaml:"gopool"           json:"gopool"`
+	Watch           *bool                       `json:"watch"            yaml:"watch"`
+	AccessLogs      map[string]AccessLogOptions `json:"access_logs"      yaml:"access_logs"`
+	Servers         map[string]ServerOptions    `json:"servers"          yaml:"servers"`
+	RoutesMap       *yaml.Node                  `json:"routes"           yaml:"routes"`
+	Middlewares     map[string]MiddlwareOptions `json:"middlewares"      yaml:"middlewares"`
+	Services        map[string]ServiceOptions   `json:"services"         yaml:"services"`
+	Upstreams       map[string]UpstreamOptions  `json:"upstreams"        yaml:"upstreams"`
+	Providers       ProviderOptions             `json:"providers"        yaml:"providers"`
+	configPath      string
+	User            string          `json:"user"             yaml:"user"`
+	Group           string          `json:"group"            yaml:"group"`
+	Metrics         MetricsOptions  `json:"metrics"          yaml:"metrics"`
+	Logging         LoggingOptions  `json:"logging"          yaml:"logging"`
+	Routes          []*RouteOptions `json:"-"                yaml:"-"`
+	Redis           []RedisOptions  `json:"redis"            yaml:"redis"`
+	Resolver        ResolverOptions `json:"resolver"         yaml:"resolver"`
+	Tracing         TracingOptions  `json:"tracing"          yaml:"tracing"`
+	Default         DefaultOptions  `json:"default"          yaml:"default"`
+	EventLoops      int             `json:"event_loops"      yaml:"event_loops"`
+	TimerResolution time.Duration   `json:"timer_resolution" yaml:"timer_resolution"`
+	SkipResolver    bool            `json:"-"                yaml:"-"`
+	Gopool          bool            `json:"gopool"           yaml:"gopool"`
 }
 
 // NewOptions creates a new Options instance with default values.
@@ -77,6 +78,7 @@ func (opt *Options) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+// IsWatch returns true if configuration watching is enabled.
 func (opt *Options) IsWatch() bool {
 	if opt.Watch == nil {
 		return true
@@ -84,97 +86,125 @@ func (opt *Options) IsWatch() bool {
 	return *opt.Watch
 }
 
+// ConfigPath returns the path to the configuration file.
 func (opt *Options) ConfigPath() string {
 	return opt.configPath
 }
 
+// ExperimentOptions defines experimental features.
 type ExperimentOptions struct {
-	ChunkedTransfer bool `yaml:"chunked_transfer" json:"chunked_transfer"`
+	ChunkedTransfer bool `json:"chunked_transfer" yaml:"chunked_transfer"`
 }
+
+// ProviderOptions defines configuration for different configuration providers.
 type ProviderOptions struct {
-	K8S   K8SProviderOptions   `yaml:"k8s"   json:"k8s"`
-	Nacos NacosProviderOptions `yaml:"nacos" json:"nacos"`
-	File  FileProviderOptions  `yaml:"file"  json:"file"`
-	DNS   DNSProviderOptions   `yaml:"dns"   json:"dns"`
+	K8S   K8SProviderOptions   `json:"k8s"   yaml:"k8s"`
+	Nacos NacosProviderOptions `json:"nacos" yaml:"nacos"`
+	File  FileProviderOptions  `json:"file"  yaml:"file"`
+	DNS   DNSProviderOptions   `json:"dns"   yaml:"dns"`
 }
+
+// FileProviderOptions defines configuration for the file-based configuration provider.
 type FileProviderOptions struct {
-	Paths      []string `yaml:"paths"      json:"paths"`
-	Extensions []string `yaml:"extensions" json:"extensions"`
-	Enabled    bool     `yaml:"enabled"    json:"enabled"`
+	Paths      []string `json:"paths"      yaml:"paths"`
+	Extensions []string `json:"extensions" yaml:"extensions"`
+	Enabled    bool     `json:"enabled"    yaml:"enabled"`
 }
+
+// File defines Nacos data ID and group.
 type File struct {
-	DataID string `yaml:"data_id" json:"data_id"`
-	Group  string `yaml:"group"   json:"group"`
+	DataID string `json:"data_id" yaml:"data_id"`
+	Group  string `json:"group"   yaml:"group"`
 }
+
+// NacosConfigOptions defines configuration for Nacos configuration center.
 type NacosConfigOptions struct {
-	Watch       *bool         `yaml:"watch"        json:"watch"`
-	Username    string        `yaml:"username"     json:"username"`
-	Password    string        `yaml:"password"     json:"password"`
-	NamespaceID string        `yaml:"namespace_id" json:"namespace_id"`
-	Prefix      string        `yaml:"prefix"       json:"prefix"`
-	LogLevel    string        `yaml:"log_level"    json:"log_level"`
-	LogDir      string        `yaml:"log_dir"      json:"log_dir"`
-	CacheDir    string        `yaml:"cache_dir"    json:"cache_dir"`
-	Endpoints   []string      `yaml:"endpoints"    json:"endpoints"`
-	Files       []*File       `yaml:"files"        json:"files"`
-	Timeout     time.Duration `yaml:"timeout"      json:"timeout"`
-	Enabled     bool          `yaml:"enabled"      json:"enabled"`
+	Watch       *bool         `json:"watch"        yaml:"watch"`
+	Username    string        `json:"username"     yaml:"username"`
+	Password    string        `json:"password"     yaml:"password"`
+	NamespaceID string        `json:"namespace_id" yaml:"namespace_id"`
+	Prefix      string        `json:"prefix"       yaml:"prefix"`
+	LogLevel    string        `json:"log_level"    yaml:"log_level"`
+	LogDir      string        `json:"log_dir"      yaml:"log_dir"`
+	CacheDir    string        `json:"cache_dir"    yaml:"cache_dir"`
+	Endpoints   []string      `json:"endpoints"    yaml:"endpoints"`
+	Files       []*File       `json:"files"        yaml:"files"`
+	Timeout     time.Duration `json:"timeout"      yaml:"timeout"`
+	Enabled     bool          `json:"enabled"      yaml:"enabled"`
 }
+
+// NacosDiscoveryOptions defines configuration for Nacos service discovery.
 type NacosDiscoveryOptions struct {
-	Username    string        `yaml:"username"     json:"username"`
-	Password    string        `yaml:"password"     json:"password"`
-	NamespaceID string        `yaml:"namespace_id" json:"namespace_id"`
-	Prefix      string        `yaml:"prefix"       json:"prefix"`
-	LogDir      string        `yaml:"log_dir"      json:"log_dir"`
-	LogLevel    string        `yaml:"log_level"    json:"log_level"`
-	CacheDir    string        `yaml:"cache_dir"    json:"cache_dir"`
-	Endpoints   []string      `yaml:"endpoints"    json:"endpoints"`
-	Timeout     time.Duration `yaml:"timeout"      json:"timeout"`
-	Enabled     bool          `yaml:"enabled"      json:"enabled"`
+	Username    string        `json:"username"     yaml:"username"`
+	Password    string        `json:"password"     yaml:"password"`
+	NamespaceID string        `json:"namespace_id" yaml:"namespace_id"`
+	Prefix      string        `json:"prefix"       yaml:"prefix"`
+	LogDir      string        `json:"log_dir"      yaml:"log_dir"`
+	LogLevel    string        `json:"log_level"    yaml:"log_level"`
+	CacheDir    string        `json:"cache_dir"    yaml:"cache_dir"`
+	Endpoints   []string      `json:"endpoints"    yaml:"endpoints"`
+	Timeout     time.Duration `json:"timeout"      yaml:"timeout"`
+	Enabled     bool          `json:"enabled"      yaml:"enabled"`
 }
+
+// NacosProviderOptions defines configuration for Nacos provider.
 type NacosProviderOptions struct {
-	Config    NacosConfigOptions    `yaml:"config"    json:"config"`
-	Discovery NacosDiscoveryOptions `yaml:"discovery" json:"discovery"`
+	Config    NacosConfigOptions    `json:"config"    yaml:"config"`
+	Discovery NacosDiscoveryOptions `json:"discovery" yaml:"discovery"`
 }
+
+// DNSProviderOptions defines configuration for DNS service discovery.
 type DNSProviderOptions struct {
-	Servers []string      `yaml:"servers" json:"servers"`
-	Valid   time.Duration `yaml:"valid"   json:"valid"`
-	Enabled bool          `yaml:"enabled" json:"enabled"`
+	Servers []string      `json:"servers" yaml:"servers"`
+	Valid   time.Duration `json:"valid"   yaml:"valid"`
+	Enabled bool          `json:"enabled" yaml:"enabled"`
 }
+
+// K8SProviderOptions defines configuration for Kubernetes service discovery.
 type K8SProviderOptions struct {
-	APIServer string `yaml:"api_server" json:"api_server"`
-	Enabled   bool   `yaml:"enabled"    json:"enabled"`
+	APIServer string `json:"api_server" yaml:"api_server"`
+	Enabled   bool   `json:"enabled"    yaml:"enabled"`
 }
+
+// MetricsOptions defines configuration for metrics collection.
 type MetricsOptions struct {
-	Prometheus PrometheusOptions  `yaml:"prometheus" json:"prometheus"`
-	OTLP       OTLPMetricsOptions `yaml:"otlp"       json:"otlp"`
+	Prometheus PrometheusOptions  `json:"prometheus" yaml:"prometheus"`
+	OTLP       OTLPMetricsOptions `json:"otlp"       yaml:"otlp"`
 }
 
+// OTLPMetricsOptions defines configuration for OpenTelemetry Protocol metrics.
 type OTLPMetricsOptions struct {
-	ServiceName string        `yaml:"service_name" json:"service_name"`
-	Endpoint    string        `yaml:"endpoint"     json:"endpoint"`
-	Flush       time.Duration `yaml:"flush"        json:"flush"`
-	Timeout     time.Duration `yaml:"timeout"      json:"timeout"`
-	Insecure    bool          `yaml:"insecure"     json:"insecure"`
-	Enabled     bool          `yaml:"enabled"      json:"enabled"`
-}
-type LoggingOptions struct {
-	Level                    string `yaml:"level"                      json:"level"`
-	Handler                  string `yaml:"handler"                    json:"handler"`
-	Output                   string `yaml:"output"                     json:"output"`
-	DisableRedirectStdStream bool   `yaml:"disable_redirect_stdstream" json:"disable_redirect_stdstream"`
-}
-type PrometheusOptions struct {
-	ServerID string    `yaml:"server_id" json:"server_id"`
-	Path     string    `yaml:"path"      json:"path"`
-	Buckets  []float64 `yaml:"buckets"   json:"buckets"`
-	Enabled  bool      `yaml:"enabled"   json:"enabled"`
-}
-type ServerTracingOptions struct {
-	Enabled    *bool             `yaml:"enabled"    json:"enabled"`
-	Attributes map[string]string `yaml:"attributes" json:"attributes"`
+	ServiceName string        `json:"service_name" yaml:"service_name"`
+	Endpoint    string        `json:"endpoint"     yaml:"endpoint"`
+	Flush       time.Duration `json:"flush"        yaml:"flush"`
+	Timeout     time.Duration `json:"timeout"      yaml:"timeout"`
+	Insecure    bool          `json:"insecure"     yaml:"insecure"`
+	Enabled     bool          `json:"enabled"      yaml:"enabled"`
 }
 
+// LoggingOptions defines configuration for logging.
+type LoggingOptions struct {
+	Level                    string `json:"level"                      yaml:"level"`
+	Handler                  string `json:"handler"                    yaml:"handler"`
+	Output                   string `json:"output"                     yaml:"output"`
+	DisableRedirectStdStream bool   `json:"disable_redirect_stdstream" yaml:"disable_redirect_stdstream"`
+}
+
+// PrometheusOptions defines configuration for Prometheus metrics.
+type PrometheusOptions struct {
+	ServerID string    `json:"server_id" yaml:"server_id"`
+	Path     string    `json:"path"      yaml:"path"`
+	Buckets  []float64 `json:"buckets"   yaml:"buckets"`
+	Enabled  bool      `json:"enabled"   yaml:"enabled"`
+}
+
+// ServerTracingOptions defines tracing configuration for a server.
+type ServerTracingOptions struct {
+	Enabled    *bool             `json:"enabled"    yaml:"enabled"`
+	Attributes map[string]string `json:"attributes" yaml:"attributes"`
+}
+
+// IsEnabled returns true if server tracing is enabled.
 func (options ServerTracingOptions) IsEnabled() bool {
 	if options.Enabled == nil || *options.Enabled {
 		return true
@@ -182,140 +212,176 @@ func (options ServerTracingOptions) IsEnabled() bool {
 	return false
 }
 
+// Observability defines observability configuration.
 type Observability struct {
-	Tracing ServerTracingOptions `yaml:"tracing" json:"tracing"`
+	Tracing ServerTracingOptions `json:"tracing" yaml:"tracing"`
 }
+
+// TracingOptions defines global tracing configuration.
 type TracingOptions struct {
-	ServiceName  string        `yaml:"service_name"  json:"service_name"`
-	Endpoint     string        `yaml:"endpoint"      json:"endpoint"`
-	Propagators  []string      `yaml:"propagators"   json:"propagators"`
-	SamplingRate float64       `yaml:"sampling_rate" json:"sampling_rate"`
-	BatchSize    int64         `yaml:"batch_size"    json:"batch_size"`
-	QueueSize    int64         `yaml:"queue_size"    json:"queue_size"`
-	Flush        time.Duration `yaml:"flush"         json:"flush"`
-	Timeout      time.Duration `yaml:"timeout"       json:"timeout"`
-	Enabled      bool          `yaml:"enabled"       json:"enabled"`
-	Insecure     bool          `yaml:"insecure"      json:"insecure"`
+	ServiceName  string        `json:"service_name"  yaml:"service_name"`
+	Endpoint     string        `json:"endpoint"      yaml:"endpoint"`
+	Propagators  []string      `json:"propagators"   yaml:"propagators"`
+	SamplingRate float64       `json:"sampling_rate" yaml:"sampling_rate"`
+	BatchSize    int64         `json:"batch_size"    yaml:"batch_size"`
+	QueueSize    int64         `json:"queue_size"    yaml:"queue_size"`
+	Flush        time.Duration `json:"flush"         yaml:"flush"`
+	Timeout      time.Duration `json:"timeout"       yaml:"timeout"`
+	Enabled      bool          `json:"enabled"       yaml:"enabled"`
+	Insecure     bool          `json:"insecure"      yaml:"insecure"`
 }
+
+// ServerOptions defines configuration for a server instance.
 type ServerOptions struct {
-	Observability      Observability        `yaml:"observability"         json:"observability"`
-	TLS                TLSOptions           `yaml:"tls"                   json:"tls"`
-	ID                 string               `yaml:"-"                     json:"-"`
-	Bind               string               `yaml:"bind"                  json:"bind"`
-	AccessLogID        string               `yaml:"access_log_id"         json:"access_log_id"`
-	Logging            LoggingOptions       `yaml:"logging"               json:"logging"`
-	Middlewares        []MiddlwareOptions   `yaml:"middlewares"           json:"middlewares"`
-	TrustedCIDRS       []string             `yaml:"trusted_cidrs"         json:"trusted_cidrs"`
-	RemoteIPHeaders    []string             `yaml:"remote_ip_headers"     json:"remote_ip_headers"`
-	Timeout            ServerTimeoutOptions `yaml:"timeout"               json:"timeout"`
-	Backlog            int                  `yaml:"backlog"               json:"backlog"`
-	MaxRequestBodySize int                  `yaml:"max_request_body_size" json:"max_request_body_size"`
-	ReadBufferSize     int                  `yaml:"read_buffer_size"      json:"read_buffer_size"`
-	ReusePort          bool                 `yaml:"reuse_port"            json:"reuse_port"`
-	TCPQuickAck        bool                 `yaml:"tcp_quick_ack"         json:"tcp_quick_ack"`
-	TCPFastOpen        bool                 `yaml:"tcp_fast_open"         json:"tcp_fast_open"`
-	HTTP2              bool                 `yaml:"http2"                 json:"http2"`
-	PPROF              bool                 `yaml:"pprof"                 json:"pprof"`
-	ProxyProtocol      bool                 `yaml:"proxy_protocol"        json:"proxy_protocol"`
+	Observability      Observability        `json:"observability"         yaml:"observability"`
+	TLS                TLSOptions           `json:"tls"                   yaml:"tls"`
+	ID                 string               `json:"-"                     yaml:"-"`
+	Bind               string               `json:"bind"                  yaml:"bind"`
+	AccessLogID        string               `json:"access_log_id"         yaml:"access_log_id"`
+	Logging            LoggingOptions       `json:"logging"               yaml:"logging"`
+	Middlewares        []MiddlwareOptions   `json:"middlewares"           yaml:"middlewares"`
+	TrustedCIDRS       []string             `json:"trusted_cidrs"         yaml:"trusted_cidrs"`
+	RemoteIPHeaders    []string             `json:"remote_ip_headers"     yaml:"remote_ip_headers"`
+	Timeout            ServerTimeoutOptions `json:"timeout"               yaml:"timeout"`
+	Backlog            int                  `json:"backlog"               yaml:"backlog"`
+	MaxRequestBodySize int                  `json:"max_request_body_size" yaml:"max_request_body_size"`
+	ReadBufferSize     int                  `json:"read_buffer_size"      yaml:"read_buffer_size"`
+	ReusePort          bool                 `json:"reuse_port"            yaml:"reuse_port"`
+	TCPQuickAck        bool                 `json:"tcp_quick_ack"         yaml:"tcp_quick_ack"`
+	TCPFastOpen        bool                 `json:"tcp_fast_open"         yaml:"tcp_fast_open"`
+	HTTP2              bool                 `json:"http2"                 yaml:"http2"`
+	PPROF              bool                 `json:"pprof"                 yaml:"pprof"`
+	ProxyProtocol      bool                 `json:"proxy_protocol"        yaml:"proxy_protocol"`
 }
+
+// ServerTimeoutOptions defines timeout configuration for a server.
 type ServerTimeoutOptions struct {
-	Graceful  time.Duration `yaml:"graceful"  json:"graceful"`
-	Idle      time.Duration `yaml:"idle"      json:"idle_timeout"`
-	KeepAlive time.Duration `yaml:"keepalive" json:"keepalive"`
-	Read      time.Duration `yaml:"read"      json:"read"`
-	Write     time.Duration `yaml:"write"     json:"write"`
+	Graceful  time.Duration `json:"graceful"     yaml:"graceful"`
+	Idle      time.Duration `json:"idle_timeout" yaml:"idle"`
+	KeepAlive time.Duration `json:"keepalive"    yaml:"keepalive"`
+	Read      time.Duration `json:"read"         yaml:"read"`
+	Write     time.Duration `json:"write"        yaml:"write"`
 }
+
+// EscapeType defines the log escape type.
 type EscapeType string
 
 const (
-	NoneEscape    EscapeType = "none"
+	// NoneEscape means no character escaping is performed.
+	NoneEscape EscapeType = "none"
+	// DefaultEscape means default character escaping is performed.
 	DefaultEscape EscapeType = "default"
-	JSONEscape    EscapeType = "json"
+	// JSONEscape means characters are escaped for JSON output.
+	JSONEscape EscapeType = "json"
 )
 
+// AccessLogOptions defines configuration for access logs.
 type AccessLogOptions struct {
-	Output     string        `yaml:"output"      json:"output"`
-	Template   string        `yaml:"template"    json:"template"`
-	TimeFormat string        `yaml:"time_format" json:"time_format"`
-	Escape     EscapeType    `yaml:"escape"      json:"escape"`
-	BufferSize int           `yaml:"buffer_size" json:"buffer_size"`
-	Flush      time.Duration `yaml:"flush"       json:"flush"`
+	Output     string        `json:"output"      yaml:"output"`
+	Template   string        `json:"template"    yaml:"template"`
+	TimeFormat string        `json:"time_format" yaml:"time_format"`
+	Escape     EscapeType    `json:"escape"      yaml:"escape"`
+	BufferSize int           `json:"buffer_size" yaml:"buffer_size"`
+	Flush      time.Duration `json:"flush"       yaml:"flush"`
 }
+
+// MiddlwareOptions defines configuration for a middleware.
 type MiddlwareOptions struct {
-	ID     string `yaml:"-"      json:"-"`
-	Type   string `yaml:"type"   json:"type"`
-	Params any    `yaml:"params" json:"params"`
-	Use    string `yaml:"use"    json:"use"`
+	ID     string `json:"-"      yaml:"-"`
+	Type   string `json:"type"   yaml:"type"`
+	Params any    `json:"params" yaml:"params"`
+	Use    string `json:"use"    yaml:"use"`
 }
+
+// PassiveHealthOptions defines configuration for passive health checks.
 type PassiveHealthOptions struct {
-	MaxFails    *uint         `yaml:"max_fails"    json:"max_fails"`
-	FailTimeout time.Duration `yaml:"fail_timeout" json:"fail_timeout"`
+	MaxFails    *uint         `json:"max_fails"    yaml:"max_fails"`
+	FailTimeout time.Duration `json:"fail_timeout" yaml:"fail_timeout"`
 }
+
+// ActiveHealthOptions defines configuration for active health checks.
 type ActiveHealthOptions struct {
-	Path             string        `yaml:"path"              json:"path"`
-	Method           string        `yaml:"method"            json:"method"`
-	Interval         time.Duration `yaml:"interval"          json:"interval"`
-	Port             int           `yaml:"port"              json:"port"`
-	SuccessThreshold int           `yaml:"success_threshold" json:"success_threshold"`
-	FailureThreshold int           `yaml:"failure_threshold" json:"failure_threshold"`
+	Path             string        `json:"path"              yaml:"path"`
+	Method           string        `json:"method"            yaml:"method"`
+	Interval         time.Duration `json:"interval"          yaml:"interval"`
+	Port             int           `json:"port"              yaml:"port"`
+	SuccessThreshold int           `json:"success_threshold" yaml:"success_threshold"`
+	FailureThreshold int           `json:"failure_threshold" yaml:"failure_threshold"`
 }
+
+// HealthCheckOptions defines health check configuration.
 type HealthCheckOptions struct {
-	Passive PassiveHealthOptions `yaml:"passive" json:"passive"`
-	Active  ActiveHealthOptions  `yaml:"active"  json:"active"`
+	Passive PassiveHealthOptions `json:"passive" yaml:"passive"`
+	Active  ActiveHealthOptions  `json:"active"  yaml:"active"`
 }
+
+// TargetOptions defines configuration for an upstream target.
 type TargetOptions struct {
-	Target string            `yaml:"target" json:"target"`
-	Weight uint32            `yaml:"weight" json:"weight"`
-	Tags   map[string]string `yaml:"tags"   json:"tags"`
+	Target string            `json:"target" yaml:"target"`
+	Weight uint32            `json:"weight" yaml:"weight"`
+	Tags   map[string]string `json:"tags"   yaml:"tags"`
 }
+
+// DiscoveryOptions defines service discovery configuration.
 type DiscoveryOptions struct {
-	Type      string `yaml:"type"      json:"type"`
-	Namespace string `yaml:"namespace" json:"namespace"`
-	Name      string `yaml:"name"      json:"name"`
+	Type      string `json:"type"      yaml:"type"`
+	Namespace string `json:"namespace" yaml:"namespace"`
+	Name      string `json:"name"      yaml:"name"`
 }
 
+// BalancerOptions defines load balancer configuration.
 type BalancerOptions struct {
-	Type   string `yaml:"type"   json:"type"`
-	Params any    `yaml:"params" json:"params"`
+	Type   string `json:"type"   yaml:"type"`
+	Params any    `json:"params" yaml:"params"`
 }
 
+// UpstreamOptions defines configuration for an upstream service.
 type UpstreamOptions struct {
-	ID          string             `yaml:"-"            json:"-"`
-	Balancer    BalancerOptions    `yaml:"balancer"     json:"balancer"`
-	HashOn      string             `yaml:"hash_on"      json:"hash_on"`
-	Discovery   DiscoveryOptions   `yaml:"discovery"    json:"discovery"`
-	Targets     []TargetOptions    `yaml:"targets"      json:"targets"`
-	HealthCheck HealthCheckOptions `yaml:"health_check" json:"health_check"`
+	ID          string             `json:"-"            yaml:"-"`
+	Balancer    BalancerOptions    `json:"balancer"     yaml:"balancer"`
+	HashOn      string             `json:"hash_on"      yaml:"hash_on"`
+	Discovery   DiscoveryOptions   `json:"discovery"    yaml:"discovery"`
+	Targets     []TargetOptions    `json:"targets"      yaml:"targets"`
+	HealthCheck HealthCheckOptions `json:"health_check" yaml:"health_check"`
 }
+
+// RouteOptions defines configuration for a route.
 type RouteOptions struct {
-	ID          string             `yaml:"-"           json:"-"`
-	Route       string             `yaml:"route"       json:"route"`
-	ServiceID   string             `yaml:"service_id"  json:"service_id"`
-	Methods     []string           `yaml:"methods"     json:"methods"`
-	Paths       []string           `yaml:"paths"       json:"paths"`
-	Servers     []string           `yaml:"servers"     json:"servers"`
-	Tags        []string           `yaml:"tags"        json:"tags"`
-	Middlewares []MiddlwareOptions `yaml:"middlewares" json:"middlewares"`
+	ID          string             `json:"-"           yaml:"-"`
+	Route       string             `json:"route"       yaml:"route"`
+	ServiceID   string             `json:"service_id"  yaml:"service_id"`
+	Methods     []string           `json:"methods"     yaml:"methods"`
+	Paths       []string           `json:"paths"       yaml:"paths"`
+	Servers     []string           `json:"servers"     yaml:"servers"`
+	Tags        []string           `json:"tags"        yaml:"tags"`
+	Middlewares []MiddlwareOptions `json:"middlewares" yaml:"middlewares"`
 }
+
+// Protocol defines the network protocol.
 type Protocol string
 
 const (
-	ProtocolHTTP  Protocol = "http"
+	// ProtocolHTTP represents the standard HTTP protocol.
+	ProtocolHTTP Protocol = "http"
+	// ProtocolHTTP2 represents the HTTP/2 protocol.
 	ProtocolHTTP2 Protocol = "http2"
-	ProtocolGRPC  Protocol = "grpc"
+	// ProtocolGRPC represents the gRPC protocol.
+	ProtocolGRPC Protocol = "grpc"
 )
 
+// ServiceOptions defines configuration for a service.
 type ServiceOptions struct {
-	MaxConnsPerHost *int                  `yaml:"max_conns_per_host" json:"max_conns_per_host"`
-	ID              string                `yaml:"-"                  json:"-"`
-	Protocol        Protocol              `yaml:"protocol"           json:"protocol"`
-	URL             string                `yaml:"url"                json:"url"`
-	Middlewares     []MiddlwareOptions    `yaml:"middlewares"        json:"middlewares"`
-	Timeout         ServiceTimeoutOptions `yaml:"timeout"            json:"timeout"`
-	TLSVerify       bool                  `yaml:"tls_verify"         json:"tls_verify"`
-	PassHostHeader  *bool                 `yaml:"pass_host_header"   json:"pass_host_header"`
+	MaxConnsPerHost *int                  `json:"max_conns_per_host" yaml:"max_conns_per_host"`
+	ID              string                `json:"-"                  yaml:"-"`
+	Protocol        Protocol              `json:"protocol"           yaml:"protocol"`
+	URL             string                `json:"url"                yaml:"url"`
+	Middlewares     []MiddlwareOptions    `json:"middlewares"        yaml:"middlewares"`
+	Timeout         ServiceTimeoutOptions `json:"timeout"            yaml:"timeout"`
+	TLSVerify       bool                  `json:"tls_verify"         yaml:"tls_verify"`
+	PassHostHeader  *bool                 `json:"pass_host_header"   yaml:"pass_host_header"`
 }
 
+// IsPassHostHeader returns true if host header should be passed to upstream.
 func (options ServiceOptions) IsPassHostHeader() bool {
 	if options.PassHostHeader == nil || *options.PassHostHeader {
 		return true
@@ -323,42 +389,55 @@ func (options ServiceOptions) IsPassHostHeader() bool {
 	return false
 }
 
+// ServiceTimeoutOptions defines timeout configuration for a service.
 type ServiceTimeoutOptions struct {
-	Read        time.Duration `yaml:"read"          json:"read"`
-	Write       time.Duration `yaml:"write"         json:"write"`
-	Dail        time.Duration `yaml:"dail"          json:"dail"`
-	MaxConnWait time.Duration `yaml:"max_conn_wait" json:"max_conn_wait"`
-	GRPC        time.Duration `yaml:"grpc"          json:"grpc"`
+	Read        time.Duration `json:"read"          yaml:"read"`
+	Write       time.Duration `json:"write"         yaml:"write"`
+	Dail        time.Duration `json:"dail"          yaml:"dail"`
+	MaxConnWait time.Duration `json:"max_conn_wait" yaml:"max_conn_wait"`
+	GRPC        time.Duration `json:"grpc"          yaml:"grpc"`
 }
+
+// TLSOptions defines TLS configuration.
 type TLSOptions struct {
-	MinVersion string `yaml:"min_version" json:"min_version"`
-	CertPEM    string `yaml:"cert_pem"    json:"cert_pem"`
-	KeyPEM     string `yaml:"key_pem"     json:"key_pem"`
+	MinVersion string `json:"min_version" yaml:"min_version"`
+	CertPEM    string `json:"cert_pem"    yaml:"cert_pem"`
+	KeyPEM     string `json:"key_pem"     yaml:"key_pem"`
 }
+
+// RedisOptions defines configuration for Redis.
 type RedisOptions struct {
-	ID       string   `yaml:"id"        json:"id"`
-	Username string   `yaml:"username"  json:"username"`
-	Password string   `yaml:"password"  json:"password"`
-	Addrs    []string `yaml:"addrs"     json:"addrs"`
-	DB       int      `yaml:"db"        json:"db"`
-	SkipPing bool     `yaml:"skip_ping" json:"skip_ping"`
+	ID       string   `json:"id"        yaml:"id"`
+	Username string   `json:"username"  yaml:"username"`
+	Password string   `json:"password"  yaml:"password"`
+	Addrs    []string `json:"addrs"     yaml:"addrs"`
+	DB       int      `json:"db"        yaml:"db"`
+	SkipPing bool     `json:"skip_ping" yaml:"skip_ping"`
 }
+
+// ResolverOptions defines configuration for DNS resolver.
 type ResolverOptions struct {
-	Servers   []string      `yaml:"servers"    json:"servers"`
-	Hostsfile string        `yaml:"hosts_file" json:"hosts_file"`
-	Order     []string      `yaml:"order"      json:"order"`
-	Timeout   time.Duration `yaml:"timeout"    json:"timeout"`
+	Servers   []string      `json:"servers"    yaml:"servers"`
+	Hostsfile string        `json:"hosts_file" yaml:"hosts_file"`
+	Order     []string      `json:"order"      yaml:"order"`
+	Timeout   time.Duration `json:"timeout"    yaml:"timeout"`
 }
+
+// DefaultServiceOptions defines default configuration for services.
 type DefaultServiceOptions struct {
-	MaxConnsPerHost *int                  `yaml:"max_conns_per_host" json:"max_conns_per_host"`
-	Protocol        Protocol              `yaml:"protocol"           json:"protocol"`
-	Timeout         ServiceTimeoutOptions `yaml:"timeout"            json:"timeout"`
+	MaxConnsPerHost *int                  `json:"max_conns_per_host" yaml:"max_conns_per_host"`
+	Protocol        Protocol              `json:"protocol"           yaml:"protocol"`
+	Timeout         ServiceTimeoutOptions `json:"timeout"            yaml:"timeout"`
 }
+
+// DefaultUpstreamOptions defines default configuration for upstreams.
 type DefaultUpstreamOptions struct {
-	MaxFails    uint          `yaml:"max_fails"    json:"max_fails"`
-	FailTimeout time.Duration `yaml:"fail_timeout" json:"fail_timeout"`
+	MaxFails    uint          `json:"max_fails"    yaml:"max_fails"`
+	FailTimeout time.Duration `json:"fail_timeout" yaml:"fail_timeout"`
 }
+
+// DefaultOptions defines default configuration for various components.
 type DefaultOptions struct {
-	Service  DefaultServiceOptions  `yaml:"service"  json:"service"`
-	Upstream DefaultUpstreamOptions `yaml:"upstream" json:"upstream"`
+	Service  DefaultServiceOptions  `json:"service"  yaml:"service"`
+	Upstream DefaultUpstreamOptions `json:"upstream" yaml:"upstream"`
 }

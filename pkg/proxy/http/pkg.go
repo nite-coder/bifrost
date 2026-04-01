@@ -17,7 +17,7 @@ var (
 // IsASCIIPrint returns whether s is ASCII and printable according to
 // https://tools.ietf.org/html/rfc20#section-4.2.
 func IsASCIIPrint(s string) bool {
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		if s[i] < ' ' || s[i] > '~' {
 			return false
 		}
@@ -25,6 +25,7 @@ func IsASCIIPrint(s string) bool {
 	return true
 }
 
+// JoinURLPath joins the request path with the target URL path, correctly handling slashes.
 func JoinURLPath(req *protocol.Request, target string) (path []byte) {
 	aslash := req.URI().Path()[0] == '/'
 	var bslash bool

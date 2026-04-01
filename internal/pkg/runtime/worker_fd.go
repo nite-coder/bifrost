@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -142,7 +143,7 @@ func InheritedListeners() (map[string]*os.File, error) {
 	// where only keys might be mocked but FDs are not actually passed.
 	fdCountEnv := os.Getenv("BIFROST_FD_COUNT")
 	if fdCountEnv == "" {
-		return listeners, fmt.Errorf("BIFROST_FD_COUNT not set, refusing to inherit FDs for safety")
+		return listeners, errors.New("BIFROST_FD_COUNT not set, refusing to inherit FDs for safety")
 	}
 
 	fdCount, err := strconv.Atoi(fdCountEnv)
@@ -158,24 +159,7 @@ func InheritedListeners() (map[string]*os.File, error) {
 	count := 0
 
 	// If we have keys, we map them 1:1 to FDs starting at startFD
-	if len(keys) > 0 {
-		for i, key := range keys {
-			fd := startFD + i
-			file := os.NewFile(uintptr(fd), "")
-			if file == nil {
-				slog.Error("inherited FD is nil", "fd", fd)
-				continue
-			}
-			// Verify FD is valid
-			if _, err := file.Stat(); err != nil {
-				slog.Error("inherited FD is invalid", "fd", fd, "error", err)
-				continue
-			}
-			listeners[key] = file
-			count++
-			slog.Debug("inherited FD mapped", "fd", fd, "key", key)
-		}
-	} else {
+	if len(keys) == 0 {
 		// Fallback: Just return list of found FDs (legacy behavior or no keys provided)
 		// But return type is map... just map by index?
 		// Actually, if we don't have keys, we can't map them correctly to addresses
@@ -184,6 +168,23 @@ func InheritedListeners() (map[string]*os.File, error) {
 		// But in this context, we rely on keys.
 		slog.Warn("no listener keys found in env, FD inheritance requires keys for mapping")
 		return listeners, nil
+	}
+
+	for i, key := range keys {
+		fd := startFD + i
+		file := os.NewFile(uintptr(fd), "")
+		if file == nil {
+			slog.Error("inherited FD is nil", "fd", fd)
+			continue
+		}
+		// Verify FD is valid
+		if _, err := file.Stat(); err != nil {
+			slog.Error("inherited FD is invalid", "fd", fd, "error", err)
+			continue
+		}
+		listeners[key] = file
+		count++
+		slog.Debug("inherited FD mapped", "fd", fd, "key", key)
 	}
 
 	if count > 0 {

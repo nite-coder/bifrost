@@ -23,7 +23,7 @@ func TestStathatDistribution(t *testing.T) {
 	numKeys := 100000
 	distribution := make(map[string]int)
 
-	for i := 0; i < numKeys; i++ {
+	for i := range numKeys {
 		/* #nosec G115 */
 		userID := uint32(i)
 		key := strconv.FormatUint(uint64(userID), 10)
@@ -57,7 +57,7 @@ func TestOurDistribution(t *testing.T) {
 	numKeys := 100000
 	distribution := make(map[string]int)
 
-	for i := 0; i < numKeys; i++ {
+	for i := range numKeys {
 		/* #nosec G115 */
 		userID := uint32(i)
 		key := strconv.FormatUint(uint64(userID), 10)
@@ -87,8 +87,7 @@ func BenchmarkStathatGet(b *testing.B) {
 	c.Add("node2")
 	c.Add("node3")
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		key := fmt.Sprintf("key%d", i%10000)
 		_, _ = c.Get(key)
 	}
@@ -101,8 +100,7 @@ func BenchmarkOurGet(b *testing.B) {
 	_ = ring.Add("node2")
 	_ = ring.Add("node3")
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		key := fmt.Sprintf("key%d", i%10000)
 		_, _ = ring.Get(key)
 	}
@@ -110,8 +108,7 @@ func BenchmarkOurGet(b *testing.B) {
 
 // BenchmarkStathatAdd benchmarks stathat/consistent Add operation.
 func BenchmarkStathatAdd(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		c := consistent.New()
 		c.NumberOfReplicas = 160
 		c.Add(fmt.Sprintf("node%d", i))
@@ -120,8 +117,7 @@ func BenchmarkStathatAdd(b *testing.B) {
 
 // BenchmarkOurAdd benchmarks our implementation's Add operation.
 func BenchmarkOurAdd(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		ring := New()
 		_ = ring.Add(fmt.Sprintf("node%d", i))
 	}

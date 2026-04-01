@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"math"
+	"net/http"
 	"net/url"
 	"runtime/debug"
 	"strconv"
@@ -38,6 +39,9 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+const grpcHeaderLen = 5
+
+// Options defines the configuration for a GRPC proxy instance.
 type Options struct {
 	Target           string
 	DailOptions      []grpc.DialOption
@@ -50,7 +54,9 @@ type Options struct {
 	IsTracingEnabled bool
 	ServiceID        string
 }
-type GRPCProxy struct {
+
+// Proxy implements a reverse proxy for gRPC services.
+type Proxy struct {
 	failExpireAt time.Time
 	client       grpc.ClientConnInterface
 	options      *Options
@@ -64,7 +70,8 @@ type GRPCProxy struct {
 	tags        map[string]string
 }
 
-func New(options Options) (*GRPCProxy, error) {
+// New creates a new GRPCProxy instance with the given options.
+func New(options Options) (*Proxy, error) {
 	addr, err := url.Parse(options.Target)
 	if err != nil {
 		return nil, fmt.Errorf("proxy: gRPC proxy failed to parse target URL: %w", err)
@@ -86,7 +93,7 @@ func New(options Options) (*GRPCProxy, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial backend: %w", err)
 	}
-	return &GRPCProxy{
+	return &Proxy{
 		id:         uuid.New().String(),
 		target:     options.Target,
 		targetHost: addr.Host,
@@ -96,7 +103,8 @@ func New(options Options) (*GRPCProxy, error) {
 	}, nil
 }
 
-func (p *GRPCProxy) IsAvailable() bool {
+// IsAvailable returns true if the upstream gRPC server is considered healthy.
+func (p *Proxy) IsAvailable() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	if p.options.MaxFails == 0 {
@@ -112,7 +120,8 @@ func (p *GRPCProxy) IsAvailable() bool {
 	return false
 }
 
-func (p *GRPCProxy) AddFailedCount(count uint) error {
+// AddFailedCount increments the failed request count for the upstream server.
+func (p *Proxy) AddFailedCount(count uint) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	now := timecache.Now()
@@ -129,19 +138,22 @@ func (p *GRPCProxy) AddFailedCount(count uint) error {
 }
 
 // ID return proxy's ID.
-func (p *GRPCProxy) ID() string {
+func (p *Proxy) ID() string {
 	return p.id
 }
 
-func (p *GRPCProxy) Weight() uint32 {
+// Weight returns the relative weight of this proxy instance for load balancing.
+func (p *Proxy) Weight() uint32 {
 	return p.weight
 }
 
-func (p *GRPCProxy) Target() string {
+// Target returns the target URL of the upstream gRPC server.
+func (p *Proxy) Target() string {
 	return p.target
 }
 
-func (p *GRPCProxy) Close() error {
+// Close closes the underlying gRPC client connection.
+func (p *Proxy) Close() error {
 	if p.client != nil {
 		if closer, ok := p.client.(io.Closer); ok {
 			err := closer.Close()
@@ -150,11 +162,11 @@ func (p *GRPCProxy) Close() error {
 			}
 		}
 	}
-	p = nil
 	return nil
 }
 
-func (p *GRPCProxy) Tag(key string) (value string, exist bool) {
+// Tag retrieves a specific metadata tag value from the proxy instance.
+func (p *Proxy) Tag(key string) (value string, exist bool) {
 	if len(p.tags) == 0 {
 		return "", false
 	}
@@ -163,12 +175,13 @@ func (p *GRPCProxy) Tag(key string) (value string, exist bool) {
 	return val, found
 }
 
-func (p *GRPCProxy) Tags() map[string]string {
+// Tags returns all metadata tags of the proxy instance.
+func (p *Proxy) Tags() map[string]string {
 	return p.tags
 }
 
 // ServeHTTP implements the http.Handler interface.
-func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 	defer func() {
 		if r := recover(); r != nil {
@@ -201,7 +214,7 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	// Check if the request payload is valid
 	payload := c.Request.Body()
-	if len(payload) < 5 {
+	if len(payload) < grpcHeaderLen {
 		logger.WarnContext(
 			ctx,
 			"proxy: gRPC proxy request payload is invalid",
@@ -210,18 +223,18 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	// Get the length of the message
-	msgLen := binary.BigEndian.Uint32(payload[1:5])
+	msgLen := binary.BigEndian.Uint32(payload[1:grpcHeaderLen])
 	// Check if the payload is large enough
-	if uint64(len(payload)) < 5+uint64(msgLen) {
+	if uint64(len(payload)) < grpcHeaderLen+uint64(msgLen) {
 		logger.WarnContext(ctx, "proxy: gRPC proxy request payload length mismatch",
 			slog.Any("declared_len", msgLen),
-			slog.Any("actual_len", len(payload)-5),
+			slog.Any("actual_len", len(payload)-grpcHeaderLen),
 		)
-		c.SetStatusCode(400) // Bad Request
+		c.SetStatusCode(http.StatusBadRequest) // Bad Request
 		return
 	}
 	// Get the message payload
-	payload = payload[5 : 5+msgLen]
+	payload = payload[grpcHeaderLen : grpcHeaderLen+msgLen]
 	// Create a new header and trailer metadata
 	var header, trailer metadata.MD
 	// Create a new response body
@@ -293,20 +306,21 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	c.Set(variable.GRPCStatusCode, codes.OK)
 
 	// Build the http frame
-	frame := make([]byte, len(respBody)+5)
-	// Set the first byte to 0, indicating no compression
-	frame[0] = 0
-	// Set the length of the message
 	val := len(respBody)
-	if val > math.MaxUint32 || val < 0 {
+	if val > math.MaxInt-grpcHeaderLen || val > math.MaxUint32-grpcHeaderLen {
 		logger.Error("proxy: gRPC proxy response payload overflow")
 		err := errors.New("proxy: gRPC proxy response payload overflow")
 		_ = c.Error(err)
 		return
 	}
-	binary.BigEndian.PutUint32(frame[1:5], uint32(val))
+
+	frame := make([]byte, val+grpcHeaderLen)
+	// Set the first byte to 0, indicating no compression
+	frame[0] = 0
+	// Set the length of the message
+	binary.BigEndian.PutUint32(frame[1:grpcHeaderLen], uint32(val))
 	// Copy the response body to the frame
-	copy(frame[5:], respBody)
+	copy(frame[grpcHeaderLen:], respBody)
 
 	// Iterate over the header and trailer metadata and add them to the response headers
 	for k, v := range header {
@@ -324,12 +338,12 @@ func (p *GRPCProxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 	// Set the status code and content type
-	c.SetStatusCode(200)
+	c.SetStatusCode(http.StatusOK)
 	c.Response.Header.Set("Content-Type", "application/grpc")
 	c.Response.SetBody(frame)
 }
 
-func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, err error) {
+func (p *Proxy) handleGRPCError(ctx context.Context, c *app.RequestContext, err error) {
 	if err == nil {
 		return
 	}
@@ -372,7 +386,7 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 		}
 	}
 	// gRPC always uses 200 OK status code, actual status is in grpc-status header
-	c.SetStatusCode(200)
+	c.SetStatusCode(http.StatusOK)
 	// Optionally write error information to the response body
 	// Note: Some gRPC clients may not expect a response body in error cases
 	errorFrame := makeGRPCErrorFrame(ctx, st)
@@ -382,17 +396,26 @@ func (p *GRPCProxy) handleGRPCError(ctx context.Context, c *app.RequestContext, 
 func makeGRPCErrorFrame(ctx context.Context, st *status.Status) []byte {
 	statusProto := st.Proto()
 	serialized, _ := proto.Marshal(statusProto)
-	val := len(serialized)
-	if val > math.MaxUint32-5 {
-		// Check for potential overflow
-		// Handle the error appropriately, e.g., log and return an empty frame
+	payloadLen := len(serialized)
+	payloadLen64 := uint64(payloadLen)
+	// Ensure payload length fits within the 32-bit gRPC length field.
+	if payloadLen64 > math.MaxUint32 {
 		logger := log.FromContext(ctx)
 		logger.Error("proxy: serialized data too large to create gRPC error frame")
 		return []byte{}
 	}
-	frame := make([]byte, val+5)
+	// Ensure total frame length (header + payload) fits within Go's maximum int.
+	totalLen64 := payloadLen64 + uint64(grpcHeaderLen)
+	if totalLen64 > math.MaxInt {
+		logger := log.FromContext(ctx)
+		logger.Error("proxy: total frame size too large to create gRPC error frame")
+		return []byte{}
+	}
+	totalLen := int(totalLen64)
+	frame := make([]byte, totalLen)
 	frame[0] = 0 // 0: no compression
-	binary.BigEndian.PutUint32(frame[1:5], uint32(val))
-	copy(frame[5:], serialized)
+	payloadLen32 := uint32(payloadLen64)
+	binary.BigEndian.PutUint32(frame[1:grpcHeaderLen], payloadLen32)
+	copy(frame[grpcHeaderLen:], serialized)
 	return frame
 }

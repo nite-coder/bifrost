@@ -6,62 +6,32 @@ linters:
     - cyclop
     - noctx
     - errcheck
-
-    # TODO: Tweak for current project needs
-    - depguard
-    - dupl
-    - err113
-    - exhaustruct
-    - gochecknoglobals
-    - intrange
-    - ireturn
-    - nlreturn
+    - lll
     - noinlineerr
-    - nonamedreturns
-    - tagliatelle
+    - nlreturn
+    - gocyclo
     - testpackage
-    - varnamelen
-    - wrapcheck
-    - wsl
-    - wsl_v5
-
-    # TODO: Disabled, because they are failing at the moment, we should fix them and enable (step by step)
-
-    - contextcheck
-    - dogsled
-    - embeddedstructfieldcheck
-    - exhaustive
-    - forbidigo
-    - forcetypeassert
     - funlen
     - gochecknoinits
-    - gocognit
-    - goconst
-    - gocritic
-    - gocyclo
     - godox
-    - goprintffuncname
-    - govet
-    - ineffassign
-    - lll
-    - maintidx
-    - mnd
-    - modernize
-    - nakedret
-    - nestif
+    - gocognit
+    - contextcheck
     - paralleltest
-    - perfsprint
-    - prealloc
-    - predeclared
-    - revive
-    - tagalign
-    - testifylint
-    - thelper
-    - unparam
-    - usestdlibvars
-    - usetesting
-    - wastedassign
-    - whitespace
+    - nestif
+    - maintidx
+    - depguard
+    - exhaustruct
+    - wrapcheck
+    - varnamelen
+    - gochecknoglobals
+    - err113
+    - tagliatelle
+    - wsl
+    - wsl_v5
+    - nonamedreturns
+    - ireturn
+    - dupl
+
   settings:
     errcheck:
       check-type-assertions: true
@@ -143,6 +113,13 @@ linters:
           - gocognit
           - gocyclo
         path: _test\.go$
+      - linters:
+          - revive
+        path: ^pkg/proxy/http/
+      - linters:
+          - tagalign
+        path: ^pkg/config/options\.go$
+
 
 issues:
   max-issues-per-linter: 0

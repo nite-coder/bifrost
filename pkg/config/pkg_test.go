@@ -4,19 +4,24 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+const (
+	minConfigPath = "./../../test/config/min.yaml"
 )
 
 func TestConfigLoad(t *testing.T) {
-	configPath := "./../../test/config/min.yaml"
+	configPath := minConfigPath
 
 	_, err := Load(configPath)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Run("routes order", func(t *testing.T) {
 		configPath := "./../../test/config/good.yaml"
 
 		mainOptions, err := Load(configPath)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, "all_routes1", mainOptions.Routes[1].ID)
 		assert.Equal(t, "all_routes2", mainOptions.Routes[2].ID)
@@ -27,18 +32,18 @@ func TestConfigLoad(t *testing.T) {
 func TestConfigFailCheck(t *testing.T) {
 	configPath := "./../../test/config/wrong_access_log.yaml"
 	_, err := Load(configPath)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	configPath = "./../../test/config/duplicate_upstream.yaml"
 	_, err = Load(configPath)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestConfigAfterDynamicLoad(t *testing.T) {
 	configPath := "./../../test/config/load_after_dynamic.yaml"
 	_, err := Load(configPath)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestDomainName(t *testing.T) {
@@ -68,13 +73,13 @@ func TestDomainName(t *testing.T) {
 }
 
 func TestDefaultPath(t *testing.T) {
-	configPath := "./../../test/config/min.yaml"
+	configPath := minConfigPath
 	_, err := defaultPath(configPath)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	configPath = ""
 	_, err = defaultPath(configPath)
-	assert.Error(t, err, "config file not found")
+	require.Error(t, err, "config file not found")
 }
 
 func TestDynamicProvider(t *testing.T) {
@@ -95,9 +100,9 @@ func TestDynamicProvider(t *testing.T) {
 	}
 
 	providers, options, err := loadDynamic(mainOptions)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, options, mainOptions)
-	assert.Equal(t, len(providers), 1)
+	assert.Len(t, providers, 1)
 }
 
 func TestMergeOptions(t *testing.T) {
@@ -108,7 +113,7 @@ func TestMergeOptions(t *testing.T) {
     type: rate_limit
 `
 		result, err := mergeOptions(mainOpts, content)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Contains(t, result.Middlewares, "rate_limit")
 	})
 
@@ -120,7 +125,7 @@ func TestMergeOptions(t *testing.T) {
     type: rate_limit
 `
 		_, err := mergeOptions(mainOpts, content)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "duplicated")
 	})
 
@@ -131,7 +136,7 @@ func TestMergeOptions(t *testing.T) {
     bind: ":8080"
 `
 		result, err := mergeOptions(mainOpts, content)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Contains(t, result.Servers, "web")
 	})
 
@@ -143,7 +148,7 @@ func TestMergeOptions(t *testing.T) {
     bind: ":8080"
 `
 		_, err := mergeOptions(mainOpts, content)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "duplicated")
 	})
 
@@ -154,7 +159,7 @@ func TestMergeOptions(t *testing.T) {
     url: http://localhost:8080
 `
 		result, err := mergeOptions(mainOpts, content)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Contains(t, result.Services, "backend")
 	})
 
@@ -166,7 +171,7 @@ func TestMergeOptions(t *testing.T) {
     url: http://localhost:8080
 `
 		_, err := mergeOptions(mainOpts, content)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "duplicated")
 	})
 
@@ -178,7 +183,7 @@ func TestMergeOptions(t *testing.T) {
       - target: localhost:8080
 `
 		result, err := mergeOptions(mainOpts, content)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Contains(t, result.Upstreams, "api")
 	})
 
@@ -191,7 +196,7 @@ func TestMergeOptions(t *testing.T) {
       - target: localhost:8080
 `
 		_, err := mergeOptions(mainOpts, content)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "duplicated")
 	})
 
@@ -199,7 +204,7 @@ func TestMergeOptions(t *testing.T) {
 		mainOpts := NewOptions()
 		content := `invalid: yaml: content: [`
 		_, err := mergeOptions(mainOpts, content)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("merge with nil maps", func(t *testing.T) {
@@ -209,7 +214,7 @@ func TestMergeOptions(t *testing.T) {
     type: test
 `
 		result, err := mergeOptions(mainOpts, content)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, result.Middlewares)
 	})
 }
@@ -219,22 +224,22 @@ func TestWatch(t *testing.T) {
 		mainProvider = nil
 		dynamicProviders = nil
 		err := Watch()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }
 
 func TestAndSkipResolverFunc(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
-		configPath := "./../../test/config/min.yaml"
+		configPath := minConfigPath
 		path, err := TestAndSkipResolver(configPath)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Contains(t, path, "min.yaml")
 	})
 
 	t.Run("invalid config path", func(t *testing.T) {
 		configPath := "./../../test/config/nonexistent.yaml"
 		_, err := TestAndSkipResolver(configPath)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }
 

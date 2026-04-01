@@ -21,6 +21,10 @@ import (
 	"github.com/nite-coder/bifrost/pkg/timecache"
 )
 
+const (
+	microsecondsPerSecond = 1e6
+)
+
 var (
 	reIsVariable    = regexp.MustCompile(`\$\w+(?:[._-]\w+)*`)
 	grpcContentType = []byte("application/grpc")
@@ -69,6 +73,7 @@ var (
 	}
 )
 
+// Get returns the value of a variable or directive.
 func Get(key string, c *app.RequestContext) (val any, found bool) {
 	key = strings.TrimSpace(key)
 
@@ -95,6 +100,7 @@ func Get(key string, c *app.RequestContext) (val any, found bool) {
 	return directive(key, c)
 }
 
+// GetString returns the string value of a variable or directive.
 func GetString(key string, c *app.RequestContext) string {
 	val, found := Get(key, c)
 	if !found {
@@ -116,6 +122,7 @@ func GetString(key string, c *app.RequestContext) string {
 	}
 }
 
+// GetInt64 returns the int64 value of a variable or directive.
 func GetInt64(key string, c *app.RequestContext) int64 {
 	val, found := Get(key, c)
 	if !found {
@@ -125,6 +132,7 @@ func GetInt64(key string, c *app.RequestContext) int64 {
 	return result
 }
 
+// GetInt32 returns the int32 value of a variable or directive.
 func GetInt32(key string, c *app.RequestContext) int32 {
 	val, found := Get(key, c)
 	if !found {
@@ -134,6 +142,7 @@ func GetInt32(key string, c *app.RequestContext) int32 {
 	return result
 }
 
+// GetFloat64 returns the float64 value of a variable or directive.
 func GetFloat64(key string, c *app.RequestContext) float64 {
 	val, found := Get(key, c)
 	if !found {
@@ -143,6 +152,7 @@ func GetFloat64(key string, c *app.RequestContext) float64 {
 	return result
 }
 
+// GetFloat32 returns the float32 value of a variable or directive.
 func GetFloat32(key string, c *app.RequestContext) float32 {
 	val, found := Get(key, c)
 	if !found {
@@ -152,6 +162,7 @@ func GetFloat32(key string, c *app.RequestContext) float32 {
 	return result
 }
 
+// GetBool returns the bool value of a variable or directive.
 func GetBool(key string, c *app.RequestContext) bool {
 	val, found := Get(key, c)
 	if !found {
@@ -161,6 +172,7 @@ func GetBool(key string, c *app.RequestContext) bool {
 	return result
 }
 
+// GetTime returns the time.Time value of a variable or directive.
 func GetTime(key string, c *app.RequestContext) time.Time {
 	val, found := Get(key, c)
 	if !found {
@@ -173,6 +185,7 @@ func GetTime(key string, c *app.RequestContext) time.Time {
 	return result
 }
 
+// IsDirective checks if a key is a known directive.
 func IsDirective(key string) bool {
 	if strings.HasPrefix(key, "$var.") ||
 		strings.HasPrefix(key, "$env.") ||
@@ -217,7 +230,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info := (val).(*RequestOriginal)
+		info, ok := (val).(*RequestOriginal)
+		if !ok {
+			return nil, false
+		}
 
 		host := string(info.Host)
 		return host, true
@@ -226,7 +242,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info := (val).(*RequestOriginal)
+		info, ok := (val).(*RequestOriginal)
+		if !ok {
+			return nil, false
+		}
 		return info.ServerID, true
 	case NetworkPeerAddress:
 		var ip string
@@ -304,34 +323,41 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info := (val).(*RequestOriginal)
-
-		builder := strings.Builder{}
-		builder.WriteString(info.Method)
-		builder.Write(spaceByte)
-		builder.Write(info.Path)
-		if len(info.Query) > 0 {
-			builder.Write(questionByte)
-			builder.Write(info.Query)
+		info, ok := (val).(*RequestOriginal)
+		if !ok {
+			return nil, false
 		}
 
-		builder.Write(spaceByte)
-		builder.WriteString(info.Protocol)
+		builder := strings.Builder{}
+		_, _ = builder.WriteString(info.Method)
+		_, _ = builder.Write(spaceByte)
+		_, _ = builder.Write(info.Path)
+		if len(info.Query) > 0 {
+			_, _ = builder.Write(questionByte)
+			_, _ = builder.Write(info.Query)
+		}
+
+		_, _ = builder.Write(spaceByte)
+		_, _ = builder.WriteString(info.Protocol)
 		return builder.String(), true
 	case HTTPRoute:
 		val, found := c.Get(BifrostRoute)
 		if !found {
 			return nil, false
 		}
-		info := (val).(*RequestRoute)
+		info, ok := (val).(*RequestRoute)
+		if !ok {
+			return nil, false
+		}
 		return info.Route, true
 	case HTTPRequestScheme:
 		val, found := c.Get(RequestOrig)
 		if found {
-			info := (val).(*RequestOriginal)
-
-			scheme := string(info.Scheme)
-			return scheme, true
+			info, ok := (val).(*RequestOriginal)
+			if ok {
+				scheme := string(info.Scheme)
+				return scheme, true
+			}
 		}
 
 		scheme := string(c.Request.Scheme())
@@ -342,8 +368,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 		val, found := c.Get(RequestOrig)
 		if found {
-			info := (val).(*RequestOriginal)
-			path = string(info.Path)
+			info, ok := (val).(*RequestOriginal)
+			if ok {
+				path = string(info.Path)
+			}
 		} else {
 			path = string(c.Request.Path())
 		}
@@ -352,16 +380,17 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case HTTPRequestURI:
 		val, found := c.Get(RequestOrig)
 		if found {
-			info := (val).(*RequestOriginal)
+			info, ok := (val).(*RequestOriginal)
+			if ok {
+				builder := strings.Builder{}
+				_, _ = builder.Write(info.Path)
+				if len(info.Query) > 0 {
+					_, _ = builder.Write(questionByte)
+					_, _ = builder.Write(info.Query)
+				}
 
-			builder := strings.Builder{}
-			builder.Write(info.Path)
-			if len(info.Query) > 0 {
-				builder.Write(questionByte)
-				builder.Write(info.Query)
+				return builder.String(), true
 			}
-
-			return builder.String(), true
 		}
 
 		uri := string(c.Request.RequestURI())
@@ -370,8 +399,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case HTTPRequestMethod:
 		val, found := c.Get(RequestOrig)
 		if found {
-			info := (val).(*RequestOriginal)
-			return info.Method, true
+			info, ok := (val).(*RequestOriginal)
+			if ok {
+				return info.Method, true
+			}
 		}
 
 		method := MethodToString(c.Request.Method())
@@ -379,10 +410,11 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case HTTPRequestQuery:
 		val, found := c.Get(RequestOrig)
 		if found {
-			info := (val).(*RequestOriginal)
-
-			query := string(info.Query)
-			return query, true
+			info, ok := (val).(*RequestOriginal)
+			if ok {
+				query := string(info.Query)
+				return query, true
+			}
 		}
 
 		query := string(c.Request.QueryString())
@@ -400,7 +432,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info := (val).(*RequestOriginal)
+		info, ok := (val).(*RequestOriginal)
+		if !ok {
+			return nil, false
+		}
 		return info.Protocol, true
 	case HTTPRequestTags:
 		val, found := c.Get(BifrostRoute)
@@ -408,7 +443,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return nil, false
 		}
 
-		info := (val).(*RequestRoute)
+		info, ok := (val).(*RequestRoute)
+		if !ok {
+			return nil, false
+		}
 		return info.Tags, true
 
 	case RouteID:
@@ -416,7 +454,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info := (val).(*RequestRoute)
+		info, ok := (val).(*RequestRoute)
+		if !ok {
+			return nil, false
+		}
 		return info.RouteID, true
 	case ServiceID:
 		val, found := c.Get(BifrostRoute)
@@ -424,7 +465,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return nil, false
 		}
 
-		info := (val).(*RequestRoute)
+		info, ok := (val).(*RequestRoute)
+		if !ok {
+			return nil, false
+		}
 
 		if IsDirective(info.ServiceID) {
 			svcID := GetString(info.ServiceID, c)
@@ -482,7 +526,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case UpstreamDuration:
 		dur := c.GetDuration(UpstreamDuration)
 		mic := dur.Microseconds()
-		duration := float64(mic) / 1e6
+		duration := float64(mic) / microsecondsPerSecond
 		responseTime := strconv.FormatFloat(duration, 'f', -1, 64)
 		return responseTime, true
 
@@ -506,8 +550,10 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return nil, false
 		}
 
-		dur := httpFinish.Time().Sub(httpStart.Time()).Microseconds()
-		duration := strconv.FormatFloat(float64(dur)/1e6, 'f', -1, 64)
+		start := httpStart.Time()
+		finish := httpFinish.Time()
+		dur := finish.Sub(start).Microseconds()
+		duration := strconv.FormatFloat(float64(dur)/microsecondsPerSecond, 'f', -1, 64)
 		return duration, true
 	case GRPCStatusCode:
 		return c.Get(GRPCStatusCode)
@@ -584,6 +630,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	}
 }
 
+// ParseDirectives parses directives from a string.
 func ParseDirectives(content string) []string {
 	variables := reIsVariable.FindAllString(content, -1)
 	sortBifrostVariables(variables)
@@ -641,6 +688,7 @@ func MethodToString(m []byte) string {
 		if string(m) == consts.MethodDelete {
 			return consts.MethodDelete
 		}
+	default:
 	}
 	return string(m)
 }

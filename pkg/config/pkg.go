@@ -19,9 +19,18 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+// ChangeFunc is a function called when configuration changes.
 type ChangeFunc func() error
 
+type skipResolverMode int
+
+const (
+	modeDefault skipResolverMode = iota
+	modeSkipResolver
+)
+
 var (
+	// OnChanged is a global callback for configuration changes.
 	OnChanged        provider.ChangeFunc
 	dynamicProviders []provider.Provider
 	mainProvider     provider.Provider
@@ -29,16 +38,18 @@ var (
 	dnsResolver      *resolver.Resolver
 )
 
+// TestAndSkipResolver loads the configuration and sets SkipResolver to true, returning the config path.
 func TestAndSkipResolver(path string) (string, error) {
-	mainOptions, err := load(path, true)
+	mainOptions, err := loadConfig(path, modeSkipResolver)
 	return mainOptions.configPath, err
 }
 
+// Load reads and parses the configuration from the given path.
 func Load(path string) (Options, error) {
-	return load(path, false)
+	return loadConfig(path, modeDefault)
 }
 
-func load(path string, skipResolver bool) (Options, error) {
+func loadConfig(path string, mode skipResolverMode) (Options, error) {
 	// load main config
 	var mainOpts Options
 
@@ -59,7 +70,7 @@ func load(path string, skipResolver bool) (Options, error) {
 		return mainOpts, err
 	}
 
-	err = ValidateConfig(mainOpts, false)
+	err = ValidateConfig(mainOpts, ModeBasic)
 	if err != nil {
 		var errInvalidConfig InvalidConfigError
 		if errors.As(err, &errInvalidConfig) {
@@ -74,11 +85,11 @@ func load(path string, skipResolver bool) (Options, error) {
 		return mainOpts, fmt.Errorf("failed to load dynamic config: %w", err)
 	}
 
-	if skipResolver {
+	if mode == modeSkipResolver {
 		mainOpts.SkipResolver = true
 	}
 
-	err = ValidateConfig(mainOpts, true)
+	err = ValidateConfig(mainOpts, ModeFull)
 	if err != nil {
 		return mainOpts, err
 	}
@@ -143,7 +154,6 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 
 	// nacos provider
 	if mainOptions.Providers.Nacos.Config.Enabled {
-
 		username := mainOptions.Providers.Nacos.Config.Username
 		if variable.IsDirective(username) {
 			username = variable.GetString(username, nil)
@@ -175,10 +185,10 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 			nacosConfigOptions.Endpoints,
 			mainOptions.Providers.Nacos.Config.Endpoints...)
 
-		for _, file := range mainOptions.Providers.Nacos.Config.Files {
+		for _, f := range mainOptions.Providers.Nacos.Config.Files {
 			nacosConfigOptions.Files = append(nacosConfigOptions.Files, &nacos.File{
-				DataID: file.DataID,
-				Group:  file.Group,
+				DataID: f.DataID,
+				Group:  f.Group,
 			})
 		}
 
@@ -192,16 +202,16 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 			return nil, mainOptions, err
 		}
 
-		for _, file := range files {
-			mainOptions, err = mergeOptions(mainOptions, file.Content)
+		for _, f := range files {
+			mainOptions, err = mergeOptions(mainOptions, f.Content)
 			if err != nil {
 				var errInvalidConfig InvalidConfigError
 				if errors.As(err, &errInvalidConfig) {
-					line := findConfigurationLine(file.Content, errInvalidConfig.Structure, errInvalidConfig.Value)
-					return nil, mainOptions, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), file.DataID, line)
+					line := findConfigurationLine(f.Content, errInvalidConfig.Structure, errInvalidConfig.Value)
+					return nil, mainOptions, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), f.DataID, line)
 				}
 
-				errMsg := fmt.Sprintf("data_id: %s, error: %s", file.DataID, err.Error())
+				errMsg := fmt.Sprintf("data_id: %s, error: %s", f.DataID, err.Error())
 				return nil, mainOptions, errors.New(errMsg)
 			}
 		}
@@ -212,6 +222,7 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 	return providers, mainOptions, nil
 }
 
+// Watch starts watching for configuration changes.
 func Watch() error {
 	if mainProvider != nil {
 		mainProvider.SetOnChanged(OnChanged)
@@ -345,17 +356,18 @@ func findInNode(node any, path []string, value any, lines []string) int {
 	for i, key := range path {
 		switch n := node.(type) {
 		case map[string]any:
-			if val, ok := n[key]; ok {
-				if i == len(path)-1 {
-					if fmt.Sprintf("%v", val) == fmt.Sprintf("%v", value) {
-						return findLineNumber(lines, key, value)
-					}
-					return -1
-				}
-				node = val
-			} else {
+			val, ok := n[key]
+			if !ok {
 				return -1
 			}
+			if i == len(path)-1 {
+				if fmt.Sprintf("%v", val) == fmt.Sprintf("%v", value) {
+					return findLineNumber(lines, key, value)
+				}
+				return -1
+			}
+			node = val
+			continue
 		case []any:
 			for _, item := range n {
 				if line := findInNode(item, path[i:], value, lines); line != -1 {
@@ -364,35 +376,39 @@ func findInNode(node any, path []string, value any, lines []string) int {
 			}
 			return -1
 		case *yaml.Node:
-			switch n.Kind {
-			case yaml.DocumentNode:
-				if len(n.Content) > 0 {
-					return findInNode(n.Content[0], path, value, lines)
-				}
-			case yaml.MappingNode:
-				for j := 0; j < len(n.Content); j += 2 {
-					if n.Content[j].Value == path[0] {
-						if len(path) == 1 {
-							if n.Content[j+1].Value == fmt.Sprintf("%v", value) {
-								return n.Content[j+1].Line
-							}
-							return -1
-						}
-						return findInNode(n.Content[j+1], path[1:], value, lines)
-					}
-				}
-			case yaml.SequenceNode:
-				for _, item := range n.Content {
-					if line := findInNode(item, path[i:], value, lines); line != -1 {
-						return line
-					}
-				}
-			default:
-			}
-			return -1
+			return findInYAMLNode(n, path, value, lines, i)
 		default:
 			return -1
 		}
+	}
+	return -1
+}
+
+func findInYAMLNode(n *yaml.Node, path []string, value any, lines []string, i int) int {
+	switch n.Kind {
+	case yaml.DocumentNode:
+		if len(n.Content) > 0 {
+			return findInNode(n.Content[0], path, value, lines)
+		}
+	case yaml.MappingNode:
+		for j := 0; j < len(n.Content); j += 2 {
+			if n.Content[j].Value == path[0] {
+				if len(path) == 1 {
+					if n.Content[j+1].Value == fmt.Sprintf("%v", value) {
+						return n.Content[j+1].Line
+					}
+					return -1
+				}
+				return findInNode(n.Content[j+1], path[1:], value, lines)
+			}
+		}
+	case yaml.SequenceNode:
+		for _, item := range n.Content {
+			if line := findInNode(item, path[i:], value, lines); line != -1 {
+				return line
+			}
+		}
+	default:
 	}
 	return -1
 }
@@ -407,6 +423,7 @@ func findLineNumber(lines []string, key string, value any) int {
 	return -1
 }
 
+// IsValidDomain checks if the given string is a valid domain name.
 func IsValidDomain(domain string) bool {
 	// Define the regular expression
 	// Each label: 1-63 characters, can only contain letters, numbers, and hyphens, cannot start or end with a hyphen

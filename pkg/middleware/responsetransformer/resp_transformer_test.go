@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
@@ -21,7 +22,7 @@ func TestRemove(t *testing.T) {
 	}
 
 	m, err := h(params)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ctx := context.Background()
 	hzCtx := app.NewContext(0)
@@ -49,7 +50,7 @@ func TestAdd(t *testing.T) {
 	}
 
 	m, err := h(params)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ctx := context.Background()
 	hzCtx := app.NewContext(0)
@@ -61,7 +62,7 @@ func TestAdd(t *testing.T) {
 
 	assert.Equal(t, "web", hzCtx.Response.Header.Get("x-source"))
 	assert.Equal(t, "12345678", hzCtx.Response.Header.Get("x-http-start"))
-	assert.Equal(t, "", hzCtx.Response.Header.Get("x-user-id"))
+	assert.Empty(t, hzCtx.Response.Header.Get("x-user-id"))
 	assert.Equal(t, "world", hzCtx.Response.Header.Get("x-existing-value"))
 }
 
@@ -77,7 +78,7 @@ func TestSet(t *testing.T) {
 	}
 
 	m, err := h(params)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ctx := context.Background()
 	hzCtx := app.NewContext(0)

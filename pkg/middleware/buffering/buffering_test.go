@@ -12,8 +12,13 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/cloudwego/hertz/pkg/route"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/middleware"
+)
+
+const (
+	testBody = "hello world"
 )
 
 func TestNewMiddleware(t *testing.T) {
@@ -34,7 +39,7 @@ func TestBufferingMiddleware(t *testing.T) {
 		router := route.NewEngine(config.NewOptions([]config.Option{}))
 		m := NewMiddleware(cfg)
 		router.Use(m.ServeHTTP)
-		router.POST("/", func(ctx context.Context, c *app.RequestContext) {
+		router.POST("/", func(_ context.Context, c *app.RequestContext) {
 			c.String(consts.StatusOK, "ok")
 		})
 		return router
@@ -46,7 +51,7 @@ func TestBufferingMiddleware(t *testing.T) {
 		}
 		router := newTestRouter(cfg)
 
-		body := "hello world"
+		body := testBody
 		w := ut.PerformRequest(router, "POST", "/", &ut.Body{Body: strings.NewReader(body), Len: len(body)})
 
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -59,7 +64,7 @@ func TestBufferingMiddleware(t *testing.T) {
 		}
 		router := newTestRouter(cfg)
 
-		body := "hello world"
+		body := testBody
 		w := ut.PerformRequest(router, "POST", "/", &ut.Body{Body: strings.NewReader(body), Len: len(body)})
 
 		assert.Equal(t, http.StatusRequestEntityTooLarge, w.Code)
@@ -71,7 +76,7 @@ func TestBufferingMiddleware(t *testing.T) {
 		}
 		router := newTestRouter(cfg)
 
-		body := "hello world"
+		body := testBody
 		// passing -1 for Len to simulate no Content-Length
 		w := ut.PerformRequest(router, "POST", "/", &ut.Body{Body: strings.NewReader(body), Len: -1})
 
@@ -85,12 +90,12 @@ func TestBufferingMiddleware(t *testing.T) {
 		handler, err := factory(map[string]any{
 			"max_request_body_size": 1024,
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, handler)
 
 		router := route.NewEngine(config.NewOptions([]config.Option{}))
 		router.Use(handler)
-		router.POST("/", func(ctx context.Context, c *app.RequestContext) {
+		router.POST("/", func(_ context.Context, c *app.RequestContext) {
 			c.String(consts.StatusOK, "ok")
 		})
 

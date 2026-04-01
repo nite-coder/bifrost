@@ -12,8 +12,8 @@ import (
 )
 
 func createTestDir(t *testing.T) (string, func()) {
-	dir, err := os.MkdirTemp("", "fileprovider-test")
-	require.NoError(t, err)
+	t.Helper()
+	dir := t.TempDir()
 
 	files := []struct {
 		path    string
@@ -85,12 +85,12 @@ func TestFileProviderOpen(t *testing.T) {
 			contents, err := p.Open()
 
 			if tt.wantError {
-				assert.Error(t, err)
+				require.Error(t, err)
 				return
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantCount, len(contents))
+			assert.Len(t, contents, tt.wantCount)
 
 			var gotContents []string
 			for _, c := range contents {
@@ -119,7 +119,7 @@ func TestFileProvider_OpenErrors(t *testing.T) {
 	t.Run("Invalid directory", func(t *testing.T) {
 		p := NewProvider(Options{Paths: []string{"/invalid/path"}})
 		_, err := p.Open()
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("Unreadable file", func(t *testing.T) {
@@ -131,7 +131,7 @@ func TestFileProvider_OpenErrors(t *testing.T) {
 
 		p := NewProvider(Options{Paths: []string{badFile}})
 		_, err := p.Open()
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }
 

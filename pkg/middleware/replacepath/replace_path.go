@@ -11,10 +11,12 @@ import (
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
+// Config defines the configuration for the replace_path middleware.
 type Config struct {
 	Path string `mapstructure:"path"`
 }
 
+// Init registers the replace_path middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"replace_path"}, func(cfg Config) (app.HandlerFunc, error) {
 		if cfg.Path == "" {
@@ -25,26 +27,30 @@ func Init() error {
 	})
 }
 
-type ReplacePathMiddleware struct {
+// Middleware is a middleware that replaces the request path.
+type Middleware struct {
 	newPathStr string
 	directives []string
 	newPath    []byte
 }
 
-func NewMiddleware(newPath string) *ReplacePathMiddleware {
+// NewMiddleware creates a new ReplacePathMiddleware instance.
+func NewMiddleware(newPath string) *Middleware {
 	if !strings.HasPrefix(newPath, "/") {
 		newPath = "/" + newPath
 	}
-	return &ReplacePathMiddleware{
+	return &Middleware{
 		newPath:    []byte(newPath),
 		newPathStr: newPath,
 		directives: variable.ParseDirectives(newPath),
 	}
 }
 
-func (m *ReplacePathMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+const allocationFactor = 2
+
+func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	if len(m.directives) > 0 {
-		replacements := make([]string, 0, len(m.directives)*2)
+		replacements := make([]string, 0, len(m.directives)*allocationFactor)
 		for _, key := range m.directives {
 			val := variable.GetString(key, c)
 			replacements = append(replacements, key, val)

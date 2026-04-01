@@ -20,7 +20,7 @@ func TestDecodeListenerKeys(t *testing.T) {
 		encoded := base64.StdEncoding.EncodeToString([]byte(strings.Join(keys, ",")))
 
 		decodedKeys, err := decodeListenerKeys(encoded)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, decodedKeys)
 		assert.Contains(t, decodedKeys, "127.0.0.1:8080")
 		assert.Contains(t, decodedKeys, "127.0.0.1:9090")
@@ -28,13 +28,13 @@ func TestDecodeListenerKeys(t *testing.T) {
 
 	t.Run("invalid base64", func(t *testing.T) {
 		decodedKeys, err := decodeListenerKeys("invalid-base64")
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, decodedKeys)
 	})
 
 	t.Run("empty environment variable", func(t *testing.T) {
 		decodedKeys, err := decodeListenerKeys("")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Nil(t, decodedKeys)
 	})
 }
@@ -83,7 +83,7 @@ func TestWorkerFDHandler(t *testing.T) {
 		handler.RegisterListener(l2, "key2")
 
 		err = handler.HandleFDRequest()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Len(t, mockClient.sentFDs, 2)
 		assert.Len(t, mockClient.sentKeys, 2)
@@ -96,7 +96,7 @@ func TestWorkerFDHandler(t *testing.T) {
 		handler := NewWorkerFDHandler(mockClient)
 
 		err := handler.HandleFDRequest()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Empty(t, mockClient.sentFDs)
 	})
 
@@ -164,7 +164,7 @@ func TestWorkerFDHandler_GetListenerFile(t *testing.T) {
 	require.NoError(t, err)
 	defer l.Close()
 	file, err := h.getListenerFile(l)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, file)
 	_ = file.Close()
 
@@ -174,21 +174,21 @@ func TestWorkerFDHandler_GetListenerFile(t *testing.T) {
 	require.NoError(t, err)
 	defer ul.Close()
 	file, err = h.getListenerFile(ul)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, file)
 	_ = file.Close()
 
 	// Case 3: Proxy Protocol Listener
 	pl := &proxyproto.Listener{Listener: l}
 	file, err = h.getListenerFile(pl)
-	assert.NoError(t, err) // Should unwrap and succeed
+	require.NoError(t, err) // Should unwrap and succeed
 	assert.NotNil(t, file)
 	_ = file.Close()
 
 	// Case 4: Unsupported Listener
 	badListener := &dummyListener{}
 	file, err = h.getListenerFile(badListener)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported listener type")
 	assert.Nil(t, file)
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -137,29 +138,29 @@ func TestGetInstances(t *testing.T) {
 				tt.endpointSlice,
 				metav1.CreateOptions{},
 			)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// Create test pods if any
 			for _, pod := range tt.pods {
-				_, err := client.CoreV1().Pods(tt.options.Namespace).Create(
+				_, e := client.CoreV1().Pods(tt.options.Namespace).Create(
 					context.Background(),
 					&pod,
 					metav1.CreateOptions{},
 				)
-				assert.NoError(t, err)
+				require.NoError(t, e)
 			}
 
-			k8sDiscovery := &K8sDiscovery{
+			k8sDiscovery := &Discovery{
 				client: client,
 			}
 
 			instances, err := k8sDiscovery.GetInstances(context.Background(), tt.options)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Len(t, instances, tt.expectedCount)
 
 			// Verify instances are correct
@@ -171,18 +172,20 @@ func TestGetInstances(t *testing.T) {
 }
 
 func TestWatch(t *testing.T) {
+	type watchOperation struct {
+		event     watch.EventType
+		obj       any
+		expected  int
+		instance  string
+		hasWeight bool
+	}
+
 	tests := []struct {
 		name          string
 		endpointSlice *discoveryv1.EndpointSlice
 		pods          []corev1.Pod
 		options       provider.GetInstanceOptions
-		operations    []struct {
-			event     watch.EventType
-			obj       any
-			expected  int
-			instance  string
-			hasWeight bool
-		}
+		operations    []watchOperation
 	}{
 		{
 			name: "endpointslice added",
@@ -247,13 +250,7 @@ func TestWatch(t *testing.T) {
 				Name:      "test-app",
 				Namespace: "default",
 			},
-			operations: []struct {
-				event     watch.EventType
-				obj       any
-				expected  int
-				instance  string
-				hasWeight bool
-			}{
+			operations: []watchOperation{
 				{
 					event: watch.Added,
 					obj: &discoveryv1.EndpointSlice{
@@ -301,18 +298,18 @@ func TestWatch(t *testing.T) {
 				tt.endpointSlice,
 				metav1.CreateOptions{},
 			)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			for _, pod := range tt.pods {
-				_, err := client.CoreV1().Pods(tt.options.Namespace).Create(
+				_, e := client.CoreV1().Pods(tt.options.Namespace).Create(
 					context.Background(),
 					&pod,
 					metav1.CreateOptions{},
 				)
-				assert.NoError(t, err)
+				require.NoError(t, e)
 			}
 
-			k8sDiscovery := &K8sDiscovery{
+			k8sDiscovery := &Discovery{
 				client: client,
 			}
 
@@ -320,17 +317,16 @@ func TestWatch(t *testing.T) {
 			defer cancel()
 
 			ch, err := k8sDiscovery.Watch(ctx, tt.options)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			for _, op := range tt.operations {
-				switch obj := op.obj.(type) {
-				case *discoveryv1.EndpointSlice:
-					_, err := client.DiscoveryV1().EndpointSlices(tt.options.Namespace).Create(
+				if obj, ok := op.obj.(*discoveryv1.EndpointSlice); ok {
+					_, e := client.DiscoveryV1().EndpointSlices(tt.options.Namespace).Create(
 						context.Background(),
 						obj,
 						metav1.CreateOptions{},
 					)
-					assert.NoError(t, err)
+					require.NoError(t, e)
 
 					select {
 					case instances := <-ch:

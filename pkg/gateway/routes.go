@@ -28,7 +28,6 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 	route := newRoutes()
 
 	for _, routeOptions := range bifrost.options.Routes {
-
 		if len(routeOptions.Servers) > 0 && !slices.Contains(routeOptions.Servers, server.ID) {
 			continue
 		}
@@ -122,6 +121,7 @@ func loadRoutes(bifrost *Bifrost, server config.ServerOptions, services map[stri
 	return route, nil
 }
 
+// Routes manages the routing logic, including exact, prefix, and regex matching.
 type Routes struct {
 	router       *router.Router
 	regexpRoutes []routeSetting
@@ -189,13 +189,13 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 			if len(expr) == 0 {
 				return fmt.Errorf("router: regular expression route cannot be empty for route ID: %s", routeOpts.ID)
 			}
-			regx, err := regexp.Compile(`(?i)` + expr)
-			if err != nil {
-				return err
+			regx1, e := regexp.Compile(`(?i)` + expr)
+			if e != nil {
+				return e
 			}
 
 			r.regexpRoutes = append(r.regexpRoutes, routeSetting{
-				regex:       regx,
+				regex:       regx1,
 				route:       &routeOpts,
 				middlewares: middlewares,
 			})
@@ -205,13 +205,13 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 			if len(expr) == 0 {
 				return fmt.Errorf("router: regular expression route cannot be empty for route ID: %s", routeOpts.ID)
 			}
-			regx, err := regexp.Compile(expr)
-			if err != nil {
-				return err
+			regx2, e := regexp.Compile(expr)
+			if e != nil {
+				return e
 			}
 
 			r.regexpRoutes = append(r.regexpRoutes, routeSetting{
-				regex:       regx,
+				regex:       regx2,
 				route:       &routeOpts,
 				middlewares: middlewares,
 			})
@@ -245,8 +245,8 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 			}
 		}
 
-		for _, method := range routeOpts.Methods {
-			method := strings.ToUpper(method)
+		for _, m := range routeOpts.Methods {
+			method := strings.ToUpper(m)
 			if !router.IsValidHTTPMethod(method) {
 				return fmt.Errorf("http method %s is not valid", method)
 			}
@@ -263,14 +263,7 @@ func (r *Routes) Add(routeOpts config.RouteOptions, middlewares ...app.HandlerFu
 
 func checkRegexpRoute(setting routeSetting, method string, path string) bool {
 	if len(setting.route.Methods) > 0 {
-		isMethodFound := false
-
-		for _, m := range setting.route.Methods {
-			if m == method {
-				isMethodFound = true
-				break
-			}
-		}
+		isMethodFound := slices.Contains(setting.route.Methods, method)
 
 		if !isMethodFound {
 			return false

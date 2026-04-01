@@ -11,23 +11,25 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	redisMod "github.com/testcontainers/testcontainers-go/modules/redis"
+	redismod "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func startRedis(t *testing.T) (string, func()) {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	ctx := context.Background()
 
-	redisContainer, err := redisMod.Run(ctx,
+	redisContainer, err := redismod.Run(ctx,
 		"redis:7.4",
-		redisMod.WithSnapshotting(10, 1),
-		redisMod.WithLogLevel(redisMod.LogLevelVerbose),
+		redismod.WithSnapshotting(10, 1),
+		redismod.WithLogLevel(redismod.LogLevelVerbose),
 	)
 	if err != nil {
 		t.Fatalf("failed to start container: %s", err)
@@ -49,6 +51,7 @@ func startRedis(t *testing.T) (string, func()) {
 }
 
 func startRedisCluster(t *testing.T) ([]string, map[string]string, func()) {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -63,11 +66,12 @@ func startRedisCluster(t *testing.T) ([]string, map[string]string, func()) {
 	networkName := newNetwork.Name
 
 	// 2. Start 3 Redis nodes
-	var containers []testcontainers.Container
-	var nodeIPs []string
-	var hostAddrs []string
+	const numNodes = 3
+	containers := make([]testcontainers.Container, 0, numNodes)
+	nodeIPs := make([]string, 0, numNodes)
+	hostAddrs := make([]string, 0, numNodes)
 
-	for i := 0; i < 3; i++ {
+	for i := range numNodes {
 		req := testcontainers.ContainerRequest{
 			Image: "redis:7.4",
 			Cmd: []string{
@@ -88,26 +92,26 @@ func startRedisCluster(t *testing.T) ([]string, map[string]string, func()) {
 			WaitingFor:   wait.ForLog("Ready to accept connections"),
 		}
 
-		container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		container, e := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: req,
 			Started:          true,
 		})
-		if err != nil {
-			t.Fatalf("failed to start redis node %d: %v", i, err)
+		if e != nil {
+			t.Fatalf("failed to start redis node %d: %v", i, e)
 		}
 		containers = append(containers, container)
 
 		// Get internal IP
-		ip, err := container.ContainerIP(ctx)
-		if err != nil {
-			t.Fatalf("failed to get container IP: %v", err)
+		ip, e := container.ContainerIP(ctx)
+		if e != nil {
+			t.Fatalf("failed to get container IP: %v", e)
 		}
 		nodeIPs = append(nodeIPs, ip)
 
 		// Get mapped host port
-		endpoint, err := container.PortEndpoint(ctx, "6379/tcp", "")
-		if err != nil {
-			t.Fatalf("failed to get endpoint: %v", err)
+		endpoint, e := container.PortEndpoint(ctx, "6379/tcp", "")
+		if e != nil {
+			t.Fatalf("failed to get endpoint: %v", e)
 		}
 		hostAddrs = append(hostAddrs, endpoint)
 	}
@@ -116,7 +120,7 @@ func startRedisCluster(t *testing.T) ([]string, map[string]string, func()) {
 	// We run redis-cli --cluster create on the first node
 	clusterCmd := []string{"redis-cli", "-a", "bitnami", "--cluster", "create"}
 	for _, ip := range nodeIPs {
-		clusterCmd = append(clusterCmd, fmt.Sprintf("%s:6379", ip))
+		clusterCmd = append(clusterCmd, ip+":6379")
 	}
 	clusterCmd = append(clusterCmd, "--cluster-replicas", "0", "--cluster-yes")
 
@@ -182,7 +186,7 @@ func TestRedis(t *testing.T) {
 	ctx := context.Background()
 	client := redis.NewClient(&redis.Options{Addr: addr})
 	_, e := client.Ping(ctx).Result()
-	assert.NoError(t, e)
+	require.NoError(t, e)
 
 	options := Options{
 		Limit:      5,
@@ -235,7 +239,7 @@ func TestRedisCluster(t *testing.T) {
 		},
 	})
 	_, e := client.Ping(ctx).Result()
-	assert.NoError(t, e)
+	require.NoError(t, e)
 
 	options := Options{
 		Limit:      5,
@@ -247,6 +251,7 @@ func TestRedisCluster(t *testing.T) {
 }
 
 func testLimiter(t *testing.T, limiter Limiter, options Options) {
+	t.Helper()
 	t.Run("Basic functionality", func(t *testing.T) {
 		key := "test_key"
 		ctx := context.Background()
@@ -271,7 +276,7 @@ func testLimiter(t *testing.T, limiter Limiter, options Options) {
 	t.Run("Different keys", func(t *testing.T) {
 		ctx := context.Background()
 
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			key := fmt.Sprintf("key_%d", i)
 			result := limiter.Allow(ctx, key)
 			if !result.Allow {
@@ -284,7 +289,7 @@ func testLimiter(t *testing.T, limiter Limiter, options Options) {
 		ctx := context.Background()
 
 		key := "reset_key"
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			result := limiter.Allow(ctx, key)
 			if !result.Allow {
 				t.Errorf("Request %d should be allowed", i+1)
@@ -310,7 +315,7 @@ func testLimiter(t *testing.T, limiter Limiter, options Options) {
 		var wg sync.WaitGroup
 
 		wg.Add(concurrentRequests)
-		for i := 0; i < concurrentRequests; i++ {
+		for range concurrentRequests {
 			go func() {
 				defer wg.Done()
 

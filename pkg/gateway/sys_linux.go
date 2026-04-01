@@ -26,7 +26,8 @@ func setTCPQuickAck(fd uintptr) error {
 
 func setTCPFastOpen(fd uintptr) error {
 	// Enable fastopen on both client and server side
-	err := unix.SetsockoptInt(int(fd), unix.SOL_TCP, unix.TCP_FASTOPEN, 3)
+	const tcpFastopenQueueSize = 3
+	err := unix.SetsockoptInt(int(fd), unix.SOL_TCP, unix.TCP_FASTOPEN, tcpFastopenQueueSize)
 	if err != nil {
 		return err
 	}

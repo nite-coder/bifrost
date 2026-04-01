@@ -20,11 +20,13 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
 
-type K8sDiscovery struct {
+// Discovery implements service discovery using Kubernetes Endpoints.
+type Discovery struct {
 	options *Options
 	client  kubernetes.Interface
 }
 
+// Options defines the configuration for the Kubernetes discovery provider.
 type Options struct {
 	// APIServer is the Kubernetes API server URL (e.g., "https://kubernetes.default.svc")
 	APIServer string
@@ -36,7 +38,8 @@ type Options struct {
 	Insecure bool
 }
 
-func NewK8sDiscovery(options Options) (*K8sDiscovery, error) {
+// NewK8sDiscovery creates a new K8sDiscovery instance.
+func NewK8sDiscovery(options Options) (*Discovery, error) {
 	var config *rest.Config
 	var err error
 
@@ -80,13 +83,14 @@ func NewK8sDiscovery(options Options) (*K8sDiscovery, error) {
 		return nil, fmt.Errorf("failed to create k8s client: %w", err)
 	}
 
-	return &K8sDiscovery{
+	return &Discovery{
 		options: &options,
 		client:  clientset,
 	}, nil
 }
 
-func (k *K8sDiscovery) GetInstances(
+// GetInstances returns the current list of service instances from Kubernetes endpoints.
+func (k *Discovery) GetInstances(
 	ctx context.Context,
 	options provider.GetInstanceOptions,
 ) ([]provider.Instancer, error) {
@@ -111,7 +115,6 @@ func (k *K8sDiscovery) GetInstances(
 
 	for _, slice := range endpointSlices.Items {
 		for _, endpoint := range slice.Endpoints {
-
 			if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
 				continue
 			}
@@ -144,7 +147,8 @@ func (k *K8sDiscovery) GetInstances(
 	return instances, nil
 }
 
-func (k *K8sDiscovery) Watch(
+// Watch returns a channel that signals changes in Kubernetes endpoints.
+func (k *Discovery) Watch(
 	ctx context.Context,
 	options provider.GetInstanceOptions,
 ) (<-chan []provider.Instancer, error) {
@@ -187,11 +191,10 @@ func (k *K8sDiscovery) Watch(
 					}
 				case watch.Deleted:
 					ch <- []provider.Instancer{} // service is down
-				case watch.Bookmark:
-					// Skip bookmark events
-					continue
 				case watch.Error:
 					logger.Warn("received error event from endpoints watcher")
+					continue
+				default:
 					continue
 				}
 			case <-ctx.Done():
@@ -220,6 +223,7 @@ func isEndpointSliceReady(endpointSlice *discoveryv1.EndpointSlice) bool {
 	return len(endpointSlice.Ports) != 0
 }
 
-func (k *K8sDiscovery) Close() error {
+// Close cleans up resources used by the Kubernetes discovery provider.
+func (k *Discovery) Close() error {
 	return nil
 }

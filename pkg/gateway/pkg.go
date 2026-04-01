@@ -45,7 +45,10 @@ var (
 // GetBifrost retrieves the current instance of Bifrost.
 // It returns a pointer to the Bifrost instance stored in the defaultBifrost atomic value.
 func GetBifrost() *Bifrost {
-	val, _ := defaultBifrost.Load().(*Bifrost)
+	val, ok := defaultBifrost.Load().(*Bifrost)
+	if !ok {
+		return nil
+	}
 	return val
 }
 
@@ -63,7 +66,7 @@ func SetBifrost(bifrost *Bifrost) {
 // err is the error that occurred during the startup process.
 func Run(mainOptions config.Options) (err error) {
 	// validate config file
-	err = config.ValidateConfig(mainOptions, true)
+	err = config.ValidateConfig(mainOptions, config.ModeFull)
 	if err != nil {
 		return err
 	}
@@ -75,18 +78,18 @@ func Run(mainOptions config.Options) (err error) {
 	}
 
 	if mainOptions.Gopool {
-		cgopool.SetPanicHandler(func(ctx context.Context, r any) {
+		cgopool.SetPanicHandler(func(_ context.Context, _ any) {
 			if r := recover(); r != nil {
-				var err error
+				var e error
 				switch v := r.(type) {
 				case error:
-					err = v
+					e = v
 				default:
-					err = fmt.Errorf("%v", v)
+					e = fmt.Errorf("%v", v)
 				}
 				stackTrace := cast.B2S(debug.Stack())
 				slog.Error("netpoll panic recovered",
-					slog.String("error", err.Error()),
+					slog.String("error", e.Error()),
 					slog.String("stack", stackTrace),
 				)
 			}
@@ -109,7 +112,7 @@ func Run(mainOptions config.Options) (err error) {
 		return err
 	}
 
-	bifrost, err := NewBifrost(mainOptions, false)
+	bifrost, err := NewBifrost(mainOptions, ModeNormal)
 	if err != nil {
 		slog.Error("failed to start bifrost", "error", err)
 		return err
@@ -122,24 +125,24 @@ func Run(mainOptions config.Options) (err error) {
 		slog.Debug("reloading...")
 
 		if mainOptions.ConfigPath() != "" {
-			newMainOptions, err := config.Load(mainOptions.ConfigPath())
-			if err != nil {
-				slog.Error("failed to load config", "error", err)
-				return err
+			newMainOptions, e := config.Load(mainOptions.ConfigPath())
+			if e != nil {
+				slog.Error("failed to load config", "error", e)
+				return e
 			}
 			mainOptions = newMainOptions
 		}
 
-		b, err := sonic.Marshal(mainOptions)
-		if err != nil {
-			return err
+		b, e := sonic.Marshal(mainOptions)
+		if e != nil {
+			return e
 		}
 
 		oldBifrost := GetBifrost()
 		if oldBifrost != nil {
-			b1, err := sonic.Marshal(oldBifrost.options)
-			if err != nil {
-				return err
+			b1, e1 := sonic.Marshal(oldBifrost.options)
+			if e1 != nil {
+				return e1
 			}
 
 			sha256sum := sha256.Sum256(b)
@@ -152,14 +155,14 @@ func Run(mainOptions config.Options) (err error) {
 		}
 
 		// validate config file
-		err = config.ValidateConfig(mainOptions, true)
+		err = config.ValidateConfig(mainOptions, config.ModeFull)
 		if err != nil {
 			return err
 		}
 
-		newBifrost, err := NewBifrost(mainOptions, true)
-		if err != nil {
-			return err
+		newBifrost, e := NewBifrost(mainOptions, ModeReload)
+		if e != nil {
+			return e
 		}
 
 		isReloaded := false
@@ -204,7 +207,12 @@ func Run(mainOptions config.Options) (err error) {
 
 	go safety.Go(context.Background(), func() {
 		// Readiness check: verify all HTTP servers are accepting connections
-		readinessTimeout := 30 * time.Second
+		const (
+			defaultReadinessTimeout = 30 * time.Second
+			defaultProbeTimeout     = 2 * time.Second
+			readinessRetryInterval  = 500 * time.Millisecond
+		)
+		readinessTimeout := defaultReadinessTimeout
 		readinessStart := time.Now()
 		readinessDeadline := readinessStart.Add(readinessTimeout)
 
@@ -223,7 +231,7 @@ func Run(mainOptions config.Options) (err error) {
 			for time.Now().Before(readinessDeadline) {
 				attempts++
 				dialer := &net.Dialer{
-					Timeout: 2 * time.Second,
+					Timeout: defaultProbeTimeout,
 				}
 				conn, err := dialer.DialContext(ctx, "tcp", httpServer.Bind())
 				if err == nil {
@@ -237,7 +245,7 @@ func Run(mainOptions config.Options) (err error) {
 					)
 					break
 				}
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(readinessRetryInterval)
 			}
 
 			if !serverReady {
@@ -270,10 +278,10 @@ func Run(mainOptions config.Options) (err error) {
 	defer func() {
 		// shutdown bifrost
 		if sigs == syscall.SIGINT {
-			_ = shutdown(ctx, true)
+			_ = shutdown(ctx, ShutdownImmediate)
 			return
 		}
-		_ = shutdown(ctx, false)
+		_ = shutdown(ctx, ShutdownGraceful)
 	}()
 
 	stopChan := make(chan os.Signal, 1)
@@ -284,12 +292,12 @@ func Run(mainOptions config.Options) (err error) {
 	return nil
 }
 
-func shutdown(ctx context.Context, now bool) error {
+func shutdown(ctx context.Context, mode ShutdownMode) error {
 	bifrost := GetBifrost()
 	if bifrost != nil {
 		var err error
 
-		if now {
+		if mode == ShutdownImmediate {
 			err = bifrost.ShutdownNow(ctx)
 		} else {
 			err = bifrost.Shutdown(ctx)
@@ -315,7 +323,7 @@ func fullURI(req *protocol.Request) string {
 	return buf.String()
 }
 
-// waitTimeout waits for the waitgroup for the specified max timeout.
+// waitTimeout waits for the waiter for the specified max timeout.
 // Returns true if waiting timed out.
 func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	c := make(chan struct{})

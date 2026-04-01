@@ -7,7 +7,11 @@ import (
 type rawCodec struct{}
 
 func (c *rawCodec) Marshal(v any) ([]byte, error) {
-	return v.([]byte), nil
+	data, ok := v.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("rawCodec.Marshal: unsupported type: %T", v)
+	}
+	return data, nil
 }
 
 func (c *rawCodec) Unmarshal(data []byte, v any) error {

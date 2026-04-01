@@ -13,23 +13,26 @@ import (
 type Config struct {
 	// MaxRequestBodySize limits the maximum number of bytes for the request body.
 	// Default 4194304 (4MB) if not specified or set to 0.
-	MaxRequestBodySize int64 `mapstructure:"max_request_body_size" json:"max_request_body_size"`
+	MaxRequestBodySize int64 `json:"max_request_body_size" mapstructure:"max_request_body_size"`
 }
 
-type BufferingMiddleware struct {
+// Middleware is a middleware that buffers the request body.
+type Middleware struct {
 	config *Config
 }
 
-func NewMiddleware(config Config) *BufferingMiddleware {
+// NewMiddleware creates a new BufferingMiddleware instance.
+func NewMiddleware(config Config) *Middleware {
+	const defaultMaxRequestBodySize = 4 * 1024 * 1024 // 4MB default
 	if config.MaxRequestBodySize <= 0 {
-		config.MaxRequestBodySize = 4 * 1024 * 1024 // 4MB default
+		config.MaxRequestBodySize = defaultMaxRequestBodySize
 	}
-	return &BufferingMiddleware{
+	return &Middleware{
 		config: &config,
 	}
 }
 
-func (m *BufferingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// Check content length header if present
 	contentLength := c.Request.Header.ContentLength()
 	if contentLength > 0 && int64(contentLength) > m.config.MaxRequestBodySize {
@@ -49,6 +52,7 @@ func (m *BufferingMiddleware) ServeHTTP(ctx context.Context, c *app.RequestConte
 	c.Next(ctx)
 }
 
+// Init registers the buffering middleware.
 func Init() error {
 	return middleware.RegisterTyped([]string{"buffering"}, func(cfg Config) (app.HandlerFunc, error) {
 		m := NewMiddleware(cfg)

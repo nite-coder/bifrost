@@ -13,21 +13,25 @@ import (
 	"github.com/nite-coder/bifrost/pkg/middleware"
 )
 
-type ParallelMiddleware struct {
+// Middleware is a middleware that executes multiple middlewares in parallel.
+type Middleware struct {
 	options []*Options
 }
+
+// Options defines the configuration for a single middleware within the parallel middleware.
 type Options struct {
 	Middleware        app.HandlerFunc
 	MiddlewareOptions config.MiddlwareOptions
 }
 
-func NewMiddleware(options []*Options) *ParallelMiddleware {
-	return &ParallelMiddleware{
+// NewMiddleware creates a new ParallelMiddleware instance.
+func NewMiddleware(options []*Options) *Middleware {
+	return &Middleware{
 		options: options,
 	}
 }
 
-func (m *ParallelMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
+func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	waitGroup := sync.WaitGroup{}
 	waitGroup.Add(len(m.options))
 	for _, option := range m.options {
@@ -49,6 +53,7 @@ func (m *ParallelMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContex
 	}
 }
 
+// Init registers the parallel middleware.
 func Init() error {
 	return middleware.RegisterTyped(
 		[]string{"parallel"},

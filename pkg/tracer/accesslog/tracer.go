@@ -20,12 +20,21 @@ import (
 
 var grpcContentType = []byte("application/grpc")
 
+const (
+	statusClientClosedRequest = 499
+	minPrintableChar          = 32
+	maxPrintableChar          = 126
+	allocationFactor          = 2
+)
+
+// Tracer is used to record access logs.
 type Tracer struct {
 	writer     *BufferedLogger
 	options    config.AccessLogOptions
 	directives []string
 }
 
+// NewTracer creates a new access log tracer with given options.
 func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 	if opts.TimeFormat == "" {
 		opts.TimeFormat = time.DateTime
@@ -44,11 +53,13 @@ func NewTracer(opts config.AccessLogOptions) (*Tracer, error) {
 	return tracer, nil
 }
 
-func (t *Tracer) Start(ctx context.Context, c *app.RequestContext) context.Context {
+// Start implements the tracer.Tracer interface.
+func (t *Tracer) Start(ctx context.Context, _ *app.RequestContext) context.Context {
 	return ctx
 }
 
-func (t *Tracer) Finish(ctx context.Context, c *app.RequestContext) {
+// Finish implements the tracer.Tracer interface.
+func (t *Tracer) Finish(_ context.Context, c *app.RequestContext) {
 	vals := t.buildReplacer(c)
 	if vals == nil {
 		return
@@ -58,6 +69,7 @@ func (t *Tracer) Finish(ctx context.Context, c *app.RequestContext) {
 	t.writer.Write(result)
 }
 
+// Close closes the tracer's writer.
 func (t *Tracer) Close() error {
 	if strings.EqualFold(t.options.Output, "stderr") {
 		return nil
@@ -76,7 +88,7 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 		// if the request is closed, the `Finish` is called, and HTTPStart event will be nil
 		return nil
 	}
-	replacements := make([]string, 0, len(t.directives)*2)
+	replacements := make([]string, 0, len(t.directives)*allocationFactor)
 	for _, key := range t.directives {
 		switch key {
 		case variable.Time:
@@ -97,7 +109,7 @@ func (t *Tracer) buildReplacer(c *app.RequestContext) []string {
 			// this case for http2 client disconnected
 			statErr := httpStats.Error()
 			if statErr != nil && statErr.Error() == "client disconnected" {
-				status = strconv.Itoa(499)
+				status = strconv.Itoa(statusClientClosedRequest)
 			}
 			replacements = append(replacements, variable.HTTPResponseStatusCode, status)
 		default:
@@ -115,15 +127,12 @@ func escape(s string, escapeType config.EscapeType) string {
 	}
 	switch escapeType {
 	case config.DefaultEscape:
-		s = escapeString(s)
+		return escapeString(s)
 	case config.JSONEscape:
-		s = escapeJSON(s)
-	case config.NoneEscape, "":
-		return s
+		return escapeJSON(s)
 	default:
 		return s
 	}
-	return s
 }
 
 // escapeString function to escape special characters.
@@ -131,13 +140,13 @@ func escapeString(s string) string {
 	var b strings.Builder
 	for i := 0; i < len(s); {
 		c := s[i]
-		if c == '"' || c == '\\' || c < 32 || c > 126 {
-			b.WriteString(`\x`)
-			b.WriteString(strconv.FormatUint(uint64(c), 16))
+		if c == '"' || c == '\\' || c < minPrintableChar || c > maxPrintableChar {
+			_, _ = b.WriteString(`\x`)
+			_, _ = b.WriteString(strconv.FormatUint(uint64(c), 16))
 			i++
 		} else {
 			r, size := utf8.DecodeRuneInString(s[i:])
-			b.WriteRune(r)
+			_, _ = b.WriteRune(r)
 			i += size
 		}
 	}
@@ -149,7 +158,7 @@ func escapeString(s string) string {
 func escapeJSON(comp string) string {
 	for i := 0; i < len(comp); i++ {
 		if needsEscape(comp[i]) {
-			ncomp := make([]byte, 0, len(comp)*2) // allocate enough space
+			ncomp := make([]byte, 0, len(comp)*allocationFactor) // allocate enough space
 			ncomp = append(ncomp, comp[:i]...)
 			for ; i < len(comp); i++ {
 				switch comp[i] {
@@ -168,7 +177,7 @@ func escapeJSON(comp string) string {
 				case '\f':
 					ncomp = append(ncomp, '\\', 'f')
 				default:
-					if comp[i] < 32 {
+					if comp[i] < minPrintableChar {
 						ncomp = append(ncomp, '\\', 'u', '0', '0',
 							hexChars[comp[i]>>4], hexChars[comp[i]&0xF])
 					} else {
@@ -183,7 +192,7 @@ func escapeJSON(comp string) string {
 }
 
 func needsEscape(c byte) bool {
-	return c == '"' || c == '\\' || c < 32
+	return c == '"' || c == '\\' || c < minPrintableChar
 }
 
 var hexChars = []byte("0123456789ABCDEF")

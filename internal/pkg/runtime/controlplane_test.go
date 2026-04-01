@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"context"
 	"net"
 	"os"
 	"path/filepath"
@@ -14,11 +13,8 @@ import (
 )
 
 func TempSocketPath(t *testing.T, name string) string {
-	dir, err := os.MkdirTemp(os.TempDir(), "bifrost-*")
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		_ = os.RemoveAll(dir)
-	})
+	t.Helper()
+	dir := t.TempDir()
 	return filepath.Join(dir, name)
 }
 
@@ -50,7 +46,7 @@ func TestControlPlane_Listen(t *testing.T) {
 
 		// Verify file exists
 		_, err = os.Stat(path)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Verify we can connect
 		conn, err := net.Dial("unix", path)
@@ -84,15 +80,14 @@ func TestControlPlane_Connection(t *testing.T) {
 
 		// Setup message handler
 		msgCh := make(chan *ControlMessage, 1)
-		cp.SetMessageHandler(func(conn net.Conn, msg *ControlMessage) {
+		cp.SetMessageHandler(func(_ net.Conn, msg *ControlMessage) {
 			msgCh <- msg
 		})
 
 		require.NoError(t, cp.Listen())
 		defer cp.Close()
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 
 		// Accept connections in background
 		go func() {
@@ -143,15 +138,14 @@ func TestControlPlane_SendReceiveFDs(t *testing.T) {
 
 	// Channel to receive FDs
 	fdCh := make(chan []*os.File, 1)
-	cp.SetFDHandler(func(fds []*os.File, keys []string) {
+	cp.SetFDHandler(func(fds []*os.File, _ []string) {
 		fdCh <- fds
 	})
 
 	require.NoError(t, cp.Listen())
 	defer cp.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	go func() {
 		_ = cp.Accept(ctx)
@@ -179,7 +173,7 @@ func TestControlPlane_SendReceiveFDs(t *testing.T) {
 	case receivedFDs := <-fdCh:
 		require.Len(t, receivedFDs, 1)
 		_, err := receivedFDs[0].Stat()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		_ = receivedFDs[0].Close()
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for FDs")
@@ -202,8 +196,7 @@ func TestWorkerControlPlane_Start(t *testing.T) {
 	require.NoError(t, cp.Listen())
 	defer cp.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	go func() {
 		_ = cp.Accept(ctx)
@@ -216,7 +209,7 @@ func TestWorkerControlPlane_Start(t *testing.T) {
 
 	// Mock Signal
 	signalCh := make(chan os.Signal, 1)
-	wcp.signalFunc = func(pid int, sig os.Signal) error {
+	wcp.signalFunc = func(_ int, sig os.Signal) error {
 		signalCh <- sig
 		return nil
 	}
@@ -260,7 +253,7 @@ func TestWorkerControlPlane_Start(t *testing.T) {
 	// Note: Start loop returns nil when shutdown message is received
 	select {
 	case err := <-errCh:
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	case <-time.After(1 * time.Second):
 		t.Fatal("Start loop did not exit")
 	}

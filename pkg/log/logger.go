@@ -19,6 +19,8 @@ import (
 	"github.com/nite-coder/bifrost/pkg/config"
 )
 
+const defaultFileMode = 0o600 // Read and write for owner only
+
 // fileWriter is a wrapper around os.File to support reopening the file on SIGUSR1.
 type fileWriter struct {
 	file              *os.File
@@ -41,7 +43,7 @@ func (fw *fileWriter) reopen() error {
 
 	// Open the new file first to ensure we don't lose logging if open fails
 	// Open-Swap-Close pattern
-	newFile, err := os.OpenFile(fw.file.Name(), os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0o600)
+	newFile, err := os.OpenFile(fw.file.Name(), os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, defaultFileMode)
 	if err != nil {
 		return err
 	}
@@ -78,13 +80,13 @@ func NewLogger(opts config.LoggingOptions) (*slog.Logger, error) {
 
 	// Configure the slog.HandlerOptions
 	logOptions := &slog.HandlerOptions{
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
 			// Customize the name of the level key and the output string
 			if a.Key == slog.LevelKey {
 				// Handle custom level values
-				level := a.Value.Any().(slog.Level)
+				level, ok := a.Value.Any().(slog.Level)
 
-				if level == LevelNotice {
+				if ok && level == LevelNotice {
 					a.Value = slog.StringValue("NOTICE")
 				}
 			}
@@ -122,7 +124,7 @@ func NewLogger(opts config.LoggingOptions) (*slog.Logger, error) {
 		writer = os.Stderr // Write logs to stderr
 	default:
 		// Open the log file for appending, creating it if it doesn't exist
-		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, 0o600)
+		file, err := os.OpenFile(opts.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_CLOEXEC, defaultFileMode)
 		if err != nil {
 			return nil, err
 		}

@@ -91,7 +91,7 @@ func runWorker() error {
 
 	upstreamURL, err := url.Parse("http://localhost:8000")
 	if err != nil {
-		return fmt.Errorf("failed to parse upstream URL: %v", err)
+		return fmt.Errorf("failed to parse upstream URL: %w", err)
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(upstreamURL)

@@ -8,27 +8,38 @@ import (
 	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
 )
 
+const (
+	defaultDialTimeout         = 10 * time.Second
+	defaultReadTimeout         = 60 * time.Second
+	defaultWriteTimeout        = 60 * time.Second
+	defaultMaxIdleConnDuration = 120 * time.Second
+	defaultMaxConnsPerHost     = 1024
+)
+
+// DefaultClientOptions returns a set of default Hertz client options for proxying.
 func DefaultClientOptions() []hzconfig.ClientOption {
 	options := []hzconfig.ClientOption{
 		client.WithNoDefaultUserAgentHeader(true),
 		client.WithDisableHeaderNamesNormalizing(true),
 		client.WithDisablePathNormalizing(true),
-		client.WithDialTimeout(10 * time.Second),
-		client.WithClientReadTimeout(60 * time.Second),
-		client.WithWriteTimeout(60 * time.Second),
-		client.WithMaxIdleConnDuration(120 * time.Second),
+		client.WithDialTimeout(defaultDialTimeout),
+		client.WithClientReadTimeout(defaultReadTimeout),
+		client.WithWriteTimeout(defaultWriteTimeout),
+		client.WithMaxIdleConnDuration(defaultMaxIdleConnDuration),
 		client.WithKeepAlive(true),
-		client.WithMaxConnsPerHost(1024),
+		client.WithMaxConnsPerHost(defaultMaxConnsPerHost),
 		client.WithResponseBodyStream(true),
 	}
 	return options
 }
 
+// ClientOptions defines the configuration for a Hertz HTTP client.
 type ClientOptions struct {
 	HZOptions []hzconfig.ClientOption
 	IsHTTP2   bool
 }
 
+// NewClient creates a new Hertz client with the given options.
 func NewClient(opts ClientOptions) (*client.Client, error) {
 	var tlsConfig *tls.Config
 	wrappedOptions := make([]hzconfig.ClientOption, len(opts.HZOptions))
