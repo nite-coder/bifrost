@@ -307,7 +307,7 @@ func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	// Build the http frame
 	val := len(respBody)
-	if val > math.MaxUint32-grpcHeaderLen {
+	if val > math.MaxInt-grpcHeaderLen {
 		logger.Error("proxy: gRPC proxy response payload overflow")
 		err := errors.New("proxy: gRPC proxy response payload overflow")
 		_ = c.Error(err)
@@ -397,7 +397,7 @@ func makeGRPCErrorFrame(ctx context.Context, st *status.Status) []byte {
 	statusProto := st.Proto()
 	serialized, _ := proto.Marshal(statusProto)
 	val := len(serialized)
-	if val > math.MaxUint32-grpcHeaderLen {
+	if val > math.MaxInt-grpcHeaderLen {
 		// Check for potential overflow
 		// Handle the error appropriately, e.g., log and return an empty frame
 		logger := log.FromContext(ctx)
