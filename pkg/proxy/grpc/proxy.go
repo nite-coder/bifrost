@@ -396,17 +396,26 @@ func (p *Proxy) handleGRPCError(ctx context.Context, c *app.RequestContext, err 
 func makeGRPCErrorFrame(ctx context.Context, st *status.Status) []byte {
 	statusProto := st.Proto()
 	serialized, _ := proto.Marshal(statusProto)
-	val := len(serialized)
-	if val > math.MaxInt-grpcHeaderLen || val > math.MaxUint32-grpcHeaderLen {
-		// Check for potential overflow
-		// Handle the error appropriately, e.g., log and return an empty frame
+	payloadLen := len(serialized)
+	payloadLen64 := uint64(payloadLen)
+	// Ensure payload length fits within the 32-bit gRPC length field.
+	if payloadLen64 > math.MaxUint32 {
 		logger := log.FromContext(ctx)
 		logger.Error("proxy: serialized data too large to create gRPC error frame")
 		return []byte{}
 	}
-	frame := make([]byte, val+grpcHeaderLen)
+	// Ensure total frame length (header + payload) fits within Go's maximum int.
+	totalLen64 := payloadLen64 + uint64(grpcHeaderLen)
+	if totalLen64 > math.MaxInt {
+		logger := log.FromContext(ctx)
+		logger.Error("proxy: total frame size too large to create gRPC error frame")
+		return []byte{}
+	}
+	totalLen := int(totalLen64)
+	frame := make([]byte, totalLen)
 	frame[0] = 0 // 0: no compression
-	binary.BigEndian.PutUint32(frame[1:grpcHeaderLen], uint32(val))
+	payloadLen32 := uint32(payloadLen64)
+	binary.BigEndian.PutUint32(frame[1:grpcHeaderLen], payloadLen32)
 	copy(frame[grpcHeaderLen:], serialized)
 	return frame
 }
