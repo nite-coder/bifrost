@@ -1,17 +1,17 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
-// https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/go
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/go .
 {
 	"name": "Go",
-	"build": {
-		"dockerfile": "Dockerfile",
-		"args": {
-			// Update the VARIANT arg to pick a version of Go: 1, 1.19, 1.18
-			// Append -bullseye or -buster to pin to an OS version.
-			// Use -bullseye variants on local arm64/Apple Silicon.
-			"VARIANT": "1.25-bookworm",
-			// Options
-			"NODE_VERSION": "24"
-		}
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"image": "mcr.microsoft.com/devcontainers/go:2-1.26-trixie",
+	"features": {
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+			"moby": false
+		},
+		"ghcr.io/devcontainers/features/node:1": {},
+		"ghcr.io/devcontainers/features/python:1": {},
+		"ghcr.io/rio/features/k3d:1": {},
+		"ghcr.io/devcontainers-extra/features/kubectl-asdf:2": {}
 	},
 	"runArgs": [
 		"--net=host",
@@ -79,35 +79,16 @@
 				"vscode-icons-team.vscode-icons", // Better file extension icons
 				"github.vscode-pull-request-github", // Github interaction
 				"redhat.vscode-yaml", // Kubernetes, Drone syntax highlighting
-				// "bajdzis.vscode-database", // Supports connections to mysql or postgres, over SSL, socked
 				"IBM.output-colorizer", // Colorize your output/test logs
 				"mohsen1.prettify-json", // Prettify JSON data
-				"zxh404.vscode-proto3", // Supports Proto syntax
 				"takumii.markdowntable"
-				// "jrebocho.vscode-random", // Generates random values
-				// "alefragnani.Bookmarks", // Manage bookmarks
-				// "quicktype.quicktype", // Paste JSON as code
-				// "spikespaz.vscode-smoothtype", // smooth cursor animation
 			]
 		}
 	},
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	"remoteUser": "root"
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "go version",
-	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
-	"remoteUser": "vscode",
-	"features": {
-		"ghcr.io/rio/features/k3d:1": {},
-		"ghcr.io/devcontainers-extra/features/kubectl-asdf:2": {},
-		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-			"moby": true,
-			"installDockerBuildx": true,
-			"version": "latest",
-			"dockerDashComposeVersion": "v2"
-		}
-		// "ghcr.io/devcontainers/features/node:1": {
-		// 	"version": "latest"
-		// }
-	}
 }

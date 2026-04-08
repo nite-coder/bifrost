@@ -18,7 +18,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	hertzslog "github.com/hertz-contrib/logger/slog"
 
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
+	"github.com/nite-coder/bifrost/internal/pkg/infra"
 	configBifrost "github.com/nite-coder/bifrost/pkg/config"
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
@@ -35,7 +35,7 @@ var daemon = flag.Bool("d", false, "Run in daemon mode")
 func main() {
 	flag.Parse()
 
-	if runtime.IsWorker() {
+	if infra.IsWorker() {
 		err := runWorker()
 		if err != nil {
 			log.Fatal(err)
@@ -44,10 +44,10 @@ func main() {
 	}
 
 	// Master Mode
-	master := runtime.NewMaster(&runtime.MasterOptions{
+	master := infra.NewMaster(&infra.MasterOptions{
 		Binary: os.Args[0],
 		Args:   os.Args[1:],
-		KeepAlive: &runtime.KeepAliveOptions{
+		KeepAlive: &infra.KeepAliveOptions{
 			InitialBackoff: 1 * time.Second,
 		},
 	})
@@ -61,8 +61,8 @@ func runWorker() error {
 	ctx := context.Background()
 
 	// 1. Setup Worker Control Plane
-	socketPath := runtime.GetControlSocketPath()
-	wcp := runtime.NewWorkerControlPlane(socketPath)
+	socketPath := infra.GetControlSocketPath()
+	wcp := infra.NewWorkerControlPlane(socketPath)
 	if err := wcp.Connect(); err != nil {
 		return fmt.Errorf("failed to connect to control plane: %w", err)
 	}
@@ -81,8 +81,8 @@ func runWorker() error {
 	}()
 
 	// 3. Create Listener
-	zeroDT := runtime.New(runtime.Options{})
-	listenOptions := &runtime.ListenerOptions{
+	zeroDT := infra.New(infra.Options{})
+	listenOptions := &infra.ListenerOptions{
 		Network: "tcp",
 		Address: ":8001",
 	}

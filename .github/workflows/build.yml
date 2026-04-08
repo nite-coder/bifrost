@@ -85,11 +85,12 @@ jobs:
           persist-credentials: false
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
       - name: Run Govulncheck
         uses: golang/govulncheck-action@v1
         with:
+          go-version-input: 1.25.9
           go-package: ./...

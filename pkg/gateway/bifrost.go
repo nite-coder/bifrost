@@ -13,7 +13,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/tracer"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
+	"github.com/nite-coder/bifrost/internal/pkg/infra"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/resolver"
@@ -58,7 +58,7 @@ type Bifrost struct {
 	metricsProvider *metrics.Provider
 	options         *config.Options
 	resolver        *resolver.Resolver
-	runtime         *runtime.ZeroDownTime
+	zeroDownTime    *infra.ZeroDownTime
 	middlewares     map[string]app.HandlerFunc
 	services        map[string]*Service
 	httpServers     map[string]*HTTPServer
@@ -75,7 +75,7 @@ func NewBifrost(mainOptions config.Options, mode BifrostMode) (bifrost *Bifrost,
 	tCache := timecache.New(mainOptions.TimerResolution)
 	timecache.Set(tCache)
 
-	zeroOptions := runtime.Options{}
+	zeroOptions := infra.Options{}
 	resolveOptions := resolver.Options{
 		Servers:  mainOptions.Resolver.Servers,
 		SkipTest: mainOptions.SkipResolver,
@@ -100,11 +100,11 @@ func NewBifrost(mainOptions config.Options, mode BifrostMode) (bifrost *Bifrost,
 		return nil, err
 	}
 	bifrost = &Bifrost{
-		options:     &mainOptions,
-		middlewares: middlewares,
-		resolver:    dnsResolver,
-		httpServers: make(map[string]*HTTPServer),
-		runtime:     runtime.New(zeroOptions),
+		options:      &mainOptions,
+		middlewares:  middlewares,
+		resolver:     dnsResolver,
+		httpServers:  make(map[string]*HTTPServer),
+		zeroDownTime: infra.New(zeroOptions),
 	}
 	// services
 	services, err := loadServices(bifrost)
@@ -210,8 +210,8 @@ func (b *Bifrost) Run() {
 }
 
 // ZeroDownTime returns the zero-downtime runtime manager.
-func (b *Bifrost) ZeroDownTime() *runtime.ZeroDownTime {
-	return b.runtime
+func (b *Bifrost) ZeroDownTime() *infra.ZeroDownTime {
+	return b.zeroDownTime
 }
 
 // Shutdown shuts down all HTTP servers in the Bifrost instance gracefully.
@@ -302,5 +302,5 @@ func (b *Bifrost) doShutdown(ctx context.Context, mode ShutdownMode) error {
 		_ = b.metricsProvider.Shutdown(ctx)
 	}
 
-	return b.runtime.Close(ctx)
+	return b.zeroDownTime.Close(ctx)
 }
