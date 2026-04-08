@@ -31,14 +31,14 @@ func TestBifrostLeakInSuccessPath_Evidence(t *testing.T) {
 		}
 	}
 
-	runtime.GC() //nolint:revive //nolint:revive
+	runtime.GC() //nolint
 	// initialGoroutines := runtime.NumGoroutine() // removed unused
 
 	currentBifrost, err := NewBifrost(options, ModeNormal)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Second)
-	runtime.GC() //nolint:revive //nolint:revive
+	runtime.GC() //nolint
 	baseline := runtime.NumGoroutine()
 	t.Logf("Baseline goroutines: %d", baseline)
 
@@ -50,7 +50,7 @@ func TestBifrostLeakInSuccessPath_Evidence(t *testing.T) {
 		currentBifrost = newB
 
 		time.Sleep(1 * time.Second)
-		runtime.GC() //nolint:revive //nolint:revive
+		runtime.GC() //nolint
 		t.Logf("Reload #%d - Goroutines: %d", i, runtime.NumGoroutine())
 	}
 

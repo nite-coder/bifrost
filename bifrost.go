@@ -13,7 +13,7 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cast"
 	"github.com/urfave/cli/v2"
 
-	"github.com/nite-coder/bifrost/internal/pkg/runtime"
+	"github.com/nite-coder/bifrost/internal/pkg/infra"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
@@ -161,7 +161,7 @@ func Run(opts ...Option) error {
 				return err
 			}
 
-			if runtime.IsWorker() || opt.debug {
+			if infra.IsWorker() || opt.debug {
 				// Execute User Init Hook
 				if opt.init != nil {
 					err := opt.init(mainOptions)
@@ -186,7 +186,7 @@ func Run(opts ...Option) error {
 // Master runs in foreground mode - process management is handled by Systemd/Docker/K8s.
 func runMasterMode(mainOptions config.Options) error {
 	// Set process name for identification in top/htop
-	_ = runtime.SetProcessName("bifrost-master")
+	_ = infra.SetProcessName("bifrost-master")
 
 	slog.Debug("starting in Master-Worker mode", "pid", os.Getpid())
 
@@ -199,13 +199,13 @@ func runMasterMode(mainOptions config.Options) error {
 		}
 	}
 
-	masterOpts := &runtime.MasterOptions{
+	masterOpts := &infra.MasterOptions{
 		ConfigPath: mainOptions.ConfigPath(),
 		User:       mainOptions.User,
 		Group:      mainOptions.Group,
 	}
 
-	master := runtime.NewMaster(masterOpts)
+	master := infra.NewMaster(masterOpts)
 	return master.Run(context.Background())
 }
 
@@ -213,7 +213,7 @@ func runMasterMode(mainOptions config.Options) error {
 // Workers are spawned by Master and handle actual traffic processing.
 func runAsWorker(mainOptions config.Options, debugMode bool) {
 	// Set process name for identification in top/htop
-	_ = runtime.SetProcessName("bifrost-worker")
+	_ = infra.SetProcessName("bifrost-worker")
 
 	// Worker inherits Master's stdout/stderr via FD inheritance (zero-copy log aggregation)
 	if debugMode {
@@ -225,14 +225,14 @@ func runAsWorker(mainOptions config.Options, debugMode bool) {
 	_ = initialize.Bifrost()
 
 	// Connect to Master's control plane
-	socketPath := runtime.GetControlSocketPath()
+	socketPath := infra.GetControlSocketPath()
 	slog.Debug("worker socket path",
 		"env", os.Getenv("BIFROST_CONTROL_SOCKET"),
 		"socketPath", socketPath,
 	)
 
 	if socketPath != "" {
-		wcp := runtime.NewWorkerControlPlane(socketPath)
+		wcp := infra.NewWorkerControlPlane(socketPath)
 		err := wcp.Connect()
 		if err != nil {
 			slog.Warn("failed to connect to control plane", "error", err)
@@ -250,7 +250,7 @@ func runAsWorker(mainOptions config.Options, debugMode bool) {
 			}
 
 			// Setup FD handler
-			fdHandler := runtime.NewWorkerFDHandler(wcp)
+			fdHandler := infra.NewWorkerFDHandler(wcp)
 
 			// Start control plane loop
 			go safety.Go(context.Background(), func() {

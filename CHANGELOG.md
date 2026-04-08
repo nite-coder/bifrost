@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Drop Go v1.24 support ([#115](https://github.com/nite-coder/bifrost/pull/115) by [0x5487](https://github.com/0x5487))
 - Translated the Hot Reload and Chunked Transfer architecture specification documentation into English ([#118](https://github.com/nite-coder/bifrost/pull/118) by [0x5487](https://github.com/0x5487))
 - Refactor high-risk `cast.B2S` and `cast.S2B` usage to use stable conversions in non-hot-path code ([#123](https://github.com/nite-coder/bifrost/pull/123) by [0x5487](https://github.com/0x5487))
-
+- rename `internal.runtime` package to `infra` ([#125](https://github.com/nite-coder/bifrost/pull/125) by [0x5487](https://github.com/0x5487))
 
 ## [0.9.0] (2026-03-01)
 

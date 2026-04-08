@@ -30,7 +30,7 @@ import (
 	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/unix"
 
-	infra "github.com/nite-coder/bifrost/internal/pkg/runtime"
+	"github.com/nite-coder/bifrost/internal/pkg/infra"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 )
@@ -182,7 +182,7 @@ func newHTTPServer(
 			listenerOptions.ProxyProtocol = true
 		}
 		var listener net.Listener
-		listener, err = bifrost.runtime.Listener(ctx, listenerOptions)
+		listener, err = bifrost.zeroDownTime.Listener(ctx, listenerOptions)
 		if err != nil {
 			return nil, err
 		}

@@ -14,7 +14,7 @@ coverage: test
 
 lint:
 	go tool golangci-lint cache clean
-	go tool golangci-lint run --timeout 5m --verbose ./pkg/... ./internal/pkg/... -v
+	go tool golangci-lint run --timeout 5m ./pkg/... ./internal/pkg/...
 
 lintd:
 	docker run -it --rm -v "${LOCAL_WORKSPACE_FOLDER}:/app" -w /app golangci/golangci-lint:v2.7.2-alpine golangci-lint run --timeout 5m --verbose ./pkg/...

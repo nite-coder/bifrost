@@ -1,6 +1,6 @@
 //go:build !linux
 
-package runtime
+package infra
 
 // SetProcessName is a no-op on non-Linux platforms.
 // On Linux, this sets the process name visible in /proc/[pid]/comm.
