@@ -18,6 +18,7 @@ type UsageObserver interface {
 // to extract usage data before passing them to the client.
 type ObservedStream struct {
 	io.ReadCloser
+
 	observer UsageObserver
 	metadata UsageMetadata
 }

@@ -266,6 +266,7 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 
+	targetUpstream := s.upstream
 	if len(s.dynamicUpstream) > 0 {
 		upstreamName := variable.GetString(s.dynamicUpstream, c)
 
@@ -278,7 +279,7 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 
 		var found bool
-		s.upstream, found = s.upstreams[upstreamName]
+		targetUpstream, found = s.upstreams[upstreamName]
 		if !found {
 			logger.Warn("upstream is not found",
 				slog.String("name", upstreamName),
@@ -286,18 +287,18 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			c.Abort()
 			return
 		}
-		s.upstream.watch()
+		targetUpstream.watch()
 	}
 
 	var myProxy proxy.Proxy
 	var err error
-	if s.upstream != nil {
-		c.Set(variable.UpstreamID, s.upstream.options.ID)
+	if targetUpstream != nil {
+		c.Set(variable.UpstreamID, targetUpstream.options.ID)
 
-		balaner := s.upstream.Balancer()
+		balaner := targetUpstream.Balancer()
 		if balaner == nil {
 			logger.Warn("balancer is nil, upstream may not be initialized",
-				"upstream_id", s.upstream.options.ID,
+				"upstream_id", targetUpstream.options.ID,
 				"service_id", s.options.ID,
 			)
 			c.SetStatusCode(http.StatusServiceUnavailable)

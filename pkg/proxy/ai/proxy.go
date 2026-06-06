@@ -63,8 +63,9 @@ func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}
 
 	// 3. Extract actual model name from p.target ("provider_id/actual-model-name")
-	parts := strings.SplitN(p.target, "/", 2)
-	if len(parts) != 2 {
+	const targetParts = 2
+	parts := strings.SplitN(p.target, "/", targetParts)
+	if len(parts) != targetParts {
 		// Log error and return
 		return
 	}
@@ -73,8 +74,15 @@ func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// 4. Branch based on family and handle request
 	switch family {
 	case coreai.FamilyChat:
-		req := c.MustGet(coreai.ContextKeyChatRequest).(*coreai.ChatRequest)
-		
+		val, ok := c.Get(coreai.ContextKeyChatRequest)
+		if !ok {
+			return
+		}
+		req, ok := val.(*coreai.ChatRequest)
+		if !ok {
+			return
+		}
+
 		// 🚨 CRITICAL: Override the client's requested model with the actual backend model
 		req.Model = actualModel
 
@@ -84,10 +92,32 @@ func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			p.handleChatUnary(ctx, c, req, metadata)
 		}
 	case coreai.FamilyResponses:
-		req := c.MustGet(coreai.ContextKeyResponsesRequest).(*coreai.ResponsesRequest)
+		val, ok := c.Get(coreai.ContextKeyResponsesRequest)
+		if !ok {
+			return
+		}
+		req, ok := val.(*coreai.ResponsesRequest)
+		if !ok {
+			return
+		}
 		req.Model = actualModel
 		// ... handle Responses family
 	}
+}
+
+// Tag returns metadata associated with this proxy.
+func (p *Proxy) Tag(key string) (value string, exist bool) {
+	return "", false
+}
+
+// Tags returns all metadata tags.
+func (p *Proxy) Tags() map[string]string {
+	return nil
+}
+
+// Close releases resources like idle connections in the HTTP client.
+func (p *Proxy) Close() error {
+	return nil
 }
 
 // handleChatUnary performs a standard request-response interaction.
@@ -112,19 +142,4 @@ func (p *Proxy) handleChatStream(ctx context.Context, c *app.RequestContext, req
 	//     }
 	//     Write chunk + Flush
 	// }
-}
-
-// Tag returns metadata associated with this proxy.
-func (p *Proxy) Tag(key string) (value string, exist bool) {
-	return "", false
-}
-
-// Tags returns all metadata tags.
-func (p *Proxy) Tags() map[string]string {
-	return nil
-}
-
-// Close releases resources like idle connections in the HTTP client.
-func (p *Proxy) Close() error {
-	return nil
 }

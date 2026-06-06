@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/cloudwego/hertz/pkg/app/client"
@@ -35,20 +36,20 @@ func (a *OpenAIChatAdapter) Chat(ctx context.Context, req *ChatRequest) (*ChatRe
 	// 1. Translate ChatRequest to OpenAI JSON
 	// 2. a.client.Do(ctx, req, resp)
 	// 3. Translate OpenAI JSON back to ChatResponse
-	return nil, nil
+	return nil, fmt.Errorf("not implemented")
 }
 
 func (a *OpenAIChatAdapter) StreamChat(ctx context.Context, req *ChatRequest) (io.ReadCloser, error) {
 	// 1. Translate ChatRequest to OpenAI JSON
 	// 2. a.client.Do(ctx, req, resp) with ResponseBodyStream=true
 	// 3. Return a reader that yields canonical SSE chunks
-	return nil, nil
+	return nil, fmt.Errorf("not implemented")
 }
 
 func (a *OpenAIChatAdapter) Responses(ctx context.Context, req *ResponsesRequest) (*ResponsesResponse, error) {
-	return nil, nil
+	return nil, fmt.Errorf("not implemented")
 }
 
 func (a *OpenAIChatAdapter) StreamResponses(ctx context.Context, req *ResponsesRequest) (io.ReadCloser, error) {
-	return nil, nil
+	return nil, fmt.Errorf("not implemented")
 }

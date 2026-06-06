@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"fmt"
 	"io"
 )
 
@@ -47,7 +48,7 @@ func RegisterClientAdapter(name string, factory ClientAdapterFactory) {
 func GetClientAdapter(name string) (ClientAdapter, error) {
 	factory, found := clientAdapterFactories[name]
 	if !found {
-		return nil, nil // Return nil if not found, caller handles default or error
+		return nil, fmt.Errorf("ai: client adapter factory '%s' not found", name)
 	}
 	return factory(), nil
 }
