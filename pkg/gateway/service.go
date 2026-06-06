@@ -112,107 +112,26 @@ func loadServices(bifrost *Bifrost) (map[string]*Service, error) {
 }
 
 func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Service, error) {
-	if len(serviceOptions.Protocol) == 0 && len(bifrost.options.Default.Service.Protocol) > 0 {
-		serviceOptions.Protocol = bifrost.options.Default.Service.Protocol
-	} else if len(serviceOptions.Protocol) == 0 && len(bifrost.options.Default.Service.Protocol) == 0 {
-		serviceOptions.Protocol = config.ProtocolHTTP
+	svc := &Service{
+		bifrost: bifrost,
+		options: &serviceOptions,
 	}
+
+	svc.applyProtocolDefaults()
 
 	upstreams, err := loadUpstreams(bifrost, serviceOptions)
 	if err != nil {
 		return nil, err
 	}
+	svc.upstreams = upstreams
 
-	svc := &Service{
-		bifrost:     bifrost,
-		options:     &serviceOptions,
-		upstreams:   upstreams,
-		middlewares: make([]app.HandlerFunc, 0),
-	}
-
-	for _, middlewareOpts := range serviceOptions.Middlewares {
-		if len(middlewareOpts.Use) > 0 {
-			m, found := bifrost.middlewares[middlewareOpts.Use]
-			if !found {
-				return nil, fmt.Errorf("middleware '%s' not found in service: '%s'", middlewareOpts, serviceOptions.ID)
-			}
-			svc.middlewares = append(svc.middlewares, m)
-			continue
-		}
-
-		if len(middlewareOpts.Type) == 0 {
-			return nil, fmt.Errorf("middleware type cannot be empty for service: %s", serviceOptions.ID)
-		}
-
-		handler := middleware.Factory(middlewareOpts.Type)
-		if handler == nil {
-			return nil, fmt.Errorf(
-				"middleware handler '%s' was not found in service: '%s'",
-				middlewareOpts.Type,
-				serviceOptions.ID,
-			)
-		}
-
-		appHandler, e := handler(middlewareOpts.Params)
-		if e != nil {
-			return nil, fmt.Errorf(
-				"failed to create middleware '%s' in route: '%s', error: %w",
-				middlewareOpts.Type,
-				serviceOptions.ID,
-				e,
-			)
-		}
-
-		svc.middlewares = append(svc.middlewares, appHandler)
-	}
-
-	addr, e := url.Parse(serviceOptions.URL)
-	if e != nil {
-		return nil, e
-	}
-
-	hostname := addr.Hostname()
-
-	// validate
-	if len(hostname) == 0 {
-		return nil, fmt.Errorf("hostname is invalid in service URL for service ID: %s", serviceOptions.ID)
-	}
-
-	// dynamic upstream
-	if hostname[0] == '$' {
-		svc.dynamicUpstream = hostname
-		return svc, nil
-	}
-
-	// exist upstream
-	// the hostname cannot be found in upstreams because user can use real domain name like www.google.com
-	upstream, found := svc.upstreams[hostname]
-	if found {
-		svc.upstream = upstream
-		upstream.watch()
-		return svc, nil
-	}
-
-	// direct proxy
-	upstreamOptions := config.UpstreamOptions{
-		ID: uuid.NewString(),
-		Balancer: config.BalancerOptions{
-			Type: "round_robin",
-		},
-		Targets: []config.TargetOptions{
-			{
-				Target: hostname,
-				Weight: 1,
-			},
-		},
-	}
-
-	upstream, err = newUpstream(bifrost, serviceOptions, upstreamOptions)
-	if err != nil {
+	if err := svc.initMiddlewares(); err != nil {
 		return nil, err
 	}
-	svc.upstream = upstream
-	upstream.watch()
+
+	if err := svc.resolveUpstreamStrategy(); err != nil {
+		return nil, err
+	}
 
 	return svc, nil
 }
@@ -331,6 +250,105 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	} else {
 		c.Set(variable.UpstreamResponoseStatusCode, c.Response.StatusCode())
 	}
+}
+
+func (s *Service) applyProtocolDefaults() {
+	if len(s.options.Protocol) == 0 && len(s.bifrost.options.Default.Service.Protocol) > 0 {
+		s.options.Protocol = s.bifrost.options.Default.Service.Protocol
+	} else if len(s.options.Protocol) == 0 && len(s.bifrost.options.Default.Service.Protocol) == 0 {
+		s.options.Protocol = config.ProtocolHTTP
+	}
+}
+
+func (s *Service) initMiddlewares() error {
+	for _, middlewareOpts := range s.options.Middlewares {
+		if len(middlewareOpts.Use) > 0 {
+			m, found := s.bifrost.middlewares[middlewareOpts.Use]
+			if !found {
+				return fmt.Errorf("middleware '%s' not found in service: '%s'", middlewareOpts.Use, s.options.ID)
+			}
+			s.middlewares = append(s.middlewares, m)
+			continue
+		}
+
+		if len(middlewareOpts.Type) == 0 {
+			return fmt.Errorf("middleware type cannot be empty for service: %s", s.options.ID)
+		}
+
+		handler := middleware.Factory(middlewareOpts.Type)
+		if handler == nil {
+			return fmt.Errorf(
+				"middleware handler '%s' was not found in service: '%s'",
+				middlewareOpts.Type,
+				s.options.ID,
+			)
+		}
+
+		appHandler, e := handler(middlewareOpts.Params)
+		if e != nil {
+			return fmt.Errorf(
+				"failed to create middleware '%s' in route: '%s', error: %w",
+				middlewareOpts.Type,
+				s.options.ID,
+				e,
+			)
+		}
+
+		s.middlewares = append(s.middlewares, appHandler)
+	}
+	return nil
+}
+
+func (s *Service) resolveUpstreamStrategy() error {
+	addr, e := url.Parse(s.options.URL)
+	if e != nil {
+		return e
+	}
+
+	hostname := addr.Hostname()
+
+	// validate
+	if len(hostname) == 0 {
+		return fmt.Errorf("hostname is invalid in service URL for service ID: %s", s.options.ID)
+	}
+
+	// dynamic upstream
+	if hostname[0] == '$' {
+		s.dynamicUpstream = hostname
+		return nil
+	}
+
+	// exist upstream
+	// the hostname cannot be found in upstreams because user can use real domain name like www.google.com
+	upstream, found := s.upstreams[hostname]
+	if found {
+		s.upstream = upstream
+		upstream.watch()
+		return nil
+	}
+
+	// direct proxy
+	upstreamOptions := config.UpstreamOptions{
+		ID: uuid.NewString(),
+		Balancer: config.BalancerOptions{
+			Type: "round_robin",
+		},
+		Targets: []config.TargetOptions{
+			{
+				Target: hostname,
+				Weight: 1,
+			},
+		},
+	}
+
+	upstream, err := newUpstream(s.bifrost, *s.options, upstreamOptions)
+	if err != nil {
+		return err
+	}
+	s.upstream = upstream
+	upstream.watch()
+
+	return nil
 }
 
 // DynamicService handles requests for services determined dynamically at runtime.
