@@ -42,28 +42,24 @@ func NewMiddleware(opts Options) *Middleware {
 func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// --- Phase 1: Ingress (Before Next) ---
 
-	// 1. Detect API Family based on config
-	// family := m.determineFamily()
-	// c.Set(ai.ContextKeyAIFamily, family)
+	// 1. Get ClientAdapter and put it in context for AIProxy to use
+	// adapter, _ := ai.GetClientAdapter(m.format)
+	// c.Set(ai.ContextKeyClientAdapter, adapter)
 
 	// 2. Translate raw client body to canonical Request object
 	// switch family {
 	// case ai.FamilyChat:
-	//     req, _ := m.translateToChatRequest(c.Request.Body())
+	//     req, _ := adapter.ToChatRequest(c.Request.Body())
 	//     c.Set(ai.ContextKeyChatRequest, req)
+	//     
+	//     // 🚨 FIX 1.2: Preserve original model name to avoid mutation side-effects
+	//     c.Set(ai.ContextKeyVirtualModelName, req.Model)
+	//     
 	//     // Inject dynamic routing variable with namespace for Service to consume
 	//     // c.Set(variable.AIModelName, "ai:" + req.Model)
-	// case ai.FamilyResponses:
-	//     req, _ := m.translateToResponsesRequest(c.Request.Body())
-	//     c.Set(ai.ContextKeyResponsesRequest, req)
+	// ...
 	// }
 
 	c.Next(ctx)
-
-	// --- Phase 2: Egress (After Next) ---
-
-	// 1. Intercept and translate AIError from downstream (AIProxy)
-	// if len(c.Errors) > 0 {
-	//     m.handleErrorTranslation(c)
-	// }
+	// ... (rest unchanged)
 }

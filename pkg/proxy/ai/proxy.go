@@ -54,21 +54,27 @@ func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// 1. Determine the API family (injected by ai_transformer)
 	family := c.GetString(coreai.ContextKeyAIFamily)
 
-	// 2. Prepare metadata for tracking (TTFB, TPS, etc.)
+	// 2. Prepare metadata using the original virtual model name
+	virtualModel := c.GetString(coreai.ContextKeyVirtualModelName)
 	metadata := coreai.UsageMetadata{
+		Model:    virtualModel,
 		Provider: p.id,
-		// Other fields like Model, UserID will be populated here
+		// ... StartTime etc to be set here
 	}
 
 	// 3. Extract actual model name from p.target ("provider_id/actual-model-name")
 	parts := strings.SplitN(p.target, "/", 2)
+	if len(parts) != 2 {
+		// Log error and return
+		return
+	}
 	actualModel := parts[1]
 
 	// 4. Branch based on family and handle request
 	switch family {
 	case coreai.FamilyChat:
 		req := c.MustGet(coreai.ContextKeyChatRequest).(*coreai.ChatRequest)
-
+		
 		// 🚨 CRITICAL: Override the client's requested model with the actual backend model
 		req.Model = actualModel
 
@@ -80,7 +86,7 @@ func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	case coreai.FamilyResponses:
 		req := c.MustGet(coreai.ContextKeyResponsesRequest).(*coreai.ResponsesRequest)
 		req.Model = actualModel
-		// ... handle Responses family logic
+		// ... handle Responses family
 	}
 }
 
@@ -91,13 +97,21 @@ func (p *Proxy) handleChatUnary(ctx context.Context, c *app.RequestContext, req 
 	// - Write JSON response
 }
 
-// handleChatStream performs a zero-buffered SSE interaction using HijackWriter.
+// handleChatStream performs a zero-buffered SSE interaction with mid-stream error handling.
 func (p *Proxy) handleChatStream(ctx context.Context, c *app.RequestContext, req *coreai.ChatRequest, meta coreai.UsageMetadata) {
 	// - Call p.adapter.StreamChat()
-	// - Set SSE headers
 	// - c.Response.HijackWriter(...)
-	// - Use coreai.NewObservedStream(stream, p.observer, meta)
-	// - io.Copy to c.GetWriter()
+	
+	// - 🚨 FIX 2.1: Mid-stream error handling loop
+	// for {
+	//     Read chunk -> error?
+	//     if error {
+	//         Write SSE error event: data: {"error":{...}}\n\n
+	//         Write data: [DONE]\n\n
+	//         return
+	//     }
+	//     Write chunk + Flush
+	// }
 }
 
 // Tag returns metadata associated with this proxy.

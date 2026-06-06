@@ -6,9 +6,14 @@ import "encoding/json"
 
 const (
 	// Context keys for communication between middleware and proxy
-	ContextKeyAIFamily         = "ai_family"
-	ContextKeyChatRequest      = "ai_chat_request"
-	ContextKeyResponsesRequest = "ai_responses_request"
+	ContextKeyAIFamily          = "ai_family"
+	ContextKeyChatRequest       = "ai_chat_request"
+	ContextKeyResponsesRequest  = "ai_responses_request"
+	ContextKeyClientAdapter     = "ai_client_adapter"      // For AIProxy to get the translator
+	ContextKeyVirtualModelName  = "ai_virtual_model_name" // Original model name from client
+	ContextKeyChatResponse      = "ai_chat_response"
+	ContextKeyResponsesResponse = "ai_responses_response"
+	ContextKeyResponseStream    = "ai_response_stream"
 
 	// API Families
 	FamilyChat      = "chat"
