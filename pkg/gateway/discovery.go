@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -71,12 +70,12 @@ func (d *ResolverDiscovery) GetInstances(
 	return instances, nil
 }
 
-// Watch is not supported by ResolverDiscovery and returns an error.
+// Watch is not supported by ResolverDiscovery and returns provider.ErrWatchNotSupported.
 func (d *ResolverDiscovery) Watch(
 	_ context.Context,
 	_ provider.GetInstanceOptions,
 ) (<-chan []provider.Instancer, error) {
-	return nil, errors.New("watch is not supported by resolver discovery")
+	return nil, provider.ErrWatchNotSupported
 }
 
 // Close releases resources used by ResolverDiscovery.

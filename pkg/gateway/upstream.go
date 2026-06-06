@@ -436,6 +436,9 @@ func (u *Upstream) watch() {
 		var watchCh <-chan []provider.Instancer
 		watchCh, err = u.discovery.Watch(ctx, options)
 		if err != nil {
+			if errors.Is(err, provider.ErrWatchNotSupported) {
+				return
+			}
 			slog.Error("failed to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
 			return
 		}
