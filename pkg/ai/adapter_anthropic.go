@@ -1,8 +1,9 @@
+//nolint:revive
 package ai
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 
 	"github.com/cloudwego/hertz/pkg/app/client"
@@ -36,20 +37,20 @@ func (a *AnthropicAdapter) Chat(ctx context.Context, req *ChatRequest) (*ChatRes
 	// 1. Translate ChatRequest to Anthropic JSON (extract system msg, handle tool_use)
 	// 2. a.client.Do(ctx, req, resp) with Anthropic-Version header
 	// 3. Translate Anthropic JSON back to ChatResponse
-	return nil, fmt.Errorf("not implemented")
+	return nil, errors.New("not implemented")
 }
 
 func (a *AnthropicAdapter) StreamChat(ctx context.Context, req *ChatRequest) (io.ReadCloser, error) {
 	// 1. Translate ChatRequest to Anthropic JSON
 	// 2. a.client.Do(ctx, req, resp)
 	// 3. Use an internal translator reader to map Anthropic SSE events to Canonical chunks
-	return nil, fmt.Errorf("not implemented")
+	return nil, errors.New("not implemented")
 }
 
 func (a *AnthropicAdapter) Responses(ctx context.Context, req *ResponsesRequest) (*ResponsesResponse, error) {
-	return nil, fmt.Errorf("not implemented")
+	return nil, errors.New("not implemented")
 }
 
 func (a *AnthropicAdapter) StreamResponses(ctx context.Context, req *ResponsesRequest) (io.ReadCloser, error) {
-	return nil, fmt.Errorf("not implemented")
+	return nil, errors.New("not implemented")
 }

@@ -1,3 +1,4 @@
+//nolint:unused,revive
 package ai
 
 import (
@@ -121,17 +122,27 @@ func (p *Proxy) Close() error {
 }
 
 // handleChatUnary performs a standard request-response interaction.
-func (p *Proxy) handleChatUnary(ctx context.Context, c *app.RequestContext, req *coreai.ChatRequest, meta coreai.UsageMetadata) {
+func (p *Proxy) handleChatUnary(
+	ctx context.Context,
+	c *app.RequestContext,
+	req *coreai.ChatRequest,
+	meta coreai.UsageMetadata,
+) {
 	// - Call p.adapter.Chat()
 	// - Call p.observer.OnUsage()
 	// - Write JSON response
 }
 
 // handleChatStream performs a zero-buffered SSE interaction with mid-stream error handling.
-func (p *Proxy) handleChatStream(ctx context.Context, c *app.RequestContext, req *coreai.ChatRequest, meta coreai.UsageMetadata) {
+func (p *Proxy) handleChatStream(
+	ctx context.Context,
+	c *app.RequestContext,
+	req *coreai.ChatRequest,
+	meta coreai.UsageMetadata,
+) {
 	// - Call p.adapter.StreamChat()
 	// - c.Response.HijackWriter(...)
-	
+
 	// - 🚨 FIX 2.1: Mid-stream error handling loop
 	// for {
 	//     Read chunk -> error?

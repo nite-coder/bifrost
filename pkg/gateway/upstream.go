@@ -424,6 +424,9 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 
 func (u *Upstream) watch() {
 	u.watchOnce.Do(func() {
+		if u.discovery == nil {
+			return
+		}
 		options := provider.GetInstanceOptions{
 			Name: u.options.Discovery.Name,
 		}

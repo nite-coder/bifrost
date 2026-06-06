@@ -51,10 +51,10 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// case ai.FamilyChat:
 	//     req, _ := adapter.ToChatRequest(c.Request.Body())
 	//     c.Set(ai.ContextKeyChatRequest, req)
-	//     
+	//
 	//     // 🚨 FIX 1.2: Preserve original model name to avoid mutation side-effects
 	//     c.Set(ai.ContextKeyVirtualModelName, req.Model)
-	//     
+	//
 	//     // Inject dynamic routing variable with namespace for Service to consume
 	//     // c.Set(variable.AIModelName, "ai:" + req.Model)
 	// ...

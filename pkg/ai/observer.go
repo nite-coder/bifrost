@@ -1,7 +1,9 @@
 package ai
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 )
 
@@ -21,6 +23,7 @@ type ObservedStream struct {
 
 	observer UsageObserver
 	metadata UsageMetadata
+	buf      []byte
 }
 
 // NewObservedStream creates a new stream decorator that notifies the observer
@@ -41,11 +44,35 @@ func NewObservedStream(stream io.ReadCloser, observer UsageObserver, metadata Us
 func (s *ObservedStream) Read(p []byte) (n int, err error) {
 	n, err = s.ReadCloser.Read(p)
 	if n > 0 {
-		// HLD: 🚨 CRITICAL BOUNDARY HANDLING
-		// Network reads (p[:n]) are not guaranteed to align with SSE event boundaries (\n\n).
-		// Implementation MUST use a buffer (e.g., bufio.Scanner or a byte slice accumulator)
-		// to safely split chunks by "\n\n" before attempting JSON parsing.
-		// If a complete JSON payload contains a "usage" field, s.observer.OnUsage(...) will be called.
+		s.buf = append(s.buf, p[:n]...)
+		for {
+			idx := bytes.Index(s.buf, []byte("\n\n"))
+			if idx == -1 {
+				break
+			}
+			event := s.buf[:idx]
+			s.buf = s.buf[idx+2:]
+			s.processEvent(event)
+		}
 	}
 	return n, err
+}
+
+func (s *ObservedStream) processEvent(event []byte) {
+	lines := bytes.SplitSeq(event, []byte("\n"))
+	for line := range lines {
+		line = bytes.TrimSpace(line)
+		if !bytes.HasPrefix(line, []byte("data: ")) {
+			continue
+		}
+		data := bytes.TrimPrefix(line, []byte("data: "))
+		if bytes.Equal(data, []byte("[DONE]")) {
+			continue
+		}
+
+		var chunk StreamChunk
+		if err := json.Unmarshal(data, &chunk); err == nil && chunk.Usage != nil {
+			s.observer.OnUsage(context.Background(), s.metadata, *chunk.Usage)
+		}
+	}
 }

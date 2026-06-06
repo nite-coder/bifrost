@@ -32,6 +32,9 @@ type ClientAdapter interface {
 	// WrapEgressStream wraps a canonical SSE stream with a protocol-specific translator
 	// to re-encode chunks into the format expected by the client SDK.
 	WrapEgressStream(stream io.ReadCloser) io.ReadCloser
+
+	// ToClientError translates a canonical AIError into the client's expected format.
+	ToClientError(err *AIError) (any, error)
 }
 
 // ClientAdapterFactory is a function type that creates a specific ClientAdapter instance.
