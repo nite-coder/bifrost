@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"net/http"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -91,6 +92,7 @@ func main() {
 	h.GET("/dynamic_upstream", findUpstreamHandler)
 	h.GET("/websocket", wssHandler)
 	h.GET("/chunk", chunkHandler)
+	h.POST("/v1/chat/completions", mockOpenAIChatHandler) // Mock AI Endpoint
 
 	h.GET("/users/:user_id/orders", func(c context.Context, ctx *app.RequestContext) {
 		userID := ctx.Param("user_id")
@@ -268,4 +270,61 @@ func GenerateRandomBytes(size int) ([]byte, error) {
 		return nil, fmt.Errorf("short read: expected %d bytes, got %d", size, n)
 	}
 	return buf, nil
+}
+
+func mockOpenAIChatHandler(ctx context.Context, c *app.RequestContext) {
+	// Simple struct to check if streaming is requested
+	var req struct {
+		Stream bool `json:"stream"`
+	}
+	if err := c.BindAndValidate(&req); err != nil {
+		c.JSON(http.StatusBadRequest, map[string]any{"error": map[string]any{"message": "Invalid request body"}})
+		return
+	}
+
+	if req.Stream {
+		c.Response.Header.Set("Content-Type", "text/event-stream")
+		c.Response.Header.Set("Cache-Control", "no-cache")
+		c.Response.Header.Set("Connection", "keep-alive")
+		c.Response.HijackWriter(resp.NewChunkedBodyWriter(&c.Response, c.GetWriter()))
+		c.Flush()
+
+		chunks := []string{
+			`{"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694268190,"model":"gpt-4o","choices":[{"index":0,"delta":{"role":"assistant","content":"Hello"},"finish_reason":null}]}`,
+			`{"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694268190,"model":"gpt-4o","choices":[{"index":0,"delta":{"content":" there!"},"finish_reason":null}]}`,
+			`{"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694268190,"model":"gpt-4o","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":9,"completion_tokens":2,"total_tokens":11}}`,
+		}
+
+		for _, chunk := range chunks {
+			c.Write([]byte("data: " + chunk + "\n\n"))
+			c.Flush()
+			time.Sleep(100 * time.Millisecond) // Simulate model generation delay
+		}
+		c.Write([]byte("data: [DONE]\n\n"))
+		c.Flush()
+		return
+	}
+
+	// Unary response
+	c.JSON(http.StatusOK, map[string]any{
+		"id":      "chatcmpl-123",
+		"object":  "chat.completion",
+		"created": 1694268190,
+		"model":   "gpt-4o",
+		"choices": []map[string]any{
+			{
+				"index": 0,
+				"message": map[string]any{
+					"role":    "assistant",
+					"content": "Hello there!",
+				},
+				"finish_reason": "stop",
+			},
+		},
+		"usage": map[string]any{
+			"prompt_tokens":     9,
+			"completion_tokens": 2,
+			"total_tokens":      11,
+		},
+	})
 }

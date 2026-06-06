@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
@@ -51,32 +52,36 @@ func (p *Proxy) AddFailedCount(count uint) error {
 // ServeHTTP handles the incoming LLM request by delegating to the adapter.
 func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// 1. Determine the API family (injected by ai_transformer)
-	// family := c.GetString(coreai.ContextKeyAIFamily)
-	// metadata := p.buildMetadata(c)
+	family := c.GetString(coreai.ContextKeyAIFamily)
 
-	// 2. Extract actual model name from p.target ("provider_id/actual-model-name")
-	// parts := strings.SplitN(p.target, "/", 2)
-	// actualModel := parts[1]
+	// 2. Prepare metadata for tracking (TTFB, TPS, etc.)
+	metadata := coreai.UsageMetadata{
+		Provider: p.id,
+		// Other fields like Model, UserID will be populated here
+	}
 
-	// 3. Branch based on family and handle request
-	// switch family {
-	// case coreai.FamilyChat:
-	//     req := c.MustGet(coreai.ContextKeyChatRequest).(*coreai.ChatRequest)
-	//     
-	//     // 🚨 CRITICAL: Override the client's requested model with the actual backend model
-	//     // Example: "gpt-4o" (virtual) -> "claude-3-5-sonnet" (actual target)
-	//     req.Model = actualModel
-	//
-	//     if req.Stream {
-	//         p.handleChatStream(ctx, c, req, metadata)
-	//     } else {
-	//         p.handleChatUnary(ctx, c, req, metadata)
-	//     }
-	// case coreai.FamilyResponses:
-	//     req := c.MustGet(coreai.ContextKeyResponsesRequest).(*coreai.ResponsesRequest)
-	//     req.Model = actualModel
-	//     // ... handle Responses family
-	// }
+	// 3. Extract actual model name from p.target ("provider_id/actual-model-name")
+	parts := strings.SplitN(p.target, "/", 2)
+	actualModel := parts[1]
+
+	// 4. Branch based on family and handle request
+	switch family {
+	case coreai.FamilyChat:
+		req := c.MustGet(coreai.ContextKeyChatRequest).(*coreai.ChatRequest)
+
+		// 🚨 CRITICAL: Override the client's requested model with the actual backend model
+		req.Model = actualModel
+
+		if req.Stream {
+			p.handleChatStream(ctx, c, req, metadata)
+		} else {
+			p.handleChatUnary(ctx, c, req, metadata)
+		}
+	case coreai.FamilyResponses:
+		req := c.MustGet(coreai.ContextKeyResponsesRequest).(*coreai.ResponsesRequest)
+		req.Model = actualModel
+		// ... handle Responses family logic
+	}
 }
 
 // handleChatUnary performs a standard request-response interaction.

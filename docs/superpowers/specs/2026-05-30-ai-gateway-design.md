@@ -167,19 +167,29 @@ type ClientAdapter interface {
 | `openai-chat` | `Authorization: Bearer` | Identity Transformation (透傳) |
 | `anthropic` | `x-api-key` | System Message 提取, `tool_use` 轉換 |
 | `gemini` | `x-goog-api-key` | 動態 Endpoint, `contents[]` 映射 |
-
 ## 7. AI 監控與觀測指標 (Observability)
 
-| 指標名稱 | 定義 | 計算方式 | 意義 |
+為了實現精確的效能評估與計費，系統將使用原生的 `github.com/prometheus/client_golang/prometheus` 來註冊與暴露 AI 專屬指標（對齊 Bifrost 既有的 Metric 開發風格），並於 Prometheus Endpoint (`/metrics`) 輸出。
+
+### 7.1 Prometheus Metrics 與 Labels 定義
+
+所有 AI 相關的 Metrics 都會攜帶以下通用 Labels：
+*   `model`: 虛擬模型名稱（如 `gpt-4o`）。
+*   `provider`: 上游供應商 ID（如 `anthropic-us`）。
+
+| Prometheus Metric 名稱 | 類型 | 計算方式 / 觸發時機 | 意義 |
 | :--- | :--- | :--- | :--- |
-| **TTFB** | 首字節延遲 | `FirstByteTime - StartTime` | 模型思考速度 |
-| **TPS** | 每秒生成速度 | `CompletionTokens / (EndTime - FirstByteTime)` | 模型生成速率 |
-| **Total Duration** | 總請求耗時 | `EndTime - StartTime` | 用戶端感知的總延遲 |
+| `bifrost_ai_request_ttfb_seconds` | **Histogram** | `FirstByteTime - StartTime` | 模型思考速度 (Time To First Byte)。 |
+| `bifrost_ai_request_duration_seconds`| **Histogram** | `EndTime - StartTime` | 用戶端感知的總請求延遲。 |
+| `bifrost_ai_generation_tps` | **Histogram** | `CompletionTokens / (EndTime - FirstByteTime)` | 單次請求的生成速率分佈。 |
+| `bifrost_ai_prompt_tokens_total` | **Counter** | 請求結束時累加 `Usage.PromptTokens` | 輸入基礎成本。 |
+| `bifrost_ai_completion_tokens_total` | **Counter** | 請求結束時累加 `Usage.CompletionTokens` | 輸出基礎成本。 |
+| `bifrost_ai_total_tokens_total` | **Counter** | 請求結束時累加 `Usage.TotalTokens` | 總用量。 |
 
-### 7.1 統計機制
-*   **MultiObserver**: 透過 `ai.UsageObserver` 介面，支援同時分發數據。
-*   **ObservedStream**: 在 `AIProxy` 執行 `io.Copy` 時，攔截 T1 (FirstByte) 與最後一個 Usage Chunk (T2)。
-
+### 7.2 統計實作機制
+*   **MetricsObserver**: 實作 `ai.UsageObserver` 介面，內部直接呼叫 `prometheus.HistogramVec.Observe()` 與 `prometheus.CounterVec.Add()`。
+*   **MultiObserver**: 支援將 `MetricsObserver` 與計費系統的 Observer 組合，達到一次擷取、多方寫入。
+*   **ObservedStream**: 在 `AIProxy` 執行 `io.Copy` 串流時，攔截 T1 (FirstByte) 與最後一個 Usage Chunk (T2)，然後觸發 Observer。
 ## 8. Initialization & Routing
 
 1.  **隱式轉換**：啟動時將 `models` 編譯為 `Upstream` 物件。
@@ -194,7 +204,20 @@ type ClientAdapter interface {
     *   **Request 結構體**：覆寫為實體模型名（如 `claude-3-5`），用於上游請求。
 *   **SSE 零緩衝**：使用 `c.Response.HijackWriter` 接管寫入流。
 
-## 10. 修改清單 (Checklist)
+## 10. 測試計畫 (Test Plan)
+
+為了驗證 AI Gateway 的功能完整性，我們將在 `server/testserver` 實作模擬的 OpenAI Chat API (支援 Unary 與 Streaming)，並針對以下情境進行測試：
+
+| Test Case | 目的 | Ingress | Egress | 驗證指標 (Success Criteria) |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. 單次請求透傳 (Unary)** | 驗證最基本的 OpenAI API 透傳功能。 | OpenAI Chat | OpenAI Chat | 客戶端收到完整的 200 OK 與正確的 JSON 結構。`UpstreamDuration` 紀錄正確。 |
+| **2. 串流請求透傳 (Streaming)** | 驗證 SSE 長連線不被緩衝。 | OpenAI Chat | OpenAI Chat | 客戶端能即時收到 `data: {...}`，結尾包含 `[DONE]`。 |
+| **3. 錯誤捕捉 (Error Interception)** | 驗證上游回傳 4xx/5xx 時，`AIProxy` 與 `ai_transformer` 的攔截轉譯。 | OpenAI Chat | OpenAI Chat | 模擬 401 Unauthorized。客戶端收到統一的 Error JSON，而非原始錯誤。 |
+| **4. 負載均衡 (Weighted)** | 驗證 `Model` 是否能根據 Weight 將流量分配到不同的 target。 | OpenAI Chat | OpenAI Chat x2 | 建立兩個 Testserver。發送 100 次請求，驗證兩台 Server 收到的請求次數符合權重比例。 |
+| **5. 統計回報 (Usage Observer)** | 驗證 `ObservedStream` 是否能成功攔截並回報 Tokens。 | OpenAI Chat | OpenAI Chat | 發送帶有 `stream_options.include_usage: true` 的請求。驗證 Gateway 日誌中印出正確的 `UsageMetadata` 與 Token 數。 |
+| **6. 跨協議轉譯 (Anthropic Egress)** | 驗證 `ClientTranslator` 與 `LLMAdapter` 的雙向轉譯。 | OpenAI Chat | Anthropic | (需接真實 API) 驗證 System Message 位置正確，且客戶端收到標準的 OpenAI 格式結果。 |
+
+## 11. 修改清單 (Checklist)
 
 | # | 目標 | 檔案路徑 |
 |---|---|---|
