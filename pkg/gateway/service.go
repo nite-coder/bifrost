@@ -21,6 +21,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/proxy"
+	aiproxy "github.com/nite-coder/bifrost/pkg/proxy/ai"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -129,8 +130,16 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 		return nil, err
 	}
 
-	if err := svc.resolveUpstreamStrategy(); err != nil {
+	if err := svc.loadModels(); err != nil {
 		return nil, err
+	}
+
+	if serviceOptions.Type == "ai" {
+		svc.dynamicUpstream = variable.AIModelName
+	} else {
+		if err := svc.resolveUpstreamStrategy(); err != nil {
+			return nil, err
+		}
 	}
 
 	return svc, nil
@@ -403,4 +412,76 @@ func (s *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	c.SetIndex(-1)
 	c.SetHandlers(middlewares)
 	c.Next(ctx)
+}
+
+func (s *Service) loadModels() error {
+	if s.upstreams == nil {
+		s.upstreams = make(map[string]*Upstream)
+	}
+
+	if s.bifrost.options.Models == nil {
+		return nil
+	}
+
+	for modelID, modelOpts := range s.bifrost.options.Models {
+		if len(modelID) == 0 {
+			continue
+		}
+
+		var targets []config.TargetOptions
+		for _, t := range modelOpts.Targets {
+			var weight uint32
+			if t.Weight > 0 && t.Weight <= 4294967295 {
+				weight = uint32(t.Weight)
+			}
+			if weight <= 0 {
+				weight = 1
+			}
+			targets = append(targets, config.TargetOptions{
+				Target: t.Target,
+				Weight: weight,
+			})
+		}
+
+		balancerType := "weighted"
+		if modelOpts.Balancer != nil && modelOpts.Balancer.Type != "" {
+			balancerType = modelOpts.Balancer.Type
+		}
+
+		upstreamOpts := config.UpstreamOptions{
+			ID: "ai:" + modelID,
+			Balancer: config.BalancerOptions{
+				Type: balancerType,
+			},
+			Targets: targets,
+		}
+
+		var proxies []proxy.Proxy
+		metricsEnabled := s.bifrost.options.Metrics.Prometheus.Enabled || s.bifrost.options.Metrics.OTLP.Enabled
+		for _, t := range targets {
+			p := aiproxy.NewProxy(t.Target, t.Target, t.Weight, s.bifrost.options.AI, metricsEnabled)
+			proxies = append(proxies, p)
+		}
+
+		factory := balancer.Factory(balancerType)
+		if factory == nil {
+			return fmt.Errorf("unsupported balancer strategy '%s' for virtual model: %s", balancerType, modelID)
+		}
+
+		bal, err := factory(proxies, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create balancer for virtual model %s: %w", modelID, err)
+		}
+
+		u := &Upstream{
+			bifrost:        s.bifrost,
+			options:        &upstreamOpts,
+			serviceOptions: s.options,
+		}
+		u.balancer.Store(bal)
+
+		s.upstreams["ai:"+modelID] = u
+	}
+
+	return nil
 }

@@ -30,21 +30,9 @@ import (
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
+	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
-
-var httpServiceOpenConnections *prom.GaugeVec
-
-func init() {
-	httpServiceOpenConnections = prom.NewGaugeVec(
-		prom.GaugeOpts{
-			Name: "http_service_open_connections",
-			Help: "Number of open connections for services",
-		},
-		[]string{"service_id", "target"},
-	)
-	prom.MustRegister(httpServiceOpenConnections)
-}
 
 // Upstream represents a collection of backend targets and a load balancer.
 type Upstream struct {
@@ -282,7 +270,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				labels := make(prom.Labels)
 				labels["service_id"] = u.serviceOptions.ID
 				labels["target"] = hcs.ConnPoolState().Addr
-				httpServiceOpenConnections.With(labels).Set(float64(hcs.ConnPoolState().TotalConnNum))
+				metrics.HTTPServiceOpenConnections.With(labels).Set(float64(hcs.ConnPoolState().TotalConnNum))
 			}))
 		}
 		var maxFails uint

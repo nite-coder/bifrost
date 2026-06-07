@@ -16,6 +16,8 @@ type Options struct {
 	Services        map[string]ServiceOptions   `json:"services"         yaml:"services"`
 	Upstreams       map[string]UpstreamOptions  `json:"upstreams"        yaml:"upstreams"`
 	Providers       ProviderOptions             `json:"providers"        yaml:"providers"`
+	AI              *AIOptions                  `json:"ai"               yaml:"ai"`
+	Models          map[string]*AIModelOptions  `json:"models"           yaml:"models"`
 	configPath      string
 	User            string          `json:"user"             yaml:"user"`
 	Group           string          `json:"group"            yaml:"group"`
@@ -373,6 +375,7 @@ const (
 type ServiceOptions struct {
 	MaxConnsPerHost *int                  `json:"max_conns_per_host" yaml:"max_conns_per_host"`
 	ID              string                `json:"-"                  yaml:"-"`
+	Type            string                `json:"type"               yaml:"type"`
 	Protocol        Protocol              `json:"protocol"           yaml:"protocol"`
 	URL             string                `json:"url"                yaml:"url"`
 	Middlewares     []MiddlwareOptions    `json:"middlewares"        yaml:"middlewares"`
@@ -440,4 +443,33 @@ type DefaultUpstreamOptions struct {
 type DefaultOptions struct {
 	Service  DefaultServiceOptions  `json:"service"  yaml:"service"`
 	Upstream DefaultUpstreamOptions `json:"upstream" yaml:"upstream"`
+}
+
+// AIOptions defines the configurations for LLM providers.
+type AIOptions struct {
+	Providers map[string]*AIProvider `json:"providers" yaml:"providers"`
+}
+
+// AIProvider defines options for an LLM provider connection.
+type AIProvider struct {
+	Handler string `json:"handler"  yaml:"handler"`
+	BaseURL string `json:"base_url" yaml:"base_url"`
+	APIKey  string `json:"api_key"  yaml:"api_key"`
+}
+
+// AIModelOptions defines target distribution and balancing options for a virtual model.
+type AIModelOptions struct {
+	Balancer *AIBalancerOptions `json:"balancer" yaml:"balancer"`
+	Targets  []AITargetOptions  `json:"targets"  yaml:"targets"`
+}
+
+// AIBalancerOptions configures the balancing type for virtual models.
+type AIBalancerOptions struct {
+	Type string `json:"type" yaml:"type"`
+}
+
+// AITargetOptions configures a target provider/model and its load weight.
+type AITargetOptions struct {
+	Target string `json:"target" yaml:"target"`
+	Weight int    `json:"weight" yaml:"weight"`
 }

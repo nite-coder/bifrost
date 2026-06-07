@@ -12,8 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
+	"github.com/nite-coder/bifrost/pkg/balancer/weighted"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/resolver"
+	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 const (
@@ -347,4 +349,83 @@ func TestServiceGetters(t *testing.T) {
 		assert.NotNil(t, middlewares)
 		assert.Len(t, middlewares, 1)
 	})
+}
+
+func TestLoadModels(t *testing.T) {
+	err := weighted.Init()
+	require.NoError(t, err)
+
+	dnsResolver, err := resolver.NewResolver(resolver.Options{})
+	require.NoError(t, err)
+
+	bifrost := &Bifrost{
+		resolver: dnsResolver,
+		options: &config.Options{
+			SkipResolver: true,
+			Models: map[string]*config.AIModelOptions{
+				"gpt-4": {
+					Balancer: &config.AIBalancerOptions{Type: "weighted"},
+					Targets: []config.AITargetOptions{
+						{Target: "p1/gpt-4", Weight: 3},
+						{Target: "p2/gpt-4", Weight: 1},
+					},
+				},
+				"gpt-3.5-turbo": {
+					Targets: []config.AITargetOptions{
+						{Target: "p1/gpt-3.5", Weight: 0},
+						{Target: "p2/gpt-3.5"},
+					},
+				},
+			},
+		},
+	}
+
+	serviceOpts := config.ServiceOptions{
+		ID:   "aiService",
+		Type: "ai",
+		URL:  "http://$ai_model_name",
+	}
+
+	service, err := newService(bifrost, serviceOpts)
+	require.NoError(t, err)
+
+	// Verify type: ai handles dynamic upstream correctly
+	assert.Equal(t, variable.AIModelName, service.dynamicUpstream)
+
+	// Verify that the virtual upstream was created with "ai:" prefix
+	upstream, exists := service.upstreams["ai:gpt-4"]
+	require.True(t, exists)
+	assert.Equal(t, "ai:gpt-4", upstream.options.ID)
+
+	// Verify targets and weights in the upstream options
+	require.Len(t, upstream.options.Targets, 2)
+	assert.Equal(t, "p1/gpt-4", upstream.options.Targets[0].Target)
+	assert.Equal(t, uint32(3), upstream.options.Targets[0].Weight)
+	assert.Equal(t, "p2/gpt-4", upstream.options.Targets[1].Target)
+	assert.Equal(t, uint32(1), upstream.options.Targets[1].Weight)
+
+	// Verify balancer exists and has the correct proxies
+	b := upstream.Balancer()
+	require.NotNil(t, b)
+	proxies := b.Proxies()
+	require.Len(t, proxies, 2)
+	assert.Equal(t, "p1/gpt-4", proxies[0].Target())
+	assert.Equal(t, uint32(3), proxies[0].Weight())
+	assert.Equal(t, "p2/gpt-4", proxies[1].Target())
+	assert.Equal(t, uint32(1), proxies[1].Weight())
+
+	// Verify that the virtual upstream was created with "ai:" prefix and defaults to weighted balancer
+	upstream2, exists2 := service.upstreams["ai:gpt-3.5-turbo"]
+	require.True(t, exists2)
+	assert.Equal(t, "ai:gpt-3.5-turbo", upstream2.options.ID)
+	assert.Equal(t, "weighted", upstream2.options.Balancer.Type)
+
+	b2 := upstream2.Balancer()
+	require.NotNil(t, b2)
+	proxies2 := b2.Proxies()
+	require.Len(t, proxies2, 2)
+	assert.Equal(t, "p1/gpt-3.5", proxies2[0].Target())
+	assert.Equal(t, uint32(1), proxies2[0].Weight())
+	assert.Equal(t, "p2/gpt-3.5", proxies2[1].Target())
+	assert.Equal(t, uint32(1), proxies2[1].Weight())
 }

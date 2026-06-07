@@ -1,7 +1,11 @@
-//nolint:revive
 package ai
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"maps"
+
+	"github.com/bytedance/sonic"
+)
 
 // --- Constants & Context Keys ---
 
@@ -49,6 +53,63 @@ type ChatRequest struct {
 	ResponseFormat    any            `json:"response_format,omitempty"`
 	UnknownFields     map[string]any `json:"-"`               // Collects unmapped fields for passthrough
 	Extra             *ExtraOptions  `json:"extra,omitempty"` // Internal metadata
+}
+
+// UnmarshalJSON implements custom unmarshaling to capture unknown fields.
+// IMPORTANT: When adding new fields to ChatRequest, add a corresponding delete(raw, "field_name") below.
+func (r *ChatRequest) UnmarshalJSON(data []byte) error {
+	type Alias ChatRequest
+	var aux Alias
+	if err := sonic.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	*r = ChatRequest(aux)
+
+	var raw map[string]any
+	if err := sonic.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	delete(raw, "model")
+	delete(raw, "messages")
+	delete(raw, "stream")
+	delete(raw, "stream_options")
+	delete(raw, "temperature")
+	delete(raw, "top_p")
+	delete(raw, "max_tokens")
+	delete(raw, "stop")
+	delete(raw, "tools")
+	delete(raw, "tool_choice")
+	delete(raw, "parallel_tool_calls")
+	delete(raw, "reasoning")
+	delete(raw, "response_format")
+	delete(raw, "extra")
+
+	r.UnknownFields = raw
+	return nil
+}
+
+// MarshalJSON implements custom marshaling to flatten unknown fields.
+func (r *ChatRequest) MarshalJSON() ([]byte, error) {
+	type Alias ChatRequest
+	aux := (Alias)(*r)
+
+	b, err := sonic.Marshal(aux)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(r.UnknownFields) == 0 {
+		return b, nil
+	}
+
+	var m map[string]any
+	if err := sonic.Unmarshal(b, &m); err != nil {
+		return nil, err
+	}
+
+	maps.Copy(m, r.UnknownFields)
+
+	return sonic.Marshal(m)
 }
 
 // StreamOptions controls streaming behavior options.
@@ -204,11 +265,15 @@ type ResponsesRequest struct {
 type ResponsesResponse struct {
 	ID     string `json:"id"`
 	Status string `json:"status"`
+	Model  string `json:"model"`
+	Usage  Usage  `json:"usage"`
 }
 
 // --- Unified Error ---
 
 // AIError defines a standardized error object for the AI Gateway.
+//
+//nolint:revive
 type AIError struct {
 	Type       string `json:"type"`    // "invalid_request_error", "authentication_error", etc.
 	Message    string `json:"message"` // Human-readable error message

@@ -1,4 +1,3 @@
-//nolint:revive
 package ai
 
 import (
@@ -10,7 +9,7 @@ import (
 )
 
 func init() {
-	RegisterAdapter("anthropic", func(opts LLMAdapterOptions) (LLMAdapter, error) {
+	RegisterLLMAdapter("anthropic", func(opts LLMAdapterOptions) (LLMAdapter, error) {
 		return NewAnthropicAdapter(opts), nil
 	})
 }
@@ -31,26 +30,31 @@ func NewAnthropicAdapter(opts LLMAdapterOptions) *AnthropicAdapter {
 	}
 }
 
+// Name returns the name of the adapter.
 func (a *AnthropicAdapter) Name() string { return "anthropic" }
 
-func (a *AnthropicAdapter) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
+// Chat sends a unary chat completion request to Anthropic.
+func (a *AnthropicAdapter) Chat(_ context.Context, _ *ChatRequest) (*ChatResponse, error) {
 	// 1. Translate ChatRequest to Anthropic JSON (extract system msg, handle tool_use)
 	// 2. a.client.Do(ctx, req, resp) with Anthropic-Version header
 	// 3. Translate Anthropic JSON back to ChatResponse
 	return nil, errors.New("not implemented")
 }
 
-func (a *AnthropicAdapter) StreamChat(ctx context.Context, req *ChatRequest) (io.ReadCloser, error) {
+// StreamChat sends a streaming chat completion request to Anthropic.
+func (a *AnthropicAdapter) StreamChat(_ context.Context, _ *ChatRequest) (io.ReadCloser, error) {
 	// 1. Translate ChatRequest to Anthropic JSON
 	// 2. a.client.Do(ctx, req, resp)
 	// 3. Use an internal translator reader to map Anthropic SSE events to Canonical chunks
 	return nil, errors.New("not implemented")
 }
 
-func (a *AnthropicAdapter) Responses(ctx context.Context, req *ResponsesRequest) (*ResponsesResponse, error) {
+// Responses sends a batch responses request to Anthropic.
+func (a *AnthropicAdapter) Responses(_ context.Context, _ *ResponsesRequest) (*ResponsesResponse, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (a *AnthropicAdapter) StreamResponses(ctx context.Context, req *ResponsesRequest) (io.ReadCloser, error) {
+// StreamResponses sends a streaming responses request to Anthropic.
+func (a *AnthropicAdapter) StreamResponses(_ context.Context, _ *ResponsesRequest) (io.ReadCloser, error) {
 	return nil, errors.New("not implemented")
 }

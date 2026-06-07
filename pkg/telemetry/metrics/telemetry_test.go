@@ -85,6 +85,15 @@ func TestTracer(t *testing.T) {
 		}
 	}
 
+	// Record at least one value to make the lazy Prometheus vectors non-empty so they appear in scrape output
+	HTTPServerOpenConnections.WithLabelValues("apiv1").Set(1)
+	HTTPServiceOpenConnections.WithLabelValues("service1", "127.0.0.1:80").Set(1)
+	RequestTTFB.WithLabelValues("gpt-4o", "openai").Observe(0.1)
+	RequestDuration.WithLabelValues("gpt-4o", "openai").Observe(0.5)
+	GenerationTPS.WithLabelValues("gpt-4o", "openai").Observe(50.0)
+	PromptTokens.WithLabelValues("gpt-4o", "openai").Inc()
+	CompletionTokens.WithLabelValues("gpt-4o", "openai").Inc()
+
 	metricsRes, e := http.Get("http://127.0.0.1:6666/metrics")
 
 	require.NoError(t, e)
@@ -128,4 +137,13 @@ func TestTracer(t *testing.T) {
 	// Verify custom OTel metric (converted to Prometheus format)
 	// OTel metrics might have scope labels
 	assert.Contains(t, metricsResStr, `otel_custom_counter_total{otel_scope_name="test-meter",otel_scope_version=""} 5`)
+
+	// Verify new consolidated metrics are registered and outputted (at least headers/definitions)
+	assert.Contains(t, metricsResStr, `bifrost_ai_request_ttfb_seconds`)
+	assert.Contains(t, metricsResStr, `bifrost_ai_request_duration_seconds`)
+	assert.Contains(t, metricsResStr, `bifrost_ai_generation_tps`)
+	assert.Contains(t, metricsResStr, `bifrost_ai_prompt_tokens_total`)
+	assert.Contains(t, metricsResStr, `bifrost_ai_completion_tokens_total`)
+	assert.Contains(t, metricsResStr, `http_server_open_connections`)
+	assert.Contains(t, metricsResStr, `http_service_open_connections`)
 }

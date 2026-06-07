@@ -20,8 +20,8 @@ type AdapterFactory func(opts LLMAdapterOptions) (LLMAdapter, error)
 
 var adapterFactories = make(map[string]AdapterFactory)
 
-// RegisterAdapter registers a new adapter factory with a unique name.
-func RegisterAdapter(name string, factory AdapterFactory) {
+// RegisterLLMAdapter registers a new adapter factory with a unique name.
+func RegisterLLMAdapter(name string, factory AdapterFactory) {
 	adapterFactories[name] = factory
 }
 

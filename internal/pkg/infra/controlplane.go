@@ -12,6 +12,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/bytedance/sonic"
 	"golang.org/x/sys/unix"
 
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
@@ -289,7 +290,7 @@ func (cp *ControlPlane) handleConnection(ctx context.Context, conn net.Conn) {
 			// Extract Keys from Payload
 			var keys []string
 			if len(msg.Payload) > 0 {
-				if e := json.Unmarshal(msg.Payload, &keys); e != nil {
+				if e := sonic.Unmarshal(msg.Payload, &keys); e != nil {
 					slog.Error("failed to unmarshal listener keys", "error", e)
 					// Continue, but keys will be empty
 				}
@@ -410,7 +411,7 @@ func (wcp *WorkerControlPlane) SendFDs(files []*os.File, keys []string) error {
 	defer conn.Close()
 
 	// Prepare Payload (Keys)
-	payload, err := json.Marshal(keys)
+	payload, err := sonic.Marshal(keys)
 	if err != nil {
 		return fmt.Errorf("failed to marshal keys: %w", err)
 	}

@@ -3,8 +3,9 @@ package ai
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
+
+	"github.com/bytedance/sonic"
 )
 
 // UsageObserver defines the contract for components that monitor AI usage.
@@ -36,6 +37,7 @@ func NewObservedStream(stream io.ReadCloser, observer UsageObserver, metadata Us
 		ReadCloser: stream,
 		observer:   observer,
 		metadata:   metadata,
+		buf:        nil,
 	}
 }
 
@@ -71,7 +73,7 @@ func (s *ObservedStream) processEvent(event []byte) {
 		}
 
 		var chunk StreamChunk
-		if err := json.Unmarshal(data, &chunk); err == nil && chunk.Usage != nil {
+		if err := sonic.Unmarshal(data, &chunk); err == nil && chunk.Usage != nil {
 			s.observer.OnUsage(context.Background(), s.metadata, *chunk.Usage)
 		}
 	}
