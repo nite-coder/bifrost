@@ -100,8 +100,8 @@ func TestAITransformer_Ingress(t *testing.T) {
 	require.True(t, exists)
 	assert.Equal(t, "gpt-4o", virtualModelVal)
 
-	modelNameVar := hzCtx.GetString(variable.AIModelName)
-	assert.Equal(t, "ai:gpt-4o", modelNameVar)
+	modelNameVar := hzCtx.GetString(variable.ModelName)
+	assert.Equal(t, "gpt-4o", modelNameVar)
 }
 
 func TestAITransformer_FamilyDetection(t *testing.T) {

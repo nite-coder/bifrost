@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/nite-coder/blackbear/pkg/cast"
 
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
+	"github.com/nite-coder/bifrost/pkg/ai"
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
@@ -134,8 +136,8 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 		return nil, err
 	}
 
-	if serviceOptions.Type == "ai" {
-		svc.dynamicUpstream = variable.AIModelName
+	if serviceOptions.Type == config.ServiceTypeAI {
+		svc.dynamicUpstream = variable.ModelName
 	} else {
 		if err := svc.resolveUpstreamStrategy(); err != nil {
 			return nil, err
@@ -199,20 +201,43 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		upstreamName := variable.GetString(s.dynamicUpstream, c)
 
 		if len(upstreamName) == 0 {
-			logger.Warn("upstream is empty",
-				slog.String("path", string(c.Request.Path())),
-			)
-			c.Abort()
+			if s.options.Type == config.ServiceTypeAI {
+				_ = c.Error(&ai.AIError{
+					Type:       "invalid_request_error",
+					Message:    "The model is missing or empty in the request",
+					StatusCode: http.StatusNotFound,
+					Code:       "model_not_found",
+				})
+			} else {
+				logger.Warn("upstream is empty",
+					slog.String("path", string(c.Request.Path())),
+				)
+				c.Abort()
+			}
 			return
+		}
+
+		if s.options.Type == config.ServiceTypeAI {
+			upstreamName = "ai:" + upstreamName
 		}
 
 		var found bool
 		targetUpstream, found = s.upstreams[upstreamName]
 		if !found {
-			logger.Warn("upstream is not found",
-				slog.String("name", upstreamName),
-			)
-			c.Abort()
+			if s.options.Type == config.ServiceTypeAI {
+				virtualModel := strings.TrimPrefix(upstreamName, "ai:")
+				_ = c.Error(&ai.AIError{
+					Type:       "invalid_request_error",
+					Message:    fmt.Sprintf("The model `%s` does not exist", virtualModel),
+					StatusCode: http.StatusNotFound,
+					Code:       "model_not_found",
+				})
+			} else {
+				logger.Warn("upstream is not found",
+					slog.String("name", upstreamName),
+				)
+				c.Abort()
+			}
 			return
 		}
 		targetUpstream.watch()

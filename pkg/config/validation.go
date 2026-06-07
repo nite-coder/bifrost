@@ -445,12 +445,13 @@ func validateServices(mainOptions Options, mode ValidationMode) error {
 		hostname := addr.Hostname()
 
 		// validate
-		if len(hostname) == 0 {
-			return fmt.Errorf("invalid host in service URL for service ID: %s", serviceID)
+		if len(hostname) == 0 && service.Type != "ai" {
+			return fmt.Errorf("URL can't empty for service ID: %s", serviceID)
 		}
 
 		// exist upstream
-		if hostname[0] != '$' && !strings.EqualFold("localhost", hostname) && !strings.EqualFold("[::1]", hostname) {
+		if len(hostname) > 0 && hostname[0] != '$' && !strings.EqualFold("localhost", hostname) &&
+			!strings.EqualFold("[::1]", hostname) {
 			_, found := mainOptions.Upstreams[hostname]
 			if !found {
 				if dnsResolver != nil && !mainOptions.SkipResolver {

@@ -70,7 +70,8 @@ var (
 		HTTPRequestDuration:         {},
 		GRPCStatusCode:              {},
 		GRPCMessage:                 {},
-		AIModelName:                 {},
+		ModelName:                   {},
+		ModelID:                     {},
 	}
 )
 
@@ -561,9 +562,12 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case GRPCMessage:
 		grpcMessage := c.GetString(GRPCMessage)
 		return grpcMessage, true
-	case AIModelName:
-		modelName := c.GetString(AIModelName)
+	case ModelName:
+		modelName := c.GetString(ModelName)
 		return modelName, true
+	case ModelID:
+		modelID := c.GetString(ModelID)
+		return modelID, true
 	default:
 
 		if strings.HasPrefix(key, "$http.request.header.") {

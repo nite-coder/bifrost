@@ -371,11 +371,21 @@ const (
 	ProtocolGRPC Protocol = "grpc"
 )
 
+// ServiceType represents the type of a service.
+type ServiceType string
+
+const (
+	// ServiceTypeProxy represents a standard reverse proxy service.
+	ServiceTypeProxy ServiceType = "proxy"
+	// ServiceTypeAI represents an AI gateway service.
+	ServiceTypeAI ServiceType = "ai"
+)
+
 // ServiceOptions defines configuration for a service.
 type ServiceOptions struct {
 	MaxConnsPerHost *int                  `json:"max_conns_per_host" yaml:"max_conns_per_host"`
 	ID              string                `json:"-"                  yaml:"-"`
-	Type            string                `json:"type"               yaml:"type"`
+	Type            ServiceType           `json:"type"               yaml:"type"`
 	Protocol        Protocol              `json:"protocol"           yaml:"protocol"`
 	URL             string                `json:"url"                yaml:"url"`
 	Middlewares     []MiddlwareOptions    `json:"middlewares"        yaml:"middlewares"`

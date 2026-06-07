@@ -70,7 +70,7 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 		c.Set(ai.ContextKeyChatRequest, chatReq)
 		c.Set(ai.ContextKeyVirtualModelName, chatReq.Model)
-		c.Set(variable.AIModelName, "ai:"+chatReq.Model)
+		c.Set(variable.ModelName, chatReq.Model)
 		c.Set(ai.ContextKeyAIFamily, ai.FamilyChat)
 	case ai.FamilyResponses:
 		respReq, err := adapter.ToResponsesRequest(c.Request.Body())
@@ -80,7 +80,7 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 		c.Set(ai.ContextKeyResponsesRequest, respReq)
 		c.Set(ai.ContextKeyVirtualModelName, respReq.Model)
-		c.Set(variable.AIModelName, "ai:"+respReq.Model)
+		c.Set(variable.ModelName, respReq.Model)
 		c.Set(ai.ContextKeyAIFamily, ai.FamilyResponses)
 	default:
 	}
@@ -93,6 +93,9 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		for i := len(c.Errors) - 1; i >= 0; i-- {
 			errObj := c.Errors[i].Err
 			if errors.As(errObj, &aiErr) {
+				c.Set(variable.ErrorType, aiErr.Type)
+				c.Set(variable.ErrorMessage, aiErr.Message)
+
 				formattedErr, translateErr := adapter.ToClientError(aiErr)
 				if translateErr == nil {
 					c.JSON(aiErr.StatusCode, formattedErr)
@@ -128,6 +131,8 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 					Message:    "Internal server error",
 					StatusCode: http.StatusBadGateway,
 				}
+				c.Set(variable.ErrorType, genericErr.Type)
+				c.Set(variable.ErrorMessage, errObj.Error())
 				formattedErr, _ := adapter.ToClientError(genericErr)
 				c.JSON(http.StatusBadGateway, formattedErr)
 				c.Abort()
@@ -146,6 +151,8 @@ func abortWithAIError(c *app.RequestContext, adapter ai.ClientAdapter, err error
 			StatusCode: http.StatusBadRequest,
 		}
 	}
+	c.Set(variable.ErrorType, aiErr.Type)
+	c.Set(variable.ErrorMessage, aiErr.Message)
 	formattedErr, _ := adapter.ToClientError(aiErr)
 	c.JSON(aiErr.StatusCode, formattedErr)
 	c.Abort()

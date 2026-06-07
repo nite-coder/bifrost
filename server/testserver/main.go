@@ -275,10 +275,71 @@ func GenerateRandomBytes(size int) ([]byte, error) {
 func mockOpenAIChatHandler(ctx context.Context, c *app.RequestContext) {
 	// Simple struct to check if streaming is requested
 	var req struct {
-		Stream bool `json:"stream"`
+		Stream bool            `json:"stream"`
+		Tools  []map[string]any `json:"tools"`
 	}
 	if err := c.BindAndValidate(&req); err != nil {
 		c.JSON(http.StatusBadRequest, map[string]any{"error": map[string]any{"message": "Invalid request body"}})
+		return
+	}
+
+	if len(req.Tools) > 0 {
+		if req.Stream {
+			c.Response.Header.Set("Content-Type", "text/event-stream")
+			c.Response.Header.Set("Cache-Control", "no-cache")
+			c.Response.Header.Set("Connection", "keep-alive")
+			c.Response.HijackWriter(resp.NewChunkedBodyWriter(&c.Response, c.GetWriter()))
+			c.Flush()
+
+			chunks := []string{
+				`{"id":"chatcmpl-456","object":"chat.completion.chunk","created":1694268190,"model":"gpt-4o","choices":[{"index":0,"delta":{"role":"assistant","reasoning_content":"I need to find out the weather for the user. I should use the get_weather function to retrieve this information."},"finish_reason":null}]}`,
+				`{"id":"chatcmpl-456","object":"chat.completion.chunk","created":1694268190,"model":"gpt-4o","choices":[{"index":0,"delta":{"content":"I have access to weather data, let me fetch it for you right away."},"finish_reason":null}]}`,
+				`{"id":"chatcmpl-456","object":"chat.completion.chunk","created":1694268190,"model":"gpt-4o","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":""}}]},"finish_reason":null}]}`,
+				`{"id":"chatcmpl-456","object":"chat.completion.chunk","created":1694268190,"model":"gpt-4o","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"location\":\"San Francisco, CA\"}"}}]},"finish_reason":null}]}`,
+				`{"id":"chatcmpl-456","object":"chat.completion.chunk","created":1694268190,"model":"gpt-4o","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":50,"completion_tokens":15,"total_tokens":65}}`,
+			}
+
+			for _, chunk := range chunks {
+				c.Write([]byte("data: " + chunk + "\n\n"))
+				c.Flush()
+			}
+			c.Write([]byte("data: [DONE]\n\n"))
+			c.Flush()
+			return
+		}
+
+		c.JSON(http.StatusOK, map[string]any{
+			"id":      "chatcmpl-456",
+			"object":  "chat.completion",
+			"created": 1694268190,
+			"model":   "gpt-4o",
+			"choices": []map[string]any{
+				{
+					"index": 0,
+					"message": map[string]any{
+						"role":             "assistant",
+						"reasoning_content": "I need to find out the weather for the user. I should use the get_weather function to retrieve this information.",
+						"content":          "I have access to weather data, let me fetch it for you right away.",
+						"tool_calls": []map[string]any{
+							{
+								"id":   "call_abc123",
+								"type": "function",
+								"function": map[string]any{
+									"name":      "get_weather",
+									"arguments": `{"location":"San Francisco, CA"}`,
+								},
+							},
+						},
+					},
+					"finish_reason": "tool_calls",
+				},
+			},
+			"usage": map[string]any{
+				"prompt_tokens":     50,
+				"completion_tokens": 15,
+				"total_tokens":      65,
+			},
+		})
 		return
 	}
 
@@ -298,14 +359,12 @@ func mockOpenAIChatHandler(ctx context.Context, c *app.RequestContext) {
 		for _, chunk := range chunks {
 			c.Write([]byte("data: " + chunk + "\n\n"))
 			c.Flush()
-			time.Sleep(100 * time.Millisecond) // Simulate model generation delay
 		}
 		c.Write([]byte("data: [DONE]\n\n"))
 		c.Flush()
 		return
 	}
 
-	// Unary response
 	c.JSON(http.StatusOK, map[string]any{
 		"id":      "chatcmpl-123",
 		"object":  "chat.completion",

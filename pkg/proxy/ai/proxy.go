@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -38,6 +39,7 @@ type Proxy struct {
 	httpClient     *client.Client
 	adapter        ai.LLMAdapter
 	metricsEnabled bool
+	upstreamHost   string
 	initOnce       sync.Once
 	initErr        error
 }
@@ -46,13 +48,24 @@ var _ proxy.Proxy = (*Proxy)(nil)
 
 // NewProxy creates a new AIProxy instance.
 func NewProxy(id string, target string, weight uint32, options *config.AIOptions, metricsEnabled bool) *Proxy {
-	return &Proxy{
+	p := &Proxy{
 		id:             id,
 		target:         target,
 		weight:         weight,
 		options:        options,
 		metricsEnabled: metricsEnabled,
 	}
+
+	parts := strings.SplitN(target, "/", TargetPartsCount)
+	if len(parts) == TargetPartsCount && options != nil && options.Providers != nil {
+		if prov, ok := options.Providers[parts[0]]; ok && prov.BaseURL != "" {
+			if addr, err := url.Parse(prov.BaseURL); err == nil {
+				p.upstreamHost = addr.Host
+			}
+		}
+	}
+
+	return p
 }
 
 // ID returns the unique identifier for the proxy.
@@ -124,6 +137,12 @@ func (p *Proxy) ServeHTTP(ctx context.Context, hzCtx *app.RequestContext) {
 	}
 	providerID := parts[0]
 	targetModel := parts[1]
+
+	if p.upstreamHost != "" {
+		hzCtx.Set(variable.UpstreamRequestHost, p.upstreamHost)
+	}
+
+	hzCtx.Set(variable.ModelID, p.target)
 
 	adapter, err := p.LLMAdapter()
 	if err != nil {
@@ -354,6 +373,7 @@ func (p *Proxy) handleChatStream(
 	finalStream := clientAdapter.WrapEgressStream(observedStream)
 	defer finalStream.Close()
 
+	hzCtx.SetStatusCode(http.StatusOK)
 	hzCtx.Response.Header.SetContentType("text/event-stream")
 	hzCtx.Response.Header.Set("Cache-Control", "no-cache")
 	hzCtx.Response.Header.Set("Connection", "keep-alive")
