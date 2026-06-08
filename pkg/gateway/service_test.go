@@ -390,7 +390,7 @@ func TestLoadModels(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify type: ai handles dynamic upstream correctly
-	assert.Equal(t, variable.ModelName, service.dynamicUpstream)
+	assert.Equal(t, variable.Model, service.dynamicUpstream)
 
 	// Verify that the virtual upstream was created with "ai:" prefix
 	upstream, exists := service.upstreams["ai:gpt-4"]

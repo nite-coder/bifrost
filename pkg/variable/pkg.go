@@ -70,7 +70,7 @@ var (
 		HTTPRequestDuration:         {},
 		GRPCStatusCode:              {},
 		GRPCMessage:                 {},
-		ModelName:                   {},
+		Model:                       {},
 		ModelID:                     {},
 	}
 )
@@ -562,8 +562,8 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case GRPCMessage:
 		grpcMessage := c.GetString(GRPCMessage)
 		return grpcMessage, true
-	case ModelName:
-		modelName := c.GetString(ModelName)
+	case Model:
+		modelName := c.GetString(Model)
 		return modelName, true
 	case ModelID:
 		modelID := c.GetString(ModelID)

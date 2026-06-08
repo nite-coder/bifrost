@@ -53,8 +53,8 @@ func (a *OpenAIChatClientAdapter) ToClientResponsesResponse(resp *ResponsesRespo
 	return resp, nil
 }
 
-// WrapEgressStream returns the stream unchanged, as the canonical SSE stream matches OpenAI's format.
-func (a *OpenAIChatClientAdapter) WrapEgressStream(stream io.ReadCloser) io.ReadCloser {
+// StreamConverter returns the stream unchanged, since the canonical SSE stream already uses OpenAI's format.
+func (a *OpenAIChatClientAdapter) StreamConverter(stream io.ReadCloser) io.ReadCloser {
 	return stream
 }
 

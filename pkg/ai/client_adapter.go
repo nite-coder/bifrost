@@ -29,9 +29,11 @@ type ClientAdapter interface {
 
 	// --- Egress Streaming (Canonical SSE -> Client SSE) ---
 
-	// WrapEgressStream wraps a canonical SSE stream with a protocol-specific translator
-	// to re-encode chunks into the format expected by the client SDK.
-	WrapEgressStream(stream io.ReadCloser) io.ReadCloser
+	// StreamConverter wraps a canonical OpenAI-format SSE stream with a protocol-specific
+	// translator to re-encode chunks into the format expected by the client SDK.
+	// The input stream must contain valid OpenAI chat.completion.chunk SSE lines.
+	// The returned stream emits client-format SSE lines and must be closed by the caller.
+	StreamConverter(stream io.ReadCloser) io.ReadCloser
 
 	// ToClientError translates a canonical AIError into the client's expected format.
 	ToClientError(err *AIError) (any, error)

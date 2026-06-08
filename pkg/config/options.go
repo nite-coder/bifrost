@@ -194,10 +194,11 @@ type LoggingOptions struct {
 
 // PrometheusOptions defines configuration for Prometheus metrics.
 type PrometheusOptions struct {
-	ServerID string    `json:"server_id" yaml:"server_id"`
-	Path     string    `json:"path"      yaml:"path"`
-	Buckets  []float64 `json:"buckets"   yaml:"buckets"`
-	Enabled  bool      `json:"enabled"   yaml:"enabled"`
+	ServerID       string    `json:"server_id"       yaml:"server_id"`
+	Path           string    `json:"path"            yaml:"path"`
+	LatencyBuckets []float64 `json:"latency_buckets" yaml:"latency_buckets"`
+	AITPSBuckets   []float64 `json:"ai_tps_buckets"  yaml:"ai_tps_buckets"`
+	Enabled        bool      `json:"enabled"         yaml:"enabled"`
 }
 
 // ServerTracingOptions defines tracing configuration for a server.

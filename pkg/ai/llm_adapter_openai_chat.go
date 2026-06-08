@@ -117,7 +117,10 @@ func (a *OpenAIChatAdapter) StreamChat(ctx context.Context, chatReq *ChatRequest
 	req.Header.SetMethod(http.MethodPost)
 	req.SetRequestURI(a.baseURL + "/chat/completions")
 	req.Header.SetContentTypeBytes([]byte("application/json"))
-	req.Header.Set("Authorization", "Bearer "+a.apiKey)
+
+	if len(a.apiKey) > 0 {
+		req.Header.Set("Authorization", "Bearer "+a.apiKey)
+	}
 
 	body, err := sonic.Marshal(chatReq)
 	if err != nil {

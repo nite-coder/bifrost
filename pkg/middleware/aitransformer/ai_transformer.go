@@ -70,7 +70,7 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 		c.Set(ai.ContextKeyChatRequest, chatReq)
 		c.Set(ai.ContextKeyVirtualModelName, chatReq.Model)
-		c.Set(variable.ModelName, chatReq.Model)
+		c.Set(variable.Model, chatReq.Model)
 		c.Set(ai.ContextKeyAIFamily, ai.FamilyChat)
 	case ai.FamilyResponses:
 		respReq, err := adapter.ToResponsesRequest(c.Request.Body())
@@ -80,7 +80,7 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 		c.Set(ai.ContextKeyResponsesRequest, respReq)
 		c.Set(ai.ContextKeyVirtualModelName, respReq.Model)
-		c.Set(variable.ModelName, respReq.Model)
+		c.Set(variable.Model, respReq.Model)
 		c.Set(ai.ContextKeyAIFamily, ai.FamilyResponses)
 	default:
 	}

@@ -3,64 +3,105 @@ package metrics
 import prom "github.com/prometheus/client_golang/prometheus"
 
 var (
-	// RequestTTFB represents the AI model thinking speed (TTFB) in seconds.
-	RequestTTFB *prom.HistogramVec
-	// RequestDuration represents the total AI request duration in seconds.
-	RequestDuration *prom.HistogramVec
-	// GenerationTPS represents the AI generation tokens per second rate.
-	GenerationTPS *prom.HistogramVec
-	// PromptTokens represents the total prompt tokens consumed.
-	PromptTokens *prom.CounterVec
-	// CompletionTokens represents the total completion tokens consumed.
-	CompletionTokens *prom.CounterVec
+	// AIRequestTTFB represents the AI model thinking speed (TTFB) in seconds.
+	AIRequestTTFB *prom.HistogramVec
+	// AIRequestDuration represents the total AI request duration in seconds.
+	AIRequestDuration *prom.HistogramVec
+	// AIGenerationTPS represents the AI generation tokens per second rate.
+	AIGenerationTPS *prom.HistogramVec
+	// AIInputTokens represents the total prompt tokens consumed.
+	AIInputTokens *prom.CounterVec
+	// AIInputCachedTokens represents the total cached prompt tokens consumed.
+	AIInputCachedTokens *prom.CounterVec
+	// AIOutputTokens represents the total completion tokens consumed.
+	AIOutputTokens *prom.CounterVec
+	// AIOutputReasoningTokens represents the total reasoning tokens consumed.
+	AIOutputReasoningTokens *prom.CounterVec
+	// AITotalTokens represents the total tokens consumed (input + output).
+	AITotalTokens *prom.CounterVec
 )
 
-func init() {
-	RequestTTFB = prom.NewHistogramVec(
+// InitAI initializes AI-related Prometheus metrics with custom or default buckets.
+func InitAI(latencyBuckets, tpsBuckets []float64) {
+	if len(latencyBuckets) == 0 {
+		latencyBuckets = prom.DefBuckets
+	}
+	if len(tpsBuckets) == 0 {
+		tpsBuckets = defaultAITPSBuckets
+	}
+
+	AIRequestTTFB = prom.NewHistogramVec(
 		prom.HistogramOpts{
 			Name:    "bifrost_ai_request_ttfb_seconds",
 			Help:    "AI model thinking speed (TTFB) in seconds",
-			Buckets: prom.DefBuckets,
+			Buckets: latencyBuckets,
 		},
-		[]string{"model", "provider"},
+		[]string{"model", "model_id"},
 	)
-	prom.MustRegister(RequestTTFB)
+	prom.MustRegister(AIRequestTTFB)
 
-	RequestDuration = prom.NewHistogramVec(
+	AIRequestDuration = prom.NewHistogramVec(
 		prom.HistogramOpts{
 			Name:    "bifrost_ai_request_duration_seconds",
 			Help:    "Total AI request duration in seconds",
-			Buckets: prom.DefBuckets,
+			Buckets: latencyBuckets,
 		},
-		[]string{"model", "provider"},
+		[]string{"model", "model_id"},
 	)
-	prom.MustRegister(RequestDuration)
+	prom.MustRegister(AIRequestDuration)
 
-	GenerationTPS = prom.NewHistogramVec(
+	AIGenerationTPS = prom.NewHistogramVec(
 		prom.HistogramOpts{
 			Name:    "bifrost_ai_generation_tps",
 			Help:    "AI generation tokens per second rate",
-			Buckets: prom.DefBuckets,
+			Buckets: tpsBuckets,
 		},
-		[]string{"model", "provider"},
+		[]string{"model", "model_id"},
 	)
-	prom.MustRegister(GenerationTPS)
+	prom.MustRegister(AIGenerationTPS)
 
-	PromptTokens = prom.NewCounterVec(
+	AIInputTokens = prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "bifrost_ai_prompt_tokens_total",
+			Name: "bifrost_ai_input_tokens_total",
 			Help: "Total prompt tokens consumed",
 		},
-		[]string{"model", "provider"},
+		[]string{"model", "model_id"},
 	)
-	prom.MustRegister(PromptTokens)
+	prom.MustRegister(AIInputTokens)
 
-	CompletionTokens = prom.NewCounterVec(
+	AIInputCachedTokens = prom.NewCounterVec(
 		prom.CounterOpts{
-			Name: "bifrost_ai_completion_tokens_total",
+			Name: "bifrost_ai_input_cached_tokens_total",
+			Help: "Total cached prompt tokens consumed",
+		},
+		[]string{"model", "model_id"},
+	)
+	prom.MustRegister(AIInputCachedTokens)
+
+	AIOutputTokens = prom.NewCounterVec(
+		prom.CounterOpts{
+			Name: "bifrost_ai_output_tokens_total",
 			Help: "Total completion tokens consumed",
 		},
-		[]string{"model", "provider"},
+		[]string{"model", "model_id"},
 	)
-	prom.MustRegister(CompletionTokens)
+	prom.MustRegister(AIOutputTokens)
+
+	AIOutputReasoningTokens = prom.NewCounterVec(
+		prom.CounterOpts{
+			Name: "bifrost_ai_output_reasoning_tokens_total",
+			Help: "Total reasoning tokens consumed",
+		},
+		[]string{"model", "model_id"},
+	)
+	prom.MustRegister(AIOutputReasoningTokens)
+
+	AITotalTokens = prom.NewCounterVec(
+		prom.CounterOpts{
+			Name: "bifrost_ai_total_tokens_total",
+			Help: "Total tokens consumed (input + output)",
+		},
+		[]string{"model", "model_id"},
+	)
+	prom.MustRegister(AITotalTokens)
 }

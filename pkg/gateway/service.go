@@ -137,7 +137,7 @@ func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Servic
 	}
 
 	if serviceOptions.Type == config.ServiceTypeAI {
-		svc.dynamicUpstream = variable.ModelName
+		svc.dynamicUpstream = variable.Model
 	} else {
 		if err := svc.resolveUpstreamStrategy(); err != nil {
 			return nil, err

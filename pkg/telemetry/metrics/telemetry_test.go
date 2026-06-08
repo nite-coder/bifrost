@@ -88,11 +88,14 @@ func TestTracer(t *testing.T) {
 	// Record at least one value to make the lazy Prometheus vectors non-empty so they appear in scrape output
 	HTTPServerOpenConnections.WithLabelValues("apiv1").Set(1)
 	HTTPServiceOpenConnections.WithLabelValues("service1", "127.0.0.1:80").Set(1)
-	RequestTTFB.WithLabelValues("gpt-4o", "openai").Observe(0.1)
-	RequestDuration.WithLabelValues("gpt-4o", "openai").Observe(0.5)
-	GenerationTPS.WithLabelValues("gpt-4o", "openai").Observe(50.0)
-	PromptTokens.WithLabelValues("gpt-4o", "openai").Inc()
-	CompletionTokens.WithLabelValues("gpt-4o", "openai").Inc()
+	AIRequestTTFB.WithLabelValues("gpt-4o", "openai/gpt-4o").Observe(0.1)
+	AIRequestDuration.WithLabelValues("gpt-4o", "openai/gpt-4o").Observe(0.5)
+	AIGenerationTPS.WithLabelValues("gpt-4o", "openai/gpt-4o").Observe(50.0)
+	AIInputTokens.WithLabelValues("gpt-4o", "openai/gpt-4o").Inc()
+	AIInputCachedTokens.WithLabelValues("gpt-4o", "openai/gpt-4o").Inc()
+	AIOutputTokens.WithLabelValues("gpt-4o", "openai/gpt-4o").Inc()
+	AIOutputReasoningTokens.WithLabelValues("gpt-4o", "openai/gpt-4o").Inc()
+	AITotalTokens.WithLabelValues("gpt-4o", "openai/gpt-4o").Inc()
 
 	metricsRes, e := http.Get("http://127.0.0.1:6666/metrics")
 
@@ -142,8 +145,11 @@ func TestTracer(t *testing.T) {
 	assert.Contains(t, metricsResStr, `bifrost_ai_request_ttfb_seconds`)
 	assert.Contains(t, metricsResStr, `bifrost_ai_request_duration_seconds`)
 	assert.Contains(t, metricsResStr, `bifrost_ai_generation_tps`)
-	assert.Contains(t, metricsResStr, `bifrost_ai_prompt_tokens_total`)
-	assert.Contains(t, metricsResStr, `bifrost_ai_completion_tokens_total`)
+	assert.Contains(t, metricsResStr, `bifrost_ai_input_tokens_total`)
+	assert.Contains(t, metricsResStr, `bifrost_ai_input_cached_tokens_total`)
+	assert.Contains(t, metricsResStr, `bifrost_ai_output_tokens_total`)
+	assert.Contains(t, metricsResStr, `bifrost_ai_output_reasoning_tokens_total`)
+	assert.Contains(t, metricsResStr, `bifrost_ai_total_tokens_total`)
 	assert.Contains(t, metricsResStr, `http_server_open_connections`)
 	assert.Contains(t, metricsResStr, `http_service_open_connections`)
 }

@@ -15,11 +15,13 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
+	hertzresp "github.com/cloudwego/hertz/pkg/protocol/http1/resp"
 
 	"github.com/nite-coder/bifrost/pkg/ai"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
+	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
@@ -135,7 +137,6 @@ func (p *Proxy) ServeHTTP(ctx context.Context, hzCtx *app.RequestContext) {
 		})
 		return
 	}
-	providerID := parts[0]
 	targetModel := parts[1]
 
 	if p.upstreamHost != "" {
@@ -173,9 +174,9 @@ func (p *Proxy) ServeHTTP(ctx context.Context, hzCtx *app.RequestContext) {
 				chatReq.StreamOptions = &ai.StreamOptions{}
 			}
 			chatReq.StreamOptions.IncludeUsage = true
-			p.handleChatStream(ctx, hzCtx, chatReq, adapter, clientAdapter, virtualModel, providerID)
+			p.handleChatStream(ctx, hzCtx, chatReq, adapter, clientAdapter, virtualModel, p.target)
 		} else {
-			p.handleChatUnary(ctx, hzCtx, chatReq, adapter, clientAdapter, virtualModel, providerID)
+			p.handleChatUnary(ctx, hzCtx, chatReq, adapter, clientAdapter, virtualModel, p.target)
 		}
 	case ai.FamilyResponses:
 		reqVal, ok := hzCtx.Get(ai.ContextKeyResponsesRequest)
@@ -190,7 +191,7 @@ func (p *Proxy) ServeHTTP(ctx context.Context, hzCtx *app.RequestContext) {
 		}
 		respReq.Model = targetModel
 
-		p.handleResponses(ctx, hzCtx, respReq, adapter, clientAdapter, virtualModel, providerID)
+		p.handleResponses(ctx, hzCtx, respReq, adapter, clientAdapter, virtualModel, p.target)
 	default:
 		hzCtx.SetStatusCode(http.StatusInternalServerError)
 		return
@@ -264,9 +265,9 @@ func (p *Proxy) handleChatUnary(
 	adapter ai.LLMAdapter,
 	clientAdapter ai.ClientAdapter,
 	virtualModel string,
-	providerID string,
+	modelID string,
 ) {
-	startTime := time.Now()
+	startTime := timecache.Now()
 
 	resp, err := adapter.Chat(ctx, chatReq)
 	if err != nil {
@@ -283,14 +284,23 @@ func (p *Proxy) handleChatUnary(
 		return
 	}
 
-	endTime := time.Now()
+	endTime := timecache.Now()
 	durationSecs := endTime.Sub(startTime).Seconds()
 
 	// Record Prometheus Metrics
 	if p.metricsEnabled {
-		metrics.RequestDuration.WithLabelValues(virtualModel, providerID).Observe(durationSecs)
-		metrics.PromptTokens.WithLabelValues(virtualModel, providerID).Add(float64(resp.Usage.PromptTokens))
-		metrics.CompletionTokens.WithLabelValues(virtualModel, providerID).Add(float64(resp.Usage.CompletionTokens))
+		metrics.AIRequestDuration.WithLabelValues(virtualModel, modelID).Observe(durationSecs)
+		metrics.AIInputTokens.WithLabelValues(virtualModel, modelID).Add(float64(resp.Usage.PromptTokens))
+		if resp.Usage.PromptTokensDetails != nil && resp.Usage.PromptTokensDetails.CachedTokens > 0 {
+			metrics.AIInputCachedTokens.WithLabelValues(virtualModel, modelID).
+				Add(float64(resp.Usage.PromptTokensDetails.CachedTokens))
+		}
+		metrics.AIOutputTokens.WithLabelValues(virtualModel, modelID).Add(float64(resp.Usage.CompletionTokens))
+		if resp.Usage.CompletionTokensDetails != nil && resp.Usage.CompletionTokensDetails.ReasoningTokens > 0 {
+			metrics.AIOutputReasoningTokens.WithLabelValues(virtualModel, modelID).
+				Add(float64(resp.Usage.CompletionTokensDetails.ReasoningTokens))
+		}
+		metrics.AITotalTokens.WithLabelValues(virtualModel, modelID).Add(float64(resp.Usage.TotalTokens))
 	}
 
 	// Mask model name in response
@@ -325,9 +335,9 @@ func (p *Proxy) handleChatStream(
 	adapter ai.LLMAdapter,
 	clientAdapter ai.ClientAdapter,
 	virtualModel string,
-	providerID string,
+	modelID string,
 ) {
-	startTime := time.Now()
+	startTime := timecache.Now()
 
 	stream, err := adapter.StreamChat(ctx, chatReq)
 	if err != nil {
@@ -343,11 +353,10 @@ func (p *Proxy) handleChatStream(
 		}
 		return
 	}
-	defer stream.Close()
 
 	metadata := ai.UsageMetadata{
 		Model:    virtualModel,
-		Provider: providerID,
+		Provider: modelID,
 	}
 
 	var totalCompletionTokens int
@@ -362,15 +371,24 @@ func (p *Proxy) handleChatStream(
 			usageReceived = true
 
 			if p.metricsEnabled {
-				metrics.PromptTokens.WithLabelValues(metadata.Model, metadata.Provider).Add(float64(u.PromptTokens))
-				metrics.CompletionTokens.WithLabelValues(metadata.Model, metadata.Provider).
+				metrics.AIInputTokens.WithLabelValues(metadata.Model, metadata.Provider).Add(float64(u.PromptTokens))
+				if u.PromptTokensDetails != nil && u.PromptTokensDetails.CachedTokens > 0 {
+					metrics.AIInputCachedTokens.WithLabelValues(metadata.Model, metadata.Provider).
+						Add(float64(u.PromptTokensDetails.CachedTokens))
+				}
+				metrics.AIOutputTokens.WithLabelValues(metadata.Model, metadata.Provider).
 					Add(float64(totalCompletionTokens))
+				if u.CompletionTokensDetails != nil && u.CompletionTokensDetails.ReasoningTokens > 0 {
+					metrics.AIOutputReasoningTokens.WithLabelValues(metadata.Model, metadata.Provider).
+						Add(float64(u.CompletionTokensDetails.ReasoningTokens))
+				}
+				metrics.AITotalTokens.WithLabelValues(metadata.Model, metadata.Provider).Add(float64(u.TotalTokens))
 			}
 		},
 	}
 
 	observedStream := ai.NewObservedStream(stream, observer, metadata)
-	finalStream := clientAdapter.WrapEgressStream(observedStream)
+	finalStream := clientAdapter.StreamConverter(observedStream)
 	defer finalStream.Close()
 
 	hzCtx.SetStatusCode(http.StatusOK)
@@ -378,6 +396,11 @@ func (p *Proxy) handleChatStream(
 	hzCtx.Response.Header.Set("Cache-Control", "no-cache")
 	hzCtx.Response.Header.Set("Connection", "keep-alive")
 	hzCtx.Response.Header.Set("X-Accel-Buffering", "no")
+
+	// Use chunked body writer for real-time streaming when available
+	if w := hzCtx.GetWriter(); w != nil {
+		hzCtx.Response.HijackWriter(hertzresp.NewChunkedBodyWriter(&hzCtx.Response, w))
+	}
 	_ = hzCtx.Flush()
 
 	firstByteOnce := sync.Once{}
@@ -388,10 +411,10 @@ func (p *Proxy) handleChatStream(
 		n, err := finalStream.Read(buf)
 		if n > 0 {
 			firstByteOnce.Do(func() {
-				firstByteTime = time.Now()
+				firstByteTime = timecache.Now()
 				ttfb := firstByteTime.Sub(startTime).Seconds()
 				if p.metricsEnabled {
-					metrics.RequestTTFB.WithLabelValues(virtualModel, providerID).Observe(ttfb)
+					metrics.AIRequestTTFB.WithLabelValues(virtualModel, modelID).Observe(ttfb)
 				}
 			})
 
@@ -413,7 +436,7 @@ func (p *Proxy) handleChatStream(
 			if errors.As(err, &aiErr) {
 				formattedErr, _ := clientAdapter.ToClientError(aiErr)
 				if errJSON, errMar := sonic.Marshal(formattedErr); errMar == nil {
-					sseErrBytes = fmt.Appendf(nil, "data: %s\n\n", string(errJSON))
+					sseErrBytes = fmt.Appendf(nil, "data: %s\n\n", errJSON)
 				}
 			} else {
 				// SECURITY: Log full error details internally, return generic error to client
@@ -421,7 +444,7 @@ func (p *Proxy) handleChatStream(
 				slog.ErrorContext(ctx, "stream mid-error intercepted",
 					"route_id", routeID,
 					"virtual_model", virtualModel,
-					"provider", providerID,
+					"model_id", modelID,
 					"error", err.Error(),
 				)
 
@@ -432,7 +455,7 @@ func (p *Proxy) handleChatStream(
 				}
 				formattedErr, _ := clientAdapter.ToClientError(genericErr)
 				if errJSON, errMar := sonic.Marshal(formattedErr); errMar == nil {
-					sseErrBytes = fmt.Appendf(nil, "data: %s\n\n", string(errJSON))
+					sseErrBytes = fmt.Appendf(nil, "data: %s\n\n", errJSON)
 				}
 			}
 			if len(sseErrBytes) == 0 {
@@ -445,10 +468,10 @@ func (p *Proxy) handleChatStream(
 		}
 	}
 
-	endTime := time.Now()
+	endTime := timecache.Now()
 	durationSecs := endTime.Sub(startTime).Seconds()
 	if p.metricsEnabled {
-		metrics.RequestDuration.WithLabelValues(virtualModel, providerID).Observe(durationSecs)
+		metrics.AIRequestDuration.WithLabelValues(virtualModel, modelID).Observe(durationSecs)
 	}
 
 	if usageReceived && totalCompletionTokens > 0 {
@@ -456,7 +479,7 @@ func (p *Proxy) handleChatStream(
 		if generationDuration > 0 {
 			tps := float64(totalCompletionTokens) / generationDuration
 			if p.metricsEnabled {
-				metrics.GenerationTPS.WithLabelValues(virtualModel, providerID).Observe(tps)
+				metrics.AIGenerationTPS.WithLabelValues(virtualModel, modelID).Observe(tps)
 			}
 		}
 	}
@@ -469,9 +492,9 @@ func (p *Proxy) handleResponses(
 	adapter ai.LLMAdapter,
 	clientAdapter ai.ClientAdapter,
 	virtualModel string,
-	providerID string,
+	modelID string,
 ) {
-	startTime := time.Now()
+	startTime := timecache.Now()
 
 	resp, err := adapter.Responses(ctx, req)
 	if err != nil {
@@ -488,14 +511,23 @@ func (p *Proxy) handleResponses(
 		return
 	}
 
-	endTime := time.Now()
+	endTime := timecache.Now()
 	durationSecs := endTime.Sub(startTime).Seconds()
 
 	// Record Prometheus Metrics
 	if p.metricsEnabled {
-		metrics.RequestDuration.WithLabelValues(virtualModel, providerID).Observe(durationSecs)
-		metrics.PromptTokens.WithLabelValues(virtualModel, providerID).Add(float64(resp.Usage.PromptTokens))
-		metrics.CompletionTokens.WithLabelValues(virtualModel, providerID).Add(float64(resp.Usage.CompletionTokens))
+		metrics.AIRequestDuration.WithLabelValues(virtualModel, modelID).Observe(durationSecs)
+		metrics.AIInputTokens.WithLabelValues(virtualModel, modelID).Add(float64(resp.Usage.PromptTokens))
+		if resp.Usage.PromptTokensDetails != nil && resp.Usage.PromptTokensDetails.CachedTokens > 0 {
+			metrics.AIInputCachedTokens.WithLabelValues(virtualModel, modelID).
+				Add(float64(resp.Usage.PromptTokensDetails.CachedTokens))
+		}
+		metrics.AIOutputTokens.WithLabelValues(virtualModel, modelID).Add(float64(resp.Usage.CompletionTokens))
+		if resp.Usage.CompletionTokensDetails != nil && resp.Usage.CompletionTokensDetails.ReasoningTokens > 0 {
+			metrics.AIOutputReasoningTokens.WithLabelValues(virtualModel, modelID).
+				Add(float64(resp.Usage.CompletionTokensDetails.ReasoningTokens))
+		}
+		metrics.AITotalTokens.WithLabelValues(virtualModel, modelID).Add(float64(resp.Usage.TotalTokens))
 	}
 
 	// Mask model name in response

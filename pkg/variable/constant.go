@@ -66,7 +66,7 @@ const (
 	TargetTimeout               = "target_timeout"
 	GRPCStatusCode              = "$grpc.status_code"
 	GRPCMessage                 = "$grpc.message"
-	ModelName                   = "$model_name"
+	Model                       = "$model"
 	ModelID                     = "$model_id"
 	B                           = 1
 	KB                          = 1024 * B

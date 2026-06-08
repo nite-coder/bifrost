@@ -49,7 +49,7 @@ func (m *MockClientAdapter) ToClientResponsesResponse(_ *ai.ResponsesResponse) (
 	return map[string]any{}, nil
 }
 
-func (m *MockClientAdapter) WrapEgressStream(stream io.ReadCloser) io.ReadCloser {
+func (m *MockClientAdapter) StreamConverter(stream io.ReadCloser) io.ReadCloser {
 	return stream
 }
 
@@ -100,7 +100,7 @@ func TestAITransformer_Ingress(t *testing.T) {
 	require.True(t, exists)
 	assert.Equal(t, "gpt-4o", virtualModelVal)
 
-	modelNameVar := hzCtx.GetString(variable.ModelName)
+	modelNameVar := hzCtx.GetString(variable.Model)
 	assert.Equal(t, "gpt-4o", modelNameVar)
 }
 

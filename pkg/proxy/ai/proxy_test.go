@@ -65,7 +65,7 @@ func (m *MockLLMAdapter) StreamResponses(_ context.Context, _ *ai.ResponsesReque
 type MockClientAdapter struct {
 	toChatRequestFunc             func(body []byte) (*ai.ChatRequest, error)
 	toClientChatResponseFunc      func(resp *ai.ChatResponse) (any, error)
-	wrapEgressStreamFunc          func(stream io.ReadCloser) io.ReadCloser
+	streamConverterFunc           func(stream io.ReadCloser) io.ReadCloser
 	toClientErrorFunc             func(err *ai.AIError) (any, error)
 	toClientResponsesResponseFunc func(resp *ai.ResponsesResponse) (any, error)
 }
@@ -96,9 +96,9 @@ func (m *MockClientAdapter) ToClientResponsesResponse(resp *ai.ResponsesResponse
 	return map[string]any{}, nil
 }
 
-func (m *MockClientAdapter) WrapEgressStream(stream io.ReadCloser) io.ReadCloser {
-	if m.wrapEgressStreamFunc != nil {
-		return m.wrapEgressStreamFunc(stream)
+func (m *MockClientAdapter) StreamConverter(stream io.ReadCloser) io.ReadCloser {
+	if m.streamConverterFunc != nil {
+		return m.streamConverterFunc(stream)
 	}
 	return stream
 }
@@ -116,6 +116,7 @@ func setupMockAdapter(t *testing.T) {
 		ai.RegisterLLMAdapter("mock", func(_ ai.LLMAdapterOptions) (ai.LLMAdapter, error) {
 			return mockLL, nil
 		})
+		metrics.InitAI(nil, nil)
 	})
 	mockLL = &MockLLMAdapter{}
 }
@@ -165,8 +166,8 @@ func TestAIProxy_ServeHTTP_UnarySuccess(t *testing.T) {
 	hzCtx.Set(ai.ContextKeyChatRequest, &ai.ChatRequest{Model: "gpt-4o"})
 
 	// Reset metrics before recording
-	metrics.PromptTokens.Reset()
-	metrics.CompletionTokens.Reset()
+	metrics.AIInputTokens.Reset()
+	metrics.AIOutputTokens.Reset()
 
 	proxy.ServeHTTP(context.Background(), hzCtx)
 
@@ -176,8 +177,8 @@ func TestAIProxy_ServeHTTP_UnarySuccess(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, body, "choices")
 
-	assert.InDelta(t, float64(10), getCounterValue(metrics.PromptTokens, "gpt-4o", "p1"), 0.0001)
-	assert.InDelta(t, float64(20), getCounterValue(metrics.CompletionTokens, "gpt-4o", "p1"), 0.0001)
+	assert.InDelta(t, float64(10), getCounterValue(metrics.AIInputTokens, "gpt-4o", "p1/gpt-4"), 0.0001)
+	assert.InDelta(t, float64(20), getCounterValue(metrics.AIOutputTokens, "gpt-4o", "p1/gpt-4"), 0.0001)
 }
 
 func TestAIProxy_ServeHTTP_UnaryError(t *testing.T) {
@@ -245,7 +246,7 @@ func TestAIProxy_ServeHTTP_StreamSuccess(t *testing.T) {
 	}
 
 	clientAdapter := &MockClientAdapter{
-		wrapEgressStreamFunc: func(stream io.ReadCloser) io.ReadCloser {
+		streamConverterFunc: func(stream io.ReadCloser) io.ReadCloser {
 			// Simply returns stream unchanged for testing
 			return stream
 		},
@@ -311,7 +312,7 @@ func TestAIProxy_ServeHTTP_StreamMidError(t *testing.T) {
 		toClientErrorFunc: func(err *ai.AIError) (any, error) {
 			return map[string]any{"error": map[string]any{"message": err.Message}}, nil
 		},
-		wrapEgressStreamFunc: func(stream io.ReadCloser) io.ReadCloser {
+		streamConverterFunc: func(stream io.ReadCloser) io.ReadCloser {
 			return stream
 		},
 	}

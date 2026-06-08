@@ -123,7 +123,8 @@ metrics:
     enabled: true
     server_id: "apiv1"
     path: "/metrics"
-    buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+    latency_buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+    ai_tps_buckets: [1, 10, 20, 30, 40, 50, 60, 80, 100, 150, 200]
   
   # Push mode - OTLP exporter
   otlp:
@@ -137,12 +138,13 @@ metrics:
 
 ### Prometheus (Pull Mode)
 
-| Field                | Type        | Default                                                                       | Description                    |
-| -------------------- | ----------- | ----------------------------------------------------------------------------- | ------------------------------ |
-| prometheus.enabled   | `bool`      | `false`                                                                       | Enables prometheus support     |
-| prometheus.server_id | `string`    |                                                                               | Server  used to expose metrics |
-| prometheus.path      | `string`    | `/metrics`                                                                    | set the metric                 |
-| prometheus.buckets   | `[]float64` | `0.005`, `0.01`, `0.025`, `0.05`, `0.1`, `0.25`, `0.5`, `1`, `2.5`, `5`, `10` | Latency bucket levels          |
+| Field                      | Type        | Default                                                                       | Description                                        |
+| -------------------------- | ----------- | ----------------------------------------------------------------------------- | -------------------------------------------------- |
+| prometheus.enabled         | `bool`      | `false`                                                                       | Enables prometheus support                         |
+| prometheus.server_id       | `string`    |                                                                               | Server  used to expose metrics                     |
+| prometheus.path            | `string`    | `/metrics`                                                                    | set the metric path                                |
+| prometheus.latency_buckets | `[]float64` | `0.005`, `0.01`, `0.025`, `0.05`, `0.1`, `0.25`, `0.5`, `1`, `2.5`, `5`, `10` | Latency bucket levels for time-based metrics (sec) |
+| prometheus.ai_tps_buckets  | `[]float64` | `1`, `10`, `20`, `30`, `40`, `50`, `60`, `80`, `100`, `150`, `200`            | Bucket levels for AI TPS metrics (tokens/sec)      |
 
 ### OTLP (Push Mode)
 
