@@ -228,7 +228,7 @@ func (p *Proxy) LLMAdapter() (ai.LLMAdapter, error) {
 			return
 		}
 
-		provOpts, exists := p.options.Providers[providerID]
+		providerOptions, exists := p.options.Providers[providerID]
 		if !exists {
 			p.initErr = fmt.Errorf("ai: provider '%s' not found", providerID)
 			return
@@ -245,10 +245,10 @@ func (p *Proxy) LLMAdapter() (ai.LLMAdapter, error) {
 
 		opts := ai.LLMAdapterOptions{
 			HTTPClient: p.httpClient,
-			APIKey:     provOpts.APIKey,
-			BaseURL:    provOpts.BaseURL,
+			APIKey:     variable.GetString(providerOptions.APIKey, nil),
+			BaseURL:    providerOptions.BaseURL,
 		}
-		adapter, err := ai.GetAdapter(provOpts.Handler, opts)
+		adapter, err := ai.GetAdapter(providerOptions.Handler, opts)
 		if err != nil {
 			p.initErr = err
 			return

@@ -22,6 +22,7 @@ This configuration file is divided into two primary types: `static configuration
 * [routes](#routes)
 * [services](#services)
 * [upstreams](#upstreams)
+* [models](#models)
 * [default](#default)
 
 ## watch
@@ -395,6 +396,41 @@ upstreams:
 | targets.target                    | `string`            |               | Target address                                                                           |
 | targets.weight                    | `int32`             | `1`           | Weight for load balancing                                                                |
 | targets.tags                      | `map[string]string` |               | target's tags                                                                            |
+
+## models
+
+The `models` section is specifically designed for AI Gateway mode. It maps a virtual model requested by the client (e.g., `gpt-4o`) to one or more physical target models (e.g., `openai/gpt-4o` or `azure/gpt-4o-deployment`). 
+
+When multiple targets are defined, Bifrost uses the specified `balancer` to distribute requests among them.
+
+Example:
+
+```yaml
+models:
+  gpt-4o: # Virtual model name requested by the client
+    balancer:
+      type: "weighted"
+    targets:
+      - target: "openai/gpt-4o"
+        weight: 70
+      - target: "azure/gpt-4o-westus"
+        weight: 30
+  
+  claude-3-5-sonnet:
+    balancer:
+      type: "round_robin"
+    targets:
+      - target: "anthropic/claude-3-5-sonnet-20240620"
+        weight: 1
+      - target: "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0"
+        weight: 1
+```
+
+| Field           | Type              | Default       | Description                                                                                                   |
+| --------------- | ----------------- | ------------- | ------------------------------------------------------------------------------------------------------------- |
+| balancer.type   | `string`          | `weighted`    | Load balancing algorithm to select a target. Supports `round_robin`, `random`, `weighted`, `chash`.           |
+| targets.target  | `string`          |               | The actual physical model identifier in the format `provider/model_id` (e.g., `openai/gpt-4-turbo`).          |
+| targets.weight  | `int32`           | `1`           | The weight of the target for load balancing. Higher weight means more traffic.                                |
 
 ## default
 

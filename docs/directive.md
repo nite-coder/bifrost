@@ -46,7 +46,8 @@ The currently supports the following directives:
 | `$upstream.request.protocol`      | Upstream request protocol                                                                                               | `HTTP/1.1`                              |
 | `$upstream.response.status_code`  | Upstream response status code                                                                                           | `200`                                   |
 | `$upstream.duration`              | Time taken to process the upstream request (use timecache)                                                              | `0.125`                                 |
-
 | `$grpc.status_code`               | GRPC STATUS CODE returned by the upstream target                                                                        | `0`                                     |
 | `$grpc.messaage`                  | GRPC Message returned by the upstream target                                                                            | `OK`                                    |
+| `$model`                          | The virtual model name requested by the client (AI Gateway mode)                                                        | `gpt-4o`                                |
+| `$model_id`                       | The physical model identifier mapped to the upstream provider (AI Gateway mode)                                         | `openai/gpt-4o`                         |
 | `$env.<key>`                      | Allow to get value from environment variables                                                                           | `$env.your_pass`                        |
