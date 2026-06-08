@@ -5,6 +5,8 @@ import (
 	"maps"
 
 	"github.com/bytedance/sonic"
+
+	"github.com/nite-coder/bifrost/internal/pkg/optional"
 )
 
 // --- Constants & Context Keys ---
@@ -275,12 +277,12 @@ type ResponsesResponse struct {
 //
 //nolint:revive
 type AIError struct {
-	Type       string `json:"type"`    // "invalid_request_error", "authentication_error", etc.
-	Message    string `json:"message"` // Human-readable error message
-	StatusCode int    `json:"-"`       // HTTP status code
-	Provider   string `json:"provider,omitempty"`
-	Param      string `json:"param,omitempty"`
-	Code       string `json:"code,omitempty"`
+	Type       string                  `json:"type"`    // "invalid_request_error", "authentication_error", etc.
+	Message    string                  `json:"message"` // Human-readable error message
+	StatusCode int                     `json:"-"`       // HTTP status code
+	Provider   string                  `json:"provider,omitempty"`
+	Param      optional.Option[string] `json:"param"`
+	Code       optional.Option[string] `json:"code"`
 }
 
 func (e *AIError) Error() string {

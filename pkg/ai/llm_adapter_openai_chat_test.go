@@ -13,6 +13,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/nite-coder/bifrost/internal/pkg/optional"
 )
 
 func TestOpenAIChatClientAdapter(t *testing.T) {
@@ -55,8 +57,8 @@ func TestOpenAIChatClientAdapter(t *testing.T) {
 		Type:       "invalid_request_error",
 		Message:    "Invalid parameters",
 		StatusCode: http.StatusBadRequest,
-		Param:      "model",
-		Code:       "invalid_model",
+		Param:      optional.Some("model"),
+		Code:       optional.Some("invalid_model"),
 	}
 	clientErr, err := adapter.ToClientError(aiErr)
 	require.NoError(t, err)
@@ -65,8 +67,8 @@ func TestOpenAIChatClientAdapter(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, "Invalid parameters", openAIErrorResp.Error.Message)
 	assert.Equal(t, "invalid_request_error", openAIErrorResp.Error.Type)
-	assert.Equal(t, "model", openAIErrorResp.Error.Param)
-	assert.Equal(t, "invalid_model", openAIErrorResp.Error.Code)
+	assert.Equal(t, "model", openAIErrorResp.Error.Param.Unwrap())
+	assert.Equal(t, "invalid_model", openAIErrorResp.Error.Code.Unwrap())
 }
 
 func TestOpenAIChatAdapter_Chat_Success(t *testing.T) {
@@ -186,8 +188,8 @@ func TestOpenAIChatAdapter_Chat_Error(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, aiErr.StatusCode)
 	assert.Equal(t, "The model gpt-5 does not exist", aiErr.Message)
 	assert.Equal(t, "invalid_request_error", aiErr.Type)
-	assert.Equal(t, "model", aiErr.Param)
-	assert.Equal(t, "model_not_found", aiErr.Code)
+	assert.Equal(t, "model", aiErr.Param.Unwrap())
+	assert.Equal(t, "model_not_found", aiErr.Code.Unwrap())
 }
 
 func TestOpenAIChatAdapter_StreamChat_Success(t *testing.T) {

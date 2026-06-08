@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nite-coder/blackbear/pkg/cast"
 
+	"github.com/nite-coder/bifrost/internal/pkg/optional"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/ai"
 	"github.com/nite-coder/bifrost/pkg/balancer"
@@ -206,7 +207,7 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 					Type:       "invalid_request_error",
 					Message:    "The model is missing or empty in the request",
 					StatusCode: http.StatusNotFound,
-					Code:       "model_not_found",
+					Code:       optional.Some("model_not_found"),
 				})
 			} else {
 				logger.Warn("upstream is empty",
@@ -230,7 +231,7 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 					Type:       "invalid_request_error",
 					Message:    fmt.Sprintf("The model `%s` does not exist", virtualModel),
 					StatusCode: http.StatusNotFound,
-					Code:       "model_not_found",
+					Code:       optional.Some("model_not_found"),
 				})
 			} else {
 				logger.Warn("upstream is not found",

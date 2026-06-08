@@ -4,6 +4,8 @@ import (
 	"io"
 
 	"github.com/bytedance/sonic"
+
+	"github.com/nite-coder/bifrost/internal/pkg/optional"
 )
 
 func init() {
@@ -65,10 +67,10 @@ type OpenAIErrorResponse struct {
 
 // OpenAIErrorDetail represents details of the OpenAI error.
 type OpenAIErrorDetail struct {
-	Message string `json:"message"`
-	Type    string `json:"type"`
-	Param   string `json:"param,omitempty"`
-	Code    string `json:"code,omitempty"`
+	Message string                  `json:"message"`
+	Type    string                  `json:"type"`
+	Param   optional.Option[string] `json:"param"`
+	Code    optional.Option[string] `json:"code"`
 }
 
 // ToClientError translates a canonical AIError into the client's expected format.

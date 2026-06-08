@@ -11,6 +11,8 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/protocol"
+
+	"github.com/nite-coder/bifrost/internal/pkg/optional"
 )
 
 func init() {
@@ -178,10 +180,10 @@ func (a *OpenAIChatAdapter) StreamResponses(_ context.Context, _ *ResponsesReque
 }
 
 type openAIErrorDetail struct {
-	Message string `json:"message"`
-	Type    string `json:"type"`
-	Param   string `json:"param"`
-	Code    string `json:"code"`
+	Message string                  `json:"message"`
+	Type    string                  `json:"type"`
+	Param   optional.Option[string] `json:"param"`
+	Code    optional.Option[string] `json:"code"`
 }
 
 type openAIErrorResponse struct {
