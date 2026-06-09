@@ -16,7 +16,6 @@ import (
 	"github.com/nite-coder/bifrost/pkg/provider/file"
 	"github.com/nite-coder/bifrost/pkg/provider/nacos"
 	"github.com/nite-coder/bifrost/pkg/resolver"
-	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 // ChangeFunc is a function called when configuration changes.
@@ -154,20 +153,10 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 
 	// nacos provider
 	if mainOptions.Providers.Nacos.Config.Enabled {
-		username := mainOptions.Providers.Nacos.Config.Username
-		if variable.IsDirective(username) {
-			username = variable.GetString(username, nil)
-		}
-
-		password := mainOptions.Providers.Nacos.Config.Password
-		if variable.IsDirective(password) {
-			password = variable.GetString(password, nil)
-		}
-
 		nacosConfigOptions := nacos.Options{
 			NamespaceID: mainOptions.Providers.Nacos.Config.NamespaceID,
-			Username:    username,
-			Password:    password,
+			Username:    mainOptions.Providers.Nacos.Config.Username,
+			Password:    mainOptions.Providers.Nacos.Config.Password,
 			Prefix:      mainOptions.Providers.Nacos.Config.Prefix,
 			LogDir:      mainOptions.Providers.Nacos.Config.LogDir,
 			LogLevel:    mainOptions.Providers.Nacos.Config.LogLevel,

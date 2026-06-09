@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -72,8 +73,8 @@ func (tc *tracerController) doFinish(ctx context.Context, c *app.RequestContext,
 		}
 		ti.Stats().Record(stats.HTTPFinish, st, "")
 	}
-	for i := len(tc.tracers) - 1; i >= 0; i-- {
-		tc.tracers[i].Finish(ctx, c)
+	for _, t := range slices.Backward(tc.tracers) {
+		t.Finish(ctx, c)
 	}
 }
 

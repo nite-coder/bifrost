@@ -257,7 +257,7 @@ func (p *Proxy) LLMAdapter() (ai.LLMAdapter, error) {
 
 		opts := ai.LLMAdapterOptions{
 			HTTPClient: p.httpClient,
-			APIKey:     variable.GetString(providerOptions.APIKey, nil),
+			APIKey:     providerOptions.APIKey,
 			BaseURL:    providerOptions.BaseURL,
 		}
 		adapter, err := ai.GetAdapter(providerOptions.Handler, opts)
