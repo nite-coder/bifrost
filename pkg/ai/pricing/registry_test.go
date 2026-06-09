@@ -90,6 +90,12 @@ func TestCustomPath(t *testing.T) {
 	if p3 == nil || p3.InputPerMtok != 0.14 {
 		t.Errorf("embedded default deepseek-chat lost after custom Init, got %+v", p3)
 	}
+
+	// Verify that non-existent custom path returns an error
+	err := Init("non_existent_file.json")
+	if err == nil {
+		t.Error("expected error for non-existent custom pricing file, got nil")
+	}
 }
 
 func TestConcurrency(_ *testing.T) {

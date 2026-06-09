@@ -12,6 +12,6 @@ Upon starting ANY session or receiving the first task, the agent **MUST** automa
 
 
 ## reference project
-1. litellm: /home/jason/_repository/public/litellm
-1. new-api: /home/jason/_repository/public/new-api
-1. gomodel: /home/jason/_repository/public/GoModel
+1. litellm: ../litellm
+1. new-api: ../new-api
+1. gomodel: ../GoModel

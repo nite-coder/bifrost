@@ -1,1 +1,1 @@
-gemini --include-directories /home/jason/_repository/public/GoModel,/home/jason/_repository/public/new-api
+gemini --include-directories ../GoModel,../new-api

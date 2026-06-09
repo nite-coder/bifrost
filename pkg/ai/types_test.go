@@ -72,4 +72,17 @@ func TestUsage_CalculateCost(t *testing.T) {
 	if u.OutputCost != 10.0 {
 		t.Errorf("expected output cost 10.0, got %f", u.OutputCost)
 	}
+
+	// Test defensive handling when cachedTokens > promptTokens
+	u2 := &Usage{
+		PromptTokens:     100000,
+		CompletionTokens: 100000,
+		PromptTokensDetails: &PromptTokensDetails{
+			CachedTokens: 150000,
+		},
+	}
+	u2.CalculateCost(p)
+	if u2.InputCost != 0.15 { // 0.15 * 1.0 + 0 * 2.0
+		t.Errorf("expected input cost 0.15, got %f", u2.InputCost)
+	}
 }

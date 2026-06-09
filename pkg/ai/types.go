@@ -238,7 +238,11 @@ func (u *Usage) CalculateCost(p *config.AIPricingOptions) {
 	}
 
 	if cachedTokens > 0 && p.CachedInputPerMtok > 0 {
-		u.InputCost = ((promptTokens - cachedTokens) / TokensPerMillion * p.InputPerMtok) + (cachedTokens / TokensPerMillion * p.CachedInputPerMtok)
+		nonCachedTokens := promptTokens - cachedTokens
+		if nonCachedTokens < 0 {
+			nonCachedTokens = 0
+		}
+		u.InputCost = (nonCachedTokens / TokensPerMillion * p.InputPerMtok) + (cachedTokens / TokensPerMillion * p.CachedInputPerMtok)
 	} else {
 		u.InputCost = promptTokens / TokensPerMillion * p.InputPerMtok
 	}

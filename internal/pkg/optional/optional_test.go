@@ -103,4 +103,16 @@ func TestOption_JSONUnmarshal(t *testing.T) {
 		assert.True(t, ts.Param.IsNone())
 		assert.True(t, ts.Code.IsNone())
 	})
+
+	t.Run("with whitespace-padded null values", func(t *testing.T) {
+		jsonStr := "{\"name\":\"test4\",\"param\":  null  ,\"code\": \n null \t }"
+		var ts TestStruct
+
+		err := json.Unmarshal([]byte(jsonStr), &ts)
+		require.NoError(t, err)
+
+		assert.Equal(t, "test4", ts.Name)
+		assert.True(t, ts.Param.IsNone())
+		assert.True(t, ts.Code.IsNone())
+	})
 }

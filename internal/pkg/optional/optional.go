@@ -1,8 +1,11 @@
 package optional
 
 import (
+	"bytes"
 	"encoding/json"
 )
+
+var jsonNull = []byte("null")
 
 // Option represents an optional value of type T.
 // It can either be empty (None) or contain a value (Some).
@@ -57,7 +60,7 @@ func (o Option[T]) UnwrapOr(defaultValue T) T {
 // An empty Option marshals to literal "null".
 func (o Option[T]) MarshalJSON() ([]byte, error) {
 	if !o.hasValue {
-		return []byte("null"), nil
+		return jsonNull, nil
 	}
 	return json.Marshal(o.value)
 }
@@ -65,7 +68,7 @@ func (o Option[T]) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON implements the json.Unmarshaler interface.
 // It correctly handles JSON "null" strings.
 func (o *Option[T]) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" {
+	if bytes.Equal(bytes.TrimSpace(data), jsonNull) {
 		o.hasValue = false
 		var zero T
 		o.value = zero

@@ -44,6 +44,7 @@ func NewObservedStream(stream io.ReadCloser, observer UsageObserver, metadata Us
 // Read implements the io.Reader interface. It intercepts data chunks and
 // parses them to find usage information.
 func (s *ObservedStream) Read(p []byte) (n int, err error) {
+	const eventDelimiterLen = 2
 	n, err = s.ReadCloser.Read(p)
 	if n > 0 {
 		s.buf = append(s.buf, p[:n]...)
@@ -53,8 +54,10 @@ func (s *ObservedStream) Read(p []byte) (n int, err error) {
 				break
 			}
 			event := s.buf[:idx]
-			s.buf = s.buf[idx+2:]
 			s.processEvent(event)
+			nextIdx := idx + eventDelimiterLen
+			copy(s.buf, s.buf[nextIdx:])
+			s.buf = s.buf[:len(s.buf)-nextIdx]
 		}
 	}
 	return n, err

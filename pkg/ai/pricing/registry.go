@@ -41,20 +41,18 @@ func Init(customPath string) error {
 
 	// Load custom overrides if provided
 	if customPath != "" {
-		if _, err := os.Stat(customPath); err == nil {
-			customData, err := os.ReadFile(filepath.Clean(customPath))
-			if err != nil {
-				return fmt.Errorf("failed to read custom pricing file: %w", err)
-			}
-
-			var customRegistry map[string]*config.AIPricingOptions
-			if err := json.Unmarshal(customData, &customRegistry); err != nil {
-				return fmt.Errorf("failed to unmarshal custom prices: %w", err)
-			}
-
-			// Merge custom prices into registry
-			maps.Copy(registry, customRegistry)
+		customData, err := os.ReadFile(filepath.Clean(customPath))
+		if err != nil {
+			return fmt.Errorf("failed to read custom pricing file: %w", err)
 		}
+
+		var customRegistry map[string]*config.AIPricingOptions
+		if err := json.Unmarshal(customData, &customRegistry); err != nil {
+			return fmt.Errorf("failed to unmarshal custom prices: %w", err)
+		}
+
+		// Merge custom prices into registry
+		maps.Copy(registry, customRegistry)
 	}
 
 	return nil
