@@ -10,8 +10,3 @@ Upon starting ANY session or receiving the first task, the agent **MUST** automa
 2. If lint issues block `make check`, run `make fix` to auto-format and fix common issues.
 3. Before any commit, MUST run `make check` and confirm both lint (0 issues) and tests (all pass) before committing.
 
-
-## reference project
-1. litellm: ../litellm
-1. new-api: ../new-api
-1. gomodel: ../GoModel

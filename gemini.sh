@@ -1,1 +1,0 @@
-gemini --include-directories ../GoModel,../new-api
