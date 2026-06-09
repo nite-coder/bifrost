@@ -63,7 +63,8 @@ type Options struct {
 }
 
 type AIOptions struct {
-    Providers map[string]*AIProvider `yaml:"providers"`
+    Providers   map[string]*AIProvider `yaml:"providers"`
+    PricingFile string                 `yaml:"pricing_file"` // 新增：外部全局價格表路徑
 }
 
 type AIProvider struct {
@@ -82,8 +83,15 @@ type AIBalancerOptions struct {
 }
 
 type AITargetOptions struct {
-    Target string `json:"target" yaml:"target"` // "provider_id/actual-model-name" 格式
-    Weight int    `json:"weight" yaml:"weight"` // 負載平衡權重，預設 1
+    Target  string            `json:"target"  yaml:"target"` // "provider_id/actual-model-name" 格式
+    Weight  int               `json:"weight"  yaml:"weight"` // 負載平衡權重，預設 1
+    Pricing *AIPricingOptions `json:"pricing" yaml:"pricing"` // 新增：Target 級別費率覆寫
+}
+
+type AIPricingOptions struct {
+    InputPerMtok       float64 `json:"input_per_mtok"        yaml:"input_per_mtok"`
+    OutputPerMtok      float64 `json:"output_per_mtok"       yaml:"output_per_mtok"`
+    CachedInputPerMtok float64 `json:"cached_input_per_mtok" yaml:"cached_input_per_mtok"`
 }
 ```
 
@@ -132,7 +140,8 @@ models:
 
 ### 4.2 Usage & Metadata
 *   `UsageMetadata`: 包含 `Model` (原始虛擬名), `UserID`, `RouteID`, `Provider` 以及時間指標 (`StartTime`, `FirstByteTime`, `EndTime`)。
-*   **輔助方法**：需提供 `TTFB()` 與 `TotalDuration()` 計算方法。
+*   `Usage`: 包含 `PromptTokens`, `CompletionTokens` 以及**新增的 `InputCost`, `OutputCost` (USD)**。
+*   **輔助方法**：需提供 `TTFB()`, `TotalDuration()` 與 `CalculateCost()` 計算方法。
 
 ## 5. 雙適配器介面 (Adapter Symmetry)
 
@@ -203,6 +212,20 @@ type ClientAdapter interface {
 *   **MultiObserver**: 透過 `ai.UsageObserver` 介面，支援同時向計費系統、Prometheus 與 OTEL 寫入。
 *   **ObservedStream**: 在 `AIProxy` 的寫入迴圈中攔截 T1 (FirstByte) 與最後一個 Usage Chunk (T2)。
 
+### 8.3 模型成本計費 (Model Cost Calculation)
+
+系統採用多層級回退 (Fallback) 機制來解析模型費率，計算單位統一為「每百萬 Token 的美元價格 (USD per 1M Tokens)」。
+
+#### 8.3.1 費率解析優先級 (Resolution Order)
+1. **Target Override**: 優先使用 `models.targets[x].pricing` 配置。
+2. **External Global**: 若未配置，則從 `ai.pricing_file` 指定的外部 JSON 中查找。
+3. **Embedded Global**: 若外部文件也未定義，則使用 Bifrost 內置的 `pkg/ai/pricing/prices.json` (透過 `//go:embed` 載入)。
+
+#### 8.3.2 成本計算指標
+| Prometheus Metric 名稱 | 類型 | 意義 |
+| :--- | :--- | :--- |
+| `bifrost_ai_request_cost_usd_total` | **Counter** | 累計消耗的估算美元成本 (`InputCost + OutputCost`)。 |
+
 ## 9. Initialization & Routing
 
 1.  **AI 模型加載與注入 (The `loadModels` Function)**：
@@ -253,7 +276,9 @@ type ClientAdapter interface {
 | 3 | 修復 Service 併發安全與 AI 注入 | `pkg/gateway/service.go` |
 | 4 | 實作 AIProxy (SSE 錯誤處理與模型遮蔽) | `pkg/proxy/ai/proxy.go` |
 | 5 | 實作 MultiObserver 與 ObservedStream (帶有緩衝安全切割) | `pkg/ai/observer.go` |
-| 6 | 定義全域動態路由變數 `AIModelName` | `pkg/variable/keys.go` |
-| 7 | 更新 Ingress Middleware (注入 Adapter 與保留原名) | `pkg/middleware/aitransformer/ai_transformer.go` |
-| 8 | 實作具體 LLM & Client Adapters | `pkg/ai/adapter_openai.go` 等 |
-| 9 | 註冊組件 | `pkg/initialize/pkg.go` |
+| 6 | 建立 Pricing Registry (含內置 JSON 與多級解析邏輯) | `pkg/ai/pricing/` |
+| 7 | 擴展 AI 指標計費與成本上報 | `pkg/telemetry/metrics/ai.go` |
+| 8 | 定義全域動態路由變數 `AIModelName` | `pkg/variable/keys.go` |
+| 9 | 更新 Ingress Middleware (注入 Adapter 與保留原名) | `pkg/middleware/aitransformer/ai_transformer.go` |
+| 10 | 實作具體 LLM & Client Adapters | `pkg/ai/adapter_openai.go` 等 |
+| 11 | 註冊組件 | `pkg/initialize/pkg.go` |

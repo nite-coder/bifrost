@@ -136,7 +136,13 @@ func TestAIProxy_ServeHTTP_UnarySuccess(t *testing.T) {
 		},
 	}
 
-	proxy := NewProxy("id1", "p1/gpt-4", 1, aiOpts, true)
+	proxy := NewProxy(ProxyOptions{
+		ID:             "id1",
+		Target:         "p1/gpt-4",
+		Weight:         1,
+		AIOptions:      aiOpts,
+		MetricsEnabled: true,
+	})
 
 	mockLL.chatFunc = func(_ context.Context, req *ai.ChatRequest) (*ai.ChatResponse, error) {
 		assert.Equal(t, "gpt-4", req.Model)
@@ -196,7 +202,13 @@ func TestAIProxy_ServeHTTP_UnaryError(t *testing.T) {
 		},
 	}
 
-	proxy := NewProxy("id1", "p1/gpt-4", 1, aiOpts, true)
+	proxy := NewProxy(ProxyOptions{
+		ID:             "id1",
+		Target:         "p1/gpt-4",
+		Weight:         1,
+		AIOptions:      aiOpts,
+		MetricsEnabled: true,
+	})
 
 	expectedErr := &ai.AIError{
 		Type:       "invalid_request_error",
@@ -238,7 +250,13 @@ func TestAIProxy_ServeHTTP_StreamSuccess(t *testing.T) {
 		},
 	}
 
-	proxy := NewProxy("id1", "p1/gpt-4", 1, aiOpts, true)
+	proxy := NewProxy(ProxyOptions{
+		ID:             "id1",
+		Target:         "p1/gpt-4",
+		Weight:         1,
+		AIOptions:      aiOpts,
+		MetricsEnabled: true,
+	})
 
 	canonicalChunks := "data: {\"id\":\"1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"delta\":{\"content\":\"hello\"}}]}\n\ndata: [DONE]\n\n"
 	mockLL.streamChatFunc = func(_ context.Context, _ *ai.ChatRequest) (io.ReadCloser, error) {
@@ -297,7 +315,13 @@ func TestAIProxy_ServeHTTP_StreamMidError(t *testing.T) {
 		},
 	}
 
-	proxy := NewProxy("id1", "p1/gpt-4", 1, aiOpts, true)
+	proxy := NewProxy(ProxyOptions{
+		ID:             "id1",
+		Target:         "p1/gpt-4",
+		Weight:         1,
+		AIOptions:      aiOpts,
+		MetricsEnabled: true,
+	})
 
 	mockLL.streamChatFunc = func(_ context.Context, _ *ai.ChatRequest) (io.ReadCloser, error) {
 		return &errorReader{
@@ -347,7 +371,13 @@ func TestAIProxy_ServeHTTP_InvalidTarget(t *testing.T) {
 		},
 	}
 
-	proxy := NewProxy("id1", "invalid_target_no_slash", 1, aiOpts, true)
+	proxy := NewProxy(ProxyOptions{
+		ID:             "id1",
+		Target:         "invalid_target_no_slash",
+		Weight:         1,
+		AIOptions:      aiOpts,
+		MetricsEnabled: true,
+	})
 
 	clientAdapter := &MockClientAdapter{}
 
@@ -380,7 +410,13 @@ func TestAIProxy_ServeHTTP_Responses(t *testing.T) {
 		},
 	}
 
-	proxy := NewProxy("id1", "p1/claude-3-opus", 1, aiOpts, true)
+	proxy := NewProxy(ProxyOptions{
+		ID:             "id1",
+		Target:         "p1/claude-3-opus",
+		Weight:         1,
+		AIOptions:      aiOpts,
+		MetricsEnabled: true,
+	})
 
 	mockLL.responsesFunc = func(_ context.Context, req *ai.ResponsesRequest) (*ai.ResponsesResponse, error) {
 		assert.Equal(t, "claude-3-opus", req.Model)

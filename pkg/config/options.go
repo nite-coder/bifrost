@@ -458,7 +458,8 @@ type DefaultOptions struct {
 
 // AIOptions defines the configurations for LLM providers.
 type AIOptions struct {
-	Providers map[string]*AIProvider `json:"providers" yaml:"providers"`
+	Providers   map[string]*AIProvider `json:"providers"    yaml:"providers"`
+	PricingFile string                 `json:"pricing_file" yaml:"pricing_file"`
 }
 
 // AIProvider defines options for an LLM provider connection.
@@ -481,6 +482,14 @@ type AIBalancerOptions struct {
 
 // AITargetOptions configures a target provider/model and its load weight.
 type AITargetOptions struct {
-	Target string `json:"target" yaml:"target"`
-	Weight int    `json:"weight" yaml:"weight"`
+	Target  string            `json:"target"  yaml:"target"`
+	Weight  int               `json:"weight"  yaml:"weight"`
+	Pricing *AIPricingOptions `json:"pricing" yaml:"pricing"`
+}
+
+// AIPricingOptions defines the pricing configuration for a model.
+type AIPricingOptions struct {
+	InputPerMtok       float64 `json:"input_per_mtok"        yaml:"input_per_mtok"`
+	OutputPerMtok      float64 `json:"output_per_mtok"       yaml:"output_per_mtok"`
+	CachedInputPerMtok float64 `json:"cached_input_per_mtok" yaml:"cached_input_per_mtok"`
 }

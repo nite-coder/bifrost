@@ -19,6 +19,8 @@ var (
 	AIOutputReasoningTokens *prom.CounterVec
 	// AITotalTokens represents the total tokens consumed (input + output).
 	AITotalTokens *prom.CounterVec
+	// AIRequestCost represents the total AI request cost in USD.
+	AIRequestCost *prom.CounterVec
 )
 
 // InitAI initializes AI-related Prometheus metrics with custom or default buckets.
@@ -104,4 +106,13 @@ func InitAI(latencyBuckets, tpsBuckets []float64) {
 		[]string{"model", "model_id"},
 	)
 	prom.MustRegister(AITotalTokens)
+
+	AIRequestCost = prom.NewCounterVec(
+		prom.CounterOpts{
+			Name: "bifrost_ai_request_cost_usd_total",
+			Help: "Total AI request cost in USD",
+		},
+		[]string{"model", "model_id"},
+	)
+	prom.MustRegister(AIRequestCost)
 }

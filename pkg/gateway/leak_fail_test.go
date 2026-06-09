@@ -29,7 +29,7 @@ func TestBifrostCumulativeLeak_FinalEvidence(t *testing.T) {
 		}
 	}
 
-	runtime.GC() //nolint:revive
+	runtime.GC() //nolint:revive,nolintlint
 	initialGoroutines := runtime.NumGoroutine()
 	t.Logf("[Initial] Goroutines: %d", initialGoroutines)
 
@@ -41,7 +41,7 @@ func TestBifrostCumulativeLeak_FinalEvidence(t *testing.T) {
 	for i := 1; i <= 2; i++ {
 		_, err := NewBifrost(failOptions, ModeNormal)
 		require.Error(t, err)
-		runtime.GC() //nolint:revive
+		runtime.GC() //nolint:revive,nolintlint
 		t.Logf("Try #%d (Fail) after Goroutines: %d", i, runtime.NumGoroutine())
 	}
 
@@ -57,7 +57,7 @@ func TestBifrostCumulativeLeak_FinalEvidence(t *testing.T) {
 	bifrost, err := NewBifrost(directOptions, ModeNormal)
 	require.NoError(t, err)
 
-	runtime.GC() //nolint:revive
+	runtime.GC() //nolint:revive,nolintlint
 	baseline := runtime.NumGoroutine()
 	t.Logf("Goroutines baseline after Direct Proxy startup: %d", baseline)
 
@@ -66,7 +66,7 @@ func TestBifrostCumulativeLeak_FinalEvidence(t *testing.T) {
 		require.NoError(t, err)
 		_ = bifrost.Close()
 		bifrost = newB
-		runtime.GC() //nolint:revive
+		runtime.GC() //nolint:revive,nolintlint
 		t.Logf("Direct Proxy Reload #%d after Goroutines: %d", i, runtime.NumGoroutine())
 	}
 

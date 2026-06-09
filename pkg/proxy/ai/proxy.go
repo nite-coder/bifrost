@@ -38,6 +38,7 @@ type Proxy struct {
 	target         string // e.g. "provider/model"
 	weight         uint32
 	options        *config.AIOptions
+	pricing        *config.AIPricingOptions
 	httpClient     *client.Client
 	adapter        ai.LLMAdapter
 	metricsEnabled bool
@@ -48,19 +49,30 @@ type Proxy struct {
 
 var _ proxy.Proxy = (*Proxy)(nil)
 
+// ProxyOptions contains configuration options for creating a new AI Proxy.
+type ProxyOptions struct {
+	ID             string
+	Target         string
+	Weight         uint32
+	AIOptions      *config.AIOptions
+	MetricsEnabled bool
+	Pricing        *config.AIPricingOptions
+}
+
 // NewProxy creates a new AIProxy instance.
-func NewProxy(id string, target string, weight uint32, options *config.AIOptions, metricsEnabled bool) *Proxy {
+func NewProxy(opts ProxyOptions) *Proxy {
 	p := &Proxy{
-		id:             id,
-		target:         target,
-		weight:         weight,
-		options:        options,
-		metricsEnabled: metricsEnabled,
+		id:             opts.ID,
+		target:         opts.Target,
+		weight:         opts.Weight,
+		options:        opts.AIOptions,
+		metricsEnabled: opts.MetricsEnabled,
+		pricing:        opts.Pricing,
 	}
 
-	parts := strings.SplitN(target, "/", TargetPartsCount)
-	if len(parts) == TargetPartsCount && options != nil && options.Providers != nil {
-		if prov, ok := options.Providers[parts[0]]; ok && prov.BaseURL != "" {
+	parts := strings.SplitN(opts.Target, "/", TargetPartsCount)
+	if len(parts) == TargetPartsCount && opts.AIOptions != nil && opts.AIOptions.Providers != nil {
+		if prov, ok := opts.AIOptions.Providers[parts[0]]; ok && prov.BaseURL != "" {
 			if addr, err := url.Parse(prov.BaseURL); err == nil {
 				p.upstreamHost = addr.Host
 			}
@@ -287,6 +299,9 @@ func (p *Proxy) handleChatUnary(
 	endTime := timecache.Now()
 	durationSecs := endTime.Sub(startTime).Seconds()
 
+	// Calculate cost
+	resp.Usage.CalculateCost(p.pricing)
+
 	// Record Prometheus Metrics
 	if p.metricsEnabled {
 		metrics.AIRequestDuration.WithLabelValues(virtualModel, modelID).Observe(durationSecs)
@@ -301,6 +316,7 @@ func (p *Proxy) handleChatUnary(
 				Add(float64(resp.Usage.CompletionTokensDetails.ReasoningTokens))
 		}
 		metrics.AITotalTokens.WithLabelValues(virtualModel, modelID).Add(float64(resp.Usage.TotalTokens))
+		metrics.AIRequestCost.WithLabelValues(virtualModel, modelID).Add(resp.Usage.InputCost + resp.Usage.OutputCost)
 	}
 
 	// Mask model name in response
@@ -370,6 +386,9 @@ func (p *Proxy) handleChatStream(
 			}
 			usageReceived = true
 
+			// Calculate cost
+			u.CalculateCost(p.pricing)
+
 			if p.metricsEnabled {
 				metrics.AIInputTokens.WithLabelValues(metadata.Model, metadata.Provider).Add(float64(u.PromptTokens))
 				if u.PromptTokensDetails != nil && u.PromptTokensDetails.CachedTokens > 0 {
@@ -383,6 +402,7 @@ func (p *Proxy) handleChatStream(
 						Add(float64(u.CompletionTokensDetails.ReasoningTokens))
 				}
 				metrics.AITotalTokens.WithLabelValues(metadata.Model, metadata.Provider).Add(float64(u.TotalTokens))
+				metrics.AIRequestCost.WithLabelValues(metadata.Model, metadata.Provider).Add(u.InputCost + u.OutputCost)
 			}
 		},
 	}
@@ -514,6 +534,9 @@ func (p *Proxy) handleResponses(
 	endTime := timecache.Now()
 	durationSecs := endTime.Sub(startTime).Seconds()
 
+	// Calculate cost
+	resp.Usage.CalculateCost(p.pricing)
+
 	// Record Prometheus Metrics
 	if p.metricsEnabled {
 		metrics.AIRequestDuration.WithLabelValues(virtualModel, modelID).Observe(durationSecs)
@@ -528,6 +551,7 @@ func (p *Proxy) handleResponses(
 				Add(float64(resp.Usage.CompletionTokensDetails.ReasoningTokens))
 		}
 		metrics.AITotalTokens.WithLabelValues(virtualModel, modelID).Add(float64(resp.Usage.TotalTokens))
+		metrics.AIRequestCost.WithLabelValues(virtualModel, modelID).Add(resp.Usage.InputCost + resp.Usage.OutputCost)
 	}
 
 	// Mask model name in response

@@ -22,6 +22,7 @@ This configuration file is divided into two primary types: `static configuration
 * [routes](#routes)
 * [services](#services)
 * [upstreams](#upstreams)
+* [ai](#ai)
 * [models](#models)
 * [default](#default)
 
@@ -397,6 +398,30 @@ upstreams:
 | targets.weight                    | `int32`             | `1`           | Weight for load balancing                                                                |
 | targets.tags                      | `map[string]string` |               | target's tags                                                                            |
 
+## ai
+
+The `ai` section configures global settings for the AI Gateway, such as LLM providers and pricing defaults.
+
+Example:
+
+```yaml
+ai:
+  # Path to an external JSON file for model pricing. 
+  # If not specified, Bifrost uses embedded default prices.
+  pricing_file: "/etc/bifrost/custom_prices.json"
+
+  providers:
+    openai-official:
+      handler: "openai-chat"
+      base_url: "https://api.openai.com/v1"
+      api_key: "$env.OPENAI_API_KEY"
+```
+
+| Field        | Type                      | Default | Description                                                                                                   |
+| ------------ | ------------------------- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| pricing_file | `string`                  |         | Path to a custom JSON file containing model rates (USD per 1M tokens).                                        |
+| providers    | `map[string]*AIProvider`  |         | Definition of upstream LLM providers.                                                                         |
+
 ## models
 
 The `models` section is specifically designed for AI Gateway mode. It maps a virtual model requested by the client (e.g., `gpt-4o`) to one or more physical target models (e.g., `openai/gpt-4o` or `azure/gpt-4o-deployment`). 
@@ -413,6 +438,10 @@ models:
     targets:
       - target: "openai/gpt-4o"
         weight: 70
+        pricing:
+          input_per_mtok: 2.50       # $2.50 per 1M prompt tokens
+          output_per_mtok: 10.00     # $10.00 per 1M completion tokens
+          cached_input_per_mtok: 1.25 # $1.25 per 1M cached prompt tokens
       - target: "azure/gpt-4o-westus"
         weight: 30
   
@@ -431,6 +460,15 @@ models:
 | balancer.type   | `string`          | `weighted`    | Load balancing algorithm to select a target. Supports `round_robin`, `random`, `weighted`, `chash`.           |
 | targets.target  | `string`          |               | The actual physical model identifier in the format `provider/model_id` (e.g., `openai/gpt-4-turbo`).          |
 | targets.weight  | `int32`           | `1`           | The weight of the target for load balancing. Higher weight means more traffic.                                |
+| targets.pricing | `Pricing`         |               | (Optional) Pricing override for this specific target. Rates are in USD per 1 million tokens.                  |
+
+### Model Pricing Resolution
+
+Bifrost calculates AI costs using a multi-level fallback mechanism:
+1. **Target Override**: Uses the `pricing` defined within a specific target in the `models` section.
+2. **External Global**: Uses the rates defined in the file specified by `ai.pricing_file`.
+3. **Embedded Global**: Uses Bifrost's built-in model price list (`prices.json`).
+
 
 ## default
 

@@ -7,6 +7,7 @@ import (
 	"github.com/bytedance/sonic"
 
 	"github.com/nite-coder/bifrost/internal/pkg/optional"
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
 // --- Constants & Context Keys ---
@@ -215,6 +216,34 @@ type Usage struct {
 	TotalTokens             int                      `json:"total_tokens"`
 	PromptTokensDetails     *PromptTokensDetails     `json:"prompt_tokens_details,omitempty"`
 	CompletionTokensDetails *CompletionTokensDetails `json:"completion_tokens_details,omitempty"`
+	InputCost               float64                  `json:"input_cost,omitempty"`
+	OutputCost              float64                  `json:"output_cost,omitempty"`
+}
+
+const (
+	// TokensPerMillion is the number of tokens in a million.
+	TokensPerMillion = 1000000.0
+)
+
+// CalculateCost calculates the input and output costs based on the pricing options.
+func (u *Usage) CalculateCost(p *config.AIPricingOptions) {
+	if p == nil {
+		return
+	}
+
+	promptTokens := float64(u.PromptTokens)
+	cachedTokens := 0.0
+	if u.PromptTokensDetails != nil {
+		cachedTokens = float64(u.PromptTokensDetails.CachedTokens)
+	}
+
+	if cachedTokens > 0 && p.CachedInputPerMtok > 0 {
+		u.InputCost = ((promptTokens - cachedTokens) / TokensPerMillion * p.InputPerMtok) + (cachedTokens / TokensPerMillion * p.CachedInputPerMtok)
+	} else {
+		u.InputCost = promptTokens / TokensPerMillion * p.InputPerMtok
+	}
+
+	u.OutputCost = float64(u.CompletionTokens) / TokensPerMillion * p.OutputPerMtok
 }
 
 // PromptTokensDetails holds extended input token breakdown (caching).

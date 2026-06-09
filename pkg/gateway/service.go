@@ -19,6 +19,7 @@ import (
 	"github.com/nite-coder/bifrost/internal/pkg/optional"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/ai"
+	"github.com/nite-coder/bifrost/pkg/ai/pricing"
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
@@ -484,8 +485,31 @@ func (s *Service) loadModels() error {
 
 		var proxies []proxy.Proxy
 		metricsEnabled := s.bifrost.options.Metrics.Prometheus.Enabled || s.bifrost.options.Metrics.OTLP.Enabled
-		for _, t := range targets {
-			p := aiproxy.NewProxy(t.Target, t.Target, t.Weight, s.bifrost.options.AI, metricsEnabled)
+		for i, t := range modelOpts.Targets {
+			parts := strings.SplitN(t.Target, "/", aiproxy.TargetPartsCount)
+			if len(parts) != aiproxy.TargetPartsCount {
+				return fmt.Errorf("invalid target format '%s' in model %s", t.Target, modelID)
+			}
+			providerID := parts[0]
+			actualModel := parts[1]
+
+			handler := ""
+			if s.bifrost.options.AI != nil && s.bifrost.options.AI.Providers != nil {
+				if prov, ok := s.bifrost.options.AI.Providers[providerID]; ok {
+					handler = prov.Handler
+				}
+			}
+
+			finalPricing := pricing.Resolve(handler, actualModel, t.Pricing)
+
+			p := aiproxy.NewProxy(aiproxy.ProxyOptions{
+				ID:             t.Target,
+				Target:         t.Target,
+				Weight:         targets[i].Weight,
+				AIOptions:      s.bifrost.options.AI,
+				MetricsEnabled: metricsEnabled,
+				Pricing:        finalPricing,
+			})
 			proxies = append(proxies, p)
 		}
 

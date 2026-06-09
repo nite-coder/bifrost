@@ -6,6 +6,8 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/nite-coder/bifrost/pkg/config"
 )
 
 func TestChatRequestPassthrough(t *testing.T) {
@@ -48,4 +50,26 @@ func TestChatRequestPassthrough(t *testing.T) {
 	assert.InDelta(t, 0.7, outputMap["temperature"], 0.0001)
 	assert.Equal(t, "hello", outputMap["custom_field_1"])
 	assert.Equal(t, map[string]any{"key": "value"}, outputMap["custom_field_2"])
+}
+
+func TestUsage_CalculateCost(t *testing.T) {
+	p := &config.AIPricingOptions{
+		InputPerMtok:       2.0,
+		OutputPerMtok:      10.0,
+		CachedInputPerMtok: 1.0,
+	}
+	u := &Usage{
+		PromptTokens:     1000000,
+		CompletionTokens: 1000000,
+		PromptTokensDetails: &PromptTokensDetails{
+			CachedTokens: 500000,
+		},
+	}
+	u.CalculateCost(p)
+	if u.InputCost != 1.5 { // (0.5 * 2) + (0.5 * 1)
+		t.Errorf("expected input cost 1.5, got %f", u.InputCost)
+	}
+	if u.OutputCost != 10.0 {
+		t.Errorf("expected output cost 10.0, got %f", u.OutputCost)
+	}
 }
