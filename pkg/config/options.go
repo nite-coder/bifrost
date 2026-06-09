@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -49,6 +51,8 @@ func NewOptions() Options {
 
 // UnmarshalYAML custom unmarshaler for Options.
 func (opt *Options) UnmarshalYAML(value *yaml.Node) error {
+	expandEnvDirectives(value, expandValue)
+
 	type options Options
 	var defaults options
 	err := value.Decode(&defaults)
@@ -78,6 +82,39 @@ func (opt *Options) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 	return nil
+}
+
+type expansionMode int
+
+const (
+	expandValue expansionMode = iota
+	skipKey
+)
+
+func expandEnvDirectives(node *yaml.Node, mode expansionMode) {
+	if node == nil || mode == skipKey {
+		return
+	}
+
+	switch node.Kind {
+	case yaml.DocumentNode, yaml.SequenceNode:
+		for _, child := range node.Content {
+			expandEnvDirectives(child, expandValue)
+		}
+	case yaml.MappingNode:
+		for idx, child := range node.Content {
+			m := expandValue
+			if idx%2 == 0 {
+				m = skipKey
+			}
+			expandEnvDirectives(child, m)
+		}
+	case yaml.ScalarNode:
+		if strings.HasPrefix(node.Value, "$env.") {
+			node.Value = os.Getenv(node.Value[len("$env."):])
+		}
+	default:
+	}
 }
 
 // IsWatch returns true if configuration watching is enabled.

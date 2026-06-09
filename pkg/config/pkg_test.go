@@ -1,10 +1,14 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/nite-coder/bifrost/pkg/resolver"
 )
 
 const (
@@ -27,6 +31,35 @@ func TestConfigLoad(t *testing.T) {
 		assert.Equal(t, "all_routes2", mainOptions.Routes[2].ID)
 		assert.Equal(t, "all_routes3", mainOptions.Routes[3].ID)
 	})
+}
+
+func TestConfigLoadExpandsEnvDirectives(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "test-openai-key")
+
+	originalDNSResolver := dnsResolver
+	dnsResolver = &resolver.Resolver{}
+	t.Cleanup(func() {
+		dnsResolver = originalDNSResolver
+	})
+
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+	content := `ai:
+  providers:
+    openai:
+      handler: openai-chat
+      base_url: https://api.openai.com/v1
+      api_key: $env.OPENAI_API_KEY
+`
+	err := os.WriteFile(configPath, []byte(content), 0o600)
+	require.NoError(t, err)
+
+	mainOptions, err := Load(configPath)
+	require.NoError(t, err)
+
+	require.NotNil(t, mainOptions.AI)
+	require.Contains(t, mainOptions.AI.Providers, "openai")
+	assert.Equal(t, "test-openai-key", mainOptions.AI.Providers["openai"].APIKey)
 }
 
 func TestConfigFailCheck(t *testing.T) {
@@ -216,6 +249,20 @@ func TestMergeOptions(t *testing.T) {
 		result, err := mergeOptions(mainOpts, content)
 		require.NoError(t, err)
 		assert.NotNil(t, result.Middlewares)
+	})
+
+	t.Run("expand env directives", func(t *testing.T) {
+		t.Setenv("BIND_ADDR", ":18080")
+
+		mainOpts := NewOptions()
+		content := `servers:
+  web:
+    bind: $env.BIND_ADDR
+`
+		result, err := mergeOptions(mainOpts, content)
+		require.NoError(t, err)
+		require.Contains(t, result.Servers, "web")
+		assert.Equal(t, ":18080", result.Servers["web"].Bind)
 	})
 }
 

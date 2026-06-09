@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -90,8 +91,8 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// --- Phase 2: Egress (After Next) ---
 	if len(c.Errors) > 0 {
 		var aiErr *ai.AIError
-		for i := len(c.Errors) - 1; i >= 0; i-- {
-			errObj := c.Errors[i].Err
+		for _, err := range slices.Backward(c.Errors) {
+			errObj := err.Err
 			if errors.As(errObj, &aiErr) {
 				c.Set(variable.ErrorType, aiErr.Type)
 				c.Set(variable.ErrorMessage, aiErr.Message)
@@ -107,8 +108,8 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 		// SECURITY: Handle plain errors (from upstream non-standard responses)
 		// Log full details internally, return generic error to client
-		for i := len(c.Errors) - 1; i >= 0; i-- {
-			errObj := c.Errors[i].Err
+		for _, err := range slices.Backward(c.Errors) {
+			errObj := err.Err
 			var aiErr *ai.AIError
 			if !errors.As(errObj, &aiErr) {
 				// This is a plain error (not AIError)

@@ -31,7 +31,6 @@ import (
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
-	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 // Upstream represents a collection of backend targets and a load balancer.
@@ -103,19 +102,9 @@ func newUpstream(
 			return nil, fmt.Errorf("nacos discovery provider is disabled for upstream ID: %s", upstreamOptions.ID)
 		}
 
-		username := bifrost.options.Providers.Nacos.Discovery.Username
-		if variable.IsDirective(bifrost.options.Providers.Nacos.Discovery.Username) {
-			username = variable.GetString(bifrost.options.Providers.Nacos.Discovery.Username, nil)
-		}
-
-		password := bifrost.options.Providers.Nacos.Discovery.Password
-		if variable.IsDirective(bifrost.options.Providers.Nacos.Discovery.Password) {
-			password = variable.GetString(bifrost.options.Providers.Nacos.Discovery.Password, nil)
-		}
-
 		options := nacos.Options{
-			Username:    username,
-			Password:    password,
+			Username:    bifrost.options.Providers.Nacos.Discovery.Username,
+			Password:    bifrost.options.Providers.Nacos.Discovery.Password,
 			NamespaceID: bifrost.options.Providers.Nacos.Discovery.NamespaceID,
 			Prefix:      bifrost.options.Providers.Nacos.Discovery.Prefix,
 			CacheDir:    bifrost.options.Providers.Nacos.Discovery.CacheDir,
