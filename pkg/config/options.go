@@ -92,7 +92,7 @@ const (
 )
 
 func expandEnvDirectives(node *yaml.Node, mode expansionMode) {
-	if node == nil {
+	if node == nil || mode == skipKey {
 		return
 	}
 
@@ -110,10 +110,6 @@ func expandEnvDirectives(node *yaml.Node, mode expansionMode) {
 			expandEnvDirectives(child, m)
 		}
 	case yaml.ScalarNode:
-		if mode == skipKey {
-			return
-		}
-
 		if strings.HasPrefix(node.Value, "$env.") {
 			node.Value = os.Getenv(node.Value[len("$env."):])
 		}
