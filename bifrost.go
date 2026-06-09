@@ -14,6 +14,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/nite-coder/bifrost/internal/pkg/infra"
+	internalinit "github.com/nite-coder/bifrost/internal/pkg/initialize"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/gateway"
@@ -157,6 +158,11 @@ func Run(opts ...Option) error {
 			}
 
 			err = initialize.Logger(mainOptions)
+			if err != nil {
+				return err
+			}
+
+			err = internalinit.AI(mainOptions)
 			if err != nil {
 				return err
 			}

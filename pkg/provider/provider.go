@@ -2,8 +2,12 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"net"
 )
+
+// ErrWatchNotSupported is returned when a service discovery provider does not support watching.
+var ErrWatchNotSupported = errors.New("watch is not supported")
 
 // ChangeFunc is a function that is called when configuration changes.
 type ChangeFunc func() error

@@ -878,3 +878,120 @@ func TestValidateServers(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestValidateAI(t *testing.T) {
+	t.Run("invalid provider missing handler", func(t *testing.T) {
+		options := NewOptions()
+		options.AI = &AIOptions{
+			Providers: map[string]*AIProvider{
+				"p1": {
+					BaseURL: "http://localhost",
+					APIKey:  "key",
+				},
+			},
+		}
+		err := ValidateConfig(options, ModeFull)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "handler is missing")
+	})
+
+	t.Run("invalid provider missing base_url", func(t *testing.T) {
+		options := NewOptions()
+		options.AI = &AIOptions{
+			Providers: map[string]*AIProvider{
+				"p1": {
+					Handler: "openai-chat",
+					APIKey:  "key",
+				},
+			},
+		}
+		err := ValidateConfig(options, ModeFull)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "base_url is missing")
+	})
+
+	t.Run("invalid model missing targets", func(t *testing.T) {
+		options := NewOptions()
+		options.Models = map[string]*AIModelOptions{
+			"m1": {
+				Balancer: &AIBalancerOptions{Type: "weighted"},
+			},
+		}
+		err := ValidateConfig(options, ModeFull)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "targets cannot be empty")
+	})
+
+	t.Run("invalid model target format", func(t *testing.T) {
+		options := NewOptions()
+		options.Models = map[string]*AIModelOptions{
+			"m1": {
+				Targets: []AITargetOptions{
+					{Target: "invalid_format", Weight: 1},
+				},
+			},
+		}
+		err := ValidateConfig(options, ModeFull)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid target format")
+	})
+
+	t.Run("invalid model target ai providers not configured", func(t *testing.T) {
+		options := NewOptions()
+		options.Models = map[string]*AIModelOptions{
+			"m1": {
+				Targets: []AITargetOptions{
+					{Target: "p1/model", Weight: 1},
+				},
+			},
+		}
+		err := ValidateConfig(options, ModeFull)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "AI providers not configured")
+	})
+
+	t.Run("invalid model target unknown provider", func(t *testing.T) {
+		options := NewOptions()
+		options.AI = &AIOptions{
+			Providers: map[string]*AIProvider{
+				"p1": {
+					Handler: "openai-chat",
+					BaseURL: "http://localhost",
+					APIKey:  "key",
+				},
+			},
+		}
+		options.Models = map[string]*AIModelOptions{
+			"m1": {
+				Targets: []AITargetOptions{
+					{Target: "unknown_provider/model", Weight: 1},
+				},
+			},
+		}
+		err := ValidateConfig(options, ModeFull)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "specific provider 'unknown_provider' not found")
+	})
+
+	t.Run("valid AI config", func(t *testing.T) {
+		options := NewOptions()
+		options.AI = &AIOptions{
+			Providers: map[string]*AIProvider{
+				"p1": {
+					Handler: "openai-chat",
+					BaseURL: "http://localhost",
+					APIKey:  "key",
+				},
+			},
+		}
+		options.Models = map[string]*AIModelOptions{
+			"m1": {
+				Targets: []AITargetOptions{
+					{Target: "p1/model", Weight: 1},
+				},
+			},
+		}
+		err := ValidateConfig(options, ModeFull)
+		require.NoError(t, err)
+	})
+}

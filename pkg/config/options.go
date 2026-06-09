@@ -16,6 +16,8 @@ type Options struct {
 	Services        map[string]ServiceOptions   `json:"services"         yaml:"services"`
 	Upstreams       map[string]UpstreamOptions  `json:"upstreams"        yaml:"upstreams"`
 	Providers       ProviderOptions             `json:"providers"        yaml:"providers"`
+	AI              *AIOptions                  `json:"ai"               yaml:"ai"`
+	Models          map[string]*AIModelOptions  `json:"models"           yaml:"models"`
 	configPath      string
 	User            string          `json:"user"             yaml:"user"`
 	Group           string          `json:"group"            yaml:"group"`
@@ -192,10 +194,11 @@ type LoggingOptions struct {
 
 // PrometheusOptions defines configuration for Prometheus metrics.
 type PrometheusOptions struct {
-	ServerID string    `json:"server_id" yaml:"server_id"`
-	Path     string    `json:"path"      yaml:"path"`
-	Buckets  []float64 `json:"buckets"   yaml:"buckets"`
-	Enabled  bool      `json:"enabled"   yaml:"enabled"`
+	ServerID       string    `json:"server_id"       yaml:"server_id"`
+	Path           string    `json:"path"            yaml:"path"`
+	LatencyBuckets []float64 `json:"latency_buckets" yaml:"latency_buckets"`
+	AITPSBuckets   []float64 `json:"ai_tps_buckets"  yaml:"ai_tps_buckets"`
+	Enabled        bool      `json:"enabled"         yaml:"enabled"`
 }
 
 // ServerTracingOptions defines tracing configuration for a server.
@@ -369,10 +372,21 @@ const (
 	ProtocolGRPC Protocol = "grpc"
 )
 
+// ServiceType represents the type of a service.
+type ServiceType string
+
+const (
+	// ServiceTypeProxy represents a standard reverse proxy service.
+	ServiceTypeProxy ServiceType = "proxy"
+	// ServiceTypeAI represents an AI gateway service.
+	ServiceTypeAI ServiceType = "ai"
+)
+
 // ServiceOptions defines configuration for a service.
 type ServiceOptions struct {
 	MaxConnsPerHost *int                  `json:"max_conns_per_host" yaml:"max_conns_per_host"`
 	ID              string                `json:"-"                  yaml:"-"`
+	Type            ServiceType           `json:"type"               yaml:"type"`
 	Protocol        Protocol              `json:"protocol"           yaml:"protocol"`
 	URL             string                `json:"url"                yaml:"url"`
 	Middlewares     []MiddlwareOptions    `json:"middlewares"        yaml:"middlewares"`
@@ -440,4 +454,42 @@ type DefaultUpstreamOptions struct {
 type DefaultOptions struct {
 	Service  DefaultServiceOptions  `json:"service"  yaml:"service"`
 	Upstream DefaultUpstreamOptions `json:"upstream" yaml:"upstream"`
+}
+
+// AIOptions defines the configurations for LLM providers.
+type AIOptions struct {
+	Providers   map[string]*AIProvider `json:"providers"    yaml:"providers"`
+	PricingFile string                 `json:"pricing_file" yaml:"pricing_file"`
+}
+
+// AIProvider defines options for an LLM provider connection.
+type AIProvider struct {
+	Handler string `json:"handler"  yaml:"handler"`
+	BaseURL string `json:"base_url" yaml:"base_url"`
+	APIKey  string `json:"api_key"  yaml:"api_key"`
+}
+
+// AIModelOptions defines target distribution and balancing options for a virtual model.
+type AIModelOptions struct {
+	Balancer *AIBalancerOptions `json:"balancer" yaml:"balancer"`
+	Targets  []AITargetOptions  `json:"targets"  yaml:"targets"`
+}
+
+// AIBalancerOptions configures the balancing type for virtual models.
+type AIBalancerOptions struct {
+	Type string `json:"type" yaml:"type"`
+}
+
+// AITargetOptions configures a target provider/model and its load weight.
+type AITargetOptions struct {
+	Target  string            `json:"target"  yaml:"target"`
+	Weight  int               `json:"weight"  yaml:"weight"`
+	Pricing *AIPricingOptions `json:"pricing" yaml:"pricing"`
+}
+
+// AIPricingOptions defines the pricing configuration for a model.
+type AIPricingOptions struct {
+	InputPerMtok       float64 `json:"input_per_mtok"        yaml:"input_per_mtok"`
+	OutputPerMtok      float64 `json:"output_per_mtok"       yaml:"output_per_mtok"`
+	CachedInputPerMtok float64 `json:"cached_input_per_mtok" yaml:"cached_input_per_mtok"`
 }

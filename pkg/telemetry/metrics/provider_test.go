@@ -72,9 +72,9 @@ func TestProviderNilSafety(t *testing.T) {
 func TestNewProvider_WithCustomBuckets(t *testing.T) {
 	opts := config.MetricsOptions{
 		Prometheus: config.PrometheusOptions{
-			Enabled:  true,
-			ServerID: "api",
-			Buckets:  []float64{0.001, 0.01, 0.1, 1, 10},
+			Enabled:        true,
+			ServerID:       "api",
+			LatencyBuckets: []float64{0.001, 0.01, 0.1, 1, 10},
 		},
 	}
 

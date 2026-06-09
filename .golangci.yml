@@ -119,6 +119,10 @@ linters:
       - linters:
           - tagalign
         path: ^pkg/config/options\.go$
+      - linters:
+          - gosec
+        text: "G101:"
+        path: ^pkg/variable/constant\.go$
 
 
 issues:

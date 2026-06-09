@@ -198,6 +198,8 @@ func NewTracer(opts ...Option) tracer.Tracer {
 	)
 	prom.MustRegister(httpBifrostRequestDuration)
 
+	InitAI(cfg.buckets, cfg.aiTPSBuckets)
+
 	// TODO: add total connections
 
 	return &serverTracer{

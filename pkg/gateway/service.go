@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,12 +16,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/nite-coder/blackbear/pkg/cast"
 
+	"github.com/nite-coder/bifrost/internal/pkg/optional"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
+	"github.com/nite-coder/bifrost/pkg/ai"
+	"github.com/nite-coder/bifrost/pkg/ai/pricing"
 	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/middleware"
 	"github.com/nite-coder/bifrost/pkg/proxy"
+	aiproxy "github.com/nite-coder/bifrost/pkg/proxy/ai"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -112,107 +117,34 @@ func loadServices(bifrost *Bifrost) (map[string]*Service, error) {
 }
 
 func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Service, error) {
-	if len(serviceOptions.Protocol) == 0 && len(bifrost.options.Default.Service.Protocol) > 0 {
-		serviceOptions.Protocol = bifrost.options.Default.Service.Protocol
-	} else if len(serviceOptions.Protocol) == 0 && len(bifrost.options.Default.Service.Protocol) == 0 {
-		serviceOptions.Protocol = config.ProtocolHTTP
+	svc := &Service{
+		bifrost: bifrost,
+		options: &serviceOptions,
 	}
+
+	svc.applyProtocolDefaults()
 
 	upstreams, err := loadUpstreams(bifrost, serviceOptions)
 	if err != nil {
 		return nil, err
 	}
+	svc.upstreams = upstreams
 
-	svc := &Service{
-		bifrost:     bifrost,
-		options:     &serviceOptions,
-		upstreams:   upstreams,
-		middlewares: make([]app.HandlerFunc, 0),
-	}
-
-	for _, middlewareOpts := range serviceOptions.Middlewares {
-		if len(middlewareOpts.Use) > 0 {
-			m, found := bifrost.middlewares[middlewareOpts.Use]
-			if !found {
-				return nil, fmt.Errorf("middleware '%s' not found in service: '%s'", middlewareOpts, serviceOptions.ID)
-			}
-			svc.middlewares = append(svc.middlewares, m)
-			continue
-		}
-
-		if len(middlewareOpts.Type) == 0 {
-			return nil, fmt.Errorf("middleware type cannot be empty for service: %s", serviceOptions.ID)
-		}
-
-		handler := middleware.Factory(middlewareOpts.Type)
-		if handler == nil {
-			return nil, fmt.Errorf(
-				"middleware handler '%s' was not found in service: '%s'",
-				middlewareOpts.Type,
-				serviceOptions.ID,
-			)
-		}
-
-		appHandler, e := handler(middlewareOpts.Params)
-		if e != nil {
-			return nil, fmt.Errorf(
-				"failed to create middleware '%s' in route: '%s', error: %w",
-				middlewareOpts.Type,
-				serviceOptions.ID,
-				e,
-			)
-		}
-
-		svc.middlewares = append(svc.middlewares, appHandler)
-	}
-
-	addr, e := url.Parse(serviceOptions.URL)
-	if e != nil {
-		return nil, e
-	}
-
-	hostname := addr.Hostname()
-
-	// validate
-	if len(hostname) == 0 {
-		return nil, fmt.Errorf("hostname is invalid in service URL for service ID: %s", serviceOptions.ID)
-	}
-
-	// dynamic upstream
-	if hostname[0] == '$' {
-		svc.dynamicUpstream = hostname
-		return svc, nil
-	}
-
-	// exist upstream
-	// the hostname cannot be found in upstreams because user can use real domain name like www.google.com
-	upstream, found := svc.upstreams[hostname]
-	if found {
-		svc.upstream = upstream
-		upstream.watch()
-		return svc, nil
-	}
-
-	// direct proxy
-	upstreamOptions := config.UpstreamOptions{
-		ID: uuid.NewString(),
-		Balancer: config.BalancerOptions{
-			Type: "round_robin",
-		},
-		Targets: []config.TargetOptions{
-			{
-				Target: hostname,
-				Weight: 1,
-			},
-		},
-	}
-
-	upstream, err = newUpstream(bifrost, serviceOptions, upstreamOptions)
-	if err != nil {
+	if err := svc.initMiddlewares(); err != nil {
 		return nil, err
 	}
-	svc.upstream = upstream
-	upstream.watch()
+
+	if err := svc.loadModels(); err != nil {
+		return nil, err
+	}
+
+	if serviceOptions.Type == config.ServiceTypeAI {
+		svc.dynamicUpstream = variable.Model
+	} else {
+		if err := svc.resolveUpstreamStrategy(); err != nil {
+			return nil, err
+		}
+	}
 
 	return svc, nil
 }
@@ -266,38 +198,62 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 
+	targetUpstream := s.upstream
 	if len(s.dynamicUpstream) > 0 {
 		upstreamName := variable.GetString(s.dynamicUpstream, c)
 
 		if len(upstreamName) == 0 {
-			logger.Warn("upstream is empty",
-				slog.String("path", string(c.Request.Path())),
-			)
-			c.Abort()
+			if s.options.Type == config.ServiceTypeAI {
+				_ = c.Error(&ai.AIError{
+					Type:       "invalid_request_error",
+					Message:    "The model is missing or empty in the request",
+					StatusCode: http.StatusNotFound,
+					Code:       optional.Some("model_not_found"),
+				})
+			} else {
+				logger.Warn("upstream is empty",
+					slog.String("path", string(c.Request.Path())),
+				)
+				c.Abort()
+			}
 			return
 		}
 
+		if s.options.Type == config.ServiceTypeAI {
+			upstreamName = "ai:" + upstreamName
+		}
+
 		var found bool
-		s.upstream, found = s.upstreams[upstreamName]
+		targetUpstream, found = s.upstreams[upstreamName]
 		if !found {
-			logger.Warn("upstream is not found",
-				slog.String("name", upstreamName),
-			)
-			c.Abort()
+			if s.options.Type == config.ServiceTypeAI {
+				virtualModel := strings.TrimPrefix(upstreamName, "ai:")
+				_ = c.Error(&ai.AIError{
+					Type:       "invalid_request_error",
+					Message:    fmt.Sprintf("The model `%s` does not exist", virtualModel),
+					StatusCode: http.StatusNotFound,
+					Code:       optional.Some("model_not_found"),
+				})
+			} else {
+				logger.Warn("upstream is not found",
+					slog.String("name", upstreamName),
+				)
+				c.Abort()
+			}
 			return
 		}
-		s.upstream.watch()
+		targetUpstream.watch()
 	}
 
 	var myProxy proxy.Proxy
 	var err error
-	if s.upstream != nil {
-		c.Set(variable.UpstreamID, s.upstream.options.ID)
+	if targetUpstream != nil {
+		c.Set(variable.UpstreamID, targetUpstream.options.ID)
 
-		balaner := s.upstream.Balancer()
+		balaner := targetUpstream.Balancer()
 		if balaner == nil {
 			logger.Warn("balancer is nil, upstream may not be initialized",
-				"upstream_id", s.upstream.options.ID,
+				"upstream_id", targetUpstream.options.ID,
 				"service_id", s.options.ID,
 			)
 			c.SetStatusCode(http.StatusServiceUnavailable)
@@ -330,6 +286,105 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	} else {
 		c.Set(variable.UpstreamResponoseStatusCode, c.Response.StatusCode())
 	}
+}
+
+func (s *Service) applyProtocolDefaults() {
+	if len(s.options.Protocol) == 0 && len(s.bifrost.options.Default.Service.Protocol) > 0 {
+		s.options.Protocol = s.bifrost.options.Default.Service.Protocol
+	} else if len(s.options.Protocol) == 0 && len(s.bifrost.options.Default.Service.Protocol) == 0 {
+		s.options.Protocol = config.ProtocolHTTP
+	}
+}
+
+func (s *Service) initMiddlewares() error {
+	for _, middlewareOpts := range s.options.Middlewares {
+		if len(middlewareOpts.Use) > 0 {
+			m, found := s.bifrost.middlewares[middlewareOpts.Use]
+			if !found {
+				return fmt.Errorf("middleware '%s' not found in service: '%s'", middlewareOpts.Use, s.options.ID)
+			}
+			s.middlewares = append(s.middlewares, m)
+			continue
+		}
+
+		if len(middlewareOpts.Type) == 0 {
+			return fmt.Errorf("middleware type cannot be empty for service: %s", s.options.ID)
+		}
+
+		handler := middleware.Factory(middlewareOpts.Type)
+		if handler == nil {
+			return fmt.Errorf(
+				"middleware handler '%s' was not found in service: '%s'",
+				middlewareOpts.Type,
+				s.options.ID,
+			)
+		}
+
+		appHandler, e := handler(middlewareOpts.Params)
+		if e != nil {
+			return fmt.Errorf(
+				"failed to create middleware '%s' in route: '%s', error: %w",
+				middlewareOpts.Type,
+				s.options.ID,
+				e,
+			)
+		}
+
+		s.middlewares = append(s.middlewares, appHandler)
+	}
+	return nil
+}
+
+func (s *Service) resolveUpstreamStrategy() error {
+	addr, e := url.Parse(s.options.URL)
+	if e != nil {
+		return e
+	}
+
+	hostname := addr.Hostname()
+
+	// validate
+	if len(hostname) == 0 {
+		return fmt.Errorf("hostname is invalid in service URL for service ID: %s", s.options.ID)
+	}
+
+	// dynamic upstream
+	if hostname[0] == '$' {
+		s.dynamicUpstream = hostname
+		return nil
+	}
+
+	// exist upstream
+	// the hostname cannot be found in upstreams because user can use real domain name like www.google.com
+	upstream, found := s.upstreams[hostname]
+	if found {
+		s.upstream = upstream
+		upstream.watch()
+		return nil
+	}
+
+	// direct proxy
+	upstreamOptions := config.UpstreamOptions{
+		ID: uuid.NewString(),
+		Balancer: config.BalancerOptions{
+			Type: "round_robin",
+		},
+		Targets: []config.TargetOptions{
+			{
+				Target: hostname,
+				Weight: 1,
+			},
+		},
+	}
+
+	upstream, err := newUpstream(s.bifrost, *s.options, upstreamOptions)
+	if err != nil {
+		return err
+	}
+	s.upstream = upstream
+	upstream.watch()
+
+	return nil
 }
 
 // DynamicService handles requests for services determined dynamically at runtime.
@@ -384,4 +439,99 @@ func (s *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	c.SetIndex(-1)
 	c.SetHandlers(middlewares)
 	c.Next(ctx)
+}
+
+func (s *Service) loadModels() error {
+	if s.upstreams == nil {
+		s.upstreams = make(map[string]*Upstream)
+	}
+
+	if s.bifrost.options.Models == nil {
+		return nil
+	}
+
+	for modelID, modelOpts := range s.bifrost.options.Models {
+		if len(modelID) == 0 {
+			continue
+		}
+
+		var targets []config.TargetOptions
+		for _, t := range modelOpts.Targets {
+			var weight uint32
+			if t.Weight > 0 && t.Weight <= 4294967295 {
+				weight = uint32(t.Weight)
+			}
+			if weight <= 0 {
+				weight = 1
+			}
+			targets = append(targets, config.TargetOptions{
+				Target: t.Target,
+				Weight: weight,
+			})
+		}
+
+		balancerType := "weighted"
+		if modelOpts.Balancer != nil && modelOpts.Balancer.Type != "" {
+			balancerType = modelOpts.Balancer.Type
+		}
+
+		upstreamOpts := config.UpstreamOptions{
+			ID: "ai:" + modelID,
+			Balancer: config.BalancerOptions{
+				Type: balancerType,
+			},
+			Targets: targets,
+		}
+
+		var proxies []proxy.Proxy
+		metricsEnabled := s.bifrost.options.Metrics.Prometheus.Enabled || s.bifrost.options.Metrics.OTLP.Enabled
+		for i, t := range modelOpts.Targets {
+			parts := strings.SplitN(t.Target, "/", aiproxy.TargetPartsCount)
+			if len(parts) != aiproxy.TargetPartsCount {
+				return fmt.Errorf("invalid target format '%s' in model %s", t.Target, modelID)
+			}
+			providerID := parts[0]
+			actualModel := parts[1]
+
+			handler := ""
+			if s.bifrost.options.AI != nil && s.bifrost.options.AI.Providers != nil {
+				if prov, ok := s.bifrost.options.AI.Providers[providerID]; ok {
+					handler = prov.Handler
+				}
+			}
+
+			finalPricing := pricing.Resolve(handler, actualModel, t.Pricing)
+
+			p := aiproxy.NewProxy(aiproxy.ProxyOptions{
+				ID:             t.Target,
+				Target:         t.Target,
+				Weight:         targets[i].Weight,
+				AIOptions:      s.bifrost.options.AI,
+				MetricsEnabled: metricsEnabled,
+				Pricing:        finalPricing,
+			})
+			proxies = append(proxies, p)
+		}
+
+		factory := balancer.Factory(balancerType)
+		if factory == nil {
+			return fmt.Errorf("unsupported balancer strategy '%s' for virtual model: %s", balancerType, modelID)
+		}
+
+		bal, err := factory(proxies, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create balancer for virtual model %s: %w", modelID, err)
+		}
+
+		u := &Upstream{
+			bifrost:        s.bifrost,
+			options:        &upstreamOpts,
+			serviceOptions: s.options,
+		}
+		u.balancer.Store(bal)
+
+		s.upstreams["ai:"+modelID] = u
+	}
+
+	return nil
 }

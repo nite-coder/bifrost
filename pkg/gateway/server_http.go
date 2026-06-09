@@ -33,12 +33,10 @@ import (
 	"github.com/nite-coder/bifrost/internal/pkg/infra"
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 )
 
-var (
-	httpServerOpenConnections *prom.GaugeVec
-	initLoggerOnce            sync.Once
-)
+var initLoggerOnce sync.Once
 
 const (
 	defaultHTTPReadTimeout       = 60 * time.Second
@@ -57,17 +55,6 @@ const (
 	// ListenerDisabled indicates the server should not open a listener.
 	ListenerDisabled
 )
-
-func init() {
-	httpServerOpenConnections = prom.NewGaugeVec(
-		prom.GaugeOpts{
-			Name: "http_server_open_connections",
-			Help: "Number of open connections for servers",
-		},
-		[]string{"server_id"},
-	)
-	prom.MustRegister(httpServerOpenConnections)
-}
 
 // HTTPServer represents an HTTP server instance in the gateway.
 type HTTPServer struct {
@@ -136,7 +123,7 @@ func newHTTPServer(
 				labels := make(prom.Labels)
 				labels["server_id"] = serverOptions.ID
 				totalConn := httpServer.totalConnections.Load()
-				httpServerOpenConnections.With(labels).Set(float64(totalConn))
+				metrics.HTTPServerOpenConnections.With(labels).Set(float64(totalConn))
 			}
 		})
 	}

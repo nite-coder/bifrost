@@ -97,6 +97,11 @@ func ValidateConfig(mainOptions Options, mode ValidationMode) error {
 		return err
 	}
 
+	err = validateAIConfig(mainOptions)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -440,12 +445,13 @@ func validateServices(mainOptions Options, mode ValidationMode) error {
 		hostname := addr.Hostname()
 
 		// validate
-		if len(hostname) == 0 {
-			return fmt.Errorf("invalid host in service URL for service ID: %s", serviceID)
+		if len(hostname) == 0 && service.Type != "ai" {
+			return fmt.Errorf("URL can't empty for service ID: %s", serviceID)
 		}
 
 		// exist upstream
-		if hostname[0] != '$' && !strings.EqualFold("localhost", hostname) && !strings.EqualFold("[::1]", hostname) {
+		if len(hostname) > 0 && hostname[0] != '$' && !strings.EqualFold("localhost", hostname) &&
+			!strings.EqualFold("[::1]", hostname) {
 			_, found := mainOptions.Upstreams[hostname]
 			if !found {
 				if dnsResolver != nil && !mainOptions.SkipResolver {
@@ -708,6 +714,48 @@ func addRoute(r *router.Router, routeOptions RouteOptions) error {
 			err := r.Add(method, path, nodeType, func(_ context.Context, _ *app.RequestContext) {})
 			if err != nil {
 				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func validateAIConfig(opts Options) error {
+	reModelName := regexp.MustCompile(`^[a-zA-Z0-9_.:-]+$`)
+
+	if opts.AI != nil {
+		for name, provider := range opts.AI.Providers {
+			if provider.Handler == "" {
+				return fmt.Errorf("handler is missing for provider '%s'", name)
+			}
+			if provider.BaseURL == "" {
+				return fmt.Errorf("base_url is missing for provider '%s'", name)
+			}
+		}
+	}
+
+	for name, model := range opts.Models {
+		if !reModelName.MatchString(name) {
+			return fmt.Errorf(
+				"invalid model name format '%s'; only alphanumeric, dashes, dots, colons, and underscores are allowed",
+				name,
+			)
+		}
+		if len(model.Targets) == 0 {
+			return fmt.Errorf("targets cannot be empty for model '%s'", name)
+		}
+		for _, target := range model.Targets {
+			parts := strings.Split(target.Target, "/")
+			if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+				return fmt.Errorf("invalid target format '%s' for model '%s'", target.Target, name)
+			}
+			providerID := parts[0]
+			if opts.AI == nil || len(opts.AI.Providers) == 0 {
+				return fmt.Errorf("AI providers not configured for model '%s'", name)
+			}
+			if opts.AI.Providers[providerID] == nil {
+				return fmt.Errorf("specific provider '%s' not found for model '%s'", providerID, name)
 			}
 		}
 	}

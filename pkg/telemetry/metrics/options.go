@@ -4,7 +4,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
-var defaultBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10}
+var (
+	defaultBuckets      = []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10}
+	defaultAITPSBuckets = []float64{1, 10, 20, 30, 40, 50, 60, 80, 100, 150, 200}
+)
 
 // Option defines the configuration options for the metrics tracer.
 type Option interface {
@@ -19,6 +22,7 @@ func (fn option) apply(cfg *promConfig) {
 
 type promConfig struct {
 	buckets            []float64
+	aiTPSBuckets       []float64
 	runtimeMetricRules []collectors.GoRuntimeMetricsRule
 	enableGoCollector  bool
 	disableServer      bool
@@ -27,6 +31,7 @@ type promConfig struct {
 func defaultConfig() *promConfig {
 	return &promConfig{
 		buckets:           defaultBuckets,
+		aiTPSBuckets:      defaultAITPSBuckets,
 		enableGoCollector: false,
 		disableServer:     false,
 	}
@@ -58,6 +63,15 @@ func WithHistogramBuckets(buckets []float64) Option {
 	return option(func(cfg *promConfig) {
 		if len(buckets) > 0 {
 			cfg.buckets = buckets
+		}
+	})
+}
+
+// WithAITPSBuckets define your custom AI TPS buckets.
+func WithAITPSBuckets(buckets []float64) Option {
+	return option(func(cfg *promConfig) {
+		if len(buckets) > 0 {
+			cfg.aiTPSBuckets = buckets
 		}
 	})
 }

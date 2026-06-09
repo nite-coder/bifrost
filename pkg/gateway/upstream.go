@@ -30,21 +30,9 @@ import (
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
+	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
-
-var httpServiceOpenConnections *prom.GaugeVec
-
-func init() {
-	httpServiceOpenConnections = prom.NewGaugeVec(
-		prom.GaugeOpts{
-			Name: "http_service_open_connections",
-			Help: "Number of open connections for services",
-		},
-		[]string{"service_id", "target"},
-	)
-	prom.MustRegister(httpServiceOpenConnections)
-}
 
 // Upstream represents a collection of backend targets and a load balancer.
 type Upstream struct {
@@ -282,7 +270,7 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 				labels := make(prom.Labels)
 				labels["service_id"] = u.serviceOptions.ID
 				labels["target"] = hcs.ConnPoolState().Addr
-				httpServiceOpenConnections.With(labels).Set(float64(hcs.ConnPoolState().TotalConnNum))
+				metrics.HTTPServiceOpenConnections.With(labels).Set(float64(hcs.ConnPoolState().TotalConnNum))
 			}))
 		}
 		var maxFails uint
@@ -424,6 +412,9 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 
 func (u *Upstream) watch() {
 	u.watchOnce.Do(func() {
+		if u.discovery == nil {
+			return
+		}
 		options := provider.GetInstanceOptions{
 			Name: u.options.Discovery.Name,
 		}
@@ -433,6 +424,9 @@ func (u *Upstream) watch() {
 		var watchCh <-chan []provider.Instancer
 		watchCh, err = u.discovery.Watch(ctx, options)
 		if err != nil {
+			if errors.Is(err, provider.ErrWatchNotSupported) {
+				return
+			}
 			slog.Error("failed to watch upstream", "error", err.Error(), "upstream_id", u.options.ID)
 			return
 		}

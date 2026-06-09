@@ -1,0 +1,12 @@
+{
+  "openai-chat/gpt-4o": {
+    "input_per_mtok": 2.50,
+    "output_per_mtok": 10.00,
+    "cached_input_per_mtok": 1.25
+  },
+  "deepseek-chat": {
+    "input_per_mtok": 0.14,
+    "output_per_mtok": 0.28,
+    "cached_input_per_mtok": 0.014
+  }
+}

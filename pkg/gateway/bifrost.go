@@ -127,8 +127,11 @@ func NewBifrost(mainOptions config.Options, mode BifrostMode) (bifrost *Bifrost,
 		// Since our Provider uses a Bridge (for Push) and MergedGatherer (for Pull)
 		// that both read from DefaultGatherer, these metrics will be visible everywhere.
 		promOpts := []metrics.Option{}
-		if len(mainOptions.Metrics.Prometheus.Buckets) > 0 {
-			promOpts = append(promOpts, metrics.WithHistogramBuckets(mainOptions.Metrics.Prometheus.Buckets))
+		if len(mainOptions.Metrics.Prometheus.LatencyBuckets) > 0 {
+			promOpts = append(promOpts, metrics.WithHistogramBuckets(mainOptions.Metrics.Prometheus.LatencyBuckets))
+		}
+		if len(mainOptions.Metrics.Prometheus.AITPSBuckets) > 0 {
+			promOpts = append(promOpts, metrics.WithAITPSBuckets(mainOptions.Metrics.Prometheus.AITPSBuckets))
 		}
 		promTracer := metrics.NewTracer(promOpts...)
 		tracers = append(tracers, promTracer)

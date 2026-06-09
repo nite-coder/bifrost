@@ -6,6 +6,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
 	"github.com/nite-coder/bifrost/pkg/balancer/weighted"
 	"github.com/nite-coder/bifrost/pkg/middleware/addprefix"
+	"github.com/nite-coder/bifrost/pkg/middleware/aitransformer"
 	"github.com/nite-coder/bifrost/pkg/middleware/buffering"
 	"github.com/nite-coder/bifrost/pkg/middleware/compression"
 	"github.com/nite-coder/bifrost/pkg/middleware/coraza"
@@ -114,6 +115,11 @@ func Bifrost() error {
 	}
 
 	err = uarestriction.Init()
+	if err != nil {
+		return err
+	}
+
+	err = aitransformer.Init()
 	if err != nil {
 		return err
 	}
