@@ -50,4 +50,11 @@ The currently supports the following directives:
 | `$grpc.messaage`                  | GRPC Message returned by the upstream target                                                                            | `OK`                                    |
 | `$model`                          | The virtual model name requested by the client (AI Gateway mode)                                                        | `gpt-4o`                                |
 | `$model_id`                       | The physical model identifier mapped to the upstream provider (AI Gateway mode)                                         | `openai/gpt-4o`                         |
+| `$input_tokens`                   | The number of input tokens consumed by the AI request (AI Gateway mode)                                                 | `12`                                    |
+| `$output_tokens`                  | The number of output tokens consumed by the AI request (AI Gateway mode)                                                | `22`                                    |
+| `$input_cached_tokens`            | The number of cached input tokens in the AI request (AI Gateway mode)                                                   | `0`                                     |
+| `$total_tokens`                   | The total number of tokens (input + output) consumed by the AI request (AI Gateway mode)                                | `34`                                    |
+| `$input_cost`                     | The calculated cost of the input tokens (AI Gateway mode)                                                               | `0.00015`                               |
+| `$output_cost`                    | The calculated cost of the output tokens (AI Gateway mode)                                                              | `0.00050`                               |
+| `$total_cost`                     | The total calculated cost of the AI request (AI Gateway mode)                                                           | `0.00065`                               |
 | `$env.<key>`                      | Allow to get value from environment variables                                                                           | `$env.your_pass`                        |

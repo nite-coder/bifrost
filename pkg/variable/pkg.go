@@ -72,6 +72,13 @@ var (
 		GRPCMessage:                 {},
 		Model:                       {},
 		ModelID:                     {},
+		InputTokens:                 {},
+		OutputTokens:                {},
+		InputCachedTokens:           {},
+		TotalTokens:                 {},
+		InputCost:                   {},
+		OutputCost:                  {},
+		TotalCost:                   {},
 	}
 )
 
@@ -568,6 +575,20 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case ModelID:
 		modelID := c.GetString(ModelID)
 		return modelID, true
+	case InputTokens:
+		return c.Get(InputTokens)
+	case OutputTokens:
+		return c.Get(OutputTokens)
+	case InputCachedTokens:
+		return c.Get(InputCachedTokens)
+	case TotalTokens:
+		return c.Get(TotalTokens)
+	case InputCost:
+		return c.Get(InputCost)
+	case OutputCost:
+		return c.Get(OutputCost)
+	case TotalCost:
+		return c.Get(TotalCost)
 	default:
 
 		if strings.HasPrefix(key, "$http.request.header.") {

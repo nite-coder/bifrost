@@ -20,6 +20,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/ai"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
+	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 var (
@@ -185,6 +186,11 @@ func TestAIProxy_ServeHTTP_UnarySuccess(t *testing.T) {
 
 	assert.InDelta(t, float64(10), getCounterValue(metrics.AIInputTokens, "gpt-4o", "p1/gpt-4"), 0.0001)
 	assert.InDelta(t, float64(20), getCounterValue(metrics.AIOutputTokens, "gpt-4o", "p1/gpt-4"), 0.0001)
+
+	assert.Equal(t, 10, hzCtx.GetInt(variable.InputTokens))
+	assert.Equal(t, 20, hzCtx.GetInt(variable.OutputTokens))
+	assert.Equal(t, 0, hzCtx.GetInt(variable.InputCachedTokens))
+	assert.Equal(t, 30, hzCtx.GetInt(variable.TotalTokens))
 }
 
 func TestAIProxy_ServeHTTP_UnaryError(t *testing.T) {
@@ -258,7 +264,7 @@ func TestAIProxy_ServeHTTP_StreamSuccess(t *testing.T) {
 		MetricsEnabled: true,
 	})
 
-	canonicalChunks := "data: {\"id\":\"1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"delta\":{\"content\":\"hello\"}}]}\n\ndata: [DONE]\n\n"
+	canonicalChunks := "data: {\"id\":\"1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"delta\":{\"content\":\"hello\"}}]}\n\ndata: {\"id\":\"1\",\"object\":\"chat.completion.chunk\",\"usage\":{\"prompt_tokens\":12,\"completion_tokens\":22,\"total_tokens\":34}}\n\ndata: [DONE]\n\n"
 	mockLL.streamChatFunc = func(_ context.Context, _ *ai.ChatRequest) (io.ReadCloser, error) {
 		return io.NopCloser(strings.NewReader(canonicalChunks)), nil
 	}
@@ -280,6 +286,10 @@ func TestAIProxy_ServeHTTP_StreamSuccess(t *testing.T) {
 
 	assert.Equal(t, "text/event-stream", string(hzCtx.Response.Header.ContentType()))
 	assert.Equal(t, canonicalChunks, string(hzCtx.Response.Body()))
+
+	assert.Equal(t, 12, hzCtx.GetInt(variable.InputTokens))
+	assert.Equal(t, 22, hzCtx.GetInt(variable.OutputTokens))
+	assert.Equal(t, 34, hzCtx.GetInt(variable.TotalTokens))
 }
 
 type errorReader struct {
@@ -451,6 +461,10 @@ func TestAIProxy_ServeHTTP_Responses(t *testing.T) {
 	err := sonic.Unmarshal(hzCtx.Response.Body(), &body)
 	require.NoError(t, err)
 	assert.Equal(t, "resp-123", body["id"])
+
+	assert.Equal(t, 5, hzCtx.GetInt(variable.InputTokens))
+	assert.Equal(t, 15, hzCtx.GetInt(variable.OutputTokens))
+	assert.Equal(t, 20, hzCtx.GetInt(variable.TotalTokens))
 }
 
 func getCounterValue(counter *prom.CounterVec, labels ...string) float64 {

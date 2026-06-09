@@ -19,6 +19,13 @@ func TestGetDirective(t *testing.T) {
 	hzCtx.Request.Header.SetUserAgentBytes([]byte("my_user_agent"))
 	hzCtx.Set(RouteID, "routeA")
 	hzCtx.Set(ServiceID, "serviceA")
+	hzCtx.Set(InputTokens, 15)
+	hzCtx.Set(OutputTokens, 25)
+	hzCtx.Set(InputCachedTokens, 5)
+	hzCtx.Set(TotalTokens, 40)
+	hzCtx.Set(InputCost, 0.00015)
+	hzCtx.Set(OutputCost, 0.00050)
+	hzCtx.Set(TotalCost, 0.00065)
 	hzCtx.Set("myservice", "serviceA")
 	hzCtx.Set(UpstreamID, "upstreamA")
 	hzCtx.Set(UpstreamRequestHost, "1.2.3.4")
@@ -168,6 +175,14 @@ func TestGetDirective(t *testing.T) {
 
 	errType := GetString(ErrorType, hzCtx)
 	assert.Empty(t, errType)
+
+	assert.Equal(t, int64(15), GetInt64(InputTokens, hzCtx))
+	assert.Equal(t, int64(25), GetInt64(OutputTokens, hzCtx))
+	assert.Equal(t, int64(5), GetInt64(InputCachedTokens, hzCtx))
+	assert.Equal(t, int64(40), GetInt64(TotalTokens, hzCtx))
+	assert.InDelta(t, float64(0.00015), GetFloat64(InputCost, hzCtx), 0.00001)
+	assert.InDelta(t, float64(0.00050), GetFloat64(OutputCost, hzCtx), 0.00001)
+	assert.InDelta(t, float64(0.00065), GetFloat64(TotalCost, hzCtx), 0.00001)
 
 	hostname := GetString(Hostname, hzCtx)
 	assert.NotEmpty(t, hostname)

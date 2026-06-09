@@ -319,6 +319,19 @@ func (p *Proxy) handleChatUnary(
 		metrics.AIRequestCost.WithLabelValues(virtualModel, modelID).Add(resp.Usage.InputCost + resp.Usage.OutputCost)
 	}
 
+	// Set access log variables in context
+	hzCtx.Set(variable.InputTokens, resp.Usage.PromptTokens)
+	hzCtx.Set(variable.OutputTokens, resp.Usage.CompletionTokens)
+	if resp.Usage.PromptTokensDetails != nil {
+		hzCtx.Set(variable.InputCachedTokens, resp.Usage.PromptTokensDetails.CachedTokens)
+	} else {
+		hzCtx.Set(variable.InputCachedTokens, 0)
+	}
+	hzCtx.Set(variable.TotalTokens, resp.Usage.TotalTokens)
+	hzCtx.Set(variable.InputCost, resp.Usage.InputCost)
+	hzCtx.Set(variable.OutputCost, resp.Usage.OutputCost)
+	hzCtx.Set(variable.TotalCost, resp.Usage.InputCost+resp.Usage.OutputCost)
+
 	// Mask model name in response
 	resp.Model = virtualModel
 
@@ -404,6 +417,19 @@ func (p *Proxy) handleChatStream(
 				metrics.AITotalTokens.WithLabelValues(metadata.Model, metadata.Provider).Add(float64(u.TotalTokens))
 				metrics.AIRequestCost.WithLabelValues(metadata.Model, metadata.Provider).Add(u.InputCost + u.OutputCost)
 			}
+
+			// Set access log variables in context
+			hzCtx.Set(variable.InputTokens, u.PromptTokens)
+			hzCtx.Set(variable.OutputTokens, totalCompletionTokens)
+			if u.PromptTokensDetails != nil {
+				hzCtx.Set(variable.InputCachedTokens, u.PromptTokensDetails.CachedTokens)
+			} else {
+				hzCtx.Set(variable.InputCachedTokens, 0)
+			}
+			hzCtx.Set(variable.TotalTokens, u.TotalTokens)
+			hzCtx.Set(variable.InputCost, u.InputCost)
+			hzCtx.Set(variable.OutputCost, u.OutputCost)
+			hzCtx.Set(variable.TotalCost, u.InputCost+u.OutputCost)
 		},
 	}
 
@@ -553,6 +579,19 @@ func (p *Proxy) handleResponses(
 		metrics.AITotalTokens.WithLabelValues(virtualModel, modelID).Add(float64(resp.Usage.TotalTokens))
 		metrics.AIRequestCost.WithLabelValues(virtualModel, modelID).Add(resp.Usage.InputCost + resp.Usage.OutputCost)
 	}
+
+	// Set access log variables in context
+	hzCtx.Set(variable.InputTokens, resp.Usage.PromptTokens)
+	hzCtx.Set(variable.OutputTokens, resp.Usage.CompletionTokens)
+	if resp.Usage.PromptTokensDetails != nil {
+		hzCtx.Set(variable.InputCachedTokens, resp.Usage.PromptTokensDetails.CachedTokens)
+	} else {
+		hzCtx.Set(variable.InputCachedTokens, 0)
+	}
+	hzCtx.Set(variable.TotalTokens, resp.Usage.TotalTokens)
+	hzCtx.Set(variable.InputCost, resp.Usage.InputCost)
+	hzCtx.Set(variable.OutputCost, resp.Usage.OutputCost)
+	hzCtx.Set(variable.TotalCost, resp.Usage.InputCost+resp.Usage.OutputCost)
 
 	// Mask model name in response
 	resp.Model = virtualModel
