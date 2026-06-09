@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Introduced an experimental AI Gateway, currently supporting OpenAI-compatible completion and chat completion modes for streamlined LLM integrations. ([#130](https://github.com/nite-coder/bifrost/pull/130) by [0x5487](https://github.com/0x5487))
 
+## Security
+
+- Bump OpenTelemetry package to `v1.43.0` ([#131](https://github.com/nite-coder/bifrost/pull/131) by [0x5487](https://github.com/0x5487))
+
 ## [0.10.0] (2026-04-13)
 
 ## Fixed
