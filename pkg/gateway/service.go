@@ -722,6 +722,23 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint
 		}
 	}
 
+	factory := balancer.Factory(upstreamOptions.Balancer.Type)
+	if factory == nil {
+		slog.Error("unsupported balancer type", "type", upstreamOptions.Balancer.Type)
+		return
+	}
+
+	bal, balancerErr := factory(newProxies, upstreamOptions.Balancer.Params)
+	if balancerErr != nil {
+		slog.Error("failed to create balancer", "upstream_id", upstreamID, "error", balancerErr)
+		return
+	}
+
+	if s.upstream != nil && s.upstream.options.ID == upstreamID {
+		s.balancer.Store(bal)
+	}
+	s.balancers[upstreamID] = bal
+
 	oldProxies := s.upstreamProxies[upstreamID]
 	s.upstreamProxies[upstreamID] = newProxyHashes
 
@@ -743,23 +760,6 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint
 			}
 		}
 	}
-
-	factory := balancer.Factory(upstreamOptions.Balancer.Type)
-	if factory == nil {
-		slog.Error("unsupported balancer type", "type", upstreamOptions.Balancer.Type)
-		return
-	}
-
-	bal, balancerErr := factory(newProxies, upstreamOptions.Balancer.Params)
-	if balancerErr != nil {
-		slog.Error("failed to create balancer", "upstream_id", upstreamID, "error", balancerErr)
-		return
-	}
-
-	if s.upstream != nil && s.upstream.options.ID == upstreamID {
-		s.balancer.Store(bal)
-	}
-	s.balancers[upstreamID] = bal
 }
 
 func (s *Service) getBalancer(upstreamName string) (balancer.Balancer, bool) {

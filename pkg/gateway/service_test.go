@@ -11,9 +11,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/nite-coder/bifrost/pkg/balancer"
 	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
 	"github.com/nite-coder/bifrost/pkg/balancer/weighted"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/resolver"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -499,4 +501,134 @@ func TestSharedUpstreamLifecycle(t *testing.T) {
 	}, time.Second, 5*time.Millisecond)
 
 	_ = service2.Close()
+}
+
+type mockProxyForUpdate struct {
+	id         string
+	target     string
+	ep         *proxy.Endpoint
+	onClose    func()
+	setEpCount int
+}
+
+func (m *mockProxyForUpdate) ID() string                                         { return m.id }
+func (m *mockProxyForUpdate) Target() string                                     { return m.target }
+func (m *mockProxyForUpdate) Endpoint() *proxy.Endpoint                          { return m.ep }
+func (m *mockProxyForUpdate) SetEndpoint(ep *proxy.Endpoint)                     { m.ep = ep; m.setEpCount++ }
+func (m *mockProxyForUpdate) ServeHTTP(_ context.Context, _ *app.RequestContext) {}
+func (m *mockProxyForUpdate) Close() error {
+	if m.onClose != nil {
+		m.onClose()
+	}
+	return nil
+}
+
+type mockBalancer struct {
+	proxies []proxy.Proxy
+}
+
+func (b *mockBalancer) Proxies() []proxy.Proxy { return b.proxies }
+func (b *mockBalancer) Select(_ context.Context, _ *app.RequestContext) (proxy.Proxy, error) {
+	if len(b.proxies) == 0 {
+		return nil, balancer.ErrNotAvailable
+	}
+	return b.proxies[0], nil
+}
+
+func TestService_AtomicBalancerUpdate(t *testing.T) {
+	// 1. Register a mock balancer handler
+	err := balancer.Register([]string{"mock_atomic"}, func(proxies []proxy.Proxy, _ any) (balancer.Balancer, error) {
+		return &mockBalancer{proxies: proxies}, nil
+	})
+	require.NoError(t, err)
+
+	// 2. Setup a Service with mock balancer type
+	bifrost := &Bifrost{
+		options: &config.Options{},
+	}
+
+	upstreamID := "test_atomic_upstream"
+	upstreamOpts := config.UpstreamOptions{
+		ID: upstreamID,
+		Balancer: config.BalancerOptions{
+			Type: "mock_atomic",
+		},
+		Targets: []config.TargetOptions{
+			{Target: "127.0.0.1:8080"},
+		},
+	}
+	u, err := newUpstream(bifrost, upstreamOpts)
+	require.NoError(t, err)
+	defer func() {
+		_ = u.Close()
+	}()
+
+	svc := &Service{
+		bifrost:         bifrost,
+		options:         &config.ServiceOptions{ID: "testService", URL: "http://" + upstreamID},
+		upstream:        u,
+		balancers:       make(map[string]balancer.Balancer),
+		activeProxies:   make(map[string]proxy.Proxy),
+		upstreamProxies: make(map[string]map[string]proxy.Proxy),
+	}
+
+	// First update: initial endpoints
+	ep1 := &proxy.Endpoint{
+		Address:     "127.0.0.1:8080",
+		HealthState: proxy.NewTargetState(2, time.Second),
+	}
+
+	// Create mock proxy for ep1
+	targetURL1 := "http://127.0.0.1:8080"
+	hash1 := generateServiceProxyHash(targetURL1, nil)
+	p1 := &mockProxyForUpdate{
+		id:     "proxy1",
+		target: targetURL1,
+		ep:     ep1,
+	}
+	svc.activeProxies[hash1] = p1
+	svc.upstreamProxies[upstreamID] = map[string]proxy.Proxy{
+		hash1: p1,
+	}
+
+	// Call updateEndpoints (this should trigger creation of mockBalancer containing p1)
+	svc.updateEndpoints(upstreamID, []*proxy.Endpoint{ep1})
+
+	bal1Val := svc.balancer.Load()
+	require.NotNil(t, bal1Val)
+	bal1, ok := bal1Val.(balancer.Balancer)
+	require.True(t, ok)
+	assert.Same(t, p1, bal1.Proxies()[0])
+
+	// Second update: ep1 is replaced by ep2
+	ep2 := &proxy.Endpoint{
+		Address:     "127.0.0.1:8081",
+		HealthState: proxy.NewTargetState(2, time.Second),
+	}
+
+	targetURL2 := "http://127.0.0.1:8081"
+	hash2 := generateServiceProxyHash(targetURL2, nil)
+	p2 := &mockProxyForUpdate{
+		id:     "proxy2",
+		target: targetURL2,
+		ep:     ep2,
+	}
+	// Pre-populate p2 so updateEndpoints doesn't try to create a real ReverseProxy
+	svc.activeProxies[hash2] = p2
+
+	// Set onClose assertion: when p1 is closed, the active balancer must already be bal2
+	var closedAsserted bool
+	p1.onClose = func() {
+		currentBalVal := svc.balancer.Load()
+		require.NotNil(t, currentBalVal)
+		currentBal, ok := currentBalVal.(balancer.Balancer)
+		require.True(t, ok)
+		// It must be bal2 (which contains p2, not p1)
+		assert.Same(t, p2, currentBal.Proxies()[0])
+		closedAsserted = true
+	}
+
+	svc.updateEndpoints(upstreamID, []*proxy.Endpoint{ep2})
+
+	assert.True(t, closedAsserted, "Expected onClose to be called and assert the new balancer was already stored")
 }
