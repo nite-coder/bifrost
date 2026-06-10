@@ -26,15 +26,18 @@ func (m *UpstreamManager) Start() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	cleanup := func() {
+		for _, upstream := range m.upstreams {
+			_ = upstream.Close()
+		}
+		m.upstreams = make(map[string]*Upstream)
+	}
+
 	for id, upstreamOptions := range m.bifrost.options.Upstreams {
 		upstreamOptions.ID = id
 		u, err := newUpstream(m.bifrost, upstreamOptions)
 		if err != nil {
-			// clean up already loaded upstreams
-			for _, upstream := range m.upstreams {
-				_ = upstream.Close()
-			}
-			m.upstreams = make(map[string]*Upstream)
+			cleanup()
 			return err
 		}
 		m.upstreams[id] = u
@@ -73,11 +76,7 @@ func (m *UpstreamManager) Start() error {
 
 			u, err := newUpstream(m.bifrost, upstreamOpts)
 			if err != nil {
-				// clean up already loaded upstreams
-				for _, upstream := range m.upstreams {
-					_ = upstream.Close()
-				}
-				m.upstreams = make(map[string]*Upstream)
+				cleanup()
 				return err
 			}
 			m.upstreams["ai:"+modelID] = u

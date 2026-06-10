@@ -9,7 +9,6 @@ import (
 	"net"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/config"
@@ -183,16 +182,12 @@ func (u *Upstream) refreshEndpoints(instances []provider.Instancer) error {
 		return fmt.Errorf("no instances found for upstream ID: %s", u.options.ID)
 	}
 
-	var maxFails uint
-	if u.options.HealthCheck.Passive.MaxFails == nil {
-		maxFails = u.bifrost.options.Default.Upstream.MaxFails
-	} else {
+	maxFails := u.bifrost.options.Default.Upstream.MaxFails
+	if u.options.HealthCheck.Passive.MaxFails != nil {
 		maxFails = *u.options.HealthCheck.Passive.MaxFails
 	}
-	var failTimeout time.Duration
-	if u.options.HealthCheck.Passive.FailTimeout > 0 {
-		failTimeout = u.options.HealthCheck.Passive.FailTimeout
-	} else if u.bifrost.options.Default.Upstream.FailTimeout > 0 {
+	failTimeout := u.options.HealthCheck.Passive.FailTimeout
+	if failTimeout <= 0 {
 		failTimeout = u.bifrost.options.Default.Upstream.FailTimeout
 	}
 

@@ -486,8 +486,8 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint
 
 	var upstreamOptions *config.UpstreamOptions
 	var modelOpts *config.AIModelOptions
-	if after, ok := strings.CutPrefix(upstreamID, "ai:"); ok {
-		modelID := after
+	modelID, isAI := strings.CutPrefix(upstreamID, "ai:")
+	if isAI {
 		var found bool
 		modelOpts, found = s.bifrost.options.Models[modelID]
 		if !found {
@@ -525,7 +525,7 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint
 	for _, ep := range endpoints {
 		var targetHost, targetPort string
 		var splitErr error
-		if strings.HasPrefix(upstreamID, "ai:") {
+		if isAI {
 			targetHost = ep.Address
 			targetPort = ""
 		} else {
@@ -537,7 +537,7 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint
 		}
 
 		var myURL string
-		if !strings.HasPrefix(upstreamID, "ai:") {
+		if !isAI {
 			addr, parseErr := url.Parse(s.options.URL)
 			if parseErr != nil {
 				slog.Error("failed to parse service URL", "url", s.options.URL, "error", parseErr)
@@ -560,20 +560,14 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint
 		hash := generateServiceProxyHash(myURL, ep.Tags)
 
 		if existing, found := s.activeProxies[hash]; found {
-			newEp := &proxy.Endpoint{
-				Address:     ep.Address,
-				Weight:      ep.Weight,
-				Tags:        ep.Tags,
-				HealthState: ep.HealthState,
-			}
-			existing.SetEndpoint(newEp)
+			existing.SetEndpoint(ep)
 			newProxies = append(newProxies, existing)
 			newProxyHashes[hash] = existing
 			continue
 		}
 
 		var p proxy.Proxy
-		if strings.HasPrefix(upstreamID, "ai:") {
+		if isAI {
 			parts := strings.SplitN(ep.Address, "/", aiproxy.TargetPartsCount)
 			if len(parts) != aiproxy.TargetPartsCount {
 				slog.Error("invalid target format in AI model", "target", ep.Address)
@@ -618,41 +612,7 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint
 			serverName := ep.Tags["server_name"]
 			switch s.options.Protocol {
 			case "", config.ProtocolHTTP, config.ProtocolHTTP2:
-				clientOpts := httpproxy.DefaultClientOptions()
-				if s.options.Timeout.Dail > 0 {
-					clientOpts = append(clientOpts, client.WithDialTimeout(s.options.Timeout.Dail))
-				} else if s.bifrost.options.Default.Service.Timeout.Dail > 0 {
-					clientOpts = append(clientOpts, client.WithDialTimeout(s.bifrost.options.Default.Service.Timeout.Dail))
-				}
-				if s.options.Timeout.Read > 0 {
-					clientOpts = append(clientOpts, client.WithClientReadTimeout(s.options.Timeout.Read))
-				} else if s.bifrost.options.Default.Service.Timeout.Read > 0 {
-					clientOpts = append(
-						clientOpts,
-						client.WithClientReadTimeout(s.bifrost.options.Default.Service.Timeout.Read),
-					)
-				}
-				if s.options.Timeout.Write > 0 {
-					clientOpts = append(clientOpts, client.WithWriteTimeout(s.options.Timeout.Write))
-				} else if s.bifrost.options.Default.Service.Timeout.Write > 0 {
-					clientOpts = append(clientOpts, client.WithWriteTimeout(s.bifrost.options.Default.Service.Timeout.Write))
-				}
-				if s.options.Timeout.MaxConnWait > 0 {
-					clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(s.options.Timeout.MaxConnWait))
-				} else if s.bifrost.options.Default.Service.Timeout.MaxConnWait > 0 {
-					clientOpts = append(
-						clientOpts,
-						client.WithMaxConnWaitTimeout(s.bifrost.options.Default.Service.Timeout.MaxConnWait),
-					)
-				}
-				if s.options.MaxConnsPerHost != nil {
-					clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*s.options.MaxConnsPerHost))
-				} else if s.bifrost.options.Default.Service.MaxConnsPerHost != nil {
-					clientOpts = append(
-						clientOpts,
-						client.WithMaxConnsPerHost(*s.bifrost.options.Default.Service.MaxConnsPerHost),
-					)
-				}
+				clientOpts := s.getClientOptions()
 
 				addr, _ := url.Parse(s.options.URL)
 				if addr != nil && strings.EqualFold(addr.Scheme, "https") {
@@ -760,6 +720,52 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint
 			}
 		}
 	}
+}
+
+func (s *Service) getClientOptions() []hzconfig.ClientOption {
+	clientOpts := httpproxy.DefaultClientOptions()
+
+	dialTimeout := s.options.Timeout.Dail
+	if dialTimeout <= 0 {
+		dialTimeout = s.bifrost.options.Default.Service.Timeout.Dail
+	}
+	if dialTimeout > 0 {
+		clientOpts = append(clientOpts, client.WithDialTimeout(dialTimeout))
+	}
+
+	readTimeout := s.options.Timeout.Read
+	if readTimeout <= 0 {
+		readTimeout = s.bifrost.options.Default.Service.Timeout.Read
+	}
+	if readTimeout > 0 {
+		clientOpts = append(clientOpts, client.WithClientReadTimeout(readTimeout))
+	}
+
+	writeTimeout := s.options.Timeout.Write
+	if writeTimeout <= 0 {
+		writeTimeout = s.bifrost.options.Default.Service.Timeout.Write
+	}
+	if writeTimeout > 0 {
+		clientOpts = append(clientOpts, client.WithWriteTimeout(writeTimeout))
+	}
+
+	maxConnWait := s.options.Timeout.MaxConnWait
+	if maxConnWait <= 0 {
+		maxConnWait = s.bifrost.options.Default.Service.Timeout.MaxConnWait
+	}
+	if maxConnWait > 0 {
+		clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(maxConnWait))
+	}
+
+	maxConns := s.options.MaxConnsPerHost
+	if maxConns == nil {
+		maxConns = s.bifrost.options.Default.Service.MaxConnsPerHost
+	}
+	if maxConns != nil {
+		clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*maxConns))
+	}
+
+	return clientOpts
 }
 
 func (s *Service) getBalancer(upstreamName string) (balancer.Balancer, bool) {
