@@ -71,9 +71,13 @@ func (s *Service) Close() error {
 	s.cancelFuncs = nil
 
 	for id, ch := range s.subscriptions {
-		if u, found := s.bifrost.upstreamManager.Get(id); found {
-			u.Unsubscribe(ch)
-		} else if s.upstream != nil && s.upstream.options.ID == id {
+		if s.bifrost != nil && s.bifrost.upstreamManager != nil {
+			if u, found := s.bifrost.upstreamManager.Get(id); found {
+				u.Unsubscribe(ch)
+				continue
+			}
+		}
+		if s.upstream != nil && s.upstream.options.ID == id {
 			s.upstream.Unsubscribe(ch)
 		}
 	}
@@ -722,8 +726,20 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint
 
 	for hash, p := range oldProxies {
 		if _, found := newProxyHashes[hash]; !found {
-			_ = p.Close()
-			delete(s.activeProxies, hash)
+			// Check if the proxy is still used by any other upstream of this service
+			inUse := false
+			for id, proxies := range s.upstreamProxies {
+				if id != upstreamID {
+					if _, exists := proxies[hash]; exists {
+						inUse = true
+						break
+					}
+				}
+			}
+			if !inUse {
+				_ = p.Close()
+				delete(s.activeProxies, hash)
+			}
 		}
 	}
 

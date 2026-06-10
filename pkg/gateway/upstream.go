@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net"
 	"strings"
 	"sync"
@@ -216,10 +217,8 @@ func (u *Upstream) refreshEndpoints(instances []provider.Instancer) error {
 			state = proxy.NewTargetState(maxFails, failTimeout)
 		}
 
-		tags := instance.Tags()
-		if tags == nil {
-			tags = make(map[string]string)
-		}
+		tags := make(map[string]string)
+		maps.Copy(tags, instance.Tags())
 		tags["server_name"] = serverName
 
 		ep := &proxy.Endpoint{
@@ -233,17 +232,23 @@ func (u *Upstream) refreshEndpoints(instances []provider.Instancer) error {
 
 	u.mu.Lock()
 	u.endpoints = newEndpoints
-	subs := make([]chan []*proxy.Endpoint, len(u.subscribers))
-	copy(subs, u.subscribers)
-	u.mu.Unlock()
-
-	for _, ch := range subs {
+	for _, ch := range u.subscribers {
 		select {
 		case ch <- newEndpoints:
 		default:
-			slog.Warn("upstream subscriber channel full, dropping update", "upstream_id", u.options.ID)
+			// Channel is full, drain the oldest update to make room for the latest update
+			select {
+			case <-ch:
+			default:
+			}
+			select {
+			case ch <- newEndpoints:
+			default:
+				slog.Warn("upstream subscriber channel full, dropping update", "upstream_id", u.options.ID)
+			}
 		}
 	}
+	u.mu.Unlock()
 
 	return nil
 }
