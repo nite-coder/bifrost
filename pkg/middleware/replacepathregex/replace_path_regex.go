@@ -18,7 +18,7 @@ type Config struct {
 
 // Init registers the replace_path_regex middleware.
 func Init() error {
-	return middleware.RegisterTyped([]string{"replace_path_regex"}, func(cfg Config) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"replace_path_regex"}, func(cfg Config) (app.HandlerFunc, error) {
 		if cfg.Regex == "" {
 			return nil, errors.New("regex field is not set")
 		}

@@ -54,7 +54,7 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 // Init registers the buffering middleware.
 func Init() error {
-	return middleware.RegisterTyped([]string{"buffering"}, func(cfg Config) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"buffering"}, func(cfg Config) (app.HandlerFunc, error) {
 		m := NewMiddleware(cfg)
 		return m.ServeHTTP, nil
 	})

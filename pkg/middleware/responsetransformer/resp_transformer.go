@@ -81,7 +81,7 @@ func (m *ResponseTransFormaterMiddleware) ServeHTTP(ctx context.Context, c *app.
 
 // Init registers the response_transformer middleware.
 func Init() error {
-	return middleware.RegisterTyped([]string{"response_transformer"}, func(opts Options) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"response_transformer"}, func(opts Options) (app.HandlerFunc, error) {
 		m := NewMiddleware(opts)
 		return m.ServeHTTP, nil
 	})

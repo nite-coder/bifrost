@@ -20,7 +20,7 @@ type Config struct {
 
 // Init registers the add_prefix middleware.
 func Init() error {
-	return middleware.RegisterTyped([]string{"add_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"add_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
 		if cfg.Prefix == "" {
 			return nil, errors.New("prefix is required and must be a string")
 		}

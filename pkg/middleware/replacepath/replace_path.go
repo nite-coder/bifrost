@@ -18,7 +18,7 @@ type Config struct {
 
 // Init registers the replace_path middleware.
 func Init() error {
-	return middleware.RegisterTyped([]string{"replace_path"}, func(cfg Config) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"replace_path"}, func(cfg Config) (app.HandlerFunc, error) {
 		if cfg.Path == "" {
 			return nil, errors.New("path field is not set")
 		}

@@ -13,7 +13,7 @@ import (
 
 // Init registers the setvars middleware.
 func Init() error {
-	return middleware.RegisterTyped([]string{"setvars"}, func(options []*Options) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"setvars"}, func(options []*Options) (app.HandlerFunc, error) {
 		if len(options) == 0 {
 			return nil, errors.New("setvars middleware params is invalid")
 		}

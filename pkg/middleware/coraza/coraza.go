@@ -209,7 +209,7 @@ func Init() error {
 		[]string{"server_id", "method", "path", "rule_id", "client_ip"},
 	)
 	prom.MustRegister(bifrostWAFCoreRulesetHits)
-	return middleware.RegisterTyped([]string{"coraza"}, func(options Options) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"coraza"}, func(options Options) (app.HandlerFunc, error) {
 		m, err := NewMiddleware(options)
 		if err != nil {
 			return nil, err
