@@ -13,7 +13,6 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync/atomic"
-	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
@@ -82,12 +81,8 @@ type Options struct {
 	TargetHostHeader string
 	ServiceID        string
 	Protocol         config.Protocol
-	MaxFails         uint
-	FailTimeout      time.Duration
-	Weight           uint32
 	IsTracingEnabled bool
 	PassHostHeader   bool
-	Tags             map[string]string
 	Endpoint         *proxy.Endpoint
 }
 
@@ -126,19 +121,10 @@ func New(opts Options, httpClient *client.Client) (proxy.Proxy, error) {
 		}
 	}
 
-	endpoint := opts.Endpoint
-	if endpoint == nil {
-		weight := opts.Weight
-		if weight == 0 {
-			weight = 1
-		}
-		endpoint = &proxy.Endpoint{
-			Address:     addr.Host,
-			Weight:      weight,
-			Tags:        opts.Tags,
-			HealthState: proxy.NewTargetState(opts.MaxFails, opts.FailTimeout),
-		}
+	if opts.Endpoint == nil {
+		return nil, errors.New("endpoint cannot be nil")
 	}
+	endpoint := opts.Endpoint
 
 	r := &Proxy{
 		id:              uuid.New().String(),

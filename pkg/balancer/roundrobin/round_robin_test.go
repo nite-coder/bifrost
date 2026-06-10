@@ -15,38 +15,29 @@ import (
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 )
 
+func createTestProxy(target string, maxFails uint, failTimeout time.Duration) proxy.Proxy {
+	p, _ := httpproxy.New(httpproxy.Options{
+		Target:   target,
+		Protocol: config.ProtocolHTTP,
+		Endpoint: &proxy.Endpoint{
+			Address:     target,
+			Weight:      1,
+			HealthState: proxy.NewTargetState(maxFails, failTimeout),
+		},
+	}, nil)
+	return p
+}
+
 func TestRoundRobin(t *testing.T) {
 	_ = Init()
-	proxyOptions1 := httpproxy.Options{
-		Target:      "http://backend1",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      1,
-		FailTimeout: time.Second,
-		MaxFails:    1,
-	}
-	proxy1, _ := httpproxy.New(proxyOptions1, nil)
+	proxy1 := createTestProxy("http://backend1", 1, time.Second)
 	proxy1.Endpoint().HealthState.RecordFailure()
 	assert.Eventually(t, func() bool {
 		return proxy1.Endpoint().HealthState.IsAvailable()
 	}, 2*time.Second, 100*time.Millisecond, "proxy1 should be available after fail timeout")
 
-	proxyOptions2 := httpproxy.Options{
-		Target:      "http://backend2",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      1,
-		FailTimeout: 10 * time.Second,
-		MaxFails:    1,
-	}
-	proxy2, _ := httpproxy.New(proxyOptions2, nil)
-
-	proxyOptions3 := httpproxy.Options{
-		Target:      "http://backend3",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      1,
-		FailTimeout: 10 * time.Second,
-		MaxFails:    0,
-	}
-	proxy3, _ := httpproxy.New(proxyOptions3, nil)
+	proxy2 := createTestProxy("http://backend2", 1, 10*time.Second)
+	proxy3 := createTestProxy("http://backend3", 0, 10*time.Second)
 
 	proxies := []proxy.Proxy{
 		proxy1,
@@ -84,14 +75,7 @@ func TestRoundRobin(t *testing.T) {
 		proxy1.Endpoint().HealthState.RecordFailure()
 		proxy2.Endpoint().HealthState.RecordFailure()
 
-		proxyOptions3 := httpproxy.Options{
-			Target:      "http://backend3",
-			Protocol:    config.ProtocolHTTP,
-			Weight:      1,
-			FailTimeout: 10 * time.Second,
-			MaxFails:    1,
-		}
-		proxy3, _ := httpproxy.New(proxyOptions3, nil)
+		proxy3 := createTestProxy("http://backend3", 1, 10*time.Second)
 		proxy3.Endpoint().HealthState.RecordFailure()
 
 		proxies := []proxy.Proxy{proxy1, proxy2, proxy3}
@@ -116,14 +100,7 @@ func TestRoundRobin(t *testing.T) {
 	})
 
 	t.Run("single proxy failed", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target:      "http://backend1",
-			Protocol:    config.ProtocolHTTP,
-			Weight:      1,
-			FailTimeout: 10 * time.Second,
-			MaxFails:    1,
-		}
-		p1, _ := httpproxy.New(p1Options, nil)
+		p1 := createTestProxy("http://backend1", 1, 10*time.Second)
 		p1.Endpoint().HealthState.RecordFailure()
 
 		bSingle := NewBalancer([]proxy.Proxy{p1})
@@ -133,10 +110,7 @@ func TestRoundRobin(t *testing.T) {
 	})
 
 	t.Run("registration", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target: "http://backend1",
-		}
-		p1, _ := httpproxy.New(p1Options, nil)
+		p1 := createTestProxy("http://backend1", 0, 0)
 
 		factory := balancer.Factory("round_robin")
 		assert.NotNil(t, factory)
@@ -150,15 +124,8 @@ func TestRoundRobin(t *testing.T) {
 	})
 
 	t.Run("counter overflow", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target: "http://backend1",
-		}
-		p1, _ := httpproxy.New(p1Options, nil)
-
-		p2Options := httpproxy.Options{
-			Target: "http://backend2",
-		}
-		p2, _ := httpproxy.New(p2Options, nil)
+		p1 := createTestProxy("http://backend1", 0, 0)
+		p2 := createTestProxy("http://backend2", 0, 0)
 
 		b := NewBalancer([]proxy.Proxy{p1, p2})
 

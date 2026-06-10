@@ -16,31 +16,27 @@ import (
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 )
 
+func createTestProxy(target string, weight uint32, maxFails uint, failTimeout time.Duration) proxy.Proxy {
+	if weight == 0 {
+		weight = 1
+	}
+	p, _ := httpproxy.New(httpproxy.Options{
+		Target:   target,
+		Protocol: config.ProtocolHTTP,
+		Endpoint: &proxy.Endpoint{
+			Address:     target,
+			Weight:      weight,
+			HealthState: proxy.NewTargetState(maxFails, failTimeout),
+		},
+	}, nil)
+	return p
+}
+
 func TestHashing(t *testing.T) {
 	_ = Init()
-	proxyOptions1 := httpproxy.Options{
-		Target:      "http://backend1",
-		Protocol:    config.ProtocolHTTP,
-		FailTimeout: 10 * time.Minute,
-		MaxFails:    1,
-	}
-	proxy1, _ := httpproxy.New(proxyOptions1, nil)
-
-	proxyOptions2 := httpproxy.Options{
-		Target:      "http://backend2",
-		Protocol:    config.ProtocolHTTP,
-		FailTimeout: 10 * time.Minute,
-		MaxFails:    1,
-	}
-	proxy2, _ := httpproxy.New(proxyOptions2, nil)
-
-	proxyOptions3 := httpproxy.Options{
-		Target:      "http://backend3",
-		Protocol:    config.ProtocolHTTP,
-		FailTimeout: 10 * time.Minute,
-		MaxFails:    1,
-	}
-	proxy3, _ := httpproxy.New(proxyOptions3, nil)
+	proxy1 := createTestProxy("http://backend1", 1, 1, 10*time.Minute)
+	proxy2 := createTestProxy("http://backend2", 1, 1, 10*time.Minute)
+	proxy3 := createTestProxy("http://backend3", 1, 1, 10*time.Minute)
 
 	proxies := []proxy.Proxy{
 		proxy1,
@@ -158,13 +154,7 @@ func TestHashing(t *testing.T) {
 	})
 
 	t.Run("single proxy failed", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target:      "http://backend1",
-			Protocol:    config.ProtocolHTTP,
-			FailTimeout: 10 * time.Minute,
-			MaxFails:    1,
-		}
-		p1, _ := httpproxy.New(p1Options, nil)
+		p1 := createTestProxy("http://backend1", 1, 1, 10*time.Minute)
 		p1.Endpoint().HealthState.RecordFailure()
 
 		b := NewBalancer([]proxy.Proxy{p1}, "$var.uid", defaultReplicas)
@@ -175,9 +165,9 @@ func TestHashing(t *testing.T) {
 
 	t.Run("consistency check", func(t *testing.T) {
 		// 1. Create 3 proxies
-		p1, _ := httpproxy.New(httpproxy.Options{Target: "http://h1"}, nil)
-		p2, _ := httpproxy.New(httpproxy.Options{Target: "http://h2"}, nil)
-		p3, _ := httpproxy.New(httpproxy.Options{Target: "http://h3"}, nil)
+		p1 := createTestProxy("http://h1", 1, 0, 0)
+		p2 := createTestProxy("http://h2", 1, 0, 0)
+		p3 := createTestProxy("http://h3", 1, 0, 0)
 		proxies := []proxy.Proxy{p1, p2, p3}
 
 		b := NewBalancer(proxies, "$var.uid", defaultReplicas)
@@ -217,8 +207,8 @@ func TestHashing(t *testing.T) {
 
 	t.Run("weight-based distribution", func(t *testing.T) {
 		// 1. Create 2 proxies with different weights (2:1)
-		p1, _ := httpproxy.New(httpproxy.Options{Target: "http://h1", Weight: 20}, nil) // Weight 2
-		p2, _ := httpproxy.New(httpproxy.Options{Target: "http://h2", Weight: 10}, nil) // Weight 1
+		p1 := createTestProxy("http://h1", 20, 0, 0)
+		p2 := createTestProxy("http://h2", 10, 0, 0)
 		proxies := []proxy.Proxy{p1, p2}
 
 		// Use a fixed replicas to make it predictable
@@ -251,9 +241,9 @@ func TestHashing(t *testing.T) {
 	})
 
 	t.Run("consistent failover order", func(t *testing.T) {
-		p1, _ := httpproxy.New(httpproxy.Options{Target: "http://h1", MaxFails: 1, FailTimeout: 10 * time.Minute}, nil)
-		p2, _ := httpproxy.New(httpproxy.Options{Target: "http://h2", MaxFails: 1, FailTimeout: 10 * time.Minute}, nil)
-		p3, _ := httpproxy.New(httpproxy.Options{Target: "http://h3", MaxFails: 1, FailTimeout: 10 * time.Minute}, nil)
+		p1 := createTestProxy("http://h1", 1, 1, 10*time.Minute)
+		p2 := createTestProxy("http://h2", 1, 1, 10*time.Minute)
+		p3 := createTestProxy("http://h3", 1, 1, 10*time.Minute)
 		proxies := []proxy.Proxy{p1, p2, p3}
 
 		b := NewBalancer(proxies, "$var.uid", 160)
@@ -285,9 +275,9 @@ func TestHashing(t *testing.T) {
 	})
 
 	t.Run("determinism", func(t *testing.T) {
-		p1, _ := httpproxy.New(httpproxy.Options{Target: "http://h1"}, nil)
-		p2, _ := httpproxy.New(httpproxy.Options{Target: "http://h2"}, nil)
-		p3, _ := httpproxy.New(httpproxy.Options{Target: "http://h3"}, nil)
+		p1 := createTestProxy("http://h1", 1, 0, 0)
+		p2 := createTestProxy("http://h2", 1, 0, 0)
+		p3 := createTestProxy("http://h3", 1, 0, 0)
 
 		proxies1 := []proxy.Proxy{p1, p2, p3}
 		proxies2 := []proxy.Proxy{p3, p1, p2} // Different initial order

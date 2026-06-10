@@ -44,12 +44,8 @@ const grpcHeaderLen = 5
 type Options struct {
 	Target           string
 	DailOptions      []grpc.DialOption
-	Weight           uint32
-	MaxFails         uint
 	Timeout          time.Duration
-	FailTimeout      time.Duration
 	TLSVerify        bool
-	Tags             map[string]string
 	IsTracingEnabled bool
 	ServiceID        string
 	Endpoint         *proxy.Endpoint
@@ -86,19 +82,10 @@ func New(options Options) (*Proxy, error) {
 		return nil, fmt.Errorf("failed to dial backend: %w", err)
 	}
 
-	endpoint := options.Endpoint
-	if endpoint == nil {
-		weight := options.Weight
-		if weight == 0 {
-			weight = 1
-		}
-		endpoint = &proxy.Endpoint{
-			Address:     addr.Host,
-			Weight:      weight,
-			Tags:        options.Tags,
-			HealthState: proxy.NewTargetState(options.MaxFails, options.FailTimeout),
-		}
+	if options.Endpoint == nil {
+		return nil, errors.New("endpoint cannot be nil")
 	}
+	endpoint := options.Endpoint
 
 	r := &Proxy{
 		id:         uuid.New().String(),

@@ -2,10 +2,8 @@ package gateway
 
 import (
 	"sync"
-	"time"
 
 	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/proxy"
 )
 
 // UpstreamManager manages the lifecycle of all global upstreams and caches target health states.
@@ -13,9 +11,6 @@ type UpstreamManager struct {
 	mu        sync.RWMutex
 	bifrost   *Bifrost
 	upstreams map[string]*Upstream
-
-	targetsMu sync.Mutex
-	targets   map[string]*proxy.TargetState
 }
 
 // newUpstreamManager creates a new UpstreamManager instance.
@@ -23,7 +18,6 @@ func newUpstreamManager(bifrost *Bifrost) *UpstreamManager {
 	return &UpstreamManager{
 		bifrost:   bifrost,
 		upstreams: make(map[string]*Upstream),
-		targets:   make(map[string]*proxy.TargetState),
 	}
 }
 
@@ -101,10 +95,6 @@ func (m *UpstreamManager) Close() error {
 	m.upstreams = make(map[string]*Upstream)
 	m.mu.Unlock()
 
-	m.targetsMu.Lock()
-	m.targets = make(map[string]*proxy.TargetState)
-	m.targetsMu.Unlock()
-
 	return nil
 }
 
@@ -114,21 +104,4 @@ func (m *UpstreamManager) Get(id string) (*Upstream, bool) {
 	defer m.mu.RUnlock()
 	u, found := m.upstreams[id]
 	return u, found
-}
-
-// GetOrCreateTargetState retrieves or creates a TargetState for the physical target address.
-func (m *UpstreamManager) GetOrCreateTargetState(
-	address string,
-	maxFails uint,
-	failTimeout time.Duration,
-) *proxy.TargetState {
-	m.targetsMu.Lock()
-	defer m.targetsMu.Unlock()
-
-	state, found := m.targets[address]
-	if !found {
-		state = proxy.NewTargetState(maxFails, failTimeout)
-		m.targets[address] = state
-	}
-	return state
 }

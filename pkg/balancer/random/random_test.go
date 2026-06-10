@@ -14,34 +14,24 @@ import (
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 )
 
+func createTestProxy(target string, maxFails uint, failTimeout time.Duration) proxy.Proxy {
+	p, _ := httpproxy.New(httpproxy.Options{
+		Target:   target,
+		Protocol: config.ProtocolHTTP,
+		Endpoint: &proxy.Endpoint{
+			Address:     target,
+			Weight:      1,
+			HealthState: proxy.NewTargetState(maxFails, failTimeout),
+		},
+	}, nil)
+	return p
+}
+
 func TestRandom(t *testing.T) {
 	_ = Init()
-	proxyOptions1 := httpproxy.Options{
-		Target:      "http://backend1",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      1,
-		FailTimeout: 10 * time.Second,
-		MaxFails:    1,
-	}
-	proxy1, _ := httpproxy.New(proxyOptions1, nil)
-
-	proxyOptions2 := httpproxy.Options{
-		Target:      "http://backend2",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      1,
-		FailTimeout: 10 * time.Second,
-		MaxFails:    1,
-	}
-	proxy2, _ := httpproxy.New(proxyOptions2, nil)
-
-	proxyOptions3 := httpproxy.Options{
-		Target:      "http://backend3",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      1,
-		FailTimeout: 10 * time.Second,
-		MaxFails:    1,
-	}
-	proxy3, _ := httpproxy.New(proxyOptions3, nil)
+	proxy1 := createTestProxy("http://backend1", 1, 10*time.Second)
+	proxy2 := createTestProxy("http://backend2", 1, 10*time.Second)
+	proxy3 := createTestProxy("http://backend3", 1, 10*time.Second)
 
 	proxies := []proxy.Proxy{
 		proxy1,
@@ -108,14 +98,7 @@ func TestRandom(t *testing.T) {
 	})
 
 	t.Run("single proxy failed", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target:      "http://backend1",
-			Protocol:    config.ProtocolHTTP,
-			Weight:      1,
-			FailTimeout: 10 * time.Second,
-			MaxFails:    1,
-		}
-		p1, _ := httpproxy.New(p1Options, nil)
+		p1 := createTestProxy("http://backend1", 1, 10*time.Second)
 		p1.Endpoint().HealthState.RecordFailure()
 
 		bSingle := NewBalancer([]proxy.Proxy{p1})
@@ -125,10 +108,7 @@ func TestRandom(t *testing.T) {
 	})
 
 	t.Run("registration", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target: "http://backend1",
-		}
-		p1, _ := httpproxy.New(p1Options, nil)
+		p1 := createTestProxy("http://backend1", 0, 0)
 
 		factory := balancer.Factory("random")
 		assert.NotNil(t, factory)

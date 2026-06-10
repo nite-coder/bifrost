@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/proxy"
 	proxygrpc "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	"github.com/nite-coder/bifrost/proto"
 )
@@ -75,6 +76,11 @@ func TestStdlibServer_GRPC_Integration(t *testing.T) {
 		Target:    "grpc://" + backendAddr,
 		TLSVerify: false,
 		Timeout:   time.Second,
+		Endpoint: &proxy.Endpoint{
+			Address:     backendAddr,
+			Weight:      1,
+			HealthState: proxy.NewTargetState(0, 0),
+		},
 	}
 	proxyHandler, err := proxygrpc.New(proxyOpts)
 	require.NoError(t, err)

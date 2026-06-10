@@ -11,6 +11,7 @@ import (
 
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/provider"
+	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/resolver"
 )
 
@@ -376,4 +377,95 @@ func TestNewUpstreamValidation(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "k8s provider is disabled")
 	})
+}
+
+func TestUpstream_TargetStatePersistence(t *testing.T) {
+	bifrost := &Bifrost{
+		options: &config.Options{},
+	}
+
+	upstreamOpts1 := config.UpstreamOptions{
+		ID: "upstream1",
+		Targets: []config.TargetOptions{
+			{Target: "127.0.0.1:8080"},
+		},
+	}
+	u1, err := newUpstream(bifrost, upstreamOpts1)
+	require.NoError(t, err)
+	defer func() {
+		_ = u1.Close()
+	}()
+
+	// 1. Same upstream, same address -> same target state pointer across refreshes
+	var state1 *proxy.TargetState
+	u1.mu.Lock()
+	state1 = u1.targets["127.0.0.1:8080"]
+	u1.mu.Unlock()
+	require.NotNil(t, state1)
+
+	// Trigger a manual refresh with the same instance
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:8080")
+	require.NoError(t, err)
+	ins := provider.NewInstance(addr, 1)
+	err = u1.refreshEndpoints([]provider.Instancer{ins})
+	require.NoError(t, err)
+
+	var state2 *proxy.TargetState
+	u1.mu.Lock()
+	state2 = u1.targets["127.0.0.1:8080"]
+	u1.mu.Unlock()
+	assert.Same(t, state1, state2, "Expected target state to persist across refreshes on the same Upstream")
+
+	// 2. Different upstream, same address -> different target state (isolation)
+	upstreamOpts2 := config.UpstreamOptions{
+		ID: "upstream2",
+		Targets: []config.TargetOptions{
+			{Target: "127.0.0.1:8080"},
+		},
+	}
+	u2, err := newUpstream(bifrost, upstreamOpts2)
+	require.NoError(t, err)
+	defer func() {
+		_ = u2.Close()
+	}()
+
+	var state3 *proxy.TargetState
+	u2.mu.Lock()
+	state3 = u2.targets["127.0.0.1:8080"]
+	u2.mu.Unlock()
+	require.NotNil(t, state3)
+	assert.NotSame(
+		t,
+		state1,
+		state3,
+		"Expected different Upstream instances to have isolated target states for the same address",
+	)
+
+	// 3. Different address, same upstream -> different target state
+	upstreamOpts3 := config.UpstreamOptions{
+		ID: "upstream3",
+		Targets: []config.TargetOptions{
+			{Target: "127.0.0.1:8080"},
+			{Target: "127.0.0.1:8081"},
+		},
+	}
+	u3, err := newUpstream(bifrost, upstreamOpts3)
+	require.NoError(t, err)
+	defer func() {
+		_ = u3.Close()
+	}()
+
+	var state4, state5 *proxy.TargetState
+	u3.mu.Lock()
+	state4 = u3.targets["127.0.0.1:8080"]
+	state5 = u3.targets["127.0.0.1:8081"]
+	u3.mu.Unlock()
+	require.NotNil(t, state4)
+	require.NotNil(t, state5)
+	assert.NotSame(
+		t,
+		state4,
+		state5,
+		"Expected different target addresses in the same Upstream to have distinct target states",
+	)
 }

@@ -52,7 +52,7 @@ type Service struct {
 	dynamicUpstream string
 	middlewares     []app.HandlerFunc
 	balancer        atomic.Value
-	balancersMu     sync.RWMutex
+	mu              sync.RWMutex
 	balancers       map[string]balancer.Balancer
 	activeProxies   map[string]proxy.Proxy
 	upstreamProxies map[string]map[string]proxy.Proxy
@@ -62,8 +62,8 @@ type Service struct {
 
 // Close releases resources used by the service and its upstreams.
 func (s *Service) Close() error {
-	s.balancersMu.Lock()
-	defer s.balancersMu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	for _, cancel := range s.cancelFuncs {
 		cancel()
@@ -83,7 +83,7 @@ func (s *Service) Close() error {
 	}
 	s.subscriptions = make(map[string]<-chan []*proxy.Endpoint)
 
-	if s.upstream != nil {
+	if s.upstream != nil && s.upstream.isExclusive {
 		_ = s.upstream.Close()
 	}
 
@@ -260,9 +260,9 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	var err error
 
 	if len(s.dynamicUpstream) > 0 {
-		upstreamName := variable.GetString(s.dynamicUpstream, c)
+		upstreamID := variable.GetString(s.dynamicUpstream, c)
 
-		if len(upstreamName) == 0 {
+		if len(upstreamID) == 0 {
 			if s.options.Type == config.ServiceTypeAI {
 				_ = c.Error(&ai.AIError{
 					Type:       "invalid_request_error",
@@ -280,14 +280,14 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 
 		if s.options.Type == config.ServiceTypeAI {
-			upstreamName = "ai:" + upstreamName
+			upstreamID = "ai:" + upstreamID
 		}
 
-		bal, found := s.getBalancer(upstreamName)
+		bal, found := s.getBalancer(upstreamID)
 
 		if !found {
 			if s.options.Type == config.ServiceTypeAI {
-				virtualModel := strings.TrimPrefix(upstreamName, "ai:")
+				virtualModel := strings.TrimPrefix(upstreamID, "ai:")
 				_ = c.Error(&ai.AIError{
 					Type:       "invalid_request_error",
 					Message:    fmt.Sprintf("The model `%s` does not exist", virtualModel),
@@ -296,14 +296,14 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 				})
 			} else {
 				logger.Warn("upstream is not found",
-					slog.String("name", upstreamName),
+					slog.String("name", upstreamID),
 				)
 				c.Abort()
 			}
 			return
 		}
 
-		c.Set(variable.UpstreamID, upstreamName)
+		c.Set(variable.UpstreamID, upstreamID)
 		myProxy, err = bal.Select(ctx, c)
 	} else if s.upstream != nil {
 		c.Set(variable.UpstreamID, s.upstream.options.ID)
@@ -445,14 +445,15 @@ func (s *Service) resolveUpstreamStrategy() error {
 		return err
 	}
 	s.upstream = upstream
+	upstream.isExclusive = true
 	s.subscribeToUpstream(upstream)
 
 	return nil
 }
 
 func (s *Service) subscribeToUpstream(upstream *Upstream) {
-	s.balancersMu.Lock()
-	defer s.balancersMu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if _, exists := s.subscriptions[upstream.options.ID]; exists {
 		return
@@ -480,8 +481,8 @@ func (s *Service) subscribeToUpstream(upstream *Upstream) {
 }
 
 func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint) {
-	s.balancersMu.Lock()
-	defer s.balancersMu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	var upstreamOptions *config.UpstreamOptions
 	var modelOpts *config.AIModelOptions
@@ -600,15 +601,19 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint
 			finalPricing := pricing.Resolve(handler, actualModel, targetPricing)
 
 			metricsEnabled := s.bifrost.options.Metrics.Prometheus.Enabled || s.bifrost.options.Metrics.OTLP.Enabled
-			p = aiproxy.NewProxy(aiproxy.ProxyOptions{
+			var pErr error
+			p, pErr = aiproxy.NewProxy(aiproxy.ProxyOptions{
 				ID:             ep.Address,
 				Target:         ep.Address,
-				Weight:         ep.Weight,
 				AIOptions:      s.bifrost.options.AI,
 				MetricsEnabled: metricsEnabled,
 				Pricing:        finalPricing,
 				Endpoint:       ep,
 			})
+			if pErr != nil {
+				slog.Error("failed to create AI proxy", "error", pErr)
+				continue
+			}
 		} else {
 			serverName := ep.Tags["server_name"]
 			switch s.options.Protocol {
@@ -678,12 +683,10 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint
 				proxyOptions := httpproxy.Options{
 					Target:           myURL,
 					Protocol:         s.options.Protocol,
-					Weight:           ep.Weight,
 					IsTracingEnabled: s.bifrost.options.Tracing.Enabled,
 					ServiceID:        s.options.ID,
 					TargetHostHeader: serverName,
 					PassHostHeader:   s.options.IsPassHostHeader(),
-					Tags:             ep.Tags,
 					Endpoint:         ep,
 				}
 				var pErr error
@@ -696,10 +699,8 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint
 				grpcOptions := grpcproxy.Options{
 					Target:           myURL,
 					TLSVerify:        s.options.TLSVerify,
-					Weight:           ep.Weight,
 					IsTracingEnabled: s.bifrost.options.Tracing.Enabled,
 					Timeout:          s.options.Timeout.GRPC,
-					Tags:             ep.Tags,
 					Endpoint:         ep,
 				}
 				var pErr error
@@ -762,8 +763,8 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint
 }
 
 func (s *Service) getBalancer(upstreamName string) (balancer.Balancer, bool) {
-	s.balancersMu.RLock()
-	defer s.balancersMu.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	bal, found := s.balancers[upstreamName]
 	return bal, found
 }

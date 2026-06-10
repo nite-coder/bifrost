@@ -19,6 +19,7 @@ import (
 
 	"github.com/nite-coder/bifrost/pkg/ai"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -137,13 +138,18 @@ func TestAIProxy_ServeHTTP_UnarySuccess(t *testing.T) {
 		},
 	}
 
-	proxy := NewProxy(ProxyOptions{
+	p, err := NewProxy(ProxyOptions{
 		ID:             "id1",
 		Target:         "p1/gpt-4",
-		Weight:         1,
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
+		Endpoint: &proxy.Endpoint{
+			Address:     "p1/gpt-4",
+			Weight:      1,
+			HealthState: proxy.NewTargetState(0, 0),
+		},
 	})
+	require.NoError(t, err)
 
 	mockLL.chatFunc = func(_ context.Context, req *ai.ChatRequest) (*ai.ChatResponse, error) {
 		assert.Equal(t, "gpt-4", req.Model)
@@ -176,11 +182,11 @@ func TestAIProxy_ServeHTTP_UnarySuccess(t *testing.T) {
 	metrics.AIInputTokens.Reset()
 	metrics.AIOutputTokens.Reset()
 
-	proxy.ServeHTTP(context.Background(), hzCtx)
+	p.ServeHTTP(context.Background(), hzCtx)
 
 	assert.Equal(t, http.StatusOK, hzCtx.Response.StatusCode())
 	var body map[string]any
-	err := sonic.Unmarshal(hzCtx.Response.Body(), &body)
+	err = sonic.Unmarshal(hzCtx.Response.Body(), &body)
 	require.NoError(t, err)
 	assert.Contains(t, body, "choices")
 
@@ -208,13 +214,18 @@ func TestAIProxy_ServeHTTP_UnaryError(t *testing.T) {
 		},
 	}
 
-	proxy := NewProxy(ProxyOptions{
+	p, err := NewProxy(ProxyOptions{
 		ID:             "id1",
 		Target:         "p1/gpt-4",
-		Weight:         1,
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
+		Endpoint: &proxy.Endpoint{
+			Address:     "p1/gpt-4",
+			Weight:      1,
+			HealthState: proxy.NewTargetState(0, 0),
+		},
 	})
+	require.NoError(t, err)
 
 	expectedErr := &ai.AIError{
 		Type:       "invalid_request_error",
@@ -234,7 +245,7 @@ func TestAIProxy_ServeHTTP_UnaryError(t *testing.T) {
 	hzCtx.Set(ai.ContextKeyVirtualModelName, "gpt-4o")
 	hzCtx.Set(ai.ContextKeyChatRequest, &ai.ChatRequest{Model: "gpt-4o"})
 
-	proxy.ServeHTTP(context.Background(), hzCtx)
+	p.ServeHTTP(context.Background(), hzCtx)
 
 	// In unary failure, AIProxy must call c.Error(err) instead of writing directly.
 	assert.Len(t, hzCtx.Errors, 1)
@@ -256,13 +267,18 @@ func TestAIProxy_ServeHTTP_StreamSuccess(t *testing.T) {
 		},
 	}
 
-	proxy := NewProxy(ProxyOptions{
+	p, err := NewProxy(ProxyOptions{
 		ID:             "id1",
 		Target:         "p1/gpt-4",
-		Weight:         1,
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
+		Endpoint: &proxy.Endpoint{
+			Address:     "p1/gpt-4",
+			Weight:      1,
+			HealthState: proxy.NewTargetState(0, 0),
+		},
 	})
+	require.NoError(t, err)
 
 	canonicalChunks := "data: {\"id\":\"1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"delta\":{\"content\":\"hello\"}}]}\n\ndata: {\"id\":\"1\",\"object\":\"chat.completion.chunk\",\"usage\":{\"prompt_tokens\":12,\"completion_tokens\":22,\"total_tokens\":34}}\n\ndata: [DONE]\n\n"
 	mockLL.streamChatFunc = func(_ context.Context, _ *ai.ChatRequest) (io.ReadCloser, error) {
@@ -282,7 +298,7 @@ func TestAIProxy_ServeHTTP_StreamSuccess(t *testing.T) {
 	hzCtx.Set(ai.ContextKeyVirtualModelName, "gpt-4o")
 	hzCtx.Set(ai.ContextKeyChatRequest, &ai.ChatRequest{Model: "gpt-4o", Stream: true})
 
-	proxy.ServeHTTP(context.Background(), hzCtx)
+	p.ServeHTTP(context.Background(), hzCtx)
 
 	assert.Equal(t, "text/event-stream", string(hzCtx.Response.Header.ContentType()))
 	assert.Equal(t, canonicalChunks, string(hzCtx.Response.Body()))
@@ -325,13 +341,18 @@ func TestAIProxy_ServeHTTP_StreamMidError(t *testing.T) {
 		},
 	}
 
-	proxy := NewProxy(ProxyOptions{
+	p, err := NewProxy(ProxyOptions{
 		ID:             "id1",
 		Target:         "p1/gpt-4",
-		Weight:         1,
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
+		Endpoint: &proxy.Endpoint{
+			Address:     "p1/gpt-4",
+			Weight:      1,
+			HealthState: proxy.NewTargetState(0, 0),
+		},
 	})
+	require.NoError(t, err)
 
 	mockLL.streamChatFunc = func(_ context.Context, _ *ai.ChatRequest) (io.ReadCloser, error) {
 		return &errorReader{
@@ -357,7 +378,7 @@ func TestAIProxy_ServeHTTP_StreamMidError(t *testing.T) {
 	hzCtx.Set(ai.ContextKeyVirtualModelName, "gpt-4o")
 	hzCtx.Set(ai.ContextKeyChatRequest, &ai.ChatRequest{Model: "gpt-4o", Stream: true})
 
-	proxy.ServeHTTP(context.Background(), hzCtx)
+	p.ServeHTTP(context.Background(), hzCtx)
 
 	bodyStr := string(hzCtx.Response.Body())
 	// SECURITY: Error details should NOT be leaked to client - only generic message
@@ -381,13 +402,18 @@ func TestAIProxy_ServeHTTP_InvalidTarget(t *testing.T) {
 		},
 	}
 
-	proxy := NewProxy(ProxyOptions{
+	p, err := NewProxy(ProxyOptions{
 		ID:             "id1",
 		Target:         "invalid_target_no_slash",
-		Weight:         1,
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
+		Endpoint: &proxy.Endpoint{
+			Address:     "invalid_target_no_slash",
+			Weight:      1,
+			HealthState: proxy.NewTargetState(0, 0),
+		},
 	})
+	require.NoError(t, err)
 
 	clientAdapter := &MockClientAdapter{}
 
@@ -396,7 +422,7 @@ func TestAIProxy_ServeHTTP_InvalidTarget(t *testing.T) {
 	hzCtx.Set(ai.ContextKeyAIFamily, ai.FamilyChat)
 	hzCtx.Set(ai.ContextKeyVirtualModelName, "gpt-4o")
 
-	proxy.ServeHTTP(context.Background(), hzCtx)
+	p.ServeHTTP(context.Background(), hzCtx)
 
 	assert.Len(t, hzCtx.Errors, 1)
 	var aiErr *ai.AIError
@@ -420,13 +446,18 @@ func TestAIProxy_ServeHTTP_Responses(t *testing.T) {
 		},
 	}
 
-	proxy := NewProxy(ProxyOptions{
+	p, err := NewProxy(ProxyOptions{
 		ID:             "id1",
 		Target:         "p1/claude-3-opus",
-		Weight:         1,
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
+		Endpoint: &proxy.Endpoint{
+			Address:     "p1/claude-3-opus",
+			Weight:      1,
+			HealthState: proxy.NewTargetState(0, 0),
+		},
 	})
+	require.NoError(t, err)
 
 	mockLL.responsesFunc = func(_ context.Context, req *ai.ResponsesRequest) (*ai.ResponsesResponse, error) {
 		assert.Equal(t, "claude-3-opus", req.Model)
@@ -454,11 +485,11 @@ func TestAIProxy_ServeHTTP_Responses(t *testing.T) {
 	hzCtx.Set(ai.ContextKeyVirtualModelName, "claude-3-opus-virtual")
 	hzCtx.Set(ai.ContextKeyResponsesRequest, &ai.ResponsesRequest{Model: "claude-3-opus-virtual"})
 
-	proxy.ServeHTTP(context.Background(), hzCtx)
+	p.ServeHTTP(context.Background(), hzCtx)
 
 	assert.Equal(t, http.StatusOK, hzCtx.Response.StatusCode())
 	var body map[string]any
-	err := sonic.Unmarshal(hzCtx.Response.Body(), &body)
+	err = sonic.Unmarshal(hzCtx.Response.Body(), &body)
 	require.NoError(t, err)
 	assert.Equal(t, "resp-123", body["id"])
 

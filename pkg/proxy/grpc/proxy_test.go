@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/proto"
 )
 
@@ -99,9 +100,13 @@ func TestGRPCProxy(t *testing.T) {
 		TLSVerify:        false,
 		Timeout:          1 * time.Second,
 		IsTracingEnabled: true,
-		Weight:           1,
+		Endpoint: &proxy.Endpoint{
+			Address:     "127.0.0.1:8500",
+			Weight:      1,
+			HealthState: proxy.NewTargetState(0, 0),
+		},
 	}
-	proxy, err := New(proxyOptions)
+	p, err := New(proxyOptions)
 	require.NoError(t, err)
 
 	httpServer := server.New(
@@ -110,7 +115,7 @@ func TestGRPCProxy(t *testing.T) {
 		server.WithStreamBody(true),
 		server.WithExitWaitTime(1*time.Second),
 	)
-	httpServer.Use(proxy.ServeHTTP)
+	httpServer.Use(p.ServeHTTP)
 	hsrv := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			c := app.NewContext(0)
@@ -230,15 +235,19 @@ func TestProxyTags(t *testing.T) {
 		TLSVerify:        false,
 		Timeout:          1 * time.Second,
 		IsTracingEnabled: true,
-		Weight:           1,
-		Tags: map[string]string{
-			"id": "123",
+		Endpoint: &proxy.Endpoint{
+			Address: "127.0.0.1:8500",
+			Weight:  1,
+			Tags: map[string]string{
+				"id": "123",
+			},
+			HealthState: proxy.NewTargetState(0, 0),
 		},
 	}
-	proxy, err := New(proxyOptions)
+	p, err := New(proxyOptions)
 	require.NoError(t, err)
 
-	val, found := proxy.Endpoint().Tags["id"]
+	val, found := p.Endpoint().Tags["id"]
 	assert.True(t, found)
 	assert.Equal(t, "123", val)
 }
@@ -259,7 +268,7 @@ func (m *mockClientConn) Invoke(
 
 func TestGRPCProxy_PanicOnInvalidPayload(t *testing.T) {
 	// Setup
-	proxy := &Proxy{
+	p := &Proxy{
 		client: &mockClientConn{}, // minimal mock
 		options: &Options{
 			Timeout: time.Second,
@@ -280,7 +289,7 @@ func TestGRPCProxy_PanicOnInvalidPayload(t *testing.T) {
 	c.Request.SetBody(malformedBody)
 
 	// Execute
-	proxy.ServeHTTP(ctx, c)
+	p.ServeHTTP(ctx, c)
 
 	// Assert: No panic should occur.
 	// Check if status code became 400 (as per our fix)
@@ -290,7 +299,7 @@ func TestGRPCProxy_PanicOnInvalidPayload(t *testing.T) {
 func TestGRPCProxy_ErrorStatusPlacement(t *testing.T) {
 	// Setup
 	mockConn := &mockClientConnError{err: status.Error(codes.Unauthenticated, "test error")}
-	proxy := &Proxy{
+	p := &Proxy{
 		client: mockConn,
 		options: &Options{
 			Timeout: time.Second,
@@ -304,7 +313,7 @@ func TestGRPCProxy_ErrorStatusPlacement(t *testing.T) {
 	c.Request.SetRequestURI("/TestService/TestMethod")
 
 	// Execute
-	proxy.ServeHTTP(ctx, c)
+	p.ServeHTTP(ctx, c)
 
 	// Assert
 	// grpc-status should NOT be in the regular headers

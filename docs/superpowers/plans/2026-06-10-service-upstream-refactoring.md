@@ -264,19 +264,26 @@ Modify `pkg/gateway/upstream.go`:
 Remove `Balancer` and `proxy.Proxy` slice. Add pub/sub for endpoints.
 ```go
 type Upstream struct {
-    // ... discovery
-	subscribers []chan<- []*proxy.Endpoint
+	// ... discovery
+	subscribers []chan []*proxy.Endpoint
 	endpoints   []*proxy.Endpoint
-    // ...
+	// ...
+	targetsMu   sync.Mutex
+	targets     map[string]*proxy.TargetState // Keyed by physical address (IP:Port)
 }
 
 func (u *Upstream) Subscribe() <-chan []*proxy.Endpoint {
     // return channel and send current endpoints
 }
 
-// In refreshProxies (rename to refreshEndpoints):
-// Map instances to Endpoints. Maintain a map of TargetState by Address 
-// so state persists across refreshes. Send to subscribers.
+// In refreshEndpoints:
+// Map instances to Endpoints. Maintain the map of TargetState directly inside each Upstream instance.
+// Scoping TargetState to the Upstream struct has several benefits:
+// 1. Clean Lifecycle & GC: When a dynamic or direct upstream is closed/deleted, its local targets map is garbage-collected. This prevents memory leaks of orphan target states in the global UpstreamManager.
+// 2. Config Compliance: Different upstreams pointing to the same backend IP address will maintain isolated health states, correctly honoring their respective passive health check configurations (MaxFails, FailTimeout) without key collision or ordering dependencies.
+// 3. Simpler Concurrency: Scoping map locks locally to the Upstream reduces lock contention and removes the need for compound cache keys.
+//
+// Look up or create TargetState within `u.targets` using `address` as key. Send updated endpoints to subscribers.
 ```
 
 - [ ] **Step 4: Run test to verify it passes**

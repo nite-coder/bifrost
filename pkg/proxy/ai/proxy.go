@@ -54,7 +54,6 @@ var _ proxy.Proxy = (*Proxy)(nil)
 type ProxyOptions struct {
 	ID             string
 	Target         string
-	Weight         uint32
 	AIOptions      *config.AIOptions
 	MetricsEnabled bool
 	Pricing        *config.AIPricingOptions
@@ -62,19 +61,11 @@ type ProxyOptions struct {
 }
 
 // NewProxy creates a new AIProxy instance.
-func NewProxy(opts ProxyOptions) *Proxy {
-	endpoint := opts.Endpoint
-	if endpoint == nil {
-		weight := opts.Weight
-		if weight == 0 {
-			weight = 1
-		}
-		endpoint = &proxy.Endpoint{
-			Address:     opts.Target,
-			Weight:      weight,
-			HealthState: proxy.NewTargetState(0, 0), // Never fails
-		}
+func NewProxy(opts ProxyOptions) (*Proxy, error) {
+	if opts.Endpoint == nil {
+		return nil, errors.New("endpoint cannot be nil")
 	}
+	endpoint := opts.Endpoint
 
 	p := &Proxy{
 		id:             opts.ID,
@@ -94,7 +85,7 @@ func NewProxy(opts ProxyOptions) *Proxy {
 		}
 	}
 
-	return p
+	return p, nil
 }
 
 // Endpoint returns the endpoint info associated with this proxy.

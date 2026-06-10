@@ -32,6 +32,8 @@ type Upstream struct {
 	endpoints   []*proxy.Endpoint
 	watchOnce   sync.Once
 	cancel      context.CancelFunc
+	isExclusive bool // isExclusive indicates if the upstream is exclusive/owned by a single service
+	targets     map[string]*proxy.TargetState
 }
 
 // Close stops watching for updates and closes discovery resources.
@@ -69,6 +71,7 @@ func newUpstream(
 	upstream := &Upstream{
 		bifrost: bifrost,
 		options: &upstreamOptions,
+		targets: make(map[string]*proxy.TargetState),
 	}
 
 	if strings.HasPrefix(upstreamOptions.ID, "ai:") {
@@ -193,6 +196,13 @@ func (u *Upstream) refreshEndpoints(instances []provider.Instancer) error {
 		failTimeout = u.bifrost.options.Default.Upstream.FailTimeout
 	}
 
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	if u.targets == nil {
+		u.targets = make(map[string]*proxy.TargetState)
+	}
+
 	newEndpoints := make([]*proxy.Endpoint, 0, len(instances))
 	for _, instance := range instances {
 		var address string
@@ -210,11 +220,10 @@ func (u *Upstream) refreshEndpoints(instances []provider.Instancer) error {
 			address = net.JoinHostPort(targetHost, targetPort)
 			serverName = targetHost
 		}
-		var state *proxy.TargetState
-		if u.bifrost.upstreamManager != nil {
-			state = u.bifrost.upstreamManager.GetOrCreateTargetState(address, maxFails, failTimeout)
-		} else {
+		state, found := u.targets[address]
+		if !found {
 			state = proxy.NewTargetState(maxFails, failTimeout)
+			u.targets[address] = state
 		}
 
 		tags := make(map[string]string)
@@ -230,7 +239,6 @@ func (u *Upstream) refreshEndpoints(instances []provider.Instancer) error {
 		newEndpoints = append(newEndpoints, ep)
 	}
 
-	u.mu.Lock()
 	u.endpoints = newEndpoints
 	for _, ch := range u.subscribers {
 		select {
@@ -248,7 +256,6 @@ func (u *Upstream) refreshEndpoints(instances []provider.Instancer) error {
 			}
 		}
 	}
-	u.mu.Unlock()
 
 	return nil
 }

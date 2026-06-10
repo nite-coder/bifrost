@@ -11,9 +11,11 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/ai"
 	"github.com/nite-coder/bifrost/pkg/config"
+	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 )
 
@@ -37,14 +39,19 @@ func TestAIProxy_CostCalculation(t *testing.T) {
 		OutputPerMtok: 20.0, // $20 per 1M tokens
 	}
 
-	proxy := NewProxy(ProxyOptions{
+	p, err := NewProxy(ProxyOptions{
 		ID:             "id1",
 		Target:         "p1/gpt-4",
-		Weight:         1,
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
 		Pricing:        pricing,
+		Endpoint: &proxy.Endpoint{
+			Address:     "p1/gpt-4",
+			Weight:      1,
+			HealthState: proxy.NewTargetState(0, 0),
+		},
 	})
+	require.NoError(t, err)
 
 	mockLL.chatFunc = func(_ context.Context, _ *ai.ChatRequest) (*ai.ChatResponse, error) {
 		return &ai.ChatResponse{
@@ -70,7 +77,7 @@ func TestAIProxy_CostCalculation(t *testing.T) {
 
 	metrics.AIRequestCost.Reset()
 
-	proxy.ServeHTTP(context.Background(), hzCtx)
+	p.ServeHTTP(context.Background(), hzCtx)
 
 	assert.Equal(t, http.StatusOK, hzCtx.Response.StatusCode())
 	// Total cost should be $10 (input) + $10 (output) = $20
@@ -97,14 +104,19 @@ func TestAIProxy_CostCalculation_Stream(t *testing.T) {
 		OutputPerMtok: 20.0, // $20 per 1M tokens
 	}
 
-	proxy := NewProxy(ProxyOptions{
+	p, err := NewProxy(ProxyOptions{
 		ID:             "id1",
 		Target:         "p1/gpt-4",
-		Weight:         1,
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
 		Pricing:        pricing,
+		Endpoint: &proxy.Endpoint{
+			Address:     "p1/gpt-4",
+			Weight:      1,
+			HealthState: proxy.NewTargetState(0, 0),
+		},
 	})
+	require.NoError(t, err)
 
 	// Mock stream with usage at the end
 	usage := ai.Usage{
@@ -136,7 +148,7 @@ func TestAIProxy_CostCalculation_Stream(t *testing.T) {
 
 	metrics.AIRequestCost.Reset()
 
-	proxy.ServeHTTP(context.Background(), hzCtx)
+	p.ServeHTTP(context.Background(), hzCtx)
 
 	assert.Equal(t, http.StatusOK, hzCtx.Response.StatusCode())
 	// Total cost should be $10 (input) + $10 (output) = $20

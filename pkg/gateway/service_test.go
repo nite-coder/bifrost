@@ -428,3 +428,75 @@ func TestLoadModels(t *testing.T) {
 	assert.Equal(t, "p2/gpt-3.5", proxies2[1].Target())
 	assert.Equal(t, uint32(1), proxies2[1].Endpoint().Weight)
 }
+
+func TestSharedUpstreamLifecycle(t *testing.T) {
+	h := testServer(t)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		_ = h.Shutdown(ctx)
+	}()
+
+	options := config.Options{
+		Services: map[string]config.ServiceOptions{
+			"service1": {
+				ID:  "service1",
+				URL: "http://testUpstream",
+			},
+			"service2": {
+				ID:  "service2",
+				URL: "http://testUpstream",
+			},
+		},
+		Upstreams: map[string]config.UpstreamOptions{
+			"testUpstream": {
+				ID: "testUpstream",
+				Targets: []config.TargetOptions{
+					{
+						Target: "127.0.0.1:8088",
+					},
+				},
+			},
+		},
+	}
+
+	bifrost, err := NewBifrost(options, ModeNormal)
+	require.NoError(t, err)
+	defer func() {
+		_ = bifrost.Close()
+	}()
+
+	service1 := bifrost.services["service1"]
+	require.NotNil(t, service1)
+
+	service2 := bifrost.services["service2"]
+	require.NotNil(t, service2)
+
+	upstream, exists := bifrost.upstreamManager.Get("testUpstream")
+	require.True(t, exists)
+
+	upstream.mu.RLock()
+	require.Len(t, upstream.subscribers, 2)
+	upstream.mu.RUnlock()
+
+	err = service1.Close()
+	require.NoError(t, err)
+
+	assert.False(t, upstream.isExclusive)
+	assert.NotNil(t, upstream.cancel)
+
+	upstream.mu.RLock()
+	require.Len(t, upstream.subscribers, 1)
+	upstream.mu.RUnlock()
+
+	ctx := context.Background()
+	hzCtx := app.NewContext(0)
+	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
+	require.Eventually(t, func() bool {
+		hzCtx.Response.Reset()
+		service2.ServeHTTP(ctx, hzCtx)
+		return hzCtx.Response.StatusCode() == 200 && string(hzCtx.Response.Body()) == backendResponse
+	}, time.Second, 5*time.Millisecond)
+
+	_ = service2.Close()
+}

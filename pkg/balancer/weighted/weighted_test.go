@@ -15,34 +15,27 @@ import (
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 )
 
+func createTestProxy(target string, weight uint32, maxFails uint, failTimeout time.Duration) proxy.Proxy {
+	if weight == 0 {
+		weight = 1
+	}
+	p, _ := httpproxy.New(httpproxy.Options{
+		Target:   target,
+		Protocol: config.ProtocolHTTP,
+		Endpoint: &proxy.Endpoint{
+			Address:     target,
+			Weight:      weight,
+			HealthState: proxy.NewTargetState(maxFails, failTimeout),
+		},
+	}, nil)
+	return p
+}
+
 func TestWeighted(t *testing.T) {
 	_ = Init()
-	proxyOptions1 := httpproxy.Options{
-		Target:      "http://backend1",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      1,
-		FailTimeout: 10 * time.Second,
-		MaxFails:    10,
-	}
-	proxy1, _ := httpproxy.New(proxyOptions1, nil)
-
-	proxyOptions2 := httpproxy.Options{
-		Target:      "http://backend2",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      2,
-		FailTimeout: 10 * time.Second,
-		MaxFails:    1,
-	}
-	proxy2, _ := httpproxy.New(proxyOptions2, nil)
-
-	proxyOptions3 := httpproxy.Options{
-		Target:      "http://backend3",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      3,
-		FailTimeout: 10 * time.Second,
-		MaxFails:    100,
-	}
-	proxy3, _ := httpproxy.New(proxyOptions3, nil)
+	proxy1 := createTestProxy("http://backend1", 1, 10, 10*time.Second)
+	proxy2 := createTestProxy("http://backend2", 2, 1, 10*time.Second)
+	proxy3 := createTestProxy("http://backend3", 3, 100, 10*time.Second)
 
 	proxies := []proxy.Proxy{
 		proxy1,
@@ -115,14 +108,7 @@ func TestWeighted(t *testing.T) {
 	})
 
 	t.Run("single proxy failed", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target:      "http://backend1",
-			Protocol:    config.ProtocolHTTP,
-			Weight:      1,
-			FailTimeout: 10 * time.Second,
-			MaxFails:    1,
-		}
-		p1, _ := httpproxy.New(p1Options, nil)
+		p1 := createTestProxy("http://backend1", 1, 1, 10*time.Second)
 		p1.Endpoint().HealthState.RecordFailure()
 
 		bSingle, _ := NewBalancer([]proxy.Proxy{p1})
@@ -132,10 +118,7 @@ func TestWeighted(t *testing.T) {
 	})
 
 	t.Run("registration", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target: "http://backend1",
-		}
-		p1, _ := httpproxy.New(p1Options, nil)
+		p1 := createTestProxy("http://backend1", 1, 0, 0)
 
 		factory := balancer.Factory("weighted")
 		assert.NotNil(t, factory)
@@ -149,17 +132,8 @@ func TestWeighted(t *testing.T) {
 	})
 
 	t.Run("weight clamping and default weight", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target: "http://backend1",
-			Weight: math.MaxInt32 + 100, // force clamping
-		}
-		p1, _ := httpproxy.New(p1Options, nil)
-
-		p2Options := httpproxy.Options{
-			Target: "http://backend2",
-			Weight: 0, // should become 1
-		}
-		p2, _ := httpproxy.New(p2Options, nil)
+		p1 := createTestProxy("http://backend1", math.MaxInt32+100, 0, 0)
+		p2 := createTestProxy("http://backend2", 0, 0, 0) // should become 1 inside newProxy/NewBalancer
 
 		bLarge, err := NewBalancer([]proxy.Proxy{p1, p2})
 		require.NoError(t, err)
