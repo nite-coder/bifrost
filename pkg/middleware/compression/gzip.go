@@ -81,7 +81,7 @@ func (m *Middleware) shouldCompress(req *protocol.Request) bool {
 
 // Init registers the compression middleware.
 func Init() error {
-	return middleware.RegisterTyped([]string{"compression"}, func(opts Options) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"compression"}, func(opts Options) (app.HandlerFunc, error) {
 		if opts.Level == 0 {
 			opts.Level = compress.CompressDefaultCompression
 		}

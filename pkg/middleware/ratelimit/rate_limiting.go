@@ -160,7 +160,7 @@ func buildReplacer(directives []string, c *app.RequestContext) []string {
 
 // Init registers the rate_limit middleware.
 func Init() error {
-	return middleware.RegisterTyped([]string{"rate_limit"}, func(option Options) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"rate_limit"}, func(option Options) (app.HandlerFunc, error) {
 		if len(option.LimitBy) == 0 {
 			return nil, errors.New("limit_by cannot be empty")
 		}

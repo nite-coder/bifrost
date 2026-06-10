@@ -19,7 +19,7 @@ var getRandomNumber = func(maxValue int64) (int64, error) {
 
 // Init registers the traffic_splitter middleware.
 func Init() error {
-	return middleware.RegisterTyped([]string{"traffic_splitter"}, func(opts Options) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"traffic_splitter"}, func(opts Options) (app.HandlerFunc, error) {
 		m := NewMiddleware(&opts)
 		return m.ServeHTTP, nil
 	})

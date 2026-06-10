@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Changed
 
 - Expand `$env.` directives during config loading so secret values can be injected from environment variables without manual parsing at each usage site. ([#132](https://github.com/nite-coder/bifrost/pull/132) by [0x5487](https://github.com/0x5487))
+- Refactor middleware registration to use strongly typed configuration structs with `mapstructure` integration, replacing the legacy generic registration approach. ([#133](https://github.com/nite-coder/bifrost/pull/133) by [0x5487](https://github.com/0x5487))
 
 ## [0.10.0] (2026-04-13)
 

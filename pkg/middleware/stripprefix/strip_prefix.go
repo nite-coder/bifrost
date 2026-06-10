@@ -17,7 +17,7 @@ type Config struct {
 
 // Init registers the strip_prefix middleware.
 func Init() error {
-	return middleware.RegisterTyped([]string{"strip_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"strip_prefix"}, func(cfg Config) (app.HandlerFunc, error) {
 		if len(cfg.Prefixes) == 0 {
 			return nil, errors.New("prefixes parameter is missing or invalid")
 		}

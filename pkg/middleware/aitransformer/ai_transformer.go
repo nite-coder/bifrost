@@ -22,7 +22,7 @@ type Options struct {
 
 // Init registers the ai_transformer middleware to the global middleware factory.
 func Init() error {
-	return middleware.RegisterTyped([]string{"ai_transformer"}, func(opts Options) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"ai_transformer"}, func(opts Options) (app.HandlerFunc, error) {
 		if len(opts.Format) == 0 {
 			return nil, errors.New("format parameter is missing or invalid")
 		}

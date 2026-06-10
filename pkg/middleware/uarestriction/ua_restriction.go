@@ -101,7 +101,7 @@ func (m *UARestriction) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 // Init registers the ua_restriction middleware.
 func Init() error {
-	return middleware.RegisterTyped([]string{"ua_restriction"}, func(option Options) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"ua_restriction"}, func(option Options) (app.HandlerFunc, error) {
 		m, err := NewMiddleware(option)
 		if err != nil {
 			return nil, err

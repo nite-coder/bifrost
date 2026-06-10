@@ -55,7 +55,7 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 // Init registers the parallel middleware.
 func Init() error {
-	return middleware.RegisterTyped(
+	return middleware.Register(
 		[]string{"parallel"},
 		func(middlewareOptions []*config.MiddlwareOptions) (app.HandlerFunc, error) {
 			if len(middlewareOptions) == 0 {

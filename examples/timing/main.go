@@ -10,7 +10,7 @@ import (
 )
 
 func registerMiddlewares() error {
-	err := middleware.Register([]string{"timing"}, func(param any) (app.HandlerFunc, error) {
+	err := middleware.Register([]string{"timing"}, func(_ any) (app.HandlerFunc, error) {
 		m := TimingMiddleware{}
 		return m.ServeHTTP, nil
 	})
@@ -22,9 +22,12 @@ func registerMiddlewares() error {
 }
 
 func main() {
-	_ = initialize.Bifrost()
+	err := initialize.Bifrost()
+	if err != nil {
+		panic(err)
+	}
 
-	err := registerMiddlewares()
+	err = registerMiddlewares()
 	if err != nil {
 		panic(err)
 	}

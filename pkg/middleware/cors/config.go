@@ -186,7 +186,7 @@ func NewMiddleware(config Config) app.HandlerFunc {
 
 // Init registers the cors middleware.
 func Init() error {
-	return middleware.RegisterTyped([]string{"cors"}, func(cfg Config) (app.HandlerFunc, error) {
+	return middleware.Register([]string{"cors"}, func(cfg Config) (app.HandlerFunc, error) {
 		// Validates if the config is valid or considered empty/invalid which implies default
 		err := cfg.Validate()
 		if err != nil {

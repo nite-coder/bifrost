@@ -8,5 +8,4 @@ Upon starting ANY session or receiving the first task, the agent **MUST** automa
 ## 2 Guidelines
 1. Use English to write code and comments
 2. If lint issues block `make check`, run `make fix` to auto-format and fix common issues.
-3. Before any commit, MUST run `make check` and confirm both lint (0 issues) and tests (all pass) before committing.
-
+3. After coding, MUST run `make check` and confirm both lint (0 issues) and tests (all pass) before committing.
