@@ -28,6 +28,10 @@ func Register[T any](names []string, handler func(T) (app.HandlerFunc, error)) e
 	}
 
 	wrappedHandler := func(params any) (app.HandlerFunc, error) {
+		if typedParams, ok := params.(T); ok {
+			return handler(typedParams)
+		}
+
 		var cfg T
 		if params == nil {
 			// If params is nil, we pass the zero value of T
