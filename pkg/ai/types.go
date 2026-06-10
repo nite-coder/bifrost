@@ -307,9 +307,7 @@ type ResponsesResponse struct {
 // --- Unified Error ---
 
 // AIError defines a standardized error object for the AI Gateway.
-//
-//nolint:revive
-type AIError struct {
+type AIError struct { //nolint:revive
 	Type       string                  `json:"type"`    // "invalid_request_error", "authentication_error", etc.
 	Message    string                  `json:"message"` // Human-readable error message
 	StatusCode int                     `json:"-"`       // HTTP status code

@@ -92,8 +92,8 @@ func TestHashing(t *testing.T) {
 	})
 
 	t.Run("two proxies failed", func(t *testing.T) {
-		_ = proxy1.AddFailedCount(100)
-		_ = proxy2.AddFailedCount(100)
+		proxy1.Endpoint().HealthState.RecordFailure()
+		proxy2.Endpoint().HealthState.RecordFailure()
 
 		keys := []string{"key1", "key2", "key3"}
 
@@ -109,9 +109,9 @@ func TestHashing(t *testing.T) {
 	})
 
 	t.Run("no live upstream", func(t *testing.T) {
-		_ = proxy1.AddFailedCount(100)
-		_ = proxy2.AddFailedCount(100)
-		_ = proxy3.AddFailedCount(100)
+		proxy1.Endpoint().HealthState.RecordFailure()
+		proxy2.Endpoint().HealthState.RecordFailure()
+		proxy3.Endpoint().HealthState.RecordFailure()
 
 		keys := []string{"key1", "key2", "key3"}
 
@@ -165,7 +165,7 @@ func TestHashing(t *testing.T) {
 			MaxFails:    1,
 		}
 		p1, _ := httpproxy.New(p1Options, nil)
-		_ = p1.AddFailedCount(1)
+		p1.Endpoint().HealthState.RecordFailure()
 
 		b := NewBalancer([]proxy.Proxy{p1}, "$var.uid", defaultReplicas)
 		p, err := b.Select(context.Background(), nil)
@@ -192,7 +192,7 @@ func TestHashing(t *testing.T) {
 		}
 
 		// 3. Mark p1 as failed (removed from pool)
-		_ = p1.AddFailedCount(100)
+		p1.Endpoint().HealthState.RecordFailure()
 
 		// 4. Map the same 1000 keys again and see how many moved
 		changedOnAliveNodes := 0
@@ -272,13 +272,13 @@ func TestHashing(t *testing.T) {
 		assert.Equal(t, candidates[0], p.Target(), "Should pick the first candidate on the ring")
 
 		// 3. Fail the first candidate, should pick the second one from the ring in clockwise order
-		_ = b.nodeMap[candidates[0]].AddFailedCount(1)
+		b.nodeMap[candidates[0]].Endpoint().HealthState.RecordFailure()
 		p, err = b.Select(context.Background(), hzctx)
 		require.NoError(t, err)
 		assert.Equal(t, candidates[1], p.Target(), "Failover should pick the second candidate on the ring")
 
 		// 4. Fail the second candidate, should pick the third one from the ring
-		_ = b.nodeMap[candidates[1]].AddFailedCount(1)
+		b.nodeMap[candidates[1]].Endpoint().HealthState.RecordFailure()
 		p, err = b.Select(context.Background(), hzctx)
 		require.NoError(t, err)
 		assert.Equal(t, candidates[2], p.Target(), "Failover should pick the third candidate on the ring")

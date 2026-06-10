@@ -14,11 +14,8 @@ var ErrMaxFailedCount = errors.New("proxy: reach max failed count")
 type Proxy interface {
 	ID() string
 	Target() string
-	Weight() uint32
-	IsAvailable() bool
-	AddFailedCount(count uint) error
+	Endpoint() *Endpoint
+	SetEndpoint(ep *Endpoint)
 	ServeHTTP(c context.Context, ctx *app.RequestContext)
-	Tag(key string) (value string, exist bool)
-	Tags() map[string]string
 	Close() error
 }

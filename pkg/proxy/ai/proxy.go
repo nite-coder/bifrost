@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -36,7 +37,6 @@ const (
 type Proxy struct {
 	id             string
 	target         string // e.g. "provider/model"
-	weight         uint32
 	options        *config.AIOptions
 	pricing        *config.AIPricingOptions
 	httpClient     *client.Client
@@ -45,6 +45,7 @@ type Proxy struct {
 	upstreamHost   string
 	initOnce       sync.Once
 	initErr        error
+	endpoint       atomic.Pointer[proxy.Endpoint]
 }
 
 var _ proxy.Proxy = (*Proxy)(nil)
@@ -57,18 +58,32 @@ type ProxyOptions struct {
 	AIOptions      *config.AIOptions
 	MetricsEnabled bool
 	Pricing        *config.AIPricingOptions
+	Endpoint       *proxy.Endpoint
 }
 
 // NewProxy creates a new AIProxy instance.
 func NewProxy(opts ProxyOptions) *Proxy {
+	endpoint := opts.Endpoint
+	if endpoint == nil {
+		weight := opts.Weight
+		if weight == 0 {
+			weight = 1
+		}
+		endpoint = &proxy.Endpoint{
+			Address:     opts.Target,
+			Weight:      weight,
+			HealthState: proxy.NewTargetState(0, 0), // Never fails
+		}
+	}
+
 	p := &Proxy{
 		id:             opts.ID,
 		target:         opts.Target,
-		weight:         opts.Weight,
 		options:        opts.AIOptions,
 		metricsEnabled: opts.MetricsEnabled,
 		pricing:        opts.Pricing,
 	}
+	p.endpoint.Store(endpoint)
 
 	parts := strings.SplitN(opts.Target, "/", TargetPartsCount)
 	if len(parts) == TargetPartsCount && opts.AIOptions != nil && opts.AIOptions.Providers != nil {
@@ -82,6 +97,16 @@ func NewProxy(opts ProxyOptions) *Proxy {
 	return p
 }
 
+// Endpoint returns the endpoint info associated with this proxy.
+func (p *Proxy) Endpoint() *proxy.Endpoint {
+	return p.endpoint.Load()
+}
+
+// SetEndpoint updates the endpoint info associated with this proxy.
+func (p *Proxy) SetEndpoint(ep *proxy.Endpoint) {
+	p.endpoint.Store(ep)
+}
+
 // ID returns the unique identifier for the proxy.
 func (p *Proxy) ID() string {
 	return p.id
@@ -90,21 +115,6 @@ func (p *Proxy) ID() string {
 // Target returns the backend target (provider/model format).
 func (p *Proxy) Target() string {
 	return p.target
-}
-
-// Weight returns the load balancing weight.
-func (p *Proxy) Weight() uint32 {
-	return p.weight
-}
-
-// IsAvailable returns true if the proxy is active and healthy.
-func (p *Proxy) IsAvailable() bool {
-	return true
-}
-
-// AddFailedCount logs a request failure.
-func (p *Proxy) AddFailedCount(_ uint) error {
-	return nil
 }
 
 // ServeHTTP handles incoming HTTP requests and proxies them to the target LLM provider.
@@ -208,16 +218,6 @@ func (p *Proxy) ServeHTTP(ctx context.Context, hzCtx *app.RequestContext) {
 		hzCtx.SetStatusCode(http.StatusInternalServerError)
 		return
 	}
-}
-
-// Tag retrieves a tag value.
-func (p *Proxy) Tag(_ string) (value string, exist bool) {
-	return "", false
-}
-
-// Tags returns all tags.
-func (p *Proxy) Tags() map[string]string {
-	return nil
 }
 
 // Close releases resources.

@@ -82,3 +82,58 @@ func (d *ResolverDiscovery) Watch(
 func (d *ResolverDiscovery) Close() error {
 	return nil
 }
+
+// StaticDiscovery implements service discovery using static targets (e.g. for virtual AI models).
+type StaticDiscovery struct {
+	upstream *Upstream
+}
+
+// NewStaticDiscovery creates a new StaticDiscovery instance.
+func NewStaticDiscovery(upstream *Upstream) *StaticDiscovery {
+	return &StaticDiscovery{
+		upstream: upstream,
+	}
+}
+
+type dummyAddr struct {
+	addr string
+}
+
+func (a dummyAddr) Network() string { return "static" }
+func (a dummyAddr) String() string  { return a.addr }
+
+// GetInstances returns static targets as instances.
+func (d *StaticDiscovery) GetInstances(
+	_ context.Context,
+	_ provider.GetInstanceOptions,
+) ([]provider.Instancer, error) {
+	instances := make([]provider.Instancer, 0, len(d.upstream.options.Targets))
+
+	for _, targetOptions := range d.upstream.options.Targets {
+		addr := dummyAddr{addr: targetOptions.Target}
+		instance := provider.NewInstance(addr, targetOptions.Weight)
+
+		if len(targetOptions.Tags) > 0 {
+			for key, val := range targetOptions.Tags {
+				instance.SetTag(key, val)
+			}
+		}
+		instance.SetTag("server_name", targetOptions.Target)
+		instances = append(instances, instance)
+	}
+
+	return instances, nil
+}
+
+// Watch is not supported by StaticDiscovery and returns provider.ErrWatchNotSupported.
+func (d *StaticDiscovery) Watch(
+	_ context.Context,
+	_ provider.GetInstanceOptions,
+) (<-chan []provider.Instancer, error) {
+	return nil, provider.ErrWatchNotSupported
+}
+
+// Close releases resources used by StaticDiscovery.
+func (d *StaticDiscovery) Close() error {
+	return nil
+}

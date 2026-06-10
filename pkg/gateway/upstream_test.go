@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,18 +54,8 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 		resolver: dnsResolver,
 	}
 
-	testService := config.ServiceOptions{
-		Protocol: config.ProtocolHTTP,
-		URL:      "http://test",
-	}
-
-	upstreamsMap, err := loadUpstreams(bifrost, testService)
-	require.NoError(t, err)
-	assert.Len(t, upstreamsMap, 1)
-
 	upstream, err := newUpstream(
 		bifrost,
-		testService,
 		config.UpstreamOptions{
 			ID: "test",
 			Balancer: config.BalancerOptions{
@@ -73,43 +64,29 @@ func TestCreateUpstreamAndDnsRefresh(t *testing.T) {
 			Targets: targetOptions,
 		},
 	)
-
 	require.NoError(t, err)
-	proxiies := upstream.Balancer().Proxies()
-	assert.Len(t, proxiies, 3)
 
-	var foundID string
-	found := false
-	for _, proxy := range proxiies {
-		if id, ok := proxy.Tag("id"); ok {
-			foundID = id
-			found = true
-			break
+	ch := upstream.Subscribe()
+	select {
+	case endpoints := <-ch:
+		assert.Len(t, endpoints, 3)
+		var foundID string
+		found := false
+		for _, ep := range endpoints {
+			if id, ok := ep.Tags["id"]; ok {
+				foundID = id
+				found = true
+				break
+			}
 		}
+		assert.True(t, found, "Expected to find an endpoint with an 'id' tag")
+		assert.Equal(t, "123", foundID, "Expected 'id' tag to be '123'")
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for endpoints")
 	}
-	assert.True(t, found, "Expected to find a proxy with an 'id' tag")
-	assert.Equal(t, "123", foundID, "Expected 'id' tag to be '123'")
-
-	upstream, err = newUpstream(
-		bifrost,
-		config.ServiceOptions{
-			Protocol: config.ProtocolGRPC,
-			URL:      "http://test",
-		},
-		config.UpstreamOptions{
-			ID: "test",
-			Balancer: config.BalancerOptions{
-				Type: "round_robin",
-			},
-			Targets: targetOptions,
-		},
-	)
-	require.NoError(t, err)
-	proxiies = upstream.Balancer().Proxies()
-	assert.Len(t, proxiies, 3)
 }
 
-func TestRefreshProxies(t *testing.T) {
+func TestRefreshEndpoints(t *testing.T) {
 	t.Run("success with initial DNS instances", func(t *testing.T) {
 		dnsResolver, err := resolver.NewResolver(resolver.Options{})
 		require.NoError(t, err)
@@ -128,10 +105,6 @@ func TestRefreshProxies(t *testing.T) {
 					Name: "test.service",
 				},
 			},
-			serviceOptions: &config.ServiceOptions{
-				Protocol: config.ProtocolHTTP,
-				URL:      "http://test.service",
-			},
 		}
 
 		addr1, err := net.ResolveTCPAddr("tcp", "127.0.0.1:8080")
@@ -144,30 +117,19 @@ func TestRefreshProxies(t *testing.T) {
 
 		instances := []provider.Instancer{ins1, ins2}
 
-		err = upstream.refreshProxies(instances)
+		ch := upstream.Subscribe()
+
+		err = upstream.refreshEndpoints(instances)
 		require.NoError(t, err)
 
-		plist1 := upstream.Balancer().Proxies()
-		assert.Len(t, plist1, 2)
-
-		// should be no update
-		err = upstream.refreshProxies(instances)
-		require.NoError(t, err)
-
-		plist2 := upstream.Balancer().Proxies()
-		assert.Len(t, plist2, 2)
-
-		plist1IDs := make(map[string]struct{})
-		for _, p := range plist1 {
-			plist1IDs[p.ID()] = struct{}{}
+		select {
+		case endpoints := <-ch:
+			assert.Len(t, endpoints, 2)
+			assert.Equal(t, "127.0.0.1:8080", endpoints[0].Address)
+			assert.Equal(t, uint32(2), endpoints[0].Weight)
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for endpoints")
 		}
-
-		plist2IDs := make(map[string]struct{})
-		for _, p := range plist2 {
-			plist2IDs[p.ID()] = struct{}{}
-		}
-
-		assert.Equal(t, plist1IDs, plist2IDs, "Expected proxy IDs to be the same regardless of order")
 	})
 
 	t.Run("success with updated tags", func(t *testing.T) {
@@ -188,10 +150,6 @@ func TestRefreshProxies(t *testing.T) {
 					Name: "test.service",
 				},
 			},
-			serviceOptions: &config.ServiceOptions{
-				Protocol: config.ProtocolHTTP,
-				URL:      "http://test.service",
-			},
 		}
 
 		addr1, err := net.ResolveTCPAddr("tcp", "127.0.0.1:8080")
@@ -203,46 +161,35 @@ func TestRefreshProxies(t *testing.T) {
 		require.NoError(t, err)
 		ins2 := provider.NewInstance(addr2, 3)
 
+		ch := upstream.Subscribe()
+
 		// first refresh
 		instances1 := []provider.Instancer{ins1, ins2}
-		err = upstream.refreshProxies(instances1)
+		err = upstream.refreshEndpoints(instances1)
 		require.NoError(t, err)
-		plist1 := upstream.Balancer().Proxies()
-		assert.Len(t, plist1, 2)
+
+		select {
+		case endpoints := <-ch:
+			assert.Len(t, endpoints, 2)
+			assert.Equal(t, "v1", endpoints[0].Tags["version"])
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for endpoints")
+		}
 
 		// second refresh with updated tags
 		ins1WithNewTags := provider.NewInstance(addr1, 2)
 		ins1WithNewTags.SetTag("version", "v2")
 		instances2 := []provider.Instancer{ins1WithNewTags, ins2}
-		err = upstream.refreshProxies(instances2)
+		err = upstream.refreshEndpoints(instances2)
 		require.NoError(t, err)
-		plist2 := upstream.Balancer().Proxies()
-		assert.Len(t, plist2, 2)
 
-		// The proxy with the same target but different tags should be replaced, so their IDs should not be equal.
-		// The other proxy should remain the same.
-		plist1Map := make(map[string]string)
-		for _, p := range plist1 {
-			plist1Map[p.Target()] = p.ID()
+		select {
+		case endpoints := <-ch:
+			assert.Len(t, endpoints, 2)
+			assert.Equal(t, "v2", endpoints[0].Tags["version"])
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for endpoints")
 		}
-
-		plist2Map := make(map[string]string)
-		for _, p := range plist2 {
-			plist2Map[p.Target()] = p.ID()
-		}
-
-		assert.NotEqual(
-			t,
-			plist1Map["http://127.0.0.1:8080"],
-			plist2Map["http://127.0.0.1:8080"],
-			"proxy should be updated due to tag changes",
-		)
-		assert.Equal(
-			t,
-			plist1Map["http://127.0.0.2:8080"],
-			plist2Map["http://127.0.0.2:8080"],
-			"proxy without tag changes should remain the same",
-		)
 	})
 
 	t.Run("fail with no instances", func(t *testing.T) {
@@ -263,13 +210,9 @@ func TestRefreshProxies(t *testing.T) {
 					Name: "test.service",
 				},
 			},
-			serviceOptions: &config.ServiceOptions{
-				Protocol: config.ProtocolHTTP,
-				URL:      "http://test.service",
-			},
 		}
 
-		err = upstream.refreshProxies([]provider.Instancer{})
+		err = upstream.refreshEndpoints([]provider.Instancer{})
 		require.Error(t, err)
 	})
 }
@@ -314,10 +257,6 @@ func TestWatchErrorHandling(t *testing.T) {
 				Name: "test.service",
 			},
 		},
-		serviceOptions: &config.ServiceOptions{
-			Protocol: config.ProtocolHTTP,
-			URL:      "http://test.service",
-		},
 		discovery: &mockErrorDiscovery{},
 	}
 
@@ -340,7 +279,6 @@ func TestNewUpstreamValidation(t *testing.T) {
 	t.Run("empty upstream ID", func(t *testing.T) {
 		_, err := newUpstream(
 			bifrost,
-			config.ServiceOptions{URL: "http://test"},
 			config.UpstreamOptions{
 				ID:      "",
 				Targets: []config.TargetOptions{{Target: "127.0.0.1:8080"}},
@@ -353,7 +291,6 @@ func TestNewUpstreamValidation(t *testing.T) {
 	t.Run("empty targets without discovery", func(t *testing.T) {
 		_, err := newUpstream(
 			bifrost,
-			config.ServiceOptions{URL: "http://test"},
 			config.UpstreamOptions{
 				ID:      "test",
 				Targets: []config.TargetOptions{},
@@ -376,7 +313,6 @@ func TestNewUpstreamValidation(t *testing.T) {
 
 		_, err := newUpstream(
 			bifrostWithDNSDisabled,
-			config.ServiceOptions{URL: "http://test"},
 			config.UpstreamOptions{
 				ID: "test",
 				Discovery: config.DiscoveryOptions{
@@ -404,7 +340,6 @@ func TestNewUpstreamValidation(t *testing.T) {
 
 		_, err := newUpstream(
 			bifrostWithNacosDisabled,
-			config.ServiceOptions{URL: "http://test"},
 			config.UpstreamOptions{
 				ID: "test",
 				Discovery: config.DiscoveryOptions{
@@ -430,7 +365,6 @@ func TestNewUpstreamValidation(t *testing.T) {
 
 		_, err := newUpstream(
 			bifrostWithK8SDisabled,
-			config.ServiceOptions{URL: "http://test"},
 			config.UpstreamOptions{
 				ID: "test",
 				Discovery: config.DiscoveryOptions{

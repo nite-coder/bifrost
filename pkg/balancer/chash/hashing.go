@@ -74,9 +74,9 @@ func NewBalancer(proxies []proxy.Proxy, hashon string, replicas int) *Balancer {
 	})
 
 	for _, p := range proxies {
-		weight := int(p.Weight())
-		if weight <= 0 {
-			weight = 1 // Default to 1 if weight is not set or invalid
+		weight := 1
+		if ep := p.Endpoint(); ep != nil && ep.Weight > 0 {
+			weight = int(ep.Weight)
 		}
 
 		// Use AddWithReplicas to scale virtual nodes based on weight
@@ -110,8 +110,10 @@ func (b *Balancer) Select(_ context.Context, c *app.RequestContext) (proxy.Proxy
 
 	for _, nodeID := range candidates {
 		p, ok := b.nodeMap[nodeID]
-		if ok && p.IsAvailable() {
-			return p, nil // Found an available proxy
+		if ok {
+			if ep := p.Endpoint(); ep != nil && ep.HealthState != nil && ep.HealthState.IsAvailable() {
+				return p, nil // Found an available proxy
+			}
 		}
 	}
 

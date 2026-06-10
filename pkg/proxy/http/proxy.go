@@ -12,7 +12,7 @@ import (
 	"net/url"
 	"runtime/debug"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -31,7 +31,6 @@ import (
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/proxy"
-	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/tracing"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -55,9 +54,8 @@ const TrailerPrefix = "Trailer:"
 
 // Proxy implements a reverse proxy for HTTP services.
 type Proxy struct {
-	failExpireAt time.Time
-	options      *Options
-	client       *client.Client
+	options *Options
+	client  *client.Client
 	// director must be a function which modifies the request
 	// into a new request. Its response is then redirected
 	// back to the original client unmodified.
@@ -72,14 +70,10 @@ type Proxy struct {
 	errorHandler func(*app.RequestContext, error)
 	id           string
 	// target is set as a reverse proxy address
-	target      string
-	targetHost  string
-	failedCount uint
-	mu          sync.RWMutex
-	weight      uint32
-	// transferTrailer is whether to forward Trailer-related header
+	target          string
+	targetHost      string
 	transferTrailer bool
-	tags            map[string]string
+	endpoint        atomic.Pointer[proxy.Endpoint]
 }
 
 // Options contains configuration for the HTTP proxy.
@@ -94,6 +88,7 @@ type Options struct {
 	IsTracingEnabled bool
 	PassHostHeader   bool
 	Tags             map[string]string
+	Endpoint         *proxy.Endpoint
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -130,16 +125,27 @@ func New(opts Options, httpClient *client.Client) (proxy.Proxy, error) {
 			return nil, err
 		}
 	}
-	if opts.Weight == 0 {
-		opts.Weight = 1
+
+	endpoint := opts.Endpoint
+	if endpoint == nil {
+		weight := opts.Weight
+		if weight == 0 {
+			weight = 1
+		}
+		endpoint = &proxy.Endpoint{
+			Address:     addr.Host,
+			Weight:      weight,
+			Tags:        opts.Tags,
+			HealthState: proxy.NewTargetState(opts.MaxFails, opts.FailTimeout),
+		}
 	}
+
 	r := &Proxy{
 		id:              uuid.New().String(),
 		transferTrailer: true,
 		options:         &opts,
 		target:          opts.Target,
 		targetHost:      addr.Host,
-		weight:          opts.Weight,
 		director: func(req *protocol.Request) {
 			switch opts.Protocol {
 			case config.ProtocolHTTP2:
@@ -171,47 +177,24 @@ func New(opts Options, httpClient *client.Client) (proxy.Proxy, error) {
 			}
 		},
 		client: httpClient,
-		tags:   opts.Tags,
 	}
+	r.endpoint.Store(endpoint)
 	return r, nil
 }
 
-// IsAvailable checks if the proxy is currently available.
-func (p *Proxy) IsAvailable() bool {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-	if p.options.MaxFails == 0 {
-		return true
-	}
-	now := timecache.Now()
-	if now.After(p.failExpireAt) {
-		return true
-	}
-	if p.failedCount < p.options.MaxFails {
-		return true
-	}
-	return false
+// Endpoint returns the endpoint info associated with this proxy.
+func (p *Proxy) Endpoint() *proxy.Endpoint {
+	return p.endpoint.Load()
 }
 
-// AddFailedCount increments the failed request count for the proxy.
-func (p *Proxy) AddFailedCount(count uint) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	now := timecache.Now()
-	if now.After(p.failExpireAt) {
-		p.failExpireAt = now.Add(p.options.FailTimeout)
-		p.failedCount = count
-	} else {
-		p.failedCount += count
-	}
-	if p.options.MaxFails > 0 && p.failedCount >= p.options.MaxFails {
-		return proxy.ErrMaxFailedCount
-	}
-	return nil
+// SetEndpoint updates the endpoint info associated with this proxy.
+func (p *Proxy) SetEndpoint(ep *proxy.Endpoint) {
+	p.endpoint.Store(ep)
 }
 
 func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
+	var isNoFreeConns bool
 	defer func() {
 		if r := recover(); r != nil {
 			stackTrace := cast.B2S(debug.Stack())
@@ -224,8 +207,11 @@ func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			c.Abort()
 		}
 		// check upstream health
-		if c.Response.StatusCode() >= http.StatusInternalServerError {
-			_ = p.AddFailedCount(1)
+		if c.Response.StatusCode() >= http.StatusInternalServerError && !isNoFreeConns {
+			ep := p.Endpoint()
+			if ep != nil && ep.HealthState != nil {
+				ep.HealthState.RecordFailure()
+			}
 		}
 	}()
 	outReq := &c.Request
@@ -286,6 +272,9 @@ func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		outReq.Header.Set("Upgrade", reqUpType)
 		err = p.roundTrip(ctx, c, outReq, outResp)
 		if err != nil {
+			if errors.Is(err, hzerrors.ErrNoFreeConns) {
+				isNoFreeConns = true
+			}
 			p.handleError(ctx, c, err)
 			return
 		}
@@ -329,6 +318,9 @@ ProxyPassLoop:
 		if errors.Is(err, hzerrors.ErrBadPoolConn) {
 			goto ProxyPassLoop
 		}
+		if errors.Is(err, hzerrors.ErrNoFreeConns) {
+			isNoFreeConns = true
+		}
 		p.handleError(ctx, c, err)
 		return
 	}
@@ -370,11 +362,6 @@ func (p *Proxy) SetTransferTrailer(b bool) {
 	p.transferTrailer = b
 }
 
-// Weight returns the load balancing weight of the proxy.
-func (p *Proxy) Weight() uint32 {
-	return p.weight
-}
-
 // Target returns the target URL string of the proxy.
 func (p *Proxy) Target() string {
 	return p.target
@@ -387,21 +374,6 @@ func (p *Proxy) Close() error {
 		p.client = nil
 	}
 	return nil
-}
-
-// Tag returns the value of a specific tag.
-func (p *Proxy) Tag(key string) (value string, exist bool) {
-	if len(p.tags) == 0 {
-		return "", false
-	}
-
-	val, found := p.tags[key]
-	return val, found
-}
-
-// Tags returns all tags associated with the proxy.
-func (p *Proxy) Tags() map[string]string {
-	return p.tags
 }
 
 func (p *Proxy) handleError(ctx context.Context, c *app.RequestContext, err error) {

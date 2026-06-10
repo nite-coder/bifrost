@@ -67,8 +67,8 @@ func TestRandom(t *testing.T) {
 	})
 
 	t.Run("two proxy failed", func(t *testing.T) {
-		_ = proxy1.AddFailedCount(100)
-		_ = proxy2.AddFailedCount(100)
+		proxy1.Endpoint().HealthState.RecordFailure()
+		proxy2.Endpoint().HealthState.RecordFailure()
 
 		hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
 		for range 10000 {
@@ -85,9 +85,9 @@ func TestRandom(t *testing.T) {
 	})
 
 	t.Run("no live upstream", func(t *testing.T) {
-		_ = proxy1.AddFailedCount(100)
-		_ = proxy2.AddFailedCount(100)
-		_ = proxy3.AddFailedCount(100)
+		proxy1.Endpoint().HealthState.RecordFailure()
+		proxy2.Endpoint().HealthState.RecordFailure()
+		proxy3.Endpoint().HealthState.RecordFailure()
 
 		for range 10000 {
 			proxy, err := b.Select(context.Background(), nil)
@@ -116,7 +116,7 @@ func TestRandom(t *testing.T) {
 			MaxFails:    1,
 		}
 		p1, _ := httpproxy.New(p1Options, nil)
-		_ = p1.AddFailedCount(1)
+		p1.Endpoint().HealthState.RecordFailure()
 
 		bSingle := NewBalancer([]proxy.Proxy{p1})
 		p, err := bSingle.Select(context.Background(), nil)

@@ -599,7 +599,7 @@ func TestProxyTags(t *testing.T) {
 	proxy, err := New(proxyOptions, nil)
 	require.NoError(t, err)
 
-	val, found := proxy.Tag("id")
+	val, found := proxy.Endpoint().Tags["id"]
 	assert.True(t, found)
 	assert.Equal(t, "123", val)
 }

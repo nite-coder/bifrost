@@ -68,7 +68,9 @@ func TestWeighted(t *testing.T) {
 	})
 
 	t.Run("one proxy failed", func(t *testing.T) {
-		_ = proxy1.AddFailedCount(100)
+		for range 10 {
+			proxy1.Endpoint().HealthState.RecordFailure()
+		}
 
 		hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
 		for range 6000 {
@@ -84,9 +86,15 @@ func TestWeighted(t *testing.T) {
 	})
 
 	t.Run("no live upstream", func(t *testing.T) {
-		_ = proxy1.AddFailedCount(1000)
-		_ = proxy2.AddFailedCount(1000)
-		_ = proxy3.AddFailedCount(1000)
+		for range 10 {
+			proxy1.Endpoint().HealthState.RecordFailure()
+		}
+		for range 5 {
+			proxy2.Endpoint().HealthState.RecordFailure()
+		}
+		for range 105 {
+			proxy3.Endpoint().HealthState.RecordFailure()
+		}
 
 		for range 6000 {
 			proxy, err := b.Select(context.Background(), nil)
@@ -115,7 +123,7 @@ func TestWeighted(t *testing.T) {
 			MaxFails:    1,
 		}
 		p1, _ := httpproxy.New(p1Options, nil)
-		_ = p1.AddFailedCount(1)
+		p1.Endpoint().HealthState.RecordFailure()
 
 		bSingle, _ := NewBalancer([]proxy.Proxy{p1})
 		p, err := bSingle.Select(context.Background(), nil)

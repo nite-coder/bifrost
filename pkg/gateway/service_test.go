@@ -38,11 +38,6 @@ func testServer(t *testing.T) *server.Hertz {
 		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
 	})
 
-	h.GET("/proxy/long-task", func(_ context.Context, ctx *app.RequestContext) {
-		time.Sleep(5 * time.Second)
-		ctx.Data(backendStatus, "application/json", []byte(backendResponse))
-	})
-
 	go h.Spin()
 	assert.Eventually(t, func() bool {
 		conn, err := net.DialTimeout("tcp", "localhost:8088", 100*time.Millisecond)
@@ -76,48 +71,52 @@ func TestServices(t *testing.T) {
 		_ = h.Shutdown(ctx)
 	}()
 
-	dnsResolver, err := resolver.NewResolver(resolver.Options{})
-	require.NoError(t, err)
-
-	bifrost := &Bifrost{
-		resolver: dnsResolver,
-		options: &config.Options{
-			Services: map[string]config.ServiceOptions{
-				"testService": {
-					URL: "http://127.0.0.1:8088",
-				},
+	options := config.Options{
+		Services: map[string]config.ServiceOptions{
+			"testService": {
+				URL: "http://127.0.0.1:8088",
 			},
-			Upstreams: map[string]config.UpstreamOptions{
-				"testUpstream": {
-					ID: "testUpstream",
-					Targets: []config.TargetOptions{
-						{
-							Target: "127.0.0.1:8088",
-						},
+		},
+		Upstreams: map[string]config.UpstreamOptions{
+			"testUpstream": {
+				ID: "testUpstream",
+				Targets: []config.TargetOptions{
+					{
+						Target: "127.0.0.1:8088",
 					},
 				},
+			},
 
-				"test_upstream_no_port": {
-					ID: "test_upstream_no_port",
-					Targets: []config.TargetOptions{
-						{
-							Target: "127.0.0.1",
-						},
+			"test_upstream_no_port": {
+				ID: "test_upstream_no_port",
+				Targets: []config.TargetOptions{
+					{
+						Target: "127.0.0.1",
 					},
 				},
 			},
 		},
 	}
 
+	bifrost, err := NewBifrost(options, ModeNormal)
+	require.NoError(t, err)
+	defer func() {
+		_ = bifrost.Close()
+	}()
+
 	ctx := context.Background()
 
 	// direct proxy
 	service, err := newService(bifrost, bifrost.options.Services["testService"])
 	require.NoError(t, err)
+
 	hzCtx := app.NewContext(0)
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
-	service.ServeHTTP(ctx, hzCtx)
-	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
+	require.Eventually(t, func() bool {
+		hzCtx.Response.Reset()
+		service.ServeHTTP(ctx, hzCtx)
+		return hzCtx.Response.StatusCode() == 200 && string(hzCtx.Response.Body()) == backendResponse
+	}, time.Second, 5*time.Millisecond)
 
 	// exist upstream
 	serviceOpts := bifrost.options.Services["testService"]
@@ -127,16 +126,23 @@ func TestServices(t *testing.T) {
 
 	hzCtx = app.NewContext(0)
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
-	service.ServeHTTP(ctx, hzCtx)
-	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
+	require.Eventually(t, func() bool {
+		hzCtx.Response.Reset()
+		service.ServeHTTP(ctx, hzCtx)
+		return hzCtx.Response.StatusCode() == 200 && string(hzCtx.Response.Body()) == backendResponse
+	}, time.Second, 5*time.Millisecond)
 
 	serviceOpts.URL = "http://test_upstream_no_port:8088"
 	service, err = newService(bifrost, serviceOpts)
 	require.NoError(t, err)
+
 	hzCtx = app.NewContext(0)
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
-	service.ServeHTTP(ctx, hzCtx)
-	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
+	require.Eventually(t, func() bool {
+		hzCtx.Response.Reset()
+		service.ServeHTTP(ctx, hzCtx)
+		return hzCtx.Response.StatusCode() == 200 && string(hzCtx.Response.Body()) == backendResponse
+	}, time.Second, 5*time.Millisecond)
 
 	// dynamic upstream
 	serviceOpts = bifrost.options.Services["testService"]
@@ -147,8 +153,11 @@ func TestServices(t *testing.T) {
 	hzCtx = app.NewContext(0)
 	hzCtx.Set("test", "testUpstream")
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
-	service.ServeHTTP(ctx, hzCtx)
-	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
+	require.Eventually(t, func() bool {
+		hzCtx.Response.Reset()
+		service.ServeHTTP(ctx, hzCtx)
+		return hzCtx.Response.StatusCode() == 200 && string(hzCtx.Response.Body()) == backendResponse
+	}, time.Second, 5*time.Millisecond)
 }
 
 func TestDynamicService(t *testing.T) {
@@ -159,70 +168,72 @@ func TestDynamicService(t *testing.T) {
 		_ = h.Shutdown(ctx)
 	}()
 
-	dnsResolver, err := resolver.NewResolver(resolver.Options{})
-	require.NoError(t, err)
-
-	bifrost := &Bifrost{
-		resolver: dnsResolver,
-		options: &config.Options{
-			Services: map[string]config.ServiceOptions{
-				"testService": {
-					URL: "http://127.0.0.1:8088",
-				},
+	options := config.Options{
+		Services: map[string]config.ServiceOptions{
+			"testService": {
+				URL: "http://127.0.0.1:8088",
 			},
-			Upstreams: map[string]config.UpstreamOptions{
-				"testUpstream": {
-					ID: "testUpstream",
-					Targets: []config.TargetOptions{
-						{
-							Target: "127.0.0.1:8088",
-						},
+		},
+		Upstreams: map[string]config.UpstreamOptions{
+			"testUpstream": {
+				ID: "testUpstream",
+				Targets: []config.TargetOptions{
+					{
+						Target: "127.0.0.1:8088",
 					},
 				},
+			},
 
-				"test_upstream_no_port": {
-					ID: "test_upstream_no_port",
-					Targets: []config.TargetOptions{
-						{
-							Target: "127.0.0.1",
-						},
+			"test_upstream_no_port": {
+				ID: "test_upstream_no_port",
+				Targets: []config.TargetOptions{
+					{
+						Target: "127.0.0.1",
 					},
 				},
 			},
 		},
 	}
 
-	ctx := context.Background()
-	services, err := loadServices(bifrost)
+	bifrost, err := NewBifrost(options, ModeNormal)
 	require.NoError(t, err)
+	defer func() {
+		_ = bifrost.Close()
+	}()
 
+	services := bifrost.services
 	dynamicService := newDynamicService("$var.myservice", services)
 
 	hzCtx := app.NewContext(0)
 	hzCtx.Set("myservice", "testService")
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
-	dynamicService.ServeHTTP(ctx, hzCtx)
-	assert.Equal(t, backendResponse, string(hzCtx.Response.Body()))
+	require.Eventually(t, func() bool {
+		hzCtx.Response.Reset()
+		dynamicService.ServeHTTP(context.Background(), hzCtx)
+		return hzCtx.Response.StatusCode() == 200 && string(hzCtx.Response.Body()) == backendResponse
+	}, time.Second, 5*time.Millisecond)
 }
 
 func TestDynamicServiceMiddleware(t *testing.T) {
+	options := config.Options{
+		Services: map[string]config.ServiceOptions{
+			"testService": {
+				URL: "http://127.0.0.1:8088",
+				Middlewares: []config.MiddlwareOptions{
+					{
+						Use: "testMiddleware",
+					},
+				},
+			},
+		},
+	}
+
 	dnsResolver, err := resolver.NewResolver(resolver.Options{})
 	require.NoError(t, err)
 
 	bifrost := &Bifrost{
 		resolver: dnsResolver,
-		options: &config.Options{
-			Services: map[string]config.ServiceOptions{
-				"testService": {
-					URL: "http://127.0.0.1:8088",
-					Middlewares: []config.MiddlwareOptions{
-						{
-							Use: "testMiddleware",
-						},
-					},
-				},
-			},
-		},
+		options:  &options,
 	}
 
 	hit := 0
@@ -233,34 +244,31 @@ func TestDynamicServiceMiddleware(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
 	services, err := loadServices(bifrost)
 	require.NoError(t, err)
+	bifrost.services = services
 
 	dynamicService := newDynamicService("$var.myservice", services)
 
 	hzCtx := app.NewContext(0)
 	hzCtx.Set("myservice", "testService")
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
-	dynamicService.ServeHTTP(ctx, hzCtx)
+	dynamicService.ServeHTTP(context.Background(), hzCtx)
 	assert.Equal(t, 1, hit)
 
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
-	dynamicService.ServeHTTP(ctx, hzCtx)
+	dynamicService.ServeHTTP(context.Background(), hzCtx)
 	assert.Equal(t, 2, hit)
 
 	hzCtx.Request.SetRequestURI("http://127.0.0.1:8088/proxy/backend")
-	dynamicService.ServeHTTP(ctx, hzCtx)
+	dynamicService.ServeHTTP(context.Background(), hzCtx)
 	assert.Equal(t, 3, hit)
 }
 
-// TestServiceNoUpstream verifies that the service handles nil upstream gracefully
-// When upstream is nil, the code path hits c.Error(nil) which panics.
-// The panic is recovered and returns 500.
 func TestServiceNoUpstream(t *testing.T) {
 	service := &Service{
 		options:  &config.ServiceOptions{ID: "test-service"},
-		upstream: nil, // No upstream configured
+		upstream: nil,
 	}
 
 	ctx := context.Background()
@@ -269,29 +277,14 @@ func TestServiceNoUpstream(t *testing.T) {
 
 	service.ServeHTTP(ctx, hzCtx)
 
-	// When upstream is nil, proxy is nil, c.Error(nil) causes panic which is recovered as 500
 	assert.Equal(t, 500, hzCtx.Response.StatusCode())
 }
 
-// TestServiceBalancerNil verifies that the service returns 503 when balancer is nil.
 func TestServiceBalancerNil(t *testing.T) {
-	dnsResolver, err := resolver.NewResolver(resolver.Options{})
-	require.NoError(t, err)
-
-	// Create upstream with nil balancer
 	upstream := &Upstream{
-		bifrost: &Bifrost{
-			options:  &config.Options{SkipResolver: true},
-			resolver: dnsResolver,
-		},
 		options: &config.UpstreamOptions{
 			ID: "test-upstream",
 		},
-		serviceOptions: &config.ServiceOptions{
-			ID:  "test-service",
-			URL: "http://test",
-		},
-		// balancer is not set (nil)
 	}
 
 	service := &Service{
@@ -305,7 +298,6 @@ func TestServiceBalancerNil(t *testing.T) {
 
 	service.ServeHTTP(ctx, hzCtx)
 
-	// Should return 503 when balancer is nil
 	assert.Equal(t, 503, hzCtx.Response.StatusCode())
 }
 
@@ -324,9 +316,6 @@ func TestServiceGetters(t *testing.T) {
 		bifrost: bifrost,
 		options: &config.UpstreamOptions{
 			ID: "test-upstream",
-		},
-		serviceOptions: &config.ServiceOptions{
-			URL: "http://test",
 		},
 	}
 
@@ -380,6 +369,13 @@ func TestLoadModels(t *testing.T) {
 		},
 	}
 
+	bifrost.upstreamManager = newUpstreamManager(bifrost)
+	err = bifrost.upstreamManager.Start()
+	require.NoError(t, err)
+	defer func() {
+		_ = bifrost.upstreamManager.Close()
+	}()
+
 	serviceOpts := config.ServiceOptions{
 		ID:   "aiService",
 		Type: "ai",
@@ -389,43 +385,46 @@ func TestLoadModels(t *testing.T) {
 	service, err := newService(bifrost, serviceOpts)
 	require.NoError(t, err)
 
-	// Verify type: ai handles dynamic upstream correctly
+	// Wait for subscriptions to propagate
+	require.Eventually(t, func() bool {
+		_, exists := service.getBalancer("ai:gpt-4")
+		return exists
+	}, time.Second, 5*time.Millisecond)
+
 	assert.Equal(t, variable.Model, service.dynamicUpstream)
 
-	// Verify that the virtual upstream was created with "ai:" prefix
-	upstream, exists := service.upstreams["ai:gpt-4"]
+	upstream, exists := service.bifrost.upstreamManager.Get("ai:gpt-4")
 	require.True(t, exists)
 	assert.Equal(t, "ai:gpt-4", upstream.options.ID)
 
-	// Verify targets and weights in the upstream options
 	require.Len(t, upstream.options.Targets, 2)
 	assert.Equal(t, "p1/gpt-4", upstream.options.Targets[0].Target)
 	assert.Equal(t, uint32(3), upstream.options.Targets[0].Weight)
 	assert.Equal(t, "p2/gpt-4", upstream.options.Targets[1].Target)
 	assert.Equal(t, uint32(1), upstream.options.Targets[1].Weight)
 
-	// Verify balancer exists and has the correct proxies
-	b := upstream.Balancer()
+	b, exists := service.getBalancer("ai:gpt-4")
+	require.True(t, exists)
 	require.NotNil(t, b)
 	proxies := b.Proxies()
 	require.Len(t, proxies, 2)
 	assert.Equal(t, "p1/gpt-4", proxies[0].Target())
-	assert.Equal(t, uint32(3), proxies[0].Weight())
+	assert.Equal(t, uint32(3), proxies[0].Endpoint().Weight)
 	assert.Equal(t, "p2/gpt-4", proxies[1].Target())
-	assert.Equal(t, uint32(1), proxies[1].Weight())
+	assert.Equal(t, uint32(1), proxies[1].Endpoint().Weight)
 
-	// Verify that the virtual upstream was created with "ai:" prefix and defaults to weighted balancer
-	upstream2, exists2 := service.upstreams["ai:gpt-3.5-turbo"]
+	upstream2, exists2 := service.bifrost.upstreamManager.Get("ai:gpt-3.5-turbo")
 	require.True(t, exists2)
 	assert.Equal(t, "ai:gpt-3.5-turbo", upstream2.options.ID)
 	assert.Equal(t, "weighted", upstream2.options.Balancer.Type)
 
-	b2 := upstream2.Balancer()
+	b2, exists3 := service.getBalancer("ai:gpt-3.5-turbo")
+	require.True(t, exists3)
 	require.NotNil(t, b2)
 	proxies2 := b2.Proxies()
 	require.Len(t, proxies2, 2)
 	assert.Equal(t, "p1/gpt-3.5", proxies2[0].Target())
-	assert.Equal(t, uint32(1), proxies2[0].Weight())
+	assert.Equal(t, uint32(1), proxies2[0].Endpoint().Weight)
 	assert.Equal(t, "p2/gpt-3.5", proxies2[1].Target())
-	assert.Equal(t, uint32(1), proxies2[1].Weight())
+	assert.Equal(t, uint32(1), proxies2[1].Endpoint().Weight)
 }

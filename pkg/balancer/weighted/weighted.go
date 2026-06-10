@@ -29,9 +29,9 @@ type Balancer struct {
 func NewBalancer(proxies []proxy.Proxy) (*Balancer, error) {
 	var totalWeight uint32
 	for _, p := range proxies {
-		weight := p.Weight()
-		if weight == 0 {
-			weight = 1
+		weight := uint32(1)
+		if ep := p.Endpoint(); ep != nil && ep.Weight > 0 {
+			weight = ep.Weight
 		}
 		totalWeight += weight
 	}
@@ -60,7 +60,7 @@ func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (proxy.Proxy
 
 	if len(b.proxies) == 1 {
 		p := b.proxies[0]
-		if p.IsAvailable() {
+		if ep := p.Endpoint(); ep != nil && ep.HealthState != nil && ep.HealthState.IsAvailable() {
 			return p, nil
 		}
 		return nil, balancer.ErrNotAvailable
@@ -73,13 +73,13 @@ findLoop:
 	randomWeight := int64(rand.IntN(int(b.totalWeight)))
 
 	for _, p := range b.proxies {
-		weight := int64(p.Weight())
-		if weight == 0 {
-			weight = 1
+		weight := int64(1)
+		if ep := p.Endpoint(); ep != nil && ep.Weight > 0 {
+			weight = int64(ep.Weight)
 		}
 		randomWeight -= weight
 		if randomWeight < 0 {
-			if p.IsAvailable() {
+			if ep := p.Endpoint(); ep != nil && ep.HealthState != nil && ep.HealthState.IsAvailable() {
 				return p, nil
 			}
 			// No live upstream

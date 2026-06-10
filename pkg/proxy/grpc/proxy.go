@@ -14,7 +14,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -34,7 +34,6 @@ import (
 
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/proxy"
-	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/tracing"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -53,21 +52,17 @@ type Options struct {
 	Tags             map[string]string
 	IsTracingEnabled bool
 	ServiceID        string
+	Endpoint         *proxy.Endpoint
 }
 
 // Proxy implements a reverse proxy for gRPC services.
 type Proxy struct {
-	failExpireAt time.Time
-	client       grpc.ClientConnInterface
-	options      *Options
-	id           string
-	// target is set as a reverse proxy address
-	target      string
-	targetHost  string
-	failedCount uint
-	mu          sync.RWMutex
-	weight      uint32
-	tags        map[string]string
+	client     grpc.ClientConnInterface
+	options    *Options
+	id         string
+	target     string
+	targetHost string
+	endpoint   atomic.Pointer[proxy.Endpoint]
 }
 
 // New creates a new GRPCProxy instance with the given options.
@@ -75,9 +70,6 @@ func New(options Options) (*Proxy, error) {
 	addr, err := url.Parse(options.Target)
 	if err != nil {
 		return nil, fmt.Errorf("proxy: gRPC proxy failed to parse target URL: %w", err)
-	}
-	if options.Weight == 0 {
-		options.Weight = 1
 	}
 	grpcOptions := []grpc.DialOption{
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(&rawCodec{})),
@@ -93,58 +85,45 @@ func New(options Options) (*Proxy, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial backend: %w", err)
 	}
-	return &Proxy{
+
+	endpoint := options.Endpoint
+	if endpoint == nil {
+		weight := options.Weight
+		if weight == 0 {
+			weight = 1
+		}
+		endpoint = &proxy.Endpoint{
+			Address:     addr.Host,
+			Weight:      weight,
+			Tags:        options.Tags,
+			HealthState: proxy.NewTargetState(options.MaxFails, options.FailTimeout),
+		}
+	}
+
+	r := &Proxy{
 		id:         uuid.New().String(),
 		target:     options.Target,
 		targetHost: addr.Host,
 		options:    &options,
 		client:     client,
-		tags:       options.Tags,
-	}, nil
+	}
+	r.endpoint.Store(endpoint)
+	return r, nil
 }
 
-// IsAvailable returns true if the upstream gRPC server is considered healthy.
-func (p *Proxy) IsAvailable() bool {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-	if p.options.MaxFails == 0 {
-		return true
-	}
-	now := timecache.Now()
-	if now.After(p.failExpireAt) {
-		return true
-	}
-	if p.failedCount < p.options.MaxFails {
-		return true
-	}
-	return false
+// Endpoint returns the endpoint info associated with this proxy.
+func (p *Proxy) Endpoint() *proxy.Endpoint {
+	return p.endpoint.Load()
 }
 
-// AddFailedCount increments the failed request count for the upstream server.
-func (p *Proxy) AddFailedCount(count uint) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	now := timecache.Now()
-	if now.After(p.failExpireAt) {
-		p.failExpireAt = now.Add(p.options.FailTimeout)
-		p.failedCount = count
-	} else {
-		p.failedCount += count
-	}
-	if p.options.MaxFails > 0 && p.failedCount >= p.options.MaxFails {
-		return proxy.ErrMaxFailedCount
-	}
-	return nil
+// SetEndpoint updates the endpoint info associated with this proxy.
+func (p *Proxy) SetEndpoint(ep *proxy.Endpoint) {
+	p.endpoint.Store(ep)
 }
 
 // ID return proxy's ID.
 func (p *Proxy) ID() string {
 	return p.id
-}
-
-// Weight returns the relative weight of this proxy instance for load balancing.
-func (p *Proxy) Weight() uint32 {
-	return p.weight
 }
 
 // Target returns the target URL of the upstream gRPC server.
@@ -163,21 +142,6 @@ func (p *Proxy) Close() error {
 		}
 	}
 	return nil
-}
-
-// Tag retrieves a specific metadata tag value from the proxy instance.
-func (p *Proxy) Tag(key string) (value string, exist bool) {
-	if len(p.tags) == 0 {
-		return "", false
-	}
-
-	val, found := p.tags[key]
-	return val, found
-}
-
-// Tags returns all metadata tags of the proxy instance.
-func (p *Proxy) Tags() map[string]string {
-	return p.tags
 }
 
 // ServeHTTP implements the http.Handler interface.
@@ -370,10 +334,10 @@ func (p *Proxy) handleGRPCError(ctx context.Context, c *app.RequestContext, err 
 	_ = c.Response.Header.Trailer().Set("grpc-message", st.Message())
 	c.Response.Header.SetContentType("application/grpc")
 	switch st.Code() {
-	case codes.Unavailable, codes.Unknown, codes.Unimplemented:
-		err := p.AddFailedCount(1)
-		if err != nil {
-			logger.Warn("upstream server temporarily disabled")
+	case codes.Unavailable, codes.Unknown, codes.Unimplemented, codes.Internal:
+		ep := p.Endpoint()
+		if ep != nil && ep.HealthState != nil {
+			ep.HealthState.RecordFailure()
 		}
 	default:
 	}

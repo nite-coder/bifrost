@@ -2,62 +2,50 @@ package gateway
 
 import (
 	"context"
-	"crypto/sha256"
-	"crypto/tls"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net"
-	"net/url"
-	"sort"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
-	"github.com/cloudwego/hertz/pkg/app/client"
-	hzconfig "github.com/cloudwego/hertz/pkg/common/config"
-	prom "github.com/prometheus/client_golang/prometheus"
-
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
-	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/provider/dns"
 	"github.com/nite-coder/bifrost/pkg/provider/k8s"
 	"github.com/nite-coder/bifrost/pkg/provider/nacos"
 	"github.com/nite-coder/bifrost/pkg/proxy"
-	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
-	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
-	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 )
 
-// Upstream represents a collection of backend targets and a load balancer.
+const defaultSubscriberBufferSize = 64
+
+// Upstream represents a collection of backend targets.
 type Upstream struct {
-	balancer       atomic.Value
-	discovery      provider.ServiceDiscovery
-	bifrost        *Bifrost
-	options        *config.UpstreamOptions
-	serviceOptions *config.ServiceOptions
-	watchOnce      sync.Once
-	cancel         context.CancelFunc
+	mu          sync.RWMutex
+	discovery   provider.ServiceDiscovery
+	bifrost     *Bifrost
+	options     *config.UpstreamOptions
+	subscribers []chan []*proxy.Endpoint
+	endpoints   []*proxy.Endpoint
+	watchOnce   sync.Once
+	cancel      context.CancelFunc
 }
 
-// Close stops watching for updates and closes all associated proxies and discovery resources.
+// Close stops watching for updates and closes discovery resources.
 func (u *Upstream) Close() error {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
 	if u.cancel != nil {
 		u.cancel()
 	}
 
-	// Close all proxies in the balancer
-	if b := u.Balancer(); b != nil {
-		for _, p := range b.Proxies() {
-			if p != nil {
-				_ = p.Close()
-			}
-		}
+	for _, sub := range u.subscribers {
+		close(sub)
 	}
+	u.subscribers = nil
 
 	if u.discovery != nil {
 		return u.discovery.Close()
@@ -67,7 +55,6 @@ func (u *Upstream) Close() error {
 
 func newUpstream(
 	bifrost *Bifrost,
-	serviceOptions config.ServiceOptions,
 	upstreamOptions config.UpstreamOptions,
 ) (*Upstream, error) {
 	var err error
@@ -79,106 +66,105 @@ func newUpstream(
 	}
 
 	upstream := &Upstream{
-		bifrost:        bifrost,
-		options:        &upstreamOptions,
-		serviceOptions: &serviceOptions,
+		bifrost: bifrost,
+		options: &upstreamOptions,
 	}
-	switch strings.ToLower(upstreamOptions.Discovery.Type) {
-	case "dns":
-		if !bifrost.options.Providers.DNS.Enabled {
-			return nil, fmt.Errorf("dns provider is disabled for upstream ID: %s", upstreamOptions.ID)
-		}
-		var discovery provider.ServiceDiscovery
-		discovery, err = dns.NewDNSServiceDiscovery(
-			bifrost.options.Providers.DNS.Servers,
-			bifrost.options.Providers.DNS.Valid,
-		)
-		if err != nil {
-			return nil, err
-		}
-		upstream.discovery = discovery
-	case "nacos":
-		if !bifrost.options.Providers.Nacos.Discovery.Enabled {
-			return nil, fmt.Errorf("nacos discovery provider is disabled for upstream ID: %s", upstreamOptions.ID)
-		}
 
-		options := nacos.Options{
-			Username:    bifrost.options.Providers.Nacos.Discovery.Username,
-			Password:    bifrost.options.Providers.Nacos.Discovery.Password,
-			NamespaceID: bifrost.options.Providers.Nacos.Discovery.NamespaceID,
-			Prefix:      bifrost.options.Providers.Nacos.Discovery.Prefix,
-			CacheDir:    bifrost.options.Providers.Nacos.Discovery.CacheDir,
-			Endpoints:   bifrost.options.Providers.Nacos.Discovery.Endpoints,
-			LogDir:      bifrost.options.Providers.Nacos.Discovery.LogDir,
-			LogLevel:    bifrost.options.Providers.Nacos.Discovery.LogLevel,
-		}
-		var discovery provider.ServiceDiscovery
-		discovery, err = nacos.NewNacosServiceDiscovery(options)
-		if err != nil {
-			return nil, err
-		}
+	if strings.HasPrefix(upstreamOptions.ID, "ai:") {
+		discovery := NewStaticDiscovery(upstream)
 		upstream.discovery = discovery
-	case "k8s":
-		if !bifrost.options.Providers.K8S.Enabled {
-			return nil, fmt.Errorf("k8s provider is disabled for upstream ID: %s", upstreamOptions.ID)
+	} else {
+		switch strings.ToLower(upstreamOptions.Discovery.Type) {
+		case "dns":
+			if !bifrost.options.Providers.DNS.Enabled {
+				return nil, fmt.Errorf("dns provider is disabled for upstream ID: %s", upstreamOptions.ID)
+			}
+			var discovery provider.ServiceDiscovery
+			discovery, err = dns.NewDNSServiceDiscovery(
+				bifrost.options.Providers.DNS.Servers,
+				bifrost.options.Providers.DNS.Valid,
+			)
+			if err != nil {
+				return nil, err
+			}
+			upstream.discovery = discovery
+		case "nacos":
+			if !bifrost.options.Providers.Nacos.Discovery.Enabled {
+				return nil, fmt.Errorf("nacos discovery provider is disabled for upstream ID: %s", upstreamOptions.ID)
+			}
+
+			options := nacos.Options{
+				Username:    bifrost.options.Providers.Nacos.Discovery.Username,
+				Password:    bifrost.options.Providers.Nacos.Discovery.Password,
+				NamespaceID: bifrost.options.Providers.Nacos.Discovery.NamespaceID,
+				Prefix:      bifrost.options.Providers.Nacos.Discovery.Prefix,
+				CacheDir:    bifrost.options.Providers.Nacos.Discovery.CacheDir,
+				Endpoints:   bifrost.options.Providers.Nacos.Discovery.Endpoints,
+				LogDir:      bifrost.options.Providers.Nacos.Discovery.LogDir,
+				LogLevel:    bifrost.options.Providers.Nacos.Discovery.LogLevel,
+			}
+			var discovery provider.ServiceDiscovery
+			discovery, err = nacos.NewNacosServiceDiscovery(options)
+			if err != nil {
+				return nil, err
+			}
+			upstream.discovery = discovery
+		case "k8s":
+			if !bifrost.options.Providers.K8S.Enabled {
+				return nil, fmt.Errorf("k8s provider is disabled for upstream ID: %s", upstreamOptions.ID)
+			}
+			option := k8s.Options{
+				APIServer: bifrost.options.Providers.K8S.APIServer,
+			}
+			var discovery provider.ServiceDiscovery
+			discovery, err = k8s.NewK8sDiscovery(option)
+			if err != nil {
+				return nil, err
+			}
+			upstream.discovery = discovery
+		default:
+			discovery := NewResolverDiscovery(upstream)
+			upstream.discovery = discovery
 		}
-		option := k8s.Options{
-			APIServer: bifrost.options.Providers.K8S.APIServer,
-		}
-		var discovery provider.ServiceDiscovery
-		discovery, err = k8s.NewK8sDiscovery(option)
-		if err != nil {
-			return nil, err
-		}
-		upstream.discovery = discovery
-	default:
-		discovery := NewResolverDiscovery(upstream)
-		upstream.discovery = discovery
 	}
-	err = upstream.refreshProxies(nil)
+
+	err = upstream.refreshEndpoints(nil)
 	if err != nil {
 		return nil, err
 	}
 	return upstream, nil
 }
 
-// Balancer returns the current load balancer for the upstream.
-func (u *Upstream) Balancer() balancer.Balancer {
-	val := u.balancer.Load()
-	if val == nil {
-		return nil
+// Subscribe returns a channel that receives the list of endpoints.
+func (u *Upstream) Subscribe() <-chan []*proxy.Endpoint {
+	u.watch()
+
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	ch := make(chan []*proxy.Endpoint, defaultSubscriberBufferSize)
+	u.subscribers = append(u.subscribers, ch)
+	if len(u.endpoints) > 0 {
+		ch <- u.endpoints
 	}
-	b, ok := val.(balancer.Balancer)
-	if !ok {
-		return nil
-	}
-	return b
+	return ch
 }
 
-// generateProxyHash generates a unique hash for a proxy based on its target and tags.
-func generateProxyHash(p proxy.Proxy) string {
-	tags := p.Tags()
-	keys := make([]string, 0, len(tags))
-	for k := range tags {
-		keys = append(keys, k)
-	}
-	// Sort keys for consistent hash generation
-	sort.Strings(keys)
+// Unsubscribe removes a subscription channel.
+func (u *Upstream) Unsubscribe(ch <-chan []*proxy.Endpoint) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
 
-	var builder strings.Builder
-	_, _ = builder.WriteString(p.Target())
-	for _, k := range keys {
-		_, _ = builder.WriteString(";")
-		_, _ = builder.WriteString(k)
-		_, _ = builder.WriteString("=")
-		_, _ = builder.WriteString(tags[k])
+	for i, sub := range u.subscribers {
+		if sub == ch {
+			u.subscribers = append(u.subscribers[:i], u.subscribers[i+1:]...)
+			close(sub)
+			break
+		}
 	}
-
-	hash := sha256.Sum256([]byte(builder.String()))
-	return hex.EncodeToString(hash[:])
 }
 
-func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
+func (u *Upstream) refreshEndpoints(instances []provider.Instancer) error {
 	var err error
 	if len(instances) == 0 && u.discovery != nil {
 		options := provider.GetInstanceOptions{
@@ -192,210 +178,73 @@ func (u *Upstream) refreshProxies(instances []provider.Instancer) error {
 	} else if len(instances) == 0 {
 		return fmt.Errorf("no instances found for upstream ID: %s", u.options.ID)
 	}
-	newProxies := make([]proxy.Proxy, 0)
 
+	var maxFails uint
+	if u.options.HealthCheck.Passive.MaxFails == nil {
+		maxFails = u.bifrost.options.Default.Upstream.MaxFails
+	} else {
+		maxFails = *u.options.HealthCheck.Passive.MaxFails
+	}
+	var failTimeout time.Duration
+	if u.options.HealthCheck.Passive.FailTimeout > 0 {
+		failTimeout = u.options.HealthCheck.Passive.FailTimeout
+	} else if u.bifrost.options.Default.Upstream.FailTimeout > 0 {
+		failTimeout = u.bifrost.options.Default.Upstream.FailTimeout
+	}
+
+	newEndpoints := make([]*proxy.Endpoint, 0, len(instances))
 	for _, instance := range instances {
-		var targetHost, targetPort string
-		targetHost, targetPort, err = net.SplitHostPort(instance.Address().String())
-		if err != nil {
-			targetHost = instance.Address().String()
-		}
-		var addr *url.URL
-		addr, err = url.Parse(u.serviceOptions.URL)
-		if err != nil {
-			return fmt.Errorf("failed to parse service URL '%s': %w", u.serviceOptions.URL, err)
-		}
-		port := ""
-		if len(addr.Port()) > 0 {
-			port = addr.Port()
-		} else if targetPort != "" && targetPort != "0" {
-			port = targetPort
-		}
-		serverName, _ := instance.Tag("server_name")
-		clientOpts := httpproxy.DefaultClientOptions()
-		if u.serviceOptions.Timeout.Dail > 0 {
-			clientOpts = append(clientOpts, client.WithDialTimeout(u.serviceOptions.Timeout.Dail))
-		} else if u.bifrost.options.Default.Service.Timeout.Dail > 0 {
-			clientOpts = append(clientOpts, client.WithDialTimeout(u.bifrost.options.Default.Service.Timeout.Dail))
-		}
-		if u.serviceOptions.Timeout.Read > 0 {
-			clientOpts = append(clientOpts, client.WithClientReadTimeout(u.serviceOptions.Timeout.Read))
-		} else if u.bifrost.options.Default.Service.Timeout.Read > 0 {
-			clientOpts = append(
-				clientOpts,
-				client.WithClientReadTimeout(u.bifrost.options.Default.Service.Timeout.Read),
-			)
-		}
-		if u.serviceOptions.Timeout.Write > 0 {
-			clientOpts = append(clientOpts, client.WithWriteTimeout(u.serviceOptions.Timeout.Write))
-		} else if u.bifrost.options.Default.Service.Timeout.Write > 0 {
-			clientOpts = append(clientOpts, client.WithWriteTimeout(u.bifrost.options.Default.Service.Timeout.Write))
-		}
-		if u.serviceOptions.Timeout.MaxConnWait > 0 {
-			clientOpts = append(clientOpts, client.WithMaxConnWaitTimeout(u.serviceOptions.Timeout.MaxConnWait))
-		} else if u.bifrost.options.Default.Service.Timeout.MaxConnWait > 0 {
-			clientOpts = append(
-				clientOpts,
-				client.WithMaxConnWaitTimeout(u.bifrost.options.Default.Service.Timeout.MaxConnWait),
-			)
-		}
-		if u.serviceOptions.MaxConnsPerHost != nil {
-			clientOpts = append(clientOpts, client.WithMaxConnsPerHost(*u.serviceOptions.MaxConnsPerHost))
-		} else if u.bifrost.options.Default.Service.MaxConnsPerHost != nil {
-			clientOpts = append(
-				clientOpts,
-				client.WithMaxConnsPerHost(*u.bifrost.options.Default.Service.MaxConnsPerHost),
-			)
-		}
-		if strings.EqualFold(addr.Scheme, "https") {
-			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
-				// when client uses ip address to connect to server, client need to set the ServerName to the domain name you want to use
-				ServerName:         serverName,
-				InsecureSkipVerify: !u.serviceOptions.TLSVerify, //nolint:gosec
-			}))
-		}
-		if u.bifrost.options.Metrics.Prometheus.Enabled {
-			clientOpts = append(clientOpts, client.WithConnStateObserve(func(hcs hzconfig.HostClientState) {
-				labels := make(prom.Labels)
-				labels["service_id"] = u.serviceOptions.ID
-				labels["target"] = hcs.ConnPoolState().Addr
-				metrics.HTTPServiceOpenConnections.With(labels).Set(float64(hcs.ConnPoolState().TotalConnNum))
-			}))
-		}
-		var maxFails uint
-		if u.options.HealthCheck.Passive.MaxFails == nil {
-			maxFails = u.bifrost.options.Default.Upstream.MaxFails
+		var address string
+		var serverName string
+		if instance.Address().Network() == "static" {
+			address = instance.Address().String()
+			serverName = address
 		} else {
-			maxFails = *u.options.HealthCheck.Passive.MaxFails
+			var targetHost, targetPort string
+			targetHost, targetPort, err = net.SplitHostPort(instance.Address().String())
+			if err != nil {
+				targetHost = instance.Address().String()
+				targetPort = "0"
+			}
+			address = net.JoinHostPort(targetHost, targetPort)
+			serverName = targetHost
 		}
-		var failTimeout time.Duration
-		if u.options.HealthCheck.Passive.FailTimeout > 0 {
-			failTimeout = u.options.HealthCheck.Passive.FailTimeout
-		} else if u.bifrost.options.Default.Upstream.FailTimeout > 0 {
-			failTimeout = u.bifrost.options.Default.Upstream.FailTimeout
+		var state *proxy.TargetState
+		if u.bifrost.upstreamManager != nil {
+			state = u.bifrost.upstreamManager.GetOrCreateTargetState(address, maxFails, failTimeout)
+		} else {
+			state = proxy.NewTargetState(maxFails, failTimeout)
 		}
-		var myURL string
-		switch u.serviceOptions.Protocol {
-		case "", config.ProtocolHTTP, config.ProtocolHTTP2:
-			myURL = fmt.Sprintf("%s://%s%s", addr.Scheme, targetHost, addr.Path)
-			if port != "" {
-				myURL = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
-			}
-			clientOptions := httpproxy.ClientOptions{
-				IsHTTP2:   u.serviceOptions.Protocol == config.ProtocolHTTP2,
-				HZOptions: clientOpts,
-			}
-			var httpClient *client.Client
-			httpClient, err = httpproxy.NewClient(clientOptions)
-			if err != nil {
-				return err
-			}
-			proxyOptions := httpproxy.Options{
-				Target:           myURL,
-				Protocol:         u.serviceOptions.Protocol,
-				Weight:           instance.Weight(),
-				MaxFails:         maxFails,
-				FailTimeout:      failTimeout,
-				IsTracingEnabled: u.bifrost.options.Tracing.Enabled,
-				ServiceID:        u.serviceOptions.ID,
-				TargetHostHeader: serverName,
-				PassHostHeader:   u.serviceOptions.IsPassHostHeader(),
-				Tags:             instance.Tags(),
-			}
-			var myProxy proxy.Proxy
-			myProxy, err = httpproxy.New(proxyOptions, httpClient)
-			if err != nil {
-				return err
-			}
-			newProxies = append(newProxies, myProxy)
-		case config.ProtocolGRPC:
-			myURL = "grpc://" + targetHost + addr.Path
-			if port != "" {
-				myURL = "grpc://" + net.JoinHostPort(targetHost, port) + addr.Path
-			}
-			grpcOptions := grpcproxy.Options{
-				Target:           myURL,
-				TLSVerify:        u.serviceOptions.TLSVerify,
-				Weight:           instance.Weight(),
-				MaxFails:         maxFails,
-				FailTimeout:      failTimeout,
-				IsTracingEnabled: u.bifrost.options.Tracing.Enabled,
-				Timeout:          u.serviceOptions.Timeout.GRPC,
-				Tags:             instance.Tags(),
-			}
-			var grpcProxy proxy.Proxy
-			grpcProxy, err = grpcproxy.New(grpcOptions)
-			if err != nil {
-				return err
-			}
-			newProxies = append(newProxies, grpcProxy)
+
+		tags := instance.Tags()
+		if tags == nil {
+			tags = make(map[string]string)
+		}
+		tags["server_name"] = serverName
+
+		ep := &proxy.Endpoint{
+			Address:     address,
+			Weight:      instance.Weight(),
+			Tags:        tags,
+			HealthState: state,
+		}
+		newEndpoints = append(newEndpoints, ep)
+	}
+
+	u.mu.Lock()
+	u.endpoints = newEndpoints
+	subs := make([]chan []*proxy.Endpoint, len(u.subscribers))
+	copy(subs, u.subscribers)
+	u.mu.Unlock()
+
+	for _, ch := range subs {
+		select {
+		case ch <- newEndpoints:
 		default:
-		}
-	}
-	var updatedProxies []proxy.Proxy
-	// remove old proxy if not exist in new proxies list
-	oldProxies := make([]proxy.Proxy, 0)
-
-	if u.Balancer() != nil && u.Balancer().Proxies() != nil {
-		proxies := u.Balancer().Proxies()
-		if proxies != nil {
-			oldProxies = proxies
+			slog.Warn("upstream subscriber channel full, dropping update", "upstream_id", u.options.ID)
 		}
 	}
 
-	newProxyHashes := make(map[string]proxy.Proxy)
-	for _, newProxy := range newProxies {
-		hash := generateProxyHash(newProxy)
-		newProxyHashes[hash] = newProxy
-	}
-
-	oldProxyHashes := make(map[string]proxy.Proxy)
-	for _, oldProxy := range oldProxies {
-		hash := generateProxyHash(oldProxy)
-		oldProxyHashes[hash] = oldProxy
-	}
-
-	// find the unchanged proxies (exist in both old and new)
-	for hash, oldProxy := range oldProxyHashes {
-		if _, found := newProxyHashes[hash]; found {
-			updatedProxies = append(updatedProxies, oldProxy)
-		}
-	}
-
-	// find the new proxies (only exist in new)
-	for hash, newProxy := range newProxyHashes {
-		if _, found := oldProxyHashes[hash]; !found {
-			updatedProxies = append(updatedProxies, newProxy)
-		}
-	}
-
-	// Close old proxies that are no longer used
-	for hash, oldProxy := range oldProxyHashes {
-		if _, found := newProxyHashes[hash]; !found {
-			_ = oldProxy.Close()
-		}
-	}
-
-	if len(updatedProxies) > 0 {
-		slog.Debug(
-			"upstream refresh success",
-			"upstream_id",
-			u.options.ID,
-			"proxy_id",
-			updatedProxies[0].ID(),
-			"len",
-			len(updatedProxies),
-		)
-	}
-
-	factory := balancer.Factory(u.options.Balancer.Type)
-	var b balancer.Balancer
-	b, err = factory(updatedProxies, u.options.Balancer.Params)
-	if err != nil {
-		return err
-	}
-
-	u.balancer.Store(b)
 	return nil
 }
 
@@ -426,54 +275,11 @@ func (u *Upstream) watch() {
 
 		go safety.Go(ctx, func() {
 			for instances := range watchCh {
-				err := u.refreshProxies(instances)
+				err := u.refreshEndpoints(instances)
 				if err != nil {
 					slog.Warn("upstream refresh failed", "error", err.Error(), "upstream_id", u.options.ID)
 				}
 			}
 		})
 	})
-}
-
-func loadUpstreams(bifrost *Bifrost, serviceOpts config.ServiceOptions) (map[string]*Upstream, error) {
-	upstreams := make(map[string]*Upstream)
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	errCh := make(chan error, len(bifrost.options.Upstreams))
-
-	for id, upstreamOptions := range bifrost.options.Upstreams {
-		wg.Add(1)
-		upstreamOptions.ID = id
-		currentUpstreamOpts := upstreamOptions // Create a new variable for the goroutine
-		currentID := id                        // Create a new variable for the goroutine
-
-		go safety.Go(context.Background(), func() {
-			defer wg.Done()
-
-			upstream, err := newUpstream(bifrost, serviceOpts, currentUpstreamOpts)
-			if err != nil {
-				errCh <- err
-				return
-			}
-
-			mu.Lock()
-			upstreams[currentID] = upstream
-			mu.Unlock()
-		})
-	}
-
-	wg.Wait()
-	close(errCh)
-
-	for err := range errCh {
-		if err != nil {
-			// cleanup
-			for _, upstream := range upstreams {
-				_ = upstream.Close()
-			}
-			return nil, err // Return the first error encountered
-		}
-	}
-
-	return upstreams, nil
 }

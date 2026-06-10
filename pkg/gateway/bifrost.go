@@ -61,6 +61,7 @@ type Bifrost struct {
 	zeroDownTime    *infra.ZeroDownTime
 	middlewares     map[string]app.HandlerFunc
 	services        map[string]*Service
+	upstreamManager *UpstreamManager
 	httpServers     map[string]*HTTPServer
 	state           uint32
 }
@@ -105,6 +106,12 @@ func NewBifrost(mainOptions config.Options, mode BifrostMode) (bifrost *Bifrost,
 		resolver:     dnsResolver,
 		httpServers:  make(map[string]*HTTPServer),
 		zeroDownTime: infra.New(zeroOptions),
+	}
+	// upstreamManager
+	bifrost.upstreamManager = newUpstreamManager(bifrost)
+	err = bifrost.upstreamManager.Start()
+	if err != nil {
+		return nil, err
 	}
 	// services
 	services, err := loadServices(bifrost)
@@ -256,6 +263,10 @@ func (b *Bifrost) SetActive(status BifrostStatus) {
 func (b *Bifrost) Close() error {
 	for _, service := range b.services {
 		_ = service.Close()
+	}
+
+	if b.upstreamManager != nil {
+		_ = b.upstreamManager.Close()
 	}
 
 	if b.resolver != nil {

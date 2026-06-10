@@ -25,10 +25,9 @@ func TestRoundRobin(t *testing.T) {
 		MaxFails:    1,
 	}
 	proxy1, _ := httpproxy.New(proxyOptions1, nil)
-	err := proxy1.AddFailedCount(1)
-	require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
+	proxy1.Endpoint().HealthState.RecordFailure()
 	assert.Eventually(t, func() bool {
-		return proxy1.IsAvailable()
+		return proxy1.Endpoint().HealthState.IsAvailable()
 	}, 2*time.Second, 100*time.Millisecond, "proxy1 should be available after fail timeout")
 
 	proxyOptions2 := httpproxy.Options{
@@ -69,10 +68,8 @@ func TestRoundRobin(t *testing.T) {
 	})
 
 	t.Run("one proxy failed", func(t *testing.T) {
-		err = proxy2.AddFailedCount(1) // proxy 2 is failed
-		require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
-		err = proxy3.AddFailedCount(1000) // proxy should be available because it turns off max_fail check
-		require.NoError(t, err)
+		proxy2.Endpoint().HealthState.RecordFailure() // proxy 2 is failed
+		proxy3.Endpoint().HealthState.RecordFailure() // proxy should be available because it turns off max_fail check
 
 		expected := []string{"http://backend1", "http://backend3"}
 		for _, e := range expected {
@@ -84,10 +81,8 @@ func TestRoundRobin(t *testing.T) {
 	})
 
 	t.Run("no live upstream", func(t *testing.T) {
-		err = proxy1.AddFailedCount(100)
-		require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
-		err = proxy2.AddFailedCount(100)
-		require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
+		proxy1.Endpoint().HealthState.RecordFailure()
+		proxy2.Endpoint().HealthState.RecordFailure()
 
 		proxyOptions3 := httpproxy.Options{
 			Target:      "http://backend3",
@@ -97,8 +92,7 @@ func TestRoundRobin(t *testing.T) {
 			MaxFails:    1,
 		}
 		proxy3, _ := httpproxy.New(proxyOptions3, nil)
-		err = proxy3.AddFailedCount(100)
-		require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
+		proxy3.Endpoint().HealthState.RecordFailure()
 
 		proxies := []proxy.Proxy{proxy1, proxy2, proxy3}
 		b.proxies = proxies
@@ -130,7 +124,7 @@ func TestRoundRobin(t *testing.T) {
 			MaxFails:    1,
 		}
 		p1, _ := httpproxy.New(p1Options, nil)
-		_ = p1.AddFailedCount(1)
+		p1.Endpoint().HealthState.RecordFailure()
 
 		bSingle := NewBalancer([]proxy.Proxy{p1})
 		p, e := bSingle.Select(context.Background(), nil)

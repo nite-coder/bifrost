@@ -43,7 +43,7 @@ func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (proxy.Proxy
 
 	if len(b.proxies) == 1 {
 		p := b.proxies[0]
-		if p.IsAvailable() {
+		if ep := p.Endpoint(); ep != nil && ep.HealthState != nil && ep.HealthState.IsAvailable() {
 			return p, nil
 		}
 		return nil, balancer.ErrNotAvailable
@@ -54,7 +54,7 @@ findLoop:
 	//nolint:gosec
 	selectedIndex := rand.IntN(len(b.proxies))
 	p := b.proxies[selectedIndex]
-	if p.IsAvailable() {
+	if ep := p.Endpoint(); ep != nil && ep.HealthState != nil && ep.HealthState.IsAvailable() {
 		return p, nil
 	}
 	// no live upstream
