@@ -478,8 +478,14 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*target.Endpoin
 
 	for _, task := range toBuild {
 		p := s.buildProxy(task.ep, task.upstreamID)
-		if p != nil {
-			s.proxyByAddress.Store(task.ep.Address, p)
+		if p == nil {
+			continue
+		}
+		if actual, loaded := s.proxyByAddress.LoadOrStore(task.ep.Address, p); loaded {
+			_ = p.Close()
+			if existing, ok := actual.(proxy.Proxy); ok {
+				existing.SetEndpoint(task.ep)
+			}
 		}
 	}
 

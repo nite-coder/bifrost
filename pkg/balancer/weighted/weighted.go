@@ -60,11 +60,14 @@ func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (*target.End
 		if ep.State != nil && !ep.State.IsAvailable() {
 			continue
 		}
-		w := int(ep.Weight)
+		w := ep.Weight
 		if w == 0 {
 			w = 1
 		}
-		r -= w
+		if w > math.MaxInt32 {
+			w = math.MaxInt32
+		}
+		r -= int(w)
 		if r <= 0 {
 			return ep, nil
 		}
