@@ -25,10 +25,11 @@ var newNamingClientFunc = clients.NewNamingClient
 
 // Discovery implements service discovery using Nacos.
 type Discovery struct {
-	client  naming_client.INamingClient
-	options *Options
-	stopCh  chan struct{}
-	watchCh chan []provider.DiscoveryResult
+	client   naming_client.INamingClient
+	options  *Options
+	stopCh   chan struct{}
+	watchCh  chan []provider.DiscoveryResult
+	subParam *vo.SubscribeParam // saved for Unsubscribe on Close to prevent panic on closed channel
 }
 
 // NewNacosServiceDiscovery creates a new NacosServiceDiscovery instance.
@@ -159,7 +160,7 @@ func (d *Discovery) Watch(
 	d.watchCh = ch
 	d.stopCh = make(chan struct{})
 
-	err := d.client.Subscribe(&vo.SubscribeParam{
+	d.subParam = &vo.SubscribeParam{
 		ServiceName: options.Name,
 		GroupName:   options.Group,
 		SubscribeCallback: func(nacosInstances []model.Instance, err error) {
@@ -174,7 +175,8 @@ func (d *Discovery) Watch(
 			default:
 			}
 		},
-	})
+	}
+	err := d.client.Subscribe(d.subParam)
 	if err != nil {
 		return nil, err
 	}
@@ -186,6 +188,9 @@ func (d *Discovery) Watch(
 func (d *Discovery) Close() error {
 	if d.stopCh != nil {
 		close(d.stopCh)
+	}
+	if d.subParam != nil {
+		_ = d.client.Unsubscribe(d.subParam)
 	}
 	d.client.CloseClient()
 	if d.watchCh != nil {

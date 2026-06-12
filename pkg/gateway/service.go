@@ -305,6 +305,15 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	myProxy := s.findProxyByEndpoint(myEndpoint)
 	if myProxy == nil {
+		upstreamID := variable.GetString(variable.UpstreamID, c)
+		if p := s.buildProxy(myEndpoint, upstreamID); p != nil {
+			actual, _ := s.proxyByAddress.LoadOrStore(myEndpoint.Address, p)
+			if pp, ok := actual.(proxy.Proxy); ok {
+				myProxy = pp
+			}
+		}
+	}
+	if myProxy == nil {
 		c.SetStatusCode(http.StatusServiceUnavailable)
 		return
 	}
