@@ -23,7 +23,7 @@ func NewResolverDiscovery(upstream *Upstream) *ResolverDiscovery {
 
 // GetInstances resolves upstream targets using DNS and returns a list of instances.
 func (d *ResolverDiscovery) GetInstances(
-	_ context.Context,
+	ctx context.Context,
 	_ provider.GetInstanceOptions,
 ) ([]provider.DiscoveryResult, error) {
 	results := make([]provider.DiscoveryResult, 0, len(d.upstream.options.Targets))
@@ -35,7 +35,7 @@ func (d *ResolverDiscovery) GetInstances(
 			targetHost = targetOptions.Target
 		}
 
-		ips, lookErr := d.upstream.bifrost.resolver.Lookup(context.Background(), targetHost)
+		ips, lookErr := d.upstream.bifrost.resolver.Lookup(ctx, targetHost)
 		if lookErr != nil {
 			return nil, fmt.Errorf("failed to lookup target '%s', error: %w", targetHost, lookErr)
 		}

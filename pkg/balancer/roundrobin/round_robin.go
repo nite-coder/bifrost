@@ -41,9 +41,10 @@ func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (*target.End
 		return nil, balancer.ErrNotAvailable
 	}
 
-	for range n {
-		count := b.Counter.Add(1)
-		idx := int((count - 1) % uint64(n)) //nolint:gosec
+	count := b.Counter.Add(1)
+	startIdx := int((count - 1) % uint64(n)) //nolint:gosec
+	for i := range n {
+		idx := (startIdx + i) % n
 		ep := b.endpoints[idx]
 		if ep.State == nil || ep.State.IsAvailable() {
 			return ep, nil

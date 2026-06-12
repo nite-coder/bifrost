@@ -245,8 +245,10 @@ func (u *Upstream) refreshEndpoints(results []provider.DiscoveryResult) error {
 			}
 			if existing, found := tgt.Endpoints[address]; found {
 				existing.Weight = inst.Weight()
-				existing.Tags = inst.Tags()
-				existing.Tags["server_name"] = serverName
+				tags := make(map[string]string)
+				maps.Copy(tags, inst.Tags())
+				tags["server_name"] = serverName
+				existing.Tags = tags
 				newMap[address] = existing
 			} else {
 				state := target.NewState(maxFails, failTimeout)
