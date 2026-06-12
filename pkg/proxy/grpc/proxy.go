@@ -33,7 +33,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/nite-coder/bifrost/pkg/log"
-	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/target"
 	"github.com/nite-coder/bifrost/pkg/tracing"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -48,7 +48,7 @@ type Options struct {
 	TLSVerify        bool
 	IsTracingEnabled bool
 	ServiceID        string
-	Endpoint         *proxy.Endpoint
+	Endpoint         *target.Endpoint
 }
 
 // Proxy implements a reverse proxy for gRPC services.
@@ -58,7 +58,7 @@ type Proxy struct {
 	id         string
 	target     string
 	targetHost string
-	endpoint   atomic.Pointer[proxy.Endpoint]
+	endpoint   atomic.Pointer[target.Endpoint]
 }
 
 // New creates a new GRPCProxy instance with the given options.
@@ -99,12 +99,12 @@ func New(options Options) (*Proxy, error) {
 }
 
 // Endpoint returns the endpoint info associated with this proxy.
-func (p *Proxy) Endpoint() *proxy.Endpoint {
+func (p *Proxy) Endpoint() *target.Endpoint {
 	return p.endpoint.Load()
 }
 
 // SetEndpoint updates the endpoint info associated with this proxy.
-func (p *Proxy) SetEndpoint(ep *proxy.Endpoint) {
+func (p *Proxy) SetEndpoint(ep *target.Endpoint) {
 	p.endpoint.Store(ep)
 }
 
@@ -323,8 +323,8 @@ func (p *Proxy) handleGRPCError(ctx context.Context, c *app.RequestContext, err 
 	switch st.Code() {
 	case codes.Unavailable, codes.Unknown, codes.Unimplemented, codes.Internal:
 		ep := p.Endpoint()
-		if ep != nil && ep.HealthState != nil {
-			ep.HealthState.RecordFailure()
+		if ep != nil && ep.State != nil {
+			ep.State.RecordFailure()
 		}
 	default:
 	}

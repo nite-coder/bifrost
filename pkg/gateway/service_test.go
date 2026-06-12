@@ -11,17 +11,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nite-coder/bifrost/pkg/balancer"
-	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
 	"github.com/nite-coder/bifrost/pkg/balancer/weighted"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/proxy"
 	"github.com/nite-coder/bifrost/pkg/resolver"
+	"github.com/nite-coder/bifrost/pkg/target"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
 const (
-	backendResponse = "I am the backend"
+	backendResponse  = "I am the backend"
+	testBackendAddr  = "127.0.0.1:8080"
+	testBackendAddr2 = "127.0.0.1:8081"
 )
 
 func testServer(t *testing.T) *server.Hertz {
@@ -408,12 +409,27 @@ func TestLoadModels(t *testing.T) {
 	b, exists := service.getBalancer("ai:gpt-4")
 	require.True(t, exists)
 	require.NotNil(t, b)
-	proxies := b.Proxies()
-	require.Len(t, proxies, 2)
-	assert.Equal(t, "p1/gpt-4", proxies[0].Target())
-	assert.Equal(t, uint32(3), proxies[0].Endpoint().Weight)
-	assert.Equal(t, "p2/gpt-4", proxies[1].Target())
-	assert.Equal(t, uint32(1), proxies[1].Endpoint().Weight)
+
+	var foundP1, foundP2 bool
+	require.Eventually(t, func() bool {
+		foundP1 = false
+		foundP2 = false
+		service.proxyByAddress.Range(func(_, v any) bool {
+			p, ok := v.(proxy.Proxy)
+			if !ok {
+				return true
+			}
+			if p.Target() == "p1/gpt-4" {
+				assert.Equal(t, uint32(3), p.Endpoint().Weight)
+				foundP1 = true
+			} else if p.Target() == "p2/gpt-4" {
+				assert.Equal(t, uint32(1), p.Endpoint().Weight)
+				foundP2 = true
+			}
+			return true
+		})
+		return foundP1 && foundP2
+	}, time.Second, 5*time.Millisecond, "expected proxies for p1/gpt-4 and p2/gpt-4")
 
 	upstream2, exists2 := service.bifrost.upstreamManager.Get("ai:gpt-3.5-turbo")
 	require.True(t, exists2)
@@ -423,12 +439,27 @@ func TestLoadModels(t *testing.T) {
 	b2, exists3 := service.getBalancer("ai:gpt-3.5-turbo")
 	require.True(t, exists3)
 	require.NotNil(t, b2)
-	proxies2 := b2.Proxies()
-	require.Len(t, proxies2, 2)
-	assert.Equal(t, "p1/gpt-3.5", proxies2[0].Target())
-	assert.Equal(t, uint32(1), proxies2[0].Endpoint().Weight)
-	assert.Equal(t, "p2/gpt-3.5", proxies2[1].Target())
-	assert.Equal(t, uint32(1), proxies2[1].Endpoint().Weight)
+
+	var foundP3, foundP4 bool
+	require.Eventually(t, func() bool {
+		foundP3 = false
+		foundP4 = false
+		service.proxyByAddress.Range(func(_, v any) bool {
+			p, ok := v.(proxy.Proxy)
+			if !ok {
+				return true
+			}
+			if p.Target() == "p1/gpt-3.5" {
+				assert.Equal(t, uint32(1), p.Endpoint().Weight)
+				foundP3 = true
+			} else if p.Target() == "p2/gpt-3.5" {
+				assert.Equal(t, uint32(1), p.Endpoint().Weight)
+				foundP4 = true
+			}
+			return true
+		})
+		return foundP3 && foundP4
+	}, time.Second, 5*time.Millisecond, "expected proxies for p1/gpt-3.5 and p2/gpt-3.5")
 }
 
 func TestSharedUpstreamLifecycle(t *testing.T) {
@@ -484,7 +515,7 @@ func TestSharedUpstreamLifecycle(t *testing.T) {
 	err = service1.Close()
 	require.NoError(t, err)
 
-	assert.False(t, upstream.isExclusive)
+	assert.False(t, upstream.isExclusive.Load())
 	assert.NotNil(t, upstream.cancel)
 
 	upstream.mu.RLock()
@@ -506,15 +537,15 @@ func TestSharedUpstreamLifecycle(t *testing.T) {
 type mockProxyForUpdate struct {
 	id         string
 	target     string
-	ep         *proxy.Endpoint
+	ep         *target.Endpoint
 	onClose    func()
 	setEpCount int
 }
 
 func (m *mockProxyForUpdate) ID() string                                         { return m.id }
 func (m *mockProxyForUpdate) Target() string                                     { return m.target }
-func (m *mockProxyForUpdate) Endpoint() *proxy.Endpoint                          { return m.ep }
-func (m *mockProxyForUpdate) SetEndpoint(ep *proxy.Endpoint)                     { m.ep = ep; m.setEpCount++ }
+func (m *mockProxyForUpdate) Endpoint() *target.Endpoint                         { return m.ep }
+func (m *mockProxyForUpdate) SetEndpoint(ep *target.Endpoint)                    { m.ep = ep; m.setEpCount++ }
 func (m *mockProxyForUpdate) ServeHTTP(_ context.Context, _ *app.RequestContext) {}
 func (m *mockProxyForUpdate) Close() error {
 	if m.onClose != nil {
@@ -523,112 +554,95 @@ func (m *mockProxyForUpdate) Close() error {
 	return nil
 }
 
-type mockBalancer struct {
-	proxies []proxy.Proxy
-}
-
-func (b *mockBalancer) Proxies() []proxy.Proxy { return b.proxies }
-func (b *mockBalancer) Select(_ context.Context, _ *app.RequestContext) (proxy.Proxy, error) {
-	if len(b.proxies) == 0 {
-		return nil, balancer.ErrNotAvailable
-	}
-	return b.proxies[0], nil
-}
-
-func TestService_AtomicBalancerUpdate(t *testing.T) {
-	// 1. Register a mock balancer handler
-	err := balancer.Register([]string{"mock_atomic"}, func(proxies []proxy.Proxy, _ any) (balancer.Balancer, error) {
-		return &mockBalancer{proxies: proxies}, nil
-	})
-	require.NoError(t, err)
-
-	// 2. Setup a Service with mock balancer type
-	bifrost := &Bifrost{
-		options: &config.Options{},
-	}
-
-	upstreamID := "test_atomic_upstream"
-	upstreamOpts := config.UpstreamOptions{
-		ID: upstreamID,
-		Balancer: config.BalancerOptions{
-			Type: "mock_atomic",
-		},
-		Targets: []config.TargetOptions{
-			{Target: "127.0.0.1:8080"},
-		},
-	}
-	u, err := newUpstream(bifrost, upstreamOpts)
-	require.NoError(t, err)
-	defer func() {
-		_ = u.Close()
-	}()
+func TestService_UpdateEndpoints(t *testing.T) {
+	upstreamID := "test_upstream"
 
 	svc := &Service{
-		bifrost:         bifrost,
-		options:         &config.ServiceOptions{ID: "testService", URL: "http://" + upstreamID},
-		upstream:        u,
-		balancers:       make(map[string]balancer.Balancer),
-		activeProxies:   make(map[string]proxy.Proxy),
-		upstreamProxies: make(map[string]map[string]proxy.Proxy),
+		options:           &config.ServiceOptions{ID: "testService"},
+		upstreamAddresses: make(map[string]map[string]bool),
 	}
 
-	// First update: initial endpoints
-	ep1 := &proxy.Endpoint{
-		Address:     "127.0.0.1:8080",
-		HealthState: proxy.NewTargetState(2, time.Second),
+	addr1 := testBackendAddr
+	ep1 := &target.Endpoint{
+		Address: addr1,
+		State:   target.NewState(2, time.Second),
 	}
 
-	// Create mock proxy for ep1
-	targetURL1 := "http://127.0.0.1:8080"
-	hash1 := generateServiceProxyHash(targetURL1, nil)
+	// Pre-populate mock proxy for addr1
+	var closed bool
 	p1 := &mockProxyForUpdate{
 		id:     "proxy1",
-		target: targetURL1,
+		target: "http://" + addr1,
 		ep:     ep1,
+		onClose: func() {
+			closed = true
+		},
 	}
-	svc.activeProxies[hash1] = p1
-	svc.upstreamProxies[upstreamID] = map[string]proxy.Proxy{
-		hash1: p1,
-	}
+	svc.proxyByAddress.Store(addr1, p1)
+	svc.upstreamAddresses[upstreamID] = map[string]bool{addr1: true}
 
-	// Call updateEndpoints (this should trigger creation of mockBalancer containing p1)
-	svc.updateEndpoints(upstreamID, []*proxy.Endpoint{ep1})
+	// First update: same address, should reuse and call SetEndpoint
+	svc.updateEndpoints(upstreamID, []*target.Endpoint{ep1})
+	assert.Equal(t, 1, p1.setEpCount)
+	assert.False(t, closed, "proxy should not be closed when address is reused")
 
-	bal1Val := svc.balancer.Load()
-	require.NotNil(t, bal1Val)
-	bal1, ok := bal1Val.(balancer.Balancer)
-	require.True(t, ok)
-	assert.Same(t, p1, bal1.Proxies()[0])
-
-	// Second update: ep1 is replaced by ep2
-	ep2 := &proxy.Endpoint{
-		Address:     "127.0.0.1:8081",
-		HealthState: proxy.NewTargetState(2, time.Second),
+	// Second update: new address, old should be closed
+	addr2 := testBackendAddr2
+	ep2 := &target.Endpoint{
+		Address: addr2,
+		State:   target.NewState(2, time.Second),
 	}
 
-	targetURL2 := "http://127.0.0.1:8081"
-	hash2 := generateServiceProxyHash(targetURL2, nil)
 	p2 := &mockProxyForUpdate{
 		id:     "proxy2",
-		target: targetURL2,
+		target: "http://" + addr2,
 		ep:     ep2,
 	}
-	// Pre-populate p2 so updateEndpoints doesn't try to create a real ReverseProxy
-	svc.activeProxies[hash2] = p2
+	svc.proxyByAddress.Store(addr2, p2)
 
-	// Set onClose assertion: when p1 is closed, the active balancer must already be bal2
-	var closedAsserted bool
-	p1.onClose = func() {
-		currentBalVal := svc.balancer.Load()
-		require.NotNil(t, currentBalVal)
-		currentBal, ok := currentBalVal.(balancer.Balancer)
-		require.True(t, ok)
-		// It must be bal2 (which contains p2, not p1)
-		assert.Same(t, p2, currentBal.Proxies()[0])
-		closedAsserted = true
+	svc.updateEndpoints(upstreamID, []*target.Endpoint{ep2})
+	assert.True(t, closed, "old proxy should be closed after address replacement")
+
+	_, ok := svc.proxyByAddress.Load(addr1)
+	assert.False(t, ok, "addr1 proxy should be removed from proxyByAddress")
+
+	v, ok := svc.proxyByAddress.Load(addr2)
+	assert.True(t, ok, "addr2 proxy should exist in proxyByAddress")
+	assert.Equal(t, p2, v)
+}
+
+func TestService_UpdateEndpoints_SharedAddress(t *testing.T) {
+	svc := &Service{
+		options:           &config.ServiceOptions{ID: "testService"},
+		upstreamAddresses: make(map[string]map[string]bool),
 	}
 
-	svc.updateEndpoints(upstreamID, []*proxy.Endpoint{ep2})
+	addr := testBackendAddr
+	ep1 := &target.Endpoint{
+		Address: addr,
+		State:   target.NewState(2, time.Second),
+	}
 
-	assert.True(t, closedAsserted, "Expected onClose to be called and assert the new balancer was already stored")
+	p1 := &mockProxyForUpdate{
+		id: "proxy1",
+		ep: ep1,
+		onClose: func() {
+			t.Error("proxy should not be closed when still used by another upstream")
+		},
+	}
+	svc.proxyByAddress.Store(addr, p1)
+	svc.upstreamAddresses["upstream1"] = map[string]bool{addr: true}
+
+	// Update upstream1 with same address
+	svc.updateEndpoints("upstream1", []*target.Endpoint{ep1})
+
+	// Now upstream2 gets the same address, then loses it
+	svc.upstreamAddresses["upstream2"] = map[string]bool{addr: true}
+	svc.updateEndpoints("upstream2", []*target.Endpoint{ep1})
+
+	// Remove address from upstream2
+	svc.updateEndpoints("upstream2", []*target.Endpoint{})
+
+	_, ok := svc.proxyByAddress.Load(addr)
+	assert.True(t, ok, "proxy should still exist when upstream1 still uses it")
 }

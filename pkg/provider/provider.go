@@ -25,10 +25,18 @@ type GetInstanceOptions struct {
 	Group     string
 }
 
+// DiscoveryResult preserves the target→instances grouping from discovery.
+type DiscoveryResult struct {
+	Target string            // hostname:port (from config TargetOptions.Target, or discovery service name)
+	Weight uint32            // target-level weight
+	Tags   map[string]string // target-level tags
+	Nodes  []Instancer       // resolved instances for this target
+}
+
 // ServiceDiscovery defines the interface for service discovery.
 type ServiceDiscovery interface {
-	GetInstances(ctx context.Context, options GetInstanceOptions) ([]Instancer, error)
-	Watch(ctx context.Context, options GetInstanceOptions) (<-chan []Instancer, error)
+	GetInstances(ctx context.Context, options GetInstanceOptions) ([]DiscoveryResult, error)
+	Watch(ctx context.Context, options GetInstanceOptions) (<-chan []DiscoveryResult, error)
 	Close() error
 }
 

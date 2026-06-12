@@ -66,7 +66,7 @@ func NewDNSServiceDiscovery(servers []string, valid time.Duration) (*Discovery, 
 func (d *Discovery) GetInstances(
 	ctx context.Context,
 	options provider.GetInstanceOptions,
-) ([]provider.Instancer, error) {
+) ([]provider.DiscoveryResult, error) {
 	instances := make([]provider.Instancer, 0)
 	targetHost, targetPort, err := net.SplitHostPort(options.Name)
 	if err != nil {
@@ -90,15 +90,21 @@ func (d *Discovery) GetInstances(
 		instance.SetTag("server_name", targetHost)
 		instances = append(instances, instance)
 	}
-	return instances, nil
+	return []provider.DiscoveryResult{
+		{
+			Target: options.Name,
+			Weight: 0,
+			Nodes:  instances,
+		},
+	}, nil
 }
 
 // Watch starts a ticker that periodically signals for instance refreshes.
 func (d *Discovery) Watch(
 	ctx context.Context,
 	_ provider.GetInstanceOptions,
-) (<-chan []provider.Instancer, error) {
-	ch := make(chan []provider.Instancer, 1)
+) (<-chan []provider.DiscoveryResult, error) {
+	ch := make(chan []provider.DiscoveryResult, 1)
 	go safety.Go(ctx, func() {
 		defer close(ch)
 		if d.ticker != nil {

@@ -21,7 +21,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/target"
 	"github.com/nite-coder/bifrost/proto"
 )
 
@@ -100,10 +100,10 @@ func TestGRPCProxy(t *testing.T) {
 		TLSVerify:        false,
 		Timeout:          1 * time.Second,
 		IsTracingEnabled: true,
-		Endpoint: &proxy.Endpoint{
-			Address:     "127.0.0.1:8500",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "127.0.0.1:8500",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	}
 	p, err := New(proxyOptions)
@@ -235,13 +235,13 @@ func TestProxyTags(t *testing.T) {
 		TLSVerify:        false,
 		Timeout:          1 * time.Second,
 		IsTracingEnabled: true,
-		Endpoint: &proxy.Endpoint{
+		Endpoint: &target.Endpoint{
 			Address: "127.0.0.1:8500",
 			Weight:  1,
 			Tags: map[string]string{
 				"id": "123",
 			},
-			HealthState: proxy.NewTargetState(0, 0),
+			State: target.NewState(0, 0),
 		},
 	}
 	p, err := New(proxyOptions)

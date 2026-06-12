@@ -2,9 +2,7 @@ package gateway
 
 import (
 	"context"
-	"crypto/sha256"
 	"crypto/tls"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,10 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"runtime/debug"
-	"sort"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -37,6 +33,7 @@ import (
 	aiproxy "github.com/nite-coder/bifrost/pkg/proxy/ai"
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
+	"github.com/nite-coder/bifrost/pkg/target"
 	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 	"github.com/nite-coder/bifrost/pkg/timecache"
 	"github.com/nite-coder/bifrost/pkg/variable"
@@ -46,18 +43,16 @@ const statusClientClosedRequest = 499
 
 // Service represents a backend service that can have multiple upstreams and middlewares.
 type Service struct {
-	bifrost         *Bifrost
-	options         *config.ServiceOptions
-	upstream        *Upstream
-	dynamicUpstream string
-	middlewares     []app.HandlerFunc
-	balancer        atomic.Value
-	mu              sync.RWMutex
-	balancers       map[string]balancer.Balancer
-	activeProxies   map[string]proxy.Proxy
-	upstreamProxies map[string]map[string]proxy.Proxy
-	subscriptions   map[string]<-chan []*proxy.Endpoint
-	cancelFuncs     []context.CancelFunc
+	bifrost           *Bifrost
+	options           *config.ServiceOptions
+	upstream          *Upstream
+	dynamicUpstream   string
+	middlewares       []app.HandlerFunc
+	mu                sync.RWMutex
+	proxyByAddress    sync.Map
+	upstreamAddresses map[string]map[string]bool
+	subscriptions     map[string]<-chan []*target.Endpoint
+	cancelFuncs       []context.CancelFunc
 }
 
 // Close releases resources used by the service and its upstreams.
@@ -81,17 +76,18 @@ func (s *Service) Close() error {
 			s.upstream.Unsubscribe(ch)
 		}
 	}
-	s.subscriptions = make(map[string]<-chan []*proxy.Endpoint)
+	s.subscriptions = make(map[string]<-chan []*target.Endpoint)
 
-	if s.upstream != nil && s.upstream.isExclusive {
+	if s.upstream != nil && s.upstream.isExclusive.Load() {
 		_ = s.upstream.Close()
 	}
 
-	for _, p := range s.activeProxies {
-		_ = p.Close()
-	}
-	s.activeProxies = make(map[string]proxy.Proxy)
-	s.upstreamProxies = make(map[string]map[string]proxy.Proxy)
+	s.proxyByAddress.Range(func(_, value any) bool {
+		if p, ok := value.(proxy.Proxy); ok {
+			_ = p.Close()
+		}
+		return true
+	})
 
 	return nil
 }
@@ -149,12 +145,10 @@ func loadServices(bifrost *Bifrost) (map[string]*Service, error) {
 
 func newService(bifrost *Bifrost, serviceOptions config.ServiceOptions) (*Service, error) {
 	svc := &Service{
-		bifrost:         bifrost,
-		options:         &serviceOptions,
-		balancers:       make(map[string]balancer.Balancer),
-		activeProxies:   make(map[string]proxy.Proxy),
-		upstreamProxies: make(map[string]map[string]proxy.Proxy),
-		subscriptions:   make(map[string]<-chan []*proxy.Endpoint),
+		bifrost:           bifrost,
+		options:           &serviceOptions,
+		upstreamAddresses: make(map[string]map[string]bool),
+		subscriptions:     make(map[string]<-chan []*target.Endpoint),
 	}
 
 	svc.applyProtocolDefaults()
@@ -199,26 +193,6 @@ func (s *Service) Middlewares() []app.HandlerFunc {
 	return s.middlewares
 }
 
-func generateServiceProxyHash(target string, tags map[string]string) string {
-	keys := make([]string, 0, len(tags))
-	for k := range tags {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	var builder strings.Builder
-	_, _ = builder.WriteString(target)
-	for _, k := range keys {
-		_, _ = builder.WriteString(";")
-		_, _ = builder.WriteString(k)
-		_, _ = builder.WriteString("=")
-		_, _ = builder.WriteString(tags[k])
-	}
-
-	hash := sha256.Sum256([]byte(builder.String()))
-	return hex.EncodeToString(hash[:])
-}
-
 func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	logger := log.FromContext(ctx)
 
@@ -256,7 +230,7 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 
-	var myProxy proxy.Proxy
+	var myEndpoint *target.Endpoint
 	var err error
 
 	if len(s.dynamicUpstream) > 0 {
@@ -304,12 +278,12 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		}
 
 		c.Set(variable.UpstreamID, upstreamID)
-		myProxy, err = bal.Select(ctx, c)
+		myEndpoint, err = bal.Select(ctx, c)
 	} else if s.upstream != nil {
 		c.Set(variable.UpstreamID, s.upstream.options.ID)
 
-		val := s.balancer.Load()
-		if val == nil {
+		bal := s.upstream.Balancer()
+		if bal == nil {
 			logger.Warn("balancer is nil, upstream may not be initialized",
 				"upstream_id", s.upstream.options.ID,
 				"service_id", s.options.ID,
@@ -317,24 +291,21 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			c.SetStatusCode(http.StatusServiceUnavailable)
 			return
 		}
-		bal, ok := val.(balancer.Balancer)
-		if !ok {
-			logger.Warn("balancer type assertion failed",
-				"upstream_id", s.upstream.options.ID,
-				"service_id", s.options.ID,
-			)
-			c.SetStatusCode(http.StatusServiceUnavailable)
-			return
-		}
-		myProxy, err = bal.Select(ctx, c)
+		myEndpoint, err = bal.Select(ctx, c)
 	}
 
-	if myProxy == nil || err != nil {
+	if myEndpoint == nil || err != nil {
 		c.SetStatusCode(http.StatusServiceUnavailable)
 
 		if !errors.Is(err, balancer.ErrNotAvailable) {
 			_ = c.Error(err)
 		}
+		return
+	}
+
+	myProxy := s.findProxyByEndpoint(myEndpoint)
+	if myProxy == nil {
+		c.SetStatusCode(http.StatusServiceUnavailable)
 		return
 	}
 
@@ -445,7 +416,7 @@ func (s *Service) resolveUpstreamStrategy() error {
 		return err
 	}
 	s.upstream = upstream
-	upstream.isExclusive = true
+	upstream.isExclusive.Store(true)
 	s.subscribeToUpstream(upstream)
 
 	return nil
@@ -480,245 +451,195 @@ func (s *Service) subscribeToUpstream(upstream *Upstream) {
 	})
 }
 
-func (s *Service) updateEndpoints(upstreamID string, endpoints []*proxy.Endpoint) {
+type proxyBuildTask struct {
+	ep         *target.Endpoint
+	upstreamID string
+}
+
+func (s *Service) updateEndpoints(upstreamID string, endpoints []*target.Endpoint) {
+	toBuild := make([]proxyBuildTask, 0, len(endpoints))
+
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	var upstreamOptions *config.UpstreamOptions
-	var modelOpts *config.AIModelOptions
-	modelID, isAI := strings.CutPrefix(upstreamID, "ai:")
-	if isAI {
-		var found bool
-		modelOpts, found = s.bifrost.options.Models[modelID]
-		if !found {
-			return
-		}
-		balancerType := "weighted"
-		if modelOpts.Balancer != nil && modelOpts.Balancer.Type != "" {
-			balancerType = modelOpts.Balancer.Type
-		}
-		upstreamOptions = &config.UpstreamOptions{
-			ID: upstreamID,
-			Balancer: config.BalancerOptions{
-				Type: balancerType,
-			},
-		}
-	} else {
-		var u *Upstream
-		var found bool
-		if s.bifrost.upstreamManager != nil {
-			u, found = s.bifrost.upstreamManager.Get(upstreamID)
-		}
-		switch {
-		case found:
-			upstreamOptions = u.options
-		case s.upstream != nil && s.upstream.options.ID == upstreamID:
-			upstreamOptions = s.upstream.options
-		default:
-			return
-		}
-	}
-
-	newProxies := make([]proxy.Proxy, 0, len(endpoints))
-	newProxyHashes := make(map[string]proxy.Proxy)
+	oldAddresses := s.upstreamAddresses[upstreamID]
+	newSet := make(map[string]bool, len(endpoints))
 
 	for _, ep := range endpoints {
-		var targetHost, targetPort string
-		var splitErr error
-		if isAI {
-			targetHost = ep.Address
-			targetPort = ""
-		} else {
-			targetHost, targetPort, splitErr = net.SplitHostPort(ep.Address)
-			if splitErr != nil {
-				targetHost = ep.Address
-				targetPort = "0"
+		newSet[ep.Address] = true
+		if v, ok := s.proxyByAddress.Load(ep.Address); ok {
+			if p, ok := v.(proxy.Proxy); ok {
+				p.SetEndpoint(ep)
 			}
-		}
-
-		var myURL string
-		if !isAI {
-			addr, parseErr := url.Parse(s.options.URL)
-			if parseErr != nil {
-				slog.Error("failed to parse service URL", "url", s.options.URL, "error", parseErr)
-				continue
-			}
-			port := ""
-			if len(addr.Port()) > 0 {
-				port = addr.Port()
-			} else if targetPort != "" && targetPort != "0" {
-				port = targetPort
-			}
-			myURL = fmt.Sprintf("%s://%s%s", addr.Scheme, targetHost, addr.Path)
-			if port != "" {
-				myURL = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
-			}
-		} else {
-			myURL = targetHost
-		}
-
-		hash := generateServiceProxyHash(myURL, ep.Tags)
-
-		if existing, found := s.activeProxies[hash]; found {
-			existing.SetEndpoint(ep)
-			newProxies = append(newProxies, existing)
-			newProxyHashes[hash] = existing
 			continue
 		}
+		toBuild = append(toBuild, proxyBuildTask{ep: ep, upstreamID: upstreamID})
+	}
+	s.upstreamAddresses[upstreamID] = newSet
+	s.mu.Unlock()
 
-		var p proxy.Proxy
-		if isAI {
-			parts := strings.SplitN(ep.Address, "/", aiproxy.TargetPartsCount)
-			if len(parts) != aiproxy.TargetPartsCount {
-				slog.Error("invalid target format in AI model", "target", ep.Address)
-				continue
-			}
-			providerID := parts[0]
-			actualModel := parts[1]
-
-			handler := ""
-			if s.bifrost.options.AI != nil && s.bifrost.options.AI.Providers != nil {
-				if prov, ok := s.bifrost.options.AI.Providers[providerID]; ok {
-					handler = prov.Handler
-				}
-			}
-
-			var targetPricing *config.AIPricingOptions
-			if modelOpts != nil {
-				for _, t := range modelOpts.Targets {
-					if t.Target == ep.Address {
-						targetPricing = t.Pricing
-						break
-					}
-				}
-			}
-			finalPricing := pricing.Resolve(handler, actualModel, targetPricing)
-
-			metricsEnabled := s.bifrost.options.Metrics.Prometheus.Enabled || s.bifrost.options.Metrics.OTLP.Enabled
-			var pErr error
-			p, pErr = aiproxy.NewProxy(aiproxy.ProxyOptions{
-				ID:             ep.Address,
-				Target:         ep.Address,
-				AIOptions:      s.bifrost.options.AI,
-				MetricsEnabled: metricsEnabled,
-				Pricing:        finalPricing,
-				Endpoint:       ep,
-			})
-			if pErr != nil {
-				slog.Error("failed to create AI proxy", "error", pErr)
-				continue
-			}
-		} else {
-			serverName := ep.Tags["server_name"]
-			switch s.options.Protocol {
-			case "", config.ProtocolHTTP, config.ProtocolHTTP2:
-				clientOpts := s.getClientOptions()
-
-				addr, _ := url.Parse(s.options.URL)
-				if addr != nil && strings.EqualFold(addr.Scheme, "https") {
-					clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
-						ServerName:         serverName,
-						InsecureSkipVerify: !s.options.TLSVerify, //nolint:gosec
-					}))
-				}
-				if s.bifrost.options.Metrics.Prometheus.Enabled {
-					clientOpts = append(clientOpts, client.WithConnStateObserve(func(hcs hzconfig.HostClientState) {
-						labels := make(prom.Labels)
-						labels["service_id"] = s.options.ID
-						labels["target"] = hcs.ConnPoolState().Addr
-						metrics.HTTPServiceOpenConnections.With(labels).Set(float64(hcs.ConnPoolState().TotalConnNum))
-					}))
-				}
-
-				clientOptions := httpproxy.ClientOptions{
-					IsHTTP2:   s.options.Protocol == config.ProtocolHTTP2,
-					HZOptions: clientOpts,
-				}
-				httpClient, clientErr := httpproxy.NewClient(clientOptions)
-				if clientErr != nil {
-					slog.Error("failed to create http client", "error", clientErr)
-					continue
-				}
-
-				proxyOptions := httpproxy.Options{
-					Target:           myURL,
-					Protocol:         s.options.Protocol,
-					IsTracingEnabled: s.bifrost.options.Tracing.Enabled,
-					ServiceID:        s.options.ID,
-					TargetHostHeader: serverName,
-					PassHostHeader:   s.options.IsPassHostHeader(),
-					Endpoint:         ep,
-				}
-				var pErr error
-				p, pErr = httpproxy.New(proxyOptions, httpClient)
-				if pErr != nil {
-					slog.Error("failed to create http proxy", "error", pErr)
-					continue
-				}
-			case config.ProtocolGRPC:
-				grpcOptions := grpcproxy.Options{
-					Target:           myURL,
-					TLSVerify:        s.options.TLSVerify,
-					IsTracingEnabled: s.bifrost.options.Tracing.Enabled,
-					Timeout:          s.options.Timeout.GRPC,
-					Endpoint:         ep,
-				}
-				var pErr error
-				p, pErr = grpcproxy.New(grpcOptions)
-				if pErr != nil {
-					slog.Error("failed to create grpc proxy", "error", pErr)
-					continue
-				}
-			default:
-				slog.Error("unsupported protocol", "protocol", s.options.Protocol)
-				continue
-			}
-		}
-
+	for _, task := range toBuild {
+		p := s.buildProxy(task.ep, task.upstreamID)
 		if p != nil {
-			newProxies = append(newProxies, p)
-			newProxyHashes[hash] = p
-			s.activeProxies[hash] = p
+			s.proxyByAddress.Store(task.ep.Address, p)
 		}
 	}
 
-	factory := balancer.Factory(upstreamOptions.Balancer.Type)
-	if factory == nil {
-		slog.Error("unsupported balancer type", "type", upstreamOptions.Balancer.Type)
-		return
+	s.mu.Lock()
+	for addr := range oldAddresses {
+		if newSet[addr] || s.isAddressUsedByAnyUpstream(addr) {
+			continue
+		}
+		v, ok := s.proxyByAddress.LoadAndDelete(addr)
+		if !ok {
+			continue
+		}
+		p, ok := v.(proxy.Proxy)
+		if !ok {
+			continue
+		}
+		_ = p.Close()
 	}
+	s.mu.Unlock()
+}
 
-	bal, balancerErr := factory(newProxies, upstreamOptions.Balancer.Params)
-	if balancerErr != nil {
-		slog.Error("failed to create balancer", "upstream_id", upstreamID, "error", balancerErr)
-		return
+func (s *Service) isAddressUsedByAnyUpstream(addr string) bool {
+	for _, addrs := range s.upstreamAddresses {
+		if addrs[addr] {
+			return true
+		}
 	}
+	return false
+}
 
-	if s.upstream != nil && s.upstream.options.ID == upstreamID {
-		s.balancer.Store(bal)
-	}
-	s.balancers[upstreamID] = bal
+func (s *Service) buildProxy(ep *target.Endpoint, upstreamID string) proxy.Proxy {
+	modelID, isAI := strings.CutPrefix(upstreamID, "ai:")
+	if isAI {
+		if s.bifrost.options.Models == nil {
+			return nil
+		}
+		modelOpts, found := s.bifrost.options.Models[modelID]
+		if !found {
+			return nil
+		}
 
-	oldProxies := s.upstreamProxies[upstreamID]
-	s.upstreamProxies[upstreamID] = newProxyHashes
+		parts := strings.SplitN(ep.Address, "/", aiproxy.TargetPartsCount)
+		if len(parts) != aiproxy.TargetPartsCount {
+			slog.Error("invalid target format in AI model", "target", ep.Address)
+			return nil
+		}
 
-	for hash, p := range oldProxies {
-		if _, found := newProxyHashes[hash]; !found {
-			// Check if the proxy is still used by any other upstream of this service
-			inUse := false
-			for id, proxies := range s.upstreamProxies {
-				if id != upstreamID {
-					if _, exists := proxies[hash]; exists {
-						inUse = true
-						break
-					}
-				}
-			}
-			if !inUse {
-				_ = p.Close()
-				delete(s.activeProxies, hash)
+		handler := ""
+		if s.bifrost.options.AI != nil && s.bifrost.options.AI.Providers != nil {
+			if prov, ok := s.bifrost.options.AI.Providers[parts[0]]; ok {
+				handler = prov.Handler
 			}
 		}
+
+		var targetPricing *config.AIPricingOptions
+		for _, t := range modelOpts.Targets {
+			if t.Target == ep.Address {
+				targetPricing = t.Pricing
+				break
+			}
+		}
+
+		metricsEnabled := s.bifrost.options.Metrics.Prometheus.Enabled || s.bifrost.options.Metrics.OTLP.Enabled
+		p, pErr := aiproxy.NewProxy(aiproxy.ProxyOptions{
+			ID:             ep.Address,
+			Target:         ep.Address,
+			AIOptions:      s.bifrost.options.AI,
+			MetricsEnabled: metricsEnabled,
+			Pricing:        pricing.Resolve(handler, parts[1], targetPricing),
+			Endpoint:       ep,
+		})
+		if pErr != nil {
+			slog.Error("failed to create AI proxy", "error", pErr)
+			return nil
+		}
+		return p
+	}
+
+	serverName := ep.Tags["server_name"]
+
+	targetHost, targetPort, splitErr := net.SplitHostPort(ep.Address)
+	if splitErr != nil {
+		targetHost = ep.Address
+		targetPort = "0"
+	}
+
+	addr, parseErr := url.Parse(s.options.URL)
+	if parseErr != nil {
+		slog.Error("failed to parse service URL", "url", s.options.URL, "error", parseErr)
+		return nil
+	}
+
+	port := addr.Port()
+	myURL := fmt.Sprintf("%s://%s%s", addr.Scheme, targetHost, addr.Path)
+	if port != "" {
+		myURL = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, port, addr.Path)
+	} else if targetPort != "" && targetPort != "0" {
+		myURL = fmt.Sprintf("%s://%s:%s%s", addr.Scheme, targetHost, targetPort, addr.Path)
+	}
+
+	switch s.options.Protocol {
+	case "", config.ProtocolHTTP, config.ProtocolHTTP2:
+		clientOpts := s.getClientOptions()
+
+		if strings.EqualFold(addr.Scheme, "https") {
+			clientOpts = append(clientOpts, client.WithTLSConfig(&tls.Config{
+				ServerName:         serverName,
+				InsecureSkipVerify: !s.options.TLSVerify, //nolint:gosec
+			}))
+		}
+		if s.bifrost.options.Metrics.Prometheus.Enabled {
+			clientOpts = append(clientOpts, client.WithConnStateObserve(func(hcs hzconfig.HostClientState) {
+				labels := make(prom.Labels)
+				labels["service_id"] = s.options.ID
+				labels["target"] = hcs.ConnPoolState().Addr
+				metrics.HTTPServiceOpenConnections.With(labels).Set(float64(hcs.ConnPoolState().TotalConnNum))
+			}))
+		}
+
+		httpClient, clientErr := httpproxy.NewClient(httpproxy.ClientOptions{
+			IsHTTP2:   s.options.Protocol == config.ProtocolHTTP2,
+			HZOptions: clientOpts,
+		})
+		if clientErr != nil {
+			slog.Error("failed to create http client", "error", clientErr)
+			return nil
+		}
+
+		p, pErr := httpproxy.New(httpproxy.Options{
+			Target:           myURL,
+			Protocol:         s.options.Protocol,
+			IsTracingEnabled: s.bifrost.options.Tracing.Enabled,
+			ServiceID:        s.options.ID,
+			TargetHostHeader: serverName,
+			PassHostHeader:   s.options.IsPassHostHeader(),
+			Endpoint:         ep,
+		}, httpClient)
+		if pErr != nil {
+			slog.Error("failed to create http proxy", "error", pErr)
+			return nil
+		}
+		return p
+
+	case config.ProtocolGRPC:
+		p, pErr := grpcproxy.New(grpcproxy.Options{
+			Target:           myURL,
+			TLSVerify:        s.options.TLSVerify,
+			IsTracingEnabled: s.bifrost.options.Tracing.Enabled,
+			Timeout:          s.options.Timeout.GRPC,
+			Endpoint:         ep,
+		})
+		if pErr != nil {
+			slog.Error("failed to create grpc proxy", "error", pErr)
+			return nil
+		}
+		return p
+
+	default:
+		slog.Error("unsupported protocol", "protocol", s.options.Protocol)
+		return nil
 	}
 }
 
@@ -768,11 +689,34 @@ func (s *Service) getClientOptions() []hzconfig.ClientOption {
 	return clientOpts
 }
 
-func (s *Service) getBalancer(upstreamName string) (balancer.Balancer, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	bal, found := s.balancers[upstreamName]
-	return bal, found
+func (s *Service) getBalancer(upstreamID string) (balancer.Balancer, bool) {
+	if s.bifrost == nil || s.bifrost.upstreamManager == nil {
+		return nil, false
+	}
+	u, found := s.bifrost.upstreamManager.Get(upstreamID)
+	if !found {
+		return nil, false
+	}
+	b := u.Balancer()
+	if b == nil {
+		return nil, false
+	}
+	return b, true
+}
+
+func (s *Service) findProxyByEndpoint(ep *target.Endpoint) proxy.Proxy {
+	if ep == nil {
+		return nil
+	}
+	v, ok := s.proxyByAddress.Load(ep.Address)
+	if !ok {
+		return nil
+	}
+	p, ok := v.(proxy.Proxy)
+	if !ok {
+		return nil
+	}
+	return p
 }
 
 // DynamicService handles requests for services determined dynamically at runtime.

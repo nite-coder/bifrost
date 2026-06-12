@@ -19,7 +19,7 @@ import (
 
 	"github.com/nite-coder/bifrost/pkg/ai"
 	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/target"
 	"github.com/nite-coder/bifrost/pkg/telemetry/metrics"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -143,10 +143,10 @@ func TestAIProxy_ServeHTTP_UnarySuccess(t *testing.T) {
 		Target:         "p1/gpt-4",
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
-		Endpoint: &proxy.Endpoint{
-			Address:     "p1/gpt-4",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "p1/gpt-4",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	})
 	require.NoError(t, err)
@@ -219,10 +219,10 @@ func TestAIProxy_ServeHTTP_UnaryError(t *testing.T) {
 		Target:         "p1/gpt-4",
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
-		Endpoint: &proxy.Endpoint{
-			Address:     "p1/gpt-4",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "p1/gpt-4",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	})
 	require.NoError(t, err)
@@ -272,10 +272,10 @@ func TestAIProxy_ServeHTTP_StreamSuccess(t *testing.T) {
 		Target:         "p1/gpt-4",
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
-		Endpoint: &proxy.Endpoint{
-			Address:     "p1/gpt-4",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "p1/gpt-4",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	})
 	require.NoError(t, err)
@@ -346,10 +346,10 @@ func TestAIProxy_ServeHTTP_StreamMidError(t *testing.T) {
 		Target:         "p1/gpt-4",
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
-		Endpoint: &proxy.Endpoint{
-			Address:     "p1/gpt-4",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "p1/gpt-4",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	})
 	require.NoError(t, err)
@@ -407,10 +407,10 @@ func TestAIProxy_ServeHTTP_InvalidTarget(t *testing.T) {
 		Target:         "invalid_target_no_slash",
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
-		Endpoint: &proxy.Endpoint{
-			Address:     "invalid_target_no_slash",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "invalid_target_no_slash",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	})
 	require.NoError(t, err)
@@ -451,10 +451,10 @@ func TestAIProxy_ServeHTTP_Responses(t *testing.T) {
 		Target:         "p1/claude-3-opus",
 		AIOptions:      aiOpts,
 		MetricsEnabled: true,
-		Endpoint: &proxy.Endpoint{
-			Address:     "p1/claude-3-opus",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "p1/claude-3-opus",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	})
 	require.NoError(t, err)

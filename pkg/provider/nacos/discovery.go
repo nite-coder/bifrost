@@ -28,7 +28,7 @@ type Discovery struct {
 	client  naming_client.INamingClient
 	options *Options
 	stopCh  chan struct{}
-	watchCh chan []provider.Instancer
+	watchCh chan []provider.DiscoveryResult
 }
 
 // NewNacosServiceDiscovery creates a new NacosServiceDiscovery instance.
@@ -123,7 +123,7 @@ func NewNacosServiceDiscovery(options Options) (*Discovery, error) {
 func (d *Discovery) GetInstances(
 	_ context.Context,
 	options provider.GetInstanceOptions,
-) ([]provider.Instancer, error) {
+) ([]provider.DiscoveryResult, error) {
 	nacosInstances, err := d.client.SelectInstances(vo.SelectInstancesParam{
 		ServiceName: options.Name,
 		GroupName:   options.Group,
@@ -142,15 +142,20 @@ func (d *Discovery) GetInstances(
 	}
 
 	instances := ToProviderInstance(nacosInstances)
-	return instances, nil
+	return []provider.DiscoveryResult{
+		{
+			Target: options.Name,
+			Nodes:  instances,
+		},
+	}, nil
 }
 
 // Watch subscribes to service changes in Nacos and returns a channel for updates.
 func (d *Discovery) Watch(
 	_ context.Context,
 	options provider.GetInstanceOptions,
-) (<-chan []provider.Instancer, error) {
-	ch := make(chan []provider.Instancer, 1)
+) (<-chan []provider.DiscoveryResult, error) {
+	ch := make(chan []provider.DiscoveryResult, 1)
 	d.watchCh = ch
 	d.stopCh = make(chan struct{})
 
@@ -165,7 +170,7 @@ func (d *Discovery) Watch(
 			instances := ToProviderInstance(nacosInstances)
 			// Non-blocking send to prevent goroutine blocking when channel is full or closed
 			select {
-			case ch <- instances:
+			case ch <- []provider.DiscoveryResult{{Target: options.Name, Nodes: instances}}:
 			default:
 			}
 		},

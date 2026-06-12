@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nite-coder/bifrost/pkg/balancer"
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/provider"
+	"github.com/nite-coder/bifrost/pkg/proxy"
 )
 
 func TestGRPCProxyLeak_Evidence(t *testing.T) {
@@ -59,22 +59,28 @@ func TestGRPCProxyLeak_Evidence(t *testing.T) {
 		addrStr := fmt.Sprintf("127.0.0.1:%d", 10000+i)
 		addr, _ := net.ResolveTCPAddr("tcp", addrStr)
 
-		err = up.refreshEndpoints([]provider.Instancer{
-			provider.NewInstance(addr, 1),
+		err = up.refreshEndpoints([]provider.DiscoveryResult{
+			{Target: addrStr, Nodes: []provider.Instancer{provider.NewInstance(addr, 1)}},
 		})
 		require.NoError(t, err)
 
 		require.Eventually(t, func() bool {
-			val := svc.balancer.Load()
-			if val == nil {
+			if svc.upstream == nil {
 				return false
 			}
-			bal, ok := val.(balancer.Balancer)
-			if !ok {
+			bal := svc.upstream.Balancer()
+			if bal == nil {
 				return false
 			}
-			proxies := bal.Proxies()
-			return len(proxies) == 1 && strings.Contains(proxies[0].Target(), addrStr)
+			var found bool
+			svc.proxyByAddress.Range(func(_, v any) bool {
+				if p, ok := v.(proxy.Proxy); ok && strings.Contains(p.Target(), addrStr) {
+					found = true
+					return false
+				}
+				return true
+			})
+			return found
 		}, time.Second, 5*time.Millisecond)
 
 		runtime.GC() //nolint:revive // explicit GC for memory leak verification

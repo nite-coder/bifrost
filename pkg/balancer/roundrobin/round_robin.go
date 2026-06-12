@@ -7,72 +7,47 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 
 	"github.com/nite-coder/bifrost/pkg/balancer"
-	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/target"
 )
 
-// Init registers the round-robin balancer.
+// Init registers the round-robin balancer with the balancer registry.
 func Init() error {
 	return balancer.Register(
 		[]string{"round_robin"},
-		func(proxies []proxy.Proxy, _ any) (balancer.Balancer, error) {
-			b := NewBalancer(proxies)
+		func(endpoints []*target.Endpoint, _ any) (balancer.Balancer, error) {
+			b := NewBalancer(endpoints)
 			return b, nil
 		},
 	)
 }
 
-// Balancer implements a round-robin load balancing strategy.
+// Balancer implements a round-robin load balancer.
 type Balancer struct {
-	counter atomic.Uint64
-	proxies []proxy.Proxy
+	Counter   atomic.Uint64
+	endpoints []*target.Endpoint
 }
 
-// NewBalancer creates a new round-robin Balancer instance.
-func NewBalancer(proxies []proxy.Proxy) *Balancer {
+// NewBalancer creates a new round-robin balancer with the given endpoints.
+func NewBalancer(endpoints []*target.Endpoint) *Balancer {
 	return &Balancer{
-		counter: atomic.Uint64{},
-		proxies: proxies,
+		endpoints: endpoints,
 	}
 }
 
-// Proxies returns the list of proxies managed by the balancer.
-func (b *Balancer) Proxies() []proxy.Proxy {
-	return b.proxies
-}
-
-// Select picks the next available proxy in a round-robin fashion.
-func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (proxy.Proxy, error) {
-	if len(b.proxies) == 0 {
+// Select returns the next available endpoint in round-robin order.
+func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (*target.Endpoint, error) {
+	n := len(b.endpoints)
+	if n == 0 {
 		return nil, balancer.ErrNotAvailable
 	}
 
-	if len(b.proxies) == 1 {
-		p := b.proxies[0]
-		if ep := p.Endpoint(); ep != nil && ep.HealthState != nil && ep.HealthState.IsAvailable() {
-			return p, nil
+	for range n {
+		count := b.Counter.Add(1)
+		idx := int((count - 1) % uint64(n)) //nolint:gosec
+		ep := b.endpoints[idx]
+		if ep.State == nil || ep.State.IsAvailable() {
+			return ep, nil
 		}
-		return nil, balancer.ErrNotAvailable
 	}
-
-	failedRecords := map[string]bool{}
-
-findLoop:
-	// Use natural wrap-around of Uint64.
-	count := b.counter.Add(1)
-
-	// By subtracting 1 from the counter value, the code is effectively making the counter 0-indexed,
-	// so that the first element in the u.proxies list is selected when the counter is at 1.
-	index := (count - 1) % uint64(len(b.proxies))
-	p := b.proxies[index]
-
-	if ep := p.Endpoint(); ep != nil && ep.HealthState != nil && ep.HealthState.IsAvailable() {
-		return p, nil
-	}
-
-	// No live upstream
-	if len(failedRecords) == len(b.proxies) {
-		return nil, balancer.ErrNotAvailable
-	}
-	failedRecords[p.ID()] = true
-	goto findLoop
+	return nil, balancer.ErrNotAvailable
 }

@@ -2,65 +2,50 @@ package random
 
 import (
 	"context"
-	"math/rand/v2"
+	"math/rand"
 
 	"github.com/cloudwego/hertz/pkg/app"
 
 	"github.com/nite-coder/bifrost/pkg/balancer"
-	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/target"
 )
 
-// Init registers the random balancer.
+// Init registers the random balancer with the balancer registry.
 func Init() error {
-	return balancer.Register([]string{"random"}, func(proxies []proxy.Proxy, _ any) (balancer.Balancer, error) {
-		b := NewBalancer(proxies)
-		return b, nil
-	})
+	return balancer.Register(
+		[]string{"random"},
+		func(endpoints []*target.Endpoint, _ any) (balancer.Balancer, error) {
+			b := NewBalancer(endpoints)
+			return b, nil
+		},
+	)
 }
 
-// Balancer implements a random load balancing strategy.
+// Balancer implements a random load balancer.
 type Balancer struct {
-	proxies []proxy.Proxy
+	endpoints []*target.Endpoint
 }
 
-// NewBalancer creates a new random Balancer instance.
-func NewBalancer(proxies []proxy.Proxy) *Balancer {
+// NewBalancer creates a new random balancer with the given endpoints.
+func NewBalancer(endpoints []*target.Endpoint) *Balancer {
 	return &Balancer{
-		proxies: proxies,
+		endpoints: endpoints,
 	}
 }
 
-// Proxies returns the list of proxies managed by the balancer.
-func (b *Balancer) Proxies() []proxy.Proxy {
-	return b.proxies
-}
-
-// Select picks a random available proxy.
-func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (proxy.Proxy, error) {
-	if len(b.proxies) == 0 {
+// Select returns a random available endpoint.
+func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (*target.Endpoint, error) {
+	if len(b.endpoints) == 0 {
 		return nil, balancer.ErrNotAvailable
 	}
 
-	if len(b.proxies) == 1 {
-		p := b.proxies[0]
-		if ep := p.Endpoint(); ep != nil && ep.HealthState != nil && ep.HealthState.IsAvailable() {
-			return p, nil
+	offset := rand.Intn(len(b.endpoints)) //nolint:gosec
+	for i := range b.endpoints {
+		idx := (offset + i) % len(b.endpoints)
+		ep := b.endpoints[idx]
+		if ep.State == nil || ep.State.IsAvailable() {
+			return ep, nil
 		}
-		return nil, balancer.ErrNotAvailable
 	}
-
-	failedRecords := map[string]bool{}
-findLoop:
-	//nolint:gosec
-	selectedIndex := rand.IntN(len(b.proxies))
-	p := b.proxies[selectedIndex]
-	if ep := p.Endpoint(); ep != nil && ep.HealthState != nil && ep.HealthState.IsAvailable() {
-		return p, nil
-	}
-	// no live upstream
-	if len(failedRecords) == len(b.proxies) {
-		return nil, balancer.ErrNotAvailable
-	}
-	failedRecords[p.ID()] = true
-	goto findLoop
+	return nil, balancer.ErrNotAvailable
 }

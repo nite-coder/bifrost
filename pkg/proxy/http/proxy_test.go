@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/target"
 )
 
 // Reverse proxy tests.
@@ -90,10 +90,10 @@ func TestReverseProxy(t *testing.T) {
 		Protocol:         config.ProtocolHTTP,
 		IsTracingEnabled: true,
 		PassHostHeader:   true,
-		Endpoint: &proxy.Endpoint{
-			Address:     "127.0.0.1:9990",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "127.0.0.1:9990",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	}
 
@@ -217,10 +217,10 @@ func TestReverseProxyStripHeadersPresentInConnection(t *testing.T) {
 	proxyOptions := Options{
 		Target:   "http://127.0.0.1:9991/proxy",
 		Protocol: config.ProtocolHTTP,
-		Endpoint: &proxy.Endpoint{
-			Address:     "127.0.0.1:9991",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "127.0.0.1:9991",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	}
 	proxy, err := New(proxyOptions, nil)
@@ -297,10 +297,10 @@ func TestReverseProxyStripEmptyConnection(t *testing.T) {
 	proxyOptions := Options{
 		Target:   "http://127.0.0.1:9992/proxy",
 		Protocol: config.ProtocolHTTP,
-		Endpoint: &proxy.Endpoint{
-			Address:     "127.0.0.1:9992",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "127.0.0.1:9992",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	}
 	proxy, err := New(proxyOptions, nil)
@@ -374,10 +374,10 @@ func TestXForwardedFor(t *testing.T) {
 		Protocol:         config.ProtocolHTTP,
 		TargetHostHeader: "abc.com",
 		PassHostHeader:   false,
-		Endpoint: &proxy.Endpoint{
-			Address:     "abc.com",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "abc.com",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	}
 	proxy, err := New(proxyOptions, nil)
@@ -439,10 +439,10 @@ func TestReverseProxyQuery(t *testing.T) {
 		proxyOptions := Options{
 			Target:   "http://127.0.0.1:9995/proxy" + tt.baseSuffix,
 			Protocol: config.ProtocolHTTP,
-			Endpoint: &proxy.Endpoint{
-				Address:     "127.0.0.1:9995",
-				Weight:      1,
-				HealthState: proxy.NewTargetState(0, 0),
+			Endpoint: &target.Endpoint{
+				Address: "127.0.0.1:9995",
+				Weight:  1,
+				State:   target.NewState(0, 0),
 			},
 		}
 		proxy, _ := New(proxyOptions, nil)
@@ -497,10 +497,10 @@ func TestReverseProxy_Post(t *testing.T) {
 	proxyOptions := Options{
 		Target:   "http://127.0.0.1:9996/proxy",
 		Protocol: config.ProtocolHTTP,
-		Endpoint: &proxy.Endpoint{
-			Address:     "127.0.0.1:9996",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "127.0.0.1:9996",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	}
 	proxy, _ := New(proxyOptions, nil)
@@ -572,10 +572,10 @@ func TestReverseProxyWebSocket(t *testing.T) {
 	proxyOptions := Options{
 		Target:   "http://127.0.0.1:9998/proxy",
 		Protocol: config.ProtocolHTTP,
-		Endpoint: &proxy.Endpoint{
-			Address:     "127.0.0.1:9998",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "127.0.0.1:9998",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	}
 	proxy, _ := New(proxyOptions, nil)
@@ -619,13 +619,13 @@ func TestProxyTags(t *testing.T) {
 		Protocol:         config.ProtocolHTTP,
 		IsTracingEnabled: true,
 		PassHostHeader:   true,
-		Endpoint: &proxy.Endpoint{
+		Endpoint: &target.Endpoint{
 			Address: "127.0.0.1:9990",
 			Weight:  1,
 			Tags: map[string]string{
 				"id": "123",
 			},
-			HealthState: proxy.NewTargetState(0, 0),
+			State: target.NewState(0, 0),
 		},
 	}
 

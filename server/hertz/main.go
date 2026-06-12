@@ -20,7 +20,7 @@ import (
 
 	"github.com/nite-coder/bifrost/internal/pkg/infra"
 	configBifrost "github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/target"
 	grpcproxy "github.com/nite-coder/bifrost/pkg/proxy/grpc"
 	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
 )
@@ -118,10 +118,10 @@ func runWorker() error {
 	opts := httpproxy.Options{
 		Target:   "http://localhost:8000",
 		Protocol: configBifrost.ProtocolHTTP,
-		Endpoint: &proxy.Endpoint{
-			Address:     "localhost:8000",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "localhost:8000",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	}
 	httpProxy, err := httpproxy.New(opts, nil)
@@ -132,10 +132,10 @@ func runWorker() error {
 	grpcOption := grpcproxy.Options{
 		Target:    "grpc://127.0.0.1:8501",
 		TLSVerify: false,
-		Endpoint: &proxy.Endpoint{
-			Address:     "127.0.0.1:8501",
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: "127.0.0.1:8501",
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	}
 

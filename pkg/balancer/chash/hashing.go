@@ -9,114 +9,89 @@ import (
 
 	"github.com/nite-coder/bifrost/internal/pkg/consistent"
 	"github.com/nite-coder/bifrost/pkg/balancer"
-	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/target"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
 
-const (
-	defaultReplicas = 160
-)
+const defaultReplicas = 160
 
-// Init registers the hashing balancers.
+// Init registers the consistent hashing balancer with the balancer registry.
 func Init() error {
 	return balancer.Register(
 		[]string{"hashing", "chash"},
-		func(proxies []proxy.Proxy, params any) (balancer.Balancer, error) {
+		func(endpoints []*target.Endpoint, params any) (balancer.Balancer, error) {
 			if params == nil {
 				return nil, errors.New("params cannot be empty")
 			}
-
-			var hashon string
-			replicas := defaultReplicas
-
-			if val, ok := params.(map[string]any); ok {
-				hashon, ok = val["hash_on"].(string)
-				if !ok {
-					return nil, errors.New("hash_on is required and must be a string")
-				}
+			parsed, ok := params.(map[string]any)
+			if !ok {
+				return nil, errors.New("params must be a map")
 			}
-
-			b := NewBalancer(proxies, hashon, replicas)
-			return b, nil
+			_, ok = parsed["hash_on"].(string)
+			if !ok {
+				return nil, errors.New("hash_on is required and must be a string")
+			}
+			return NewBalancer(endpoints, parsed)
 		},
 	)
 }
 
-// Balancer implements a consistent hashing load balancing strategy.
+// Balancer implements a consistent hashing load balancer.
 type Balancer struct {
 	hashon  string
-	proxies []proxy.Proxy
 	ring    *consistent.Consistent
-	nodeMap map[string]proxy.Proxy // Maps node ID to proxy
+	nodeMap map[string]*target.Endpoint
 }
 
-// NewBalancer creates a new consistent hashing Balancer instance.
-// It uses the consistent hashing package for better distribution and performance.
-// Each proxy's virtual nodes are scaled by its Weight() to achieve weight-based distribution.
-func NewBalancer(proxies []proxy.Proxy, hashon string, replicas int) *Balancer {
+// NewBalancer creates a new consistent hashing balancer with the given endpoints and params.
+func NewBalancer(endpoints []*target.Endpoint, params map[string]any) (*Balancer, error) {
+	hashon, ok := params["hash_on"].(string)
+	if !ok {
+		return nil, errors.New("hash_on is required and must be a string")
+	}
+	replicas := defaultReplicas
 	b := &Balancer{
-		proxies: proxies,
 		hashon:  hashon,
 		ring:    consistent.New().SetReplicas(replicas),
-		nodeMap: make(map[string]proxy.Proxy),
+		nodeMap: make(map[string]*target.Endpoint),
 	}
-
-	// Add all proxies to the consistent hash ring with weight-based replicas
-	// Sort proxies by target to ensure deterministic ring construction
-	slices.SortFunc(proxies, func(a, b proxy.Proxy) int {
-		if a.Target() < b.Target() {
+	sorted := make([]*target.Endpoint, len(endpoints))
+	copy(sorted, endpoints)
+	slices.SortFunc(sorted, func(a, b *target.Endpoint) int {
+		if a.Address < b.Address {
 			return -1
 		}
-		if a.Target() > b.Target() {
+		if a.Address > b.Address {
 			return 1
 		}
 		return 0
 	})
-
-	for _, p := range proxies {
+	for _, ep := range sorted {
 		weight := 1
-		if ep := p.Endpoint(); ep != nil && ep.Weight > 0 {
+		if ep.Weight > 0 {
 			weight = int(ep.Weight)
 		}
-
-		// Use AddWithReplicas to scale virtual nodes based on weight
-		_ = b.ring.AddWithReplicas(p.Target(), replicas*weight)
-		b.nodeMap[p.Target()] = p
+		_ = b.ring.AddWithReplicas(ep.Address, replicas*weight)
+		b.nodeMap[ep.Address] = ep
 	}
-
-	return b
+	return b, nil
 }
 
-// Proxies returns the list of proxies managed by the balancer.
-func (b *Balancer) Proxies() []proxy.Proxy {
-	return b.proxies
-}
-
-// Select picks a proxy from the hash ring based on a hashed value from the request.
-// If the selected proxy is unavailable, it tries the next nodes on the ring.
-func (b *Balancer) Select(_ context.Context, c *app.RequestContext) (proxy.Proxy, error) {
-	if len(b.proxies) == 0 {
+// Select picks an endpoint based on the configured hash key from the request context.
+func (b *Balancer) Select(_ context.Context, c *app.RequestContext) (*target.Endpoint, error) {
+	if len(b.nodeMap) == 0 {
 		return nil, balancer.ErrNotAvailable
 	}
-
 	val := variable.GetString(b.hashon, c)
-
-	// Get all possible candidates from the consistent hash ring in clockwise order
-	candidates, err := b.ring.GetN(val, len(b.proxies))
+	candidates, err := b.ring.GetN(val, len(b.nodeMap))
 	if err != nil {
-		// If GetN returns an error, it means no nodes are available in the ring.
 		return nil, balancer.ErrNotAvailable
 	}
-
 	for _, nodeID := range candidates {
-		p, ok := b.nodeMap[nodeID]
-		if ok {
-			if ep := p.Endpoint(); ep != nil && ep.HealthState != nil && ep.HealthState.IsAvailable() {
-				return p, nil // Found an available proxy
-			}
+		ep, ok := b.nodeMap[nodeID]
+		if ok && (ep.State == nil || ep.State.IsAvailable()) {
+			return ep, nil
 		}
 	}
-
-	// No available proxy found among all candidates
 	return nil, balancer.ErrNotAvailable
 }

@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/target"
 )
 
 // setupHTTP2Server starts a test server that supports ONLY HTTP/2 (via TLS).
@@ -50,10 +50,10 @@ func TestProxy_HTTP2_Basic(t *testing.T) {
 	proxyOptions := Options{
 		Target:   url,
 		Protocol: config.ProtocolHTTP2,
-		Endpoint: &proxy.Endpoint{
-			Address:     url,
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: url,
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	}
 
@@ -114,10 +114,10 @@ func TestProxy_HTTP2_GRPC_Trailers(t *testing.T) {
 	proxyOptions := Options{
 		Target:   url,
 		Protocol: config.ProtocolHTTP2,
-		Endpoint: &proxy.Endpoint{
-			Address:     url,
-			Weight:      1,
-			HealthState: proxy.NewTargetState(0, 0),
+		Endpoint: &target.Endpoint{
+			Address: url,
+			Weight:  1,
+			State:   target.NewState(0, 0),
 		},
 	}
 

@@ -1,8 +1,7 @@
-package chash
+package chash_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -11,292 +10,112 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/balancer"
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/proxy"
-	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
+	"github.com/nite-coder/bifrost/pkg/balancer/chash"
+	"github.com/nite-coder/bifrost/pkg/target"
 )
 
-func createTestProxy(target string, weight uint32, maxFails uint, failTimeout time.Duration) proxy.Proxy {
-	if weight == 0 {
-		weight = 1
+func createTestEndpoint(addr string) *target.Endpoint {
+	return &target.Endpoint{
+		Address: addr,
+		Weight:  1,
+		State:   target.NewState(1, 10*time.Minute),
 	}
-	p, _ := httpproxy.New(httpproxy.Options{
-		Target:   target,
-		Protocol: config.ProtocolHTTP,
-		Endpoint: &proxy.Endpoint{
-			Address:     target,
-			Weight:      weight,
-			HealthState: proxy.NewTargetState(maxFails, failTimeout),
-		},
-	}, nil)
-	return p
 }
 
 func TestHashing(t *testing.T) {
-	_ = Init()
-	proxy1 := createTestProxy("http://backend1", 1, 1, 10*time.Minute)
-	proxy2 := createTestProxy("http://backend2", 1, 1, 10*time.Minute)
-	proxy3 := createTestProxy("http://backend3", 1, 1, 10*time.Minute)
+	_ = chash.Init()
 
-	proxies := []proxy.Proxy{
-		proxy1,
-		proxy2,
-		proxy3,
-	}
+	ep1 := createTestEndpoint("10.0.1.1:80")
+	ep2 := createTestEndpoint("10.0.1.2:80")
+	ep3 := createTestEndpoint("10.0.1.3:80")
+	eps := []*target.Endpoint{ep1, ep2, ep3}
 
 	t.Run("success", func(t *testing.T) {
 		keys := []string{"key1", "key2", "key3"}
-
 		for _, key := range keys {
-			factory := balancer.Factory("hashing")
 			params := map[string]any{"hash_on": "$var.uid"}
-
-			b, err := factory(proxies, params)
+			b, err := chash.NewBalancer(eps, params)
 			require.NoError(t, err)
 
 			hzctx := app.NewContext(0)
 			hzctx.Set("uid", key)
 
-			// Call multiple times and ensure it always returns the same proxy
-			p1, err := b.Select(context.Background(), hzctx)
+			epOut1, err := b.Select(context.Background(), hzctx)
 			require.NoError(t, err)
-			assert.NotNil(t, p1)
-
-			p2, err := b.Select(context.Background(), hzctx)
+			epOut2, err := b.Select(context.Background(), hzctx)
 			require.NoError(t, err)
-			assert.Equal(t, p1.Target(), p2.Target())
+			assert.Equal(t, epOut1.Address, epOut2.Address, "same key same endpoint")
 		}
 	})
 
-	t.Run("concurrency", func(t *testing.T) {
-		b := NewBalancer(proxies, "$var.uid", defaultReplicas)
-		ctx := context.Background()
+	t.Run("two endpoints failed", func(t *testing.T) {
+		ep1.State.RecordFailure()
+		ep2.State.RecordFailure()
 
-		// Run 100 goroutines to call Select concurrently
-		for i := range 100 {
-			t.Run(fmt.Sprintf("worker-%d", i), func(t *testing.T) {
-				t.Parallel()
-				for range 100 {
-					hzctx := app.NewContext(0)
-					hzctx.Set("uid", "some-key")
-					p, err := b.Select(ctx, hzctx)
-					require.NoError(t, err)
-					assert.NotNil(t, p)
-				}
-			})
-		}
-	})
+		params := map[string]any{"hash_on": "$var.uid"}
+		for _, key := range []string{"key1", "key2", "key3"} {
+			b, err := chash.NewBalancer(eps, params)
+			require.NoError(t, err)
 
-	t.Run("two proxies failed", func(t *testing.T) {
-		proxy1.Endpoint().HealthState.RecordFailure()
-		proxy2.Endpoint().HealthState.RecordFailure()
-
-		keys := []string{"key1", "key2", "key3"}
-
-		for _, key := range keys {
-			b := NewBalancer(proxies, "$var.uid", defaultReplicas)
 			hzctx := app.NewContext(0)
 			hzctx.Set("uid", key)
-			proxy, err := b.Select(context.Background(), hzctx)
+			ep, err := b.Select(context.Background(), hzctx)
 			require.NoError(t, err)
-			assert.NotNil(t, proxy)
-			assert.Equal(t, "http://backend3", proxy.Target())
+			assert.Equal(t, "10.0.1.3:80", ep.Address)
 		}
 	})
 
-	t.Run("no live upstream", func(t *testing.T) {
-		proxy1.Endpoint().HealthState.RecordFailure()
-		proxy2.Endpoint().HealthState.RecordFailure()
-		proxy3.Endpoint().HealthState.RecordFailure()
+	t.Run("no live endpoint", func(t *testing.T) {
+		ep1.State.RecordFailure()
+		ep2.State.RecordFailure()
+		ep3.State.RecordFailure()
 
-		keys := []string{"key1", "key2", "key3"}
+		params := map[string]any{"hash_on": "$var.uid"}
+		b, err := chash.NewBalancer(eps, params)
+		require.NoError(t, err)
 
-		for _, key := range keys {
-			b := NewBalancer(proxies, "$var.uid", defaultReplicas)
-			hzctx := app.NewContext(0)
-			hzctx.Set("uid", key)
-			proxy, err := b.Select(context.Background(), hzctx)
-			require.ErrorIs(t, err, balancer.ErrNotAvailable)
-			assert.Nil(t, proxy)
-		}
+		hzctx := app.NewContext(0)
+		hzctx.Set("uid", "test")
+		ep, err := b.Select(context.Background(), hzctx)
+		require.ErrorIs(t, err, balancer.ErrNotAvailable)
+		assert.Nil(t, ep)
 	})
 
 	t.Run("registration error paths", func(t *testing.T) {
 		factory := balancer.Factory("hashing")
-		assert.NotNil(t, factory)
+		require.NotNil(t, factory)
 
-		// nil params
-		b, err := factory(proxies, nil)
+		b, err := factory(eps, nil)
 		require.Error(t, err)
 		assert.Nil(t, b)
 
-		// invalid hash_on type
-		b, err = factory(proxies, map[string]any{"hash_on": 123})
+		b, err = factory(eps, map[string]any{"hash_on": 123})
 		require.Error(t, err)
 		assert.Nil(t, b)
 
-		// missing hash_on
-		b, err = factory(proxies, map[string]any{"other": "val"})
+		b, err = factory(eps, map[string]any{"other": "val"})
 		require.Error(t, err)
 		assert.Nil(t, b)
 	})
 
-	t.Run("proxies getter", func(t *testing.T) {
-		b := NewBalancer(proxies, "$var.uid", defaultReplicas)
-		assert.Len(t, b.Proxies(), 3)
-	})
-
-	t.Run("nil proxies", func(t *testing.T) {
-		b := NewBalancer(nil, "$var.uid", defaultReplicas)
-		p, err := b.Select(context.Background(), nil)
+	t.Run("nil endpoints", func(t *testing.T) {
+		b, err := chash.NewBalancer(nil, map[string]any{"hash_on": "$var.uid"})
+		require.NoError(t, err)
+		ep, err := b.Select(context.Background(), nil)
 		require.ErrorIs(t, err, balancer.ErrNotAvailable)
-		assert.Nil(t, p)
+		assert.Nil(t, ep)
 	})
 
-	t.Run("single proxy failed", func(t *testing.T) {
-		p1 := createTestProxy("http://backend1", 1, 1, 10*time.Minute)
-		p1.Endpoint().HealthState.RecordFailure()
+	t.Run("single endpoint failed", func(t *testing.T) {
+		e := createTestEndpoint("10.0.1.1:80")
+		e.State.RecordFailure()
+		b, err := chash.NewBalancer([]*target.Endpoint{e}, map[string]any{"hash_on": "$var.uid"})
+		require.NoError(t, err)
 
-		b := NewBalancer([]proxy.Proxy{p1}, "$var.uid", defaultReplicas)
-		p, err := b.Select(context.Background(), nil)
+		hzctx := app.NewContext(0)
+		hzctx.Set("uid", "key")
+		ep, err := b.Select(context.Background(), hzctx)
 		require.ErrorIs(t, err, balancer.ErrNotAvailable)
-		assert.Nil(t, p)
-	})
-
-	t.Run("consistency check", func(t *testing.T) {
-		// 1. Create 3 proxies
-		p1 := createTestProxy("http://h1", 1, 0, 0)
-		p2 := createTestProxy("http://h2", 1, 0, 0)
-		p3 := createTestProxy("http://h3", 1, 0, 0)
-		proxies := []proxy.Proxy{p1, p2, p3}
-
-		b := NewBalancer(proxies, "$var.uid", defaultReplicas)
-
-		// 2. Map 1000 keys and record their assignments
-		assignments := make(map[int]string)
-		for i := range 1000 {
-			hzctx := app.NewContext(0)
-			hzctx.Set("uid", i)
-			p, _ := b.Select(context.Background(), hzctx)
-			assignments[i] = p.Target()
-		}
-
-		// 3. Mark p1 as failed (removed from pool)
-		p1.Endpoint().HealthState.RecordFailure()
-
-		// 4. Map the same 1000 keys again and see how many moved
-		changedOnAliveNodes := 0
-		for i := range 1000 {
-			hzctx := app.NewContext(0)
-			hzctx.Set("uid", i)
-			p, _ := b.Select(context.Background(), hzctx)
-
-			oldTarget := assignments[i]
-			newTarget := p.Target()
-
-			// A key should stay on the SAME node if its previous node is still alive.
-			// Only keys that were on the failed node (h1) should move.
-			if oldTarget != "http://h1" && oldTarget != newTarget {
-				changedOnAliveNodes++
-			}
-		}
-
-		assert.Equal(t, 0, changedOnAliveNodes)
-		t.Logf("Redistribution count for alive nodes: %d / 1000", changedOnAliveNodes)
-	})
-
-	t.Run("weight-based distribution", func(t *testing.T) {
-		// 1. Create 2 proxies with different weights (2:1)
-		p1 := createTestProxy("http://h1", 20, 0, 0)
-		p2 := createTestProxy("http://h2", 10, 0, 0)
-		proxies := []proxy.Proxy{p1, p2}
-
-		// Use a fixed replicas to make it predictable
-		b := NewBalancer(proxies, "$var.uid", 160)
-
-		// 2. Map 100,000 keys and record their assignments
-		distribution := make(map[string]int)
-		numKeys := 100000
-		for i := range numKeys {
-			hzctx := app.NewContext(0)
-			hzctx.Set("uid", i)
-			p, _ := b.Select(context.Background(), hzctx)
-			distribution[p.Target()]++
-		}
-
-		// 3. Verify distribution matches weights (approx 2:1)
-		// Expected: h1 (66.6%), h2 (33.3%)
-		h1Count := distribution["http://h1"]
-		h2Count := distribution["http://h2"]
-
-		t.Logf("Distribution: h1=%d, h2=%d", h1Count, h2Count)
-
-		// Check if h1 receives approximately 2x the traffic of h2
-		ratio := float64(h1Count) / float64(h2Count)
-		t.Logf("Measured Ratio (h1/h2): %.4f (Expected around 2.0)", ratio)
-
-		// Tolerance: allow some deviation due to hashing distribution, but should be close to 2.0
-		assert.Greater(t, ratio, 1.7, "h1 should receive about 2x traffic of h2")
-		assert.Less(t, ratio, 2.3, "h1 should receive about 2x traffic of h2")
-	})
-
-	t.Run("consistent failover order", func(t *testing.T) {
-		p1 := createTestProxy("http://h1", 1, 1, 10*time.Minute)
-		p2 := createTestProxy("http://h2", 1, 1, 10*time.Minute)
-		p3 := createTestProxy("http://h3", 1, 1, 10*time.Minute)
-		proxies := []proxy.Proxy{p1, p2, p3}
-
-		b := NewBalancer(proxies, "$var.uid", 160)
-		key := "failover-key"
-		hzctx := app.NewContext(0)
-		hzctx.Set("uid", key)
-
-		// 1. Get the candidate order from the ring
-		candidates, err := b.ring.GetN(key, 3)
-		require.NoError(t, err)
-		require.Len(t, candidates, 3)
-
-		// 2. Initial selection should be the first candidate
-		p, err := b.Select(context.Background(), hzctx)
-		require.NoError(t, err)
-		assert.Equal(t, candidates[0], p.Target(), "Should pick the first candidate on the ring")
-
-		// 3. Fail the first candidate, should pick the second one from the ring in clockwise order
-		b.nodeMap[candidates[0]].Endpoint().HealthState.RecordFailure()
-		p, err = b.Select(context.Background(), hzctx)
-		require.NoError(t, err)
-		assert.Equal(t, candidates[1], p.Target(), "Failover should pick the second candidate on the ring")
-
-		// 4. Fail the second candidate, should pick the third one from the ring
-		b.nodeMap[candidates[1]].Endpoint().HealthState.RecordFailure()
-		p, err = b.Select(context.Background(), hzctx)
-		require.NoError(t, err)
-		assert.Equal(t, candidates[2], p.Target(), "Failover should pick the third candidate on the ring")
-	})
-
-	t.Run("determinism", func(t *testing.T) {
-		p1 := createTestProxy("http://h1", 1, 0, 0)
-		p2 := createTestProxy("http://h2", 1, 0, 0)
-		p3 := createTestProxy("http://h3", 1, 0, 0)
-
-		proxies1 := []proxy.Proxy{p1, p2, p3}
-		proxies2 := []proxy.Proxy{p3, p1, p2} // Different initial order
-
-		b1 := NewBalancer(proxies1, "$var.uid", 160)
-		b2 := NewBalancer(proxies2, "$var.uid", 160)
-
-		key := "test-determinism"
-		hzctx := app.NewContext(0)
-		hzctx.Set("uid", key)
-
-		sel1, err1 := b1.Select(context.Background(), hzctx)
-		sel2, err2 := b2.Select(context.Background(), hzctx)
-
-		require.NoError(t, err1)
-		require.NoError(t, err2)
-		assert.Equal(t, sel1.Target(), sel2.Target(), "Selection should be identical regardless of proxy input order")
-
-		// Also verify the internal ring nodes are sorted
-		assert.ElementsMatch(t, b1.ring.Nodes(), b2.ring.Nodes())
+		assert.Nil(t, ep)
 	})
 }

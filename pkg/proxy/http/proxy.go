@@ -30,6 +30,7 @@ import (
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/log"
 	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/target"
 	"github.com/nite-coder/bifrost/pkg/tracing"
 	"github.com/nite-coder/bifrost/pkg/variable"
 )
@@ -72,7 +73,7 @@ type Proxy struct {
 	target          string
 	targetHost      string
 	transferTrailer bool
-	endpoint        atomic.Pointer[proxy.Endpoint]
+	endpoint        atomic.Pointer[target.Endpoint]
 }
 
 // Options contains configuration for the HTTP proxy.
@@ -83,7 +84,7 @@ type Options struct {
 	Protocol         config.Protocol
 	IsTracingEnabled bool
 	PassHostHeader   bool
-	Endpoint         *proxy.Endpoint
+	Endpoint         *target.Endpoint
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -169,12 +170,12 @@ func New(opts Options, httpClient *client.Client) (proxy.Proxy, error) {
 }
 
 // Endpoint returns the endpoint info associated with this proxy.
-func (p *Proxy) Endpoint() *proxy.Endpoint {
+func (p *Proxy) Endpoint() *target.Endpoint {
 	return p.endpoint.Load()
 }
 
 // SetEndpoint updates the endpoint info associated with this proxy.
-func (p *Proxy) SetEndpoint(ep *proxy.Endpoint) {
+func (p *Proxy) SetEndpoint(ep *target.Endpoint) {
 	p.endpoint.Store(ep)
 }
 
@@ -195,8 +196,8 @@ func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		// check upstream health
 		if c.Response.StatusCode() >= http.StatusInternalServerError && !isNoFreeConns {
 			ep := p.Endpoint()
-			if ep != nil && ep.HealthState != nil {
-				ep.HealthState.RecordFailure()
+			if ep != nil && ep.State != nil {
+				ep.State.RecordFailure()
 			}
 		}
 	}()

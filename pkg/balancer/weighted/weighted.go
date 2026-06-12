@@ -3,91 +3,70 @@ package weighted
 import (
 	"context"
 	"math"
-	"math/rand/v2"
+	"math/rand"
 
 	"github.com/cloudwego/hertz/pkg/app"
 
 	"github.com/nite-coder/bifrost/pkg/balancer"
-	"github.com/nite-coder/bifrost/pkg/proxy"
+	"github.com/nite-coder/bifrost/pkg/target"
 )
 
-// Init registers the weighted balancer.
+// Init registers the weighted balancer with the balancer registry.
 func Init() error {
-	return balancer.Register([]string{"weighted"}, func(proxies []proxy.Proxy, _ any) (balancer.Balancer, error) {
-		return NewBalancer(proxies)
-	})
+	return balancer.Register(
+		[]string{"weighted"},
+		func(endpoints []*target.Endpoint, _ any) (balancer.Balancer, error) {
+			return NewBalancer(endpoints)
+		},
+	)
 }
 
-// Balancer implements a weighted random load balancing algorithm.
+// Balancer selects an endpoint based on weighted random selection.
 type Balancer struct {
-	totalWeight uint32
-	proxies     []proxy.Proxy
+	endpoints []*target.Endpoint
 }
 
-// NewBalancer creates a new WeightedBalancer instance.
-// It calculates the total weight and ensures it doesn't exceed MaxInt32.
-func NewBalancer(proxies []proxy.Proxy) (*Balancer, error) {
-	var totalWeight uint32
-	for _, p := range proxies {
-		weight := uint32(1)
-		if ep := p.Endpoint(); ep != nil && ep.Weight > 0 {
-			weight = ep.Weight
-		}
-		totalWeight += weight
-	}
-
-	// Clamp total weight to MaxInt32 to avoid issues with random number generation.
-	if totalWeight > math.MaxInt32 {
-		totalWeight = math.MaxInt32
-	}
-
-	return &Balancer{
-		proxies:     proxies,
-		totalWeight: totalWeight,
-	}, nil
+// NewBalancer creates a new weighted balancer with the given endpoints.
+func NewBalancer(endpoints []*target.Endpoint) (*Balancer, error) {
+	return &Balancer{endpoints: endpoints}, nil
 }
 
-// Proxies returns the list of proxies managed by the balancer.
-func (b *Balancer) Proxies() []proxy.Proxy {
-	return b.proxies
-}
-
-// Select picks a proxy based on weights.
-func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (proxy.Proxy, error) {
-	if len(b.proxies) == 0 {
+// Select picks an endpoint using weighted random selection, skipping unhealthy endpoints.
+func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (*target.Endpoint, error) {
+	if len(b.endpoints) == 0 {
 		return nil, balancer.ErrNotAvailable
 	}
 
-	if len(b.proxies) == 1 {
-		p := b.proxies[0]
-		if ep := p.Endpoint(); ep != nil && ep.HealthState != nil && ep.HealthState.IsAvailable() {
-			return p, nil
+	var available uint32
+	for _, ep := range b.endpoints {
+		if ep.State != nil && !ep.State.IsAvailable() {
+			continue
 		}
+		w := ep.Weight
+		if w == 0 {
+			w = 1
+		}
+		if w > math.MaxInt32 {
+			w = math.MaxInt32
+		}
+		available += w
+	}
+	if available == 0 {
 		return nil, balancer.ErrNotAvailable
 	}
 
-	failedRecords := map[string]bool{}
-
-findLoop:
-	//nolint:gosec
-	randomWeight := int64(rand.IntN(int(b.totalWeight)))
-
-	for _, p := range b.proxies {
-		weight := int64(1)
-		if ep := p.Endpoint(); ep != nil && ep.Weight > 0 {
-			weight = int64(ep.Weight)
+	r := rand.Intn(int(available)) + 1 //nolint:gosec
+	for _, ep := range b.endpoints {
+		if ep.State != nil && !ep.State.IsAvailable() {
+			continue
 		}
-		randomWeight -= weight
-		if randomWeight < 0 {
-			if ep := p.Endpoint(); ep != nil && ep.HealthState != nil && ep.HealthState.IsAvailable() {
-				return p, nil
-			}
-			// No live upstream
-			if len(failedRecords) == len(b.proxies) {
-				return nil, balancer.ErrNotAvailable
-			}
-			failedRecords[p.ID()] = true
-			goto findLoop
+		w := int(ep.Weight)
+		if w == 0 {
+			w = 1
+		}
+		r -= w
+		if r <= 0 {
+			return ep, nil
 		}
 	}
 	return nil, balancer.ErrNotAvailable
