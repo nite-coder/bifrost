@@ -439,10 +439,12 @@ func (s *Service) subscribeToUpstream(upstream *Upstream) {
 	}
 	s.mu.Unlock()
 
+	// Subscribe first so no update is lost between Endpoints() and Subscribe().
+	// Duplicate processing is harmless since updateEndpoints is idempotent.
+	ch := upstream.Subscribe()
+
 	endpoints := upstream.Endpoints()
 	s.updateEndpoints(upstream.options.ID, endpoints)
-
-	ch := upstream.Subscribe()
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -470,50 +472,35 @@ func (s *Service) subscribeToUpstream(upstream *Upstream) {
 	})
 }
 
-type proxyBuildTask struct {
-	ep         *target.Endpoint
-	upstreamID string
-}
-
 func (s *Service) updateEndpoints(upstreamID string, endpoints []*target.Endpoint) {
-	toBuild := make([]proxyBuildTask, 0, len(endpoints))
-
 	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	oldAddresses := s.upstreamAddresses[upstreamID]
 	newSet := make(map[string]bool, len(endpoints))
 
 	for _, ep := range endpoints {
-		newSet[ep.Address] = true
 		if v, ok := s.proxyByAddress.Load(ep.Address); ok {
 			if p, ok := v.(proxy.Proxy); ok {
 				p.SetEndpoint(ep)
 			}
+			newSet[ep.Address] = true
 			continue
 		}
-		toBuild = append(toBuild, proxyBuildTask{ep: ep, upstreamID: upstreamID})
-	}
-	s.upstreamAddresses[upstreamID] = newSet
-	s.mu.Unlock()
-
-	failedAddrs := make([]string, 0)
-	for _, task := range toBuild {
-		p := s.buildProxy(task.ep, task.upstreamID)
+		p := s.buildProxy(ep, upstreamID)
 		if p == nil {
-			failedAddrs = append(failedAddrs, task.ep.Address)
 			continue
 		}
-		if actual, loaded := s.proxyByAddress.LoadOrStore(task.ep.Address, p); loaded {
+		if actual, loaded := s.proxyByAddress.LoadOrStore(ep.Address, p); loaded {
 			_ = p.Close()
 			if existing, ok := actual.(proxy.Proxy); ok {
-				existing.SetEndpoint(task.ep)
+				existing.SetEndpoint(ep)
 			}
 		}
+		newSet[ep.Address] = true
 	}
+	s.upstreamAddresses[upstreamID] = newSet
 
-	s.mu.Lock()
-	for _, addr := range failedAddrs {
-		delete(s.upstreamAddresses[upstreamID], addr)
-	}
 	for addr := range oldAddresses {
 		if newSet[addr] || s.isAddressUsedByAnyUpstream(addr) {
 			continue
@@ -528,7 +515,6 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*target.Endpoin
 		}
 		_ = p.Close()
 	}
-	s.mu.Unlock()
 }
 
 func (s *Service) isAddressUsedByAnyUpstream(addr string) bool {

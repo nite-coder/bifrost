@@ -61,12 +61,12 @@ func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (*target.End
 		return nil, balancer.ErrNotAvailable
 	}
 
-	r := rand.Intn(int(available)) + 1 //nolint:gosec
+	r := rand.Int63n(int64(available)) + 1 //nolint:gosec
 	for _, ep := range b.endpoints {
 		if ep.State != nil && !ep.State.IsAvailable() {
 			continue
 		}
-		r -= int(ep.Weight)
+		r -= int64(ep.Weight)
 		if r <= 0 {
 			return ep, nil
 		}
