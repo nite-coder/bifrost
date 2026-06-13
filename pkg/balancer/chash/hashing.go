@@ -18,7 +18,7 @@ const defaultReplicas = 160
 // Init registers the consistent hashing balancer with the balancer registry.
 func Init() error {
 	return balancer.Register(
-		[]string{"hashing", "chash"},
+		[]string{"chash"},
 		func(endpoints []*target.Endpoint, params any) (balancer.Balancer, error) {
 			if params == nil {
 				return nil, errors.New("params cannot be empty")
