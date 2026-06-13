@@ -52,7 +52,7 @@ func (m *UpstreamManager) Start() error {
 			var targets []config.TargetOptions
 			for _, t := range modelOpts.Targets {
 				weight := uint32(t.Weight) //nolint:gosec
-				if weight <= 0 {
+				if weight == 0 {
 					weight = 1
 				}
 				targets = append(targets, config.TargetOptions{

@@ -34,7 +34,7 @@ type Upstream struct {
 	subscribers   []chan []*target.Endpoint
 	targets       map[string]*target.Target
 	endpointsHash string
-	balancer      balancer.Balancer
+	balancer      atomic.Value
 	watchOnce     sync.Once
 	cancel        context.CancelFunc
 	isExclusive   atomic.Bool
@@ -59,9 +59,14 @@ func (u *Upstream) Close() error {
 
 // Balancer returns the current load balancer for this upstream.
 func (u *Upstream) Balancer() balancer.Balancer {
-	u.mu.RLock()
-	defer u.mu.RUnlock()
-	return u.balancer
+	b := u.balancer.Load()
+	if b == nil {
+		return nil
+	}
+	if bal, ok := b.(balancer.Balancer); ok {
+		return bal
+	}
+	return nil
 }
 
 func newUpstream(bifrost *Bifrost, upstreamOptions config.UpstreamOptions) (*Upstream, error) {
@@ -163,10 +168,6 @@ func (u *Upstream) Subscribe() <-chan []*target.Endpoint {
 	defer u.mu.Unlock()
 	ch := make(chan []*target.Endpoint, defaultSubscriberBufferSize)
 	u.subscribers = append(u.subscribers, ch)
-	endpoints := u.flattenEndpoints()
-	if len(endpoints) > 0 {
-		ch <- endpoints
-	}
 	return ch
 }
 
@@ -244,12 +245,16 @@ func (u *Upstream) refreshEndpoints(results []provider.DiscoveryResult) error {
 				}
 			}
 			if existing, found := tgt.Endpoints[address]; found {
-				existing.Weight = inst.Weight()
 				tags := make(map[string]string)
 				maps.Copy(tags, inst.Tags())
 				tags["server_name"] = serverName
-				existing.Tags = tags
-				newMap[address] = existing
+				ep := &target.Endpoint{
+					Address: existing.Address,
+					Weight:  inst.Weight(),
+					Tags:    tags,
+					State:   existing.State,
+				}
+				newMap[address] = ep
 			} else {
 				state := target.NewState(maxFails, failTimeout)
 				tags := make(map[string]string)
@@ -303,7 +308,7 @@ func (u *Upstream) rebuildBalancer(endpoints []*target.Endpoint) {
 		slog.Error("failed to create balancer", "upstream_id", u.options.ID, "error", err)
 		return
 	}
-	u.balancer = b
+	u.balancer.Store(b)
 }
 
 func (u *Upstream) getOrCreateTarget(name string) *target.Target {

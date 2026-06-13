@@ -433,13 +433,23 @@ func (s *Service) resolveUpstreamStrategy() error {
 
 func (s *Service) subscribeToUpstream(upstream *Upstream) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if _, exists := s.subscriptions[upstream.options.ID]; exists {
+		s.mu.Unlock()
 		return
 	}
+	s.mu.Unlock()
+
+	endpoints := upstream.Endpoints()
+	s.updateEndpoints(upstream.options.ID, endpoints)
 
 	ch := upstream.Subscribe()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, exists := s.subscriptions[upstream.options.ID]; exists {
+		upstream.Unsubscribe(ch)
+		return
+	}
 	s.subscriptions[upstream.options.ID] = ch
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -485,9 +495,11 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*target.Endpoin
 	s.upstreamAddresses[upstreamID] = newSet
 	s.mu.Unlock()
 
+	failedAddrs := make([]string, 0)
 	for _, task := range toBuild {
 		p := s.buildProxy(task.ep, task.upstreamID)
 		if p == nil {
+			failedAddrs = append(failedAddrs, task.ep.Address)
 			continue
 		}
 		if actual, loaded := s.proxyByAddress.LoadOrStore(task.ep.Address, p); loaded {
@@ -499,6 +511,9 @@ func (s *Service) updateEndpoints(upstreamID string, endpoints []*target.Endpoin
 	}
 
 	s.mu.Lock()
+	for _, addr := range failedAddrs {
+		delete(s.upstreamAddresses[upstreamID], addr)
+	}
 	for addr := range oldAddresses {
 		if newSet[addr] || s.isAddressUsedByAnyUpstream(addr) {
 			continue

@@ -28,7 +28,20 @@ type Balancer struct {
 
 // NewBalancer creates a new weighted balancer with the given endpoints.
 func NewBalancer(endpoints []*target.Endpoint) (*Balancer, error) {
-	return &Balancer{endpoints: endpoints}, nil
+	clamped := make([]*target.Endpoint, len(endpoints))
+	for i, ep := range endpoints {
+		w := ep.Weight
+		if w == 0 {
+			w = 1
+		}
+		if w > math.MaxInt32 {
+			w = math.MaxInt32
+		}
+		c := *ep
+		c.Weight = w
+		clamped[i] = &c
+	}
+	return &Balancer{endpoints: clamped}, nil
 }
 
 // Select picks an endpoint using weighted random selection, skipping unhealthy endpoints.
@@ -37,19 +50,12 @@ func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (*target.End
 		return nil, balancer.ErrNotAvailable
 	}
 
-	var available uint32
+	var available uint64
 	for _, ep := range b.endpoints {
 		if ep.State != nil && !ep.State.IsAvailable() {
 			continue
 		}
-		w := ep.Weight
-		if w == 0 {
-			w = 1
-		}
-		if w > math.MaxInt32 {
-			w = math.MaxInt32
-		}
-		available += w
+		available += uint64(ep.Weight)
 	}
 	if available == 0 {
 		return nil, balancer.ErrNotAvailable
@@ -60,14 +66,7 @@ func (b *Balancer) Select(_ context.Context, _ *app.RequestContext) (*target.End
 		if ep.State != nil && !ep.State.IsAvailable() {
 			continue
 		}
-		w := ep.Weight
-		if w == 0 {
-			w = 1
-		}
-		if w > math.MaxInt32 {
-			w = math.MaxInt32
-		}
-		r -= int(w)
+		r -= int(ep.Weight)
 		if r <= 0 {
 			return ep, nil
 		}

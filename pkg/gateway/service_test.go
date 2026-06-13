@@ -534,26 +534,6 @@ func TestSharedUpstreamLifecycle(t *testing.T) {
 	_ = service2.Close()
 }
 
-type mockProxyForUpdate struct {
-	id         string
-	target     string
-	ep         *target.Endpoint
-	onClose    func()
-	setEpCount int
-}
-
-func (m *mockProxyForUpdate) ID() string                                         { return m.id }
-func (m *mockProxyForUpdate) Target() string                                     { return m.target }
-func (m *mockProxyForUpdate) Endpoint() *target.Endpoint                         { return m.ep }
-func (m *mockProxyForUpdate) SetEndpoint(ep *target.Endpoint)                    { m.ep = ep; m.setEpCount++ }
-func (m *mockProxyForUpdate) ServeHTTP(_ context.Context, _ *app.RequestContext) {}
-func (m *mockProxyForUpdate) Close() error {
-	if m.onClose != nil {
-		m.onClose()
-	}
-	return nil
-}
-
 func TestService_UpdateEndpoints(t *testing.T) {
 	upstreamID := "test_upstream"
 
