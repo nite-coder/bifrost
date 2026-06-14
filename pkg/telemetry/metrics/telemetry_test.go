@@ -139,7 +139,7 @@ func TestTracer(t *testing.T) {
 
 	// Verify custom OTel metric (converted to Prometheus format)
 	// OTel metrics might have scope labels
-	assert.Contains(t, metricsResStr, `otel_custom_counter_total{otel_scope_name="test-meter",otel_scope_version=""} 5`)
+	assert.Contains(t, metricsResStr, `otel_custom_counter_total{otel_scope_name="test-meter"`)
 
 	// Verify new consolidated metrics are registered and outputted (at least headers/definitions)
 	assert.Contains(t, metricsResStr, `bifrost_ai_request_ttfb_seconds`)

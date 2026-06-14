@@ -93,7 +93,7 @@ func NewK8sDiscovery(options Options) (*Discovery, error) {
 func (k *Discovery) GetInstances(
 	ctx context.Context,
 	options provider.GetInstanceOptions,
-) ([]provider.Instancer, error) {
+) ([]provider.DiscoveryResult, error) {
 	logger := log.FromContext(ctx)
 
 	if options.Name == "" {
@@ -144,14 +144,19 @@ func (k *Discovery) GetInstances(
 	}
 
 	logger.Info("discovered instances", "count", len(instances))
-	return instances, nil
+	return []provider.DiscoveryResult{
+		{
+			Target: options.Name,
+			Nodes:  instances,
+		},
+	}, nil
 }
 
 // Watch returns a channel that signals changes in Kubernetes endpoints.
 func (k *Discovery) Watch(
 	ctx context.Context,
 	options provider.GetInstanceOptions,
-) (<-chan []provider.Instancer, error) {
+) (<-chan []provider.DiscoveryResult, error) {
 	logger := log.FromContext(ctx)
 
 	endpointsWatcher, err := k.client.DiscoveryV1().EndpointSlices(options.Namespace).Watch(ctx, metav1.ListOptions{
@@ -161,7 +166,7 @@ func (k *Discovery) Watch(
 		return nil, fmt.Errorf("failed to watch endpoint slices: %w", err)
 	}
 
-	ch := make(chan []provider.Instancer)
+	ch := make(chan []provider.DiscoveryResult)
 
 	go safety.Go(ctx, func() {
 		defer endpointsWatcher.Stop()
@@ -190,7 +195,7 @@ func (k *Discovery) Watch(
 						ch <- instances
 					}
 				case watch.Deleted:
-					ch <- []provider.Instancer{} // service is down
+					ch <- []provider.DiscoveryResult{{Target: options.Name, Nodes: []provider.Instancer{}}} // service is down
 				case watch.Error:
 					logger.Warn("received error event from endpoints watcher")
 					continue

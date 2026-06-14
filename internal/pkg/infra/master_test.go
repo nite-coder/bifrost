@@ -30,8 +30,7 @@ func TestHelperProcess(_ *testing.T) {
 	args := os.Args
 	for _, arg := range args {
 		if arg == "FORCE_ERROR" {
-			//nolint:revive // deep-exit is expected in helper process
-			os.Exit(1)
+			os.Exit(1) //nolint:revive
 		}
 	}
 
@@ -44,12 +43,10 @@ func TestHelperProcess(_ *testing.T) {
 	select {
 	case sig := <-sigCh:
 		_, _ = fmt.Fprintf(os.Stderr, "Helper process received signal: %v\n", sig)
-		//nolint:revive // deep-exit is expected in helper process
-		os.Exit(0)
+		os.Exit(0) //nolint:revive
 	case <-time.After(2 * time.Second):
 		_, _ = fmt.Fprintln(os.Stderr, "Helper process timeout")
-		//nolint:revive // deep-exit is expected in helper process
-		os.Exit(0)
+		os.Exit(0) //nolint:revive
 	}
 }
 

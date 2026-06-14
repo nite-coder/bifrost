@@ -23,20 +23,21 @@ func NewResolverDiscovery(upstream *Upstream) *ResolverDiscovery {
 
 // GetInstances resolves upstream targets using DNS and returns a list of instances.
 func (d *ResolverDiscovery) GetInstances(
-	_ context.Context,
+	ctx context.Context,
 	_ provider.GetInstanceOptions,
-) ([]provider.Instancer, error) {
-	instances := make([]provider.Instancer, 0)
+) ([]provider.DiscoveryResult, error) {
+	results := make([]provider.DiscoveryResult, 0, len(d.upstream.options.Targets))
 
 	for _, targetOptions := range d.upstream.options.Targets {
+		instances := make([]provider.Instancer, 0)
 		targetHost, targetPort, err := net.SplitHostPort(targetOptions.Target)
 		if err != nil {
 			targetHost = targetOptions.Target
 		}
 
-		ips, err := d.upstream.bifrost.resolver.Lookup(context.Background(), targetHost)
-		if err != nil {
-			return nil, fmt.Errorf("failed to lookup target '%s', error: %w", targetHost, err)
+		ips, lookErr := d.upstream.bifrost.resolver.Lookup(ctx, targetHost)
+		if lookErr != nil {
+			return nil, fmt.Errorf("failed to lookup target '%s', error: %w", targetHost, lookErr)
 		}
 
 		for _, ip := range ips {
@@ -46,9 +47,9 @@ func (d *ResolverDiscovery) GetInstances(
 				ip = net.JoinHostPort(ip, "0")
 			}
 
-			addr, err := net.ResolveTCPAddr("tcp", ip)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve target '%s', error: %w", ip, err)
+			addr, addrErr := net.ResolveTCPAddr("tcp", ip)
+			if addrErr != nil {
+				return nil, fmt.Errorf("failed to resolve target '%s', error: %w", ip, addrErr)
 			}
 
 			instance := provider.NewInstance(addr, targetOptions.Weight)
@@ -65,20 +66,88 @@ func (d *ResolverDiscovery) GetInstances(
 
 			instances = append(instances, instance)
 		}
+
+		results = append(results, provider.DiscoveryResult{
+			Target: targetOptions.Target,
+			Weight: targetOptions.Weight,
+			Tags:   targetOptions.Tags,
+			Nodes:  instances,
+		})
 	}
 
-	return instances, nil
+	return results, nil
 }
 
 // Watch is not supported by ResolverDiscovery and returns provider.ErrWatchNotSupported.
 func (d *ResolverDiscovery) Watch(
 	_ context.Context,
 	_ provider.GetInstanceOptions,
-) (<-chan []provider.Instancer, error) {
+) (<-chan []provider.DiscoveryResult, error) {
 	return nil, provider.ErrWatchNotSupported
 }
 
 // Close releases resources used by ResolverDiscovery.
 func (d *ResolverDiscovery) Close() error {
+	return nil
+}
+
+// StaticDiscovery implements service discovery using static targets (e.g. for virtual AI models).
+type StaticDiscovery struct {
+	upstream *Upstream
+}
+
+// NewStaticDiscovery creates a new StaticDiscovery instance.
+func NewStaticDiscovery(upstream *Upstream) *StaticDiscovery {
+	return &StaticDiscovery{
+		upstream: upstream,
+	}
+}
+
+type dummyAddr struct {
+	addr string
+}
+
+func (a dummyAddr) Network() string { return "static" }
+func (a dummyAddr) String() string  { return a.addr }
+
+// GetInstances returns static targets as instances.
+func (d *StaticDiscovery) GetInstances(
+	_ context.Context,
+	_ provider.GetInstanceOptions,
+) ([]provider.DiscoveryResult, error) {
+	results := make([]provider.DiscoveryResult, 0, len(d.upstream.options.Targets))
+
+	for _, targetOptions := range d.upstream.options.Targets {
+		addr := dummyAddr{addr: targetOptions.Target}
+		instance := provider.NewInstance(addr, targetOptions.Weight)
+
+		if len(targetOptions.Tags) > 0 {
+			for key, val := range targetOptions.Tags {
+				instance.SetTag(key, val)
+			}
+		}
+		instance.SetTag("server_name", targetOptions.Target)
+
+		results = append(results, provider.DiscoveryResult{
+			Target: targetOptions.Target,
+			Weight: targetOptions.Weight,
+			Tags:   targetOptions.Tags,
+			Nodes:  []provider.Instancer{instance},
+		})
+	}
+
+	return results, nil
+}
+
+// Watch is not supported by StaticDiscovery and returns provider.ErrWatchNotSupported.
+func (d *StaticDiscovery) Watch(
+	_ context.Context,
+	_ provider.GetInstanceOptions,
+) (<-chan []provider.DiscoveryResult, error) {
+	return nil, provider.ErrWatchNotSupported
+}
+
+// Close releases resources used by StaticDiscovery.
+func (d *StaticDiscovery) Close() error {
 	return nil
 }

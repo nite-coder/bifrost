@@ -1,4 +1,4 @@
-package random
+package random_test
 
 import (
 	"context"
@@ -9,135 +9,81 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/balancer"
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/proxy"
-	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
+	"github.com/nite-coder/bifrost/pkg/balancer/random"
+	"github.com/nite-coder/bifrost/pkg/target"
 )
 
+func createTestEndpoint(addr string, maxFails uint, failTimeout time.Duration) *target.Endpoint {
+	return &target.Endpoint{
+		Address: addr,
+		Weight:  1,
+		State:   target.NewState(maxFails, failTimeout),
+	}
+}
+
 func TestRandom(t *testing.T) {
-	_ = Init()
-	proxyOptions1 := httpproxy.Options{
-		Target:      "http://backend1",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      1,
-		FailTimeout: 10 * time.Second,
-		MaxFails:    1,
-	}
-	proxy1, _ := httpproxy.New(proxyOptions1, nil)
-
-	proxyOptions2 := httpproxy.Options{
-		Target:      "http://backend2",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      1,
-		FailTimeout: 10 * time.Second,
-		MaxFails:    1,
-	}
-	proxy2, _ := httpproxy.New(proxyOptions2, nil)
-
-	proxyOptions3 := httpproxy.Options{
-		Target:      "http://backend3",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      1,
-		FailTimeout: 10 * time.Second,
-		MaxFails:    1,
-	}
-	proxy3, _ := httpproxy.New(proxyOptions3, nil)
-
-	proxies := []proxy.Proxy{
-		proxy1,
-		proxy2,
-		proxy3,
-	}
-
-	b := NewBalancer(proxies)
+	_ = random.Init()
 
 	t.Run("success", func(t *testing.T) {
-		hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
+		eps := []*target.Endpoint{
+			createTestEndpoint("10.0.1.1:80", 1, 10*time.Second),
+			createTestEndpoint("10.0.1.2:80", 1, 10*time.Second),
+			createTestEndpoint("10.0.1.3:80", 1, 10*time.Second),
+		}
+		b := random.NewBalancer(eps)
+
+		hits := map[string]int{}
 		for range 10000 {
-			proxy, err := b.Select(context.Background(), nil)
+			ep, err := b.Select(context.Background(), nil)
 			require.NoError(t, err)
-			assert.NotNil(t, proxy)
-			hits[proxy.Target()]++
+			hits[ep.Address]++
 		}
-
-		// Assert that each proxy was selected roughly equally
-		assert.InDelta(t, 3333, hits["http://backend1"], 500)
-		assert.InDelta(t, 3333, hits["http://backend2"], 500)
-		assert.InDelta(t, 3333, hits["http://backend3"], 500)
+		assert.InDelta(t, 3333, hits["10.0.1.1:80"], 500)
+		assert.InDelta(t, 3333, hits["10.0.1.2:80"], 500)
+		assert.InDelta(t, 3333, hits["10.0.1.3:80"], 500)
 	})
 
-	t.Run("two proxy failed", func(t *testing.T) {
-		_ = proxy1.AddFailedCount(100)
-		_ = proxy2.AddFailedCount(100)
+	t.Run("two endpoints failed", func(t *testing.T) {
+		ep1 := createTestEndpoint("10.0.1.1:80", 1, 10*time.Second)
+		ep2 := createTestEndpoint("10.0.1.2:80", 1, 10*time.Second)
+		ep3 := createTestEndpoint("10.0.1.3:80", 1, 10*time.Second)
+		ep1.State.RecordFailure()
+		ep2.State.RecordFailure()
 
-		hits := map[string]int{"http://backend1": 0, "http://backend2": 0, "http://backend3": 0}
-		for range 10000 {
-			proxy, err := b.Select(context.Background(), nil)
+		b := random.NewBalancer([]*target.Endpoint{ep1, ep2, ep3})
+
+		for range 100 {
+			ep, err := b.Select(context.Background(), nil)
 			require.NoError(t, err)
-			assert.NotNil(t, proxy)
-			hits[proxy.Target()]++
-		}
-
-		// Assert that each proxy was selected roughly equally
-		assert.InDelta(t, 0, hits["http://backend1"], 0)
-		assert.InDelta(t, 0, hits["http://backend2"], 0)
-		assert.InDelta(t, 10000, hits["http://backend3"], 0)
-	})
-
-	t.Run("no live upstream", func(t *testing.T) {
-		_ = proxy1.AddFailedCount(100)
-		_ = proxy2.AddFailedCount(100)
-		_ = proxy3.AddFailedCount(100)
-
-		for range 10000 {
-			proxy, err := b.Select(context.Background(), nil)
-			require.ErrorIs(t, err, balancer.ErrNotAvailable)
-			assert.Nil(t, proxy)
+			assert.Equal(t, "10.0.1.3:80", ep.Address)
 		}
 	})
 
-	t.Run("proxies getter", func(t *testing.T) {
-		assert.Len(t, b.Proxies(), 3)
-	})
-
-	t.Run("nil proxies", func(t *testing.T) {
-		b2 := NewBalancer(nil)
-		p, err := b2.Select(context.Background(), nil)
+	t.Run("no live endpoint", func(t *testing.T) {
+		ep1 := createTestEndpoint("10.0.1.1:80", 1, time.Second)
+		ep1.State.RecordFailure()
+		b := random.NewBalancer([]*target.Endpoint{ep1})
+		ep, err := b.Select(context.Background(), nil)
 		require.ErrorIs(t, err, balancer.ErrNotAvailable)
-		require.Nil(t, p)
+		assert.Nil(t, ep)
 	})
 
-	t.Run("single proxy failed", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target:      "http://backend1",
-			Protocol:    config.ProtocolHTTP,
-			Weight:      1,
-			FailTimeout: 10 * time.Second,
-			MaxFails:    1,
-		}
-		p1, _ := httpproxy.New(p1Options, nil)
-		_ = p1.AddFailedCount(1)
-
-		bSingle := NewBalancer([]proxy.Proxy{p1})
-		p, err := bSingle.Select(context.Background(), nil)
+	t.Run("nil endpoints", func(t *testing.T) {
+		b := random.NewBalancer(nil)
+		ep, err := b.Select(context.Background(), nil)
 		require.ErrorIs(t, err, balancer.ErrNotAvailable)
-		assert.Nil(t, p)
+		assert.Nil(t, ep)
 	})
 
 	t.Run("registration", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target: "http://backend1",
-		}
-		p1, _ := httpproxy.New(p1Options, nil)
-
 		factory := balancer.Factory("random")
-		assert.NotNil(t, factory)
-		rr, err := factory([]proxy.Proxy{p1}, nil)
+		require.NotNil(t, factory)
+		ep := createTestEndpoint("10.0.1.1:80", 0, 0)
+		b, err := factory([]*target.Endpoint{ep}, nil)
 		require.NoError(t, err)
-		assert.NotNil(t, rr)
-
-		p, err := rr.Select(context.Background(), nil)
+		require.NotNil(t, b)
+		epOut, err := b.Select(context.Background(), nil)
 		require.NoError(t, err)
-		assert.Equal(t, "http://backend1", p.Target())
+		assert.Equal(t, "10.0.1.1:80", epOut.Address)
 	})
 }

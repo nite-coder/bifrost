@@ -209,12 +209,14 @@ func TestNacosServiceDiscovery_GetInstances(t *testing.T) {
 			}
 
 			if tt.metadataCount > 0 {
-				id, found := got[0].Tag("id")
+				id, found := got[0].Nodes[0].Tag("id")
 				assert.True(t, found)
 				assert.Equal(t, "123", id)
 			}
 
-			assert.Len(t, got, tt.want)
+			if len(got) > 0 {
+				assert.Len(t, got[0].Nodes, tt.want)
+			}
 		})
 	}
 }

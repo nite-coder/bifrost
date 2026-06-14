@@ -191,7 +191,7 @@ func chunkHandler(ctx context.Context, c *app.RequestContext) {
 	// Hijack the writer of response
 	c.Response.HijackWriter(resp.NewChunkedBodyWriter(&c.Response, c.GetWriter()))
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		c.Write(orderResp) //nolint: errcheck
 		c.Flush()          //nolint: errcheck
 		time.Sleep(1 * time.Second)
@@ -275,7 +275,7 @@ func GenerateRandomBytes(size int) ([]byte, error) {
 func mockOpenAIChatHandler(ctx context.Context, c *app.RequestContext) {
 	// Simple struct to check if streaming is requested
 	var req struct {
-		Stream bool            `json:"stream"`
+		Stream bool             `json:"stream"`
 		Tools  []map[string]any `json:"tools"`
 	}
 	if err := c.BindAndValidate(&req); err != nil {
@@ -317,9 +317,9 @@ func mockOpenAIChatHandler(ctx context.Context, c *app.RequestContext) {
 				{
 					"index": 0,
 					"message": map[string]any{
-						"role":             "assistant",
+						"role":              "assistant",
 						"reasoning_content": "I need to find out the weather for the user. I should use the get_weather function to retrieve this information.",
-						"content":          "I have access to weather data, let me fetch it for you right away.",
+						"content":           "I have access to weather data, let me fetch it for you right away.",
 						"tool_calls": []map[string]any{
 							{
 								"id":   "call_abc123",

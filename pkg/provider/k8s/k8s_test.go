@@ -154,18 +154,18 @@ func TestGetInstances(t *testing.T) {
 				client: client,
 			}
 
-			instances, err := k8sDiscovery.GetInstances(context.Background(), tt.options)
+			results, err := k8sDiscovery.GetInstances(context.Background(), tt.options)
 			if tt.wantErr {
 				require.Error(t, err)
 				return
 			}
 
 			require.NoError(t, err)
-			assert.Len(t, instances, tt.expectedCount)
-
-			// Verify instances are correct
-			for _, instance := range instances {
-				assert.NotEmpty(t, instance.Address())
+			if len(results) > 0 {
+				assert.Len(t, results[0].Nodes, tt.expectedCount)
+				for _, instance := range results[0].Nodes {
+					assert.NotEmpty(t, instance.Address())
+				}
 			}
 		})
 	}
@@ -329,7 +329,8 @@ func TestWatch(t *testing.T) {
 					require.NoError(t, e)
 
 					select {
-					case instances := <-ch:
+					case results := <-ch:
+						instances := results[0].Nodes
 						assert.Len(t, instances, op.expected)
 						found := false
 						for _, instance := range instances {

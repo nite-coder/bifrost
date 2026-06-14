@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/provider"
+	"github.com/nite-coder/bifrost/pkg/proxy"
 )
 
 func TestGRPCProxyLeak_Evidence(t *testing.T) {
@@ -57,11 +59,29 @@ func TestGRPCProxyLeak_Evidence(t *testing.T) {
 		addrStr := fmt.Sprintf("127.0.0.1:%d", 10000+i)
 		addr, _ := net.ResolveTCPAddr("tcp", addrStr)
 
-		// Call refreshProxies directly to simulate update without background goroutine
-		err = up.refreshProxies([]provider.Instancer{
-			provider.NewInstance(addr, 1),
+		err = up.refreshEndpoints([]provider.DiscoveryResult{
+			{Target: addrStr, Nodes: []provider.Instancer{provider.NewInstance(addr, 1)}},
 		})
 		require.NoError(t, err)
+
+		require.Eventually(t, func() bool {
+			if svc.upstream == nil {
+				return false
+			}
+			bal := svc.upstream.Balancer()
+			if bal == nil {
+				return false
+			}
+			var found bool
+			svc.proxyByAddress.Range(func(_, v any) bool {
+				if p, ok := v.(proxy.Proxy); ok && strings.Contains(p.Target(), addrStr) {
+					found = true
+					return false
+				}
+				return true
+			})
+			return found
+		}, time.Second, 5*time.Millisecond)
 
 		runtime.GC() //nolint:revive // explicit GC for memory leak verification
 		t.Logf("After Refresh #%d, goroutines: %d", i, runtime.NumGoroutine())
@@ -71,13 +91,11 @@ func TestGRPCProxyLeak_Evidence(t *testing.T) {
 	err = bf.Close()
 	require.NoError(t, err)
 
-	// Give some time for any async cleanup (though we expect none for leaked resources)
-	time.Sleep(200 * time.Millisecond)
-	runtime.GC() //nolint:revive // explicit GC for memory leak verification
-	finalCount := runtime.NumGoroutine()
-	t.Logf("Final goroutines after Bifrost.Close: %d", finalCount)
-
-	// Assertion: If no leak, finalCount should return close to initialGoroutines.
-	// Since gRPC starts goroutines that are never closed currently, this will fail.
-	assert.LessOrEqual(t, finalCount, initialGoroutines+3, "gRPC Proxy Goroutine leak detected!")
+	// Give some time for any async cleanup (though we expect none for leaked resources) and assert
+	assert.Eventually(t, func() bool {
+		runtime.GC() // explicit GC for memory leak verification
+		finalCount := runtime.NumGoroutine()
+		t.Logf("Checking final goroutines after Bifrost.Close: %d (initial: %d)", finalCount, initialGoroutines)
+		return finalCount <= initialGoroutines+3
+	}, time.Second, 10*time.Millisecond, "gRPC Proxy Goroutine leak detected!")
 }

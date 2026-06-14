@@ -1,4 +1,4 @@
-package roundrobin
+package roundrobin_test
 
 import (
 	"context"
@@ -10,182 +10,83 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/nite-coder/bifrost/pkg/balancer"
-	"github.com/nite-coder/bifrost/pkg/config"
-	"github.com/nite-coder/bifrost/pkg/proxy"
-	httpproxy "github.com/nite-coder/bifrost/pkg/proxy/http"
+	"github.com/nite-coder/bifrost/pkg/balancer/roundrobin"
+	"github.com/nite-coder/bifrost/pkg/target"
 )
 
+func createTestEndpoint(addr string, maxFails uint, failTimeout time.Duration) *target.Endpoint {
+	return &target.Endpoint{
+		Address: addr,
+		Weight:  1,
+		State:   target.NewState(maxFails, failTimeout),
+	}
+}
+
 func TestRoundRobin(t *testing.T) {
-	_ = Init()
-	proxyOptions1 := httpproxy.Options{
-		Target:      "http://backend1",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      1,
-		FailTimeout: time.Second,
-		MaxFails:    1,
-	}
-	proxy1, _ := httpproxy.New(proxyOptions1, nil)
-	err := proxy1.AddFailedCount(1)
-	require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
-	assert.Eventually(t, func() bool {
-		return proxy1.IsAvailable()
-	}, 2*time.Second, 100*time.Millisecond, "proxy1 should be available after fail timeout")
-
-	proxyOptions2 := httpproxy.Options{
-		Target:      "http://backend2",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      1,
-		FailTimeout: 10 * time.Second,
-		MaxFails:    1,
-	}
-	proxy2, _ := httpproxy.New(proxyOptions2, nil)
-
-	proxyOptions3 := httpproxy.Options{
-		Target:      "http://backend3",
-		Protocol:    config.ProtocolHTTP,
-		Weight:      1,
-		FailTimeout: 10 * time.Second,
-		MaxFails:    0,
-	}
-	proxy3, _ := httpproxy.New(proxyOptions3, nil)
-
-	proxies := []proxy.Proxy{
-		proxy1,
-		proxy2,
-		proxy3,
-	}
-
-	b := NewBalancer(proxies)
+	_ = roundrobin.Init()
 
 	t.Run("success", func(t *testing.T) {
-		expected := []string{"http://backend1", "http://backend2", "http://backend3"}
+		eps := []*target.Endpoint{
+			createTestEndpoint("10.0.1.1:80", 1, time.Second),
+			createTestEndpoint("10.0.1.2:80", 1, 10*time.Second),
+			createTestEndpoint("10.0.1.3:80", 0, 10*time.Second),
+		}
+		b := roundrobin.NewBalancer(eps)
 
+		expected := []string{"10.0.1.1:80", "10.0.1.2:80", "10.0.1.3:80"}
 		for _, e := range expected {
-			p, e1 := b.Select(context.Background(), nil)
-			require.NotNil(t, p)
-			require.NoError(t, e1)
-			assert.Equal(t, e, p.Target())
+			ep, err := b.Select(context.Background(), nil)
+			require.NoError(t, err)
+			require.NotNil(t, ep)
+			assert.Equal(t, e, ep.Address)
 		}
 	})
 
-	t.Run("one proxy failed", func(t *testing.T) {
-		err = proxy2.AddFailedCount(1) // proxy 2 is failed
-		require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
-		err = proxy3.AddFailedCount(1000) // proxy should be available because it turns off max_fail check
-		require.NoError(t, err)
+	t.Run("one endpoint failed", func(t *testing.T) {
+		ep1 := createTestEndpoint("10.0.1.1:80", 1, time.Second)
+		ep2 := createTestEndpoint("10.0.1.2:80", 1, 10*time.Second)
+		ep3 := createTestEndpoint("10.0.1.3:80", 0, 10*time.Second)
 
-		expected := []string{"http://backend1", "http://backend3"}
-		for _, e := range expected {
-			p, e1 := b.Select(context.Background(), nil)
-			require.NoError(t, e1)
-			require.NotNil(t, p)
-			assert.Equal(t, e, p.Target())
+		ep1.State.RecordFailure()
+		ep2.State.RecordFailure()
+
+		eps := []*target.Endpoint{ep1, ep2, ep3}
+		b := roundrobin.NewBalancer(eps)
+
+		for range 5 {
+			ep, err := b.Select(context.Background(), nil)
+			require.NoError(t, err)
+			assert.Equal(t, "10.0.1.3:80", ep.Address, "only ep3 should be selected")
 		}
 	})
 
-	t.Run("no live upstream", func(t *testing.T) {
-		err = proxy1.AddFailedCount(100)
-		require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
-		err = proxy2.AddFailedCount(100)
-		require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
+	t.Run("no live endpoint", func(t *testing.T) {
+		ep1 := createTestEndpoint("10.0.1.1:80", 1, 10*time.Second)
+		ep1.State.RecordFailure()
 
-		proxyOptions3 := httpproxy.Options{
-			Target:      "http://backend3",
-			Protocol:    config.ProtocolHTTP,
-			Weight:      1,
-			FailTimeout: 10 * time.Second,
-			MaxFails:    1,
-		}
-		proxy3, _ := httpproxy.New(proxyOptions3, nil)
-		err = proxy3.AddFailedCount(100)
-		require.ErrorIs(t, err, proxy.ErrMaxFailedCount)
-
-		proxies := []proxy.Proxy{proxy1, proxy2, proxy3}
-		b.proxies = proxies
-
-		for range 6000 {
-			p, e := b.Select(context.Background(), nil)
-			require.ErrorIs(t, e, balancer.ErrNotAvailable)
-			require.Nil(t, p)
-		}
+		b := roundrobin.NewBalancer([]*target.Endpoint{ep1})
+		ep, err := b.Select(context.Background(), nil)
+		require.ErrorIs(t, err, balancer.ErrNotAvailable)
+		require.Nil(t, ep)
 	})
 
-	t.Run("proxies getter", func(t *testing.T) {
-		assert.Len(t, b.Proxies(), 3)
-	})
-
-	t.Run("nil proxies", func(t *testing.T) {
-		b2 := NewBalancer(nil)
-		p, e := b2.Select(context.Background(), nil)
-		require.ErrorIs(t, e, balancer.ErrNotAvailable)
-		assert.Nil(t, p)
-	})
-
-	t.Run("single proxy failed", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target:      "http://backend1",
-			Protocol:    config.ProtocolHTTP,
-			Weight:      1,
-			FailTimeout: 10 * time.Second,
-			MaxFails:    1,
-		}
-		p1, _ := httpproxy.New(p1Options, nil)
-		_ = p1.AddFailedCount(1)
-
-		bSingle := NewBalancer([]proxy.Proxy{p1})
-		p, e := bSingle.Select(context.Background(), nil)
-		require.ErrorIs(t, e, balancer.ErrNotAvailable)
-		assert.Nil(t, p)
-	})
-
-	t.Run("registration", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target: "http://backend1",
-		}
-		p1, _ := httpproxy.New(p1Options, nil)
-
-		factory := balancer.Factory("round_robin")
-		assert.NotNil(t, factory)
-		rr, err := factory([]proxy.Proxy{p1}, nil)
-		require.NoError(t, err)
-		assert.NotNil(t, rr)
-
-		p, e := rr.Select(context.Background(), nil)
-		require.NoError(t, e)
-		assert.Equal(t, "http://backend1", p.Target())
+	t.Run("nil endpoints", func(t *testing.T) {
+		b := roundrobin.NewBalancer(nil)
+		ep, err := b.Select(context.Background(), nil)
+		require.ErrorIs(t, err, balancer.ErrNotAvailable)
+		assert.Nil(t, ep)
 	})
 
 	t.Run("counter overflow", func(t *testing.T) {
-		p1Options := httpproxy.Options{
-			Target: "http://backend1",
+		eps := []*target.Endpoint{
+			createTestEndpoint("10.0.1.1:80", 0, 0),
+			createTestEndpoint("10.0.1.2:80", 0, 0),
 		}
-		p1, _ := httpproxy.New(p1Options, nil)
+		b := roundrobin.NewBalancer(eps)
+		b.Counter.Store(math.MaxUint64 - 1)
 
-		p2Options := httpproxy.Options{
-			Target: "http://backend2",
-		}
-		p2, _ := httpproxy.New(p2Options, nil)
-
-		b := NewBalancer([]proxy.Proxy{p1, p2})
-
-		// force counter to near max
-		b.counter.Store(math.MaxUint64 - 1)
-
-		p, e := b.Select(context.Background(), nil)
-		require.NoError(t, e)
-		assert.Equal(t, "http://backend1", p.Target())
-		assert.Equal(t, uint64(math.MaxUint64), b.counter.Load())
-
-		// trigger natural wrap-around to 0
-		p, e = b.Select(context.Background(), nil)
-		require.NoError(t, e)
-		assert.Equal(t, "http://backend2", p.Target()) // index (0-1)%2 = MaxUint64%2 = 1 -> backend2
-		assert.Equal(t, uint64(0), b.counter.Load())
-
-		// next increment to 1
-		p, e = b.Select(context.Background(), nil)
-		require.NoError(t, e)
-		assert.Equal(t, "http://backend1", p.Target()) // index (1-1)%2 = 0 -> backend1
-		assert.Equal(t, uint64(1), b.counter.Load())
+		ep, err := b.Select(context.Background(), nil)
+		require.NoError(t, err)
+		assert.Equal(t, "10.0.1.1:80", ep.Address)
 	})
 }

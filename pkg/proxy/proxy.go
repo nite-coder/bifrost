@@ -2,23 +2,18 @@ package proxy
 
 import (
 	"context"
-	"errors"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
+	"github.com/nite-coder/bifrost/pkg/target"
 )
 
-// ErrMaxFailedCount is returned when the maximum number of failed proxy attempts is reached.
-var ErrMaxFailedCount = errors.New("proxy: reach max failed count")
-
-// Proxy defines the interface for a proxy service.
+// Proxy forwards HTTP requests to a backend endpoint.
 type Proxy interface {
 	ID() string
 	Target() string
-	Weight() uint32
-	IsAvailable() bool
-	AddFailedCount(count uint) error
+	Endpoint() *target.Endpoint
+	SetEndpoint(ep *target.Endpoint)
 	ServeHTTP(c context.Context, ctx *app.RequestContext)
-	Tag(key string) (value string, exist bool)
-	Tags() map[string]string
 	Close() error
 }

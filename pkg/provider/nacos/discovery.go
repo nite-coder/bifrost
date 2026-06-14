@@ -25,10 +25,11 @@ var newNamingClientFunc = clients.NewNamingClient
 
 // Discovery implements service discovery using Nacos.
 type Discovery struct {
-	client  naming_client.INamingClient
-	options *Options
-	stopCh  chan struct{}
-	watchCh chan []provider.Instancer
+	client   naming_client.INamingClient
+	options  *Options
+	stopCh   chan struct{}
+	watchCh  chan []provider.DiscoveryResult
+	subParam *vo.SubscribeParam // saved for Unsubscribe on Close to prevent panic on closed channel
 }
 
 // NewNacosServiceDiscovery creates a new NacosServiceDiscovery instance.
@@ -123,7 +124,7 @@ func NewNacosServiceDiscovery(options Options) (*Discovery, error) {
 func (d *Discovery) GetInstances(
 	_ context.Context,
 	options provider.GetInstanceOptions,
-) ([]provider.Instancer, error) {
+) ([]provider.DiscoveryResult, error) {
 	nacosInstances, err := d.client.SelectInstances(vo.SelectInstancesParam{
 		ServiceName: options.Name,
 		GroupName:   options.Group,
@@ -142,19 +143,24 @@ func (d *Discovery) GetInstances(
 	}
 
 	instances := ToProviderInstance(nacosInstances)
-	return instances, nil
+	return []provider.DiscoveryResult{
+		{
+			Target: options.Name,
+			Nodes:  instances,
+		},
+	}, nil
 }
 
 // Watch subscribes to service changes in Nacos and returns a channel for updates.
 func (d *Discovery) Watch(
 	_ context.Context,
 	options provider.GetInstanceOptions,
-) (<-chan []provider.Instancer, error) {
-	ch := make(chan []provider.Instancer, 1)
+) (<-chan []provider.DiscoveryResult, error) {
+	ch := make(chan []provider.DiscoveryResult, 1)
 	d.watchCh = ch
 	d.stopCh = make(chan struct{})
 
-	err := d.client.Subscribe(&vo.SubscribeParam{
+	d.subParam = &vo.SubscribeParam{
 		ServiceName: options.Name,
 		GroupName:   options.Group,
 		SubscribeCallback: func(nacosInstances []model.Instance, err error) {
@@ -165,11 +171,12 @@ func (d *Discovery) Watch(
 			instances := ToProviderInstance(nacosInstances)
 			// Non-blocking send to prevent goroutine blocking when channel is full or closed
 			select {
-			case ch <- instances:
+			case ch <- []provider.DiscoveryResult{{Target: options.Name, Nodes: instances}}:
 			default:
 			}
 		},
-	})
+	}
+	err := d.client.Subscribe(d.subParam)
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +188,9 @@ func (d *Discovery) Watch(
 func (d *Discovery) Close() error {
 	if d.stopCh != nil {
 		close(d.stopCh)
+	}
+	if d.subParam != nil {
+		_ = d.client.Unsubscribe(d.subParam)
 	}
 	d.client.CloseClient()
 	if d.watchCh != nil {

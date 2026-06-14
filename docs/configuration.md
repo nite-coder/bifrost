@@ -374,7 +374,7 @@ upstreams:
     balancer:
       type: "round_robin"
       # params:
-      #   "hash_on": "$var.user_id"  only work for `hashing` balacer
+      #   "hash_on": "$var.user_id"  # required for `chash` balancer
     health_check:
       passive:
         max_fails: 1
