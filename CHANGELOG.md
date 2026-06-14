@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Expand `$env.` directives during config loading so secret values can be injected from environment variables without manual parsing at each usage site. ([#132](https://github.com/nite-coder/bifrost/pull/132) by [0x5487](https://github.com/0x5487))
 - Refactor middleware registration to use strongly typed configuration structs with `mapstructure` integration, replacing the legacy generic registration approach. ([#133](https://github.com/nite-coder/bifrost/pull/133) by [0x5487](https://github.com/0x5487))
 - Refactor Service and Upstream architecture to centralize target health states globally via a shared UpstreamManager, while instantiating load balancers and proxy client connections dynamically at the Service level. ([#133](https://github.com/nite-coder/bifrost/pull/133) by [0x5487](https://github.com/0x5487))
+- Refactor the internal architecture to allow `Upstream` instances to be shared globally across multiple `Service` instances. ([#134](https://github.com/nite-coder/bifrost/pull/134) by [0x5487](https://github.com/0x5487))
 
 ## [0.10.0] (2026-04-13)
 
