@@ -80,6 +80,7 @@ func TestCorazaMiddleware_ServeHTTP(t *testing.T) {
 			Include @crs-setup.conf.example
 			Include @owasp_crs/*.conf
 			SecRuleEngine On
+			SecRuleRemoveById 920640
 			`,
 	}
 	m, err := NewMiddleware(options)

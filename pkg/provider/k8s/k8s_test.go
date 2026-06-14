@@ -131,7 +131,7 @@ func TestGetInstances(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create fake clientset
-			client := fake.NewSimpleClientset()
+			client := fake.NewClientset()
 
 			_, err := client.DiscoveryV1().EndpointSlices(tt.options.Namespace).Create(
 				context.Background(),
@@ -290,7 +290,7 @@ func TestWatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := fake.NewSimpleClientset()
+			client := fake.NewClientset()
 
 			// Create initial endpointslice and pods
 			_, err := client.DiscoveryV1().EndpointSlices(tt.options.Namespace).Create(
