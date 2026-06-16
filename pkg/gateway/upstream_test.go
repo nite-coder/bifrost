@@ -260,6 +260,50 @@ func TestRefreshEndpoints(t *testing.T) {
 		err = upstream.refreshEndpoints([]provider.DiscoveryResult{})
 		require.Error(t, err)
 	})
+
+	t.Run("server_name tag is preserved when resolving endpoints", func(t *testing.T) {
+		dnsResolver, err := resolver.NewResolver(resolver.Options{SkipTest: true})
+		require.NoError(t, err)
+
+		upstream := &Upstream{
+			bifrost: &Bifrost{
+				options: &config.Options{
+					SkipResolver: true,
+					Default: config.DefaultOptions{
+						Upstream: config.DefaultUpstreamOptions{
+							MaxFails:    1,
+							FailTimeout: time.Second,
+						},
+					},
+				},
+				resolver: dnsResolver,
+			},
+			options: &config.UpstreamOptions{
+				ID: "test",
+				Discovery: config.DiscoveryOptions{
+					Type: "dns",
+					Name: "test.service",
+				},
+			},
+			targets: make(map[string]*target.Target),
+		}
+
+		addr1, err := net.ResolveTCPAddr("tcp", testAddr)
+		require.NoError(t, err)
+		ins1 := provider.NewInstance(addr1, 1)
+		ins1.SetTag("server_name", "my-correct-domain.com")
+
+		results := []provider.DiscoveryResult{
+			{Target: testAddr, Nodes: []provider.Instancer{ins1}},
+		}
+
+		err = upstream.refreshEndpoints(results)
+		require.NoError(t, err)
+
+		endpoints := upstream.Endpoints()
+		require.Len(t, endpoints, 1)
+		assert.Equal(t, "my-correct-domain.com", endpoints[0].Tags["server_name"])
+	})
 }
 
 // mockErrorDiscovery is a mock service discovery that always returns an error.

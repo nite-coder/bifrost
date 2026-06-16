@@ -11,10 +11,8 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-
 	"github.com/nite-coder/bifrost/internal/pkg/safety"
 	"github.com/nite-coder/bifrost/pkg/balancer"
-	_ "github.com/nite-coder/bifrost/pkg/balancer/roundrobin" // side-effect registration of default balancer
 	"github.com/nite-coder/bifrost/pkg/config"
 	"github.com/nite-coder/bifrost/pkg/provider"
 	"github.com/nite-coder/bifrost/pkg/provider/dns"
@@ -247,7 +245,9 @@ func (u *Upstream) refreshEndpoints(results []provider.DiscoveryResult) error {
 			if existing, found := tgt.Endpoints[address]; found {
 				tags := make(map[string]string)
 				maps.Copy(tags, inst.Tags())
-				tags["server_name"] = serverName
+				if _, ok := tags["server_name"]; !ok {
+					tags["server_name"] = serverName
+				}
 				ep := &target.Endpoint{
 					Address: existing.Address,
 					Weight:  inst.Weight(),
@@ -259,7 +259,9 @@ func (u *Upstream) refreshEndpoints(results []provider.DiscoveryResult) error {
 				state := target.NewState(maxFails, failTimeout)
 				tags := make(map[string]string)
 				maps.Copy(tags, inst.Tags())
-				tags["server_name"] = serverName
+				if _, ok := tags["server_name"]; !ok {
+					tags["server_name"] = serverName
+				}
 				ep := &target.Endpoint{
 					Address: address,
 					Weight:  inst.Weight(),
@@ -347,7 +349,7 @@ func (u *Upstream) watch() {
 		go safety.Go(ctx, func() {
 			for results := range watchCh {
 				if rErr := u.refreshEndpoints(results); rErr != nil {
-					slog.Warn("upstream refresh failed", "error", rErr.Error(), "upstream_id", u.options.ID)
+					slog.Warn("failed to resfresh upstream", "error", rErr.Error(), "upstream_id", u.options.ID)
 				}
 			}
 		})
