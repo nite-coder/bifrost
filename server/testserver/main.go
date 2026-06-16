@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"flag"
 	"fmt"
@@ -253,6 +252,7 @@ func registerNacosServiceProvider() {
 	select {}
 }
 
+// GenerateRandomBytes generates a slice of bytes of the specified size containing human-readable ASCII text.
 func GenerateRandomBytes(size int) ([]byte, error) {
 	if size < 0 {
 		return nil, errors.New("payload size cannot be negative")
@@ -261,13 +261,11 @@ func GenerateRandomBytes(size int) ([]byte, error) {
 		return []byte{}, nil
 	}
 
+	phrase := "This is a human-readable mock response from the Bifrost test server. "
+	phraseLen := len(phrase)
 	buf := make([]byte, size)
-	n, err := rand.Read(buf) // use crypto/rand.Read fill slice
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate random bytes: %w", err)
-	}
-	if n != size {
-		return nil, fmt.Errorf("short read: expected %d bytes, got %d", size, n)
+	for i := range size {
+		buf[i] = phrase[i%phraseLen]
 	}
 	return buf, nil
 }

@@ -1,12 +1,15 @@
 k6 run --vus=100 --iterations=100000 place_order.js
 
-k6 run --vus=500 --duration 10s vus.js
+k6 run --vus=100 --duration 10s vus.js
 
 k6 run --vus=1 --iterations=1 vus.js
 
 curl -i --request POST '<http://localhost:80/place_order>'
 
 curl -o default.pgo 'http://localhost:8001/debug/pprof/profile?seconds=60'
+
+taskset -c 0,1,2,3 k6 run vus.js
+taskset -c 0,1,2,3,4,5,6,7 k6 run qps.js
 
 
 k6 run qps.js
