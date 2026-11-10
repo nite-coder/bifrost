@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Changed
 
-- Bump all packages ([#136](https://github.com/nite-coder/bifrost/pull/136) by [0x5487](https://github.com/0x5487))
+- Bump all packages and drop Go v1.25 support ([#136](https://github.com/nite-coder/bifrost/pull/136) by [0x5487](https://github.com/0x5487))
 
 
 
