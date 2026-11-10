@@ -53,7 +53,7 @@ func TestHelperProcess(_ *testing.T) {
 func fakeExecCommandContext(ctx context.Context, _ string, args ...string) *exec.Cmd {
 	cs := []string{"-test.run=TestHelperProcess", "--"}
 	cs = append(cs, args...)
-	/* #nosec G204 */
+	/* #nosec G204, G702 */
 	cmd := exec.CommandContext(ctx, os.Args[0], cs...)
 	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1", EnvBifrostRole + "=" + RoleWorker}
 	return cmd

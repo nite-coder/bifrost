@@ -235,6 +235,10 @@ func NewStdlibServer(
 	protocols.SetHTTP2(true)
 	protocols.SetUnencryptedHTTP2(true) // Support h2c
 
+	if tlsConfig != nil && len(tlsConfig.NextProtos) == 0 {
+		tlsConfig.NextProtos = []string{"h2", "http/1.1"}
+	}
+
 	srv := &http.Server{
 		Handler:      newHertzBridge(h, tracers),
 		ReadTimeout:  options.Timeout.Read,

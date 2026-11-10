@@ -259,7 +259,7 @@ func (p *Proxy) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	// Build the http frame
 	val := len(respBody)
 	if val > math.MaxInt-grpcHeaderLen || val > math.MaxUint32-grpcHeaderLen {
-		logger.Error("proxy: gRPC proxy response payload overflow")
+		logger.ErrorContext(ctx, "proxy: gRPC proxy response payload overflow")
 		err := errors.New("proxy: gRPC proxy response payload overflow")
 		_ = c.Error(err)
 		return
@@ -308,7 +308,7 @@ func (p *Proxy) handleGRPCError(ctx context.Context, c *app.RequestContext, err 
 	}
 	c.Set(variable.GRPCStatusCode, st.Code())
 	c.Set(variable.GRPCMessage, st.Message())
-	logger.Error("failed to invoke gRPC server",
+	logger.ErrorContext(ctx, "failed to invoke gRPC server",
 		slog.String("error", err.Error()),
 		slog.String("original_path", originalPath),
 		slog.String("upstream", p.targetHost+string(c.Request.Path())),
@@ -352,14 +352,14 @@ func makeGRPCErrorFrame(ctx context.Context, st *status.Status) []byte {
 	// Ensure payload length fits within the 32-bit gRPC length field.
 	if payloadLen64 > math.MaxUint32 {
 		logger := log.FromContext(ctx)
-		logger.Error("proxy: serialized data too large to create gRPC error frame")
+		logger.ErrorContext(ctx, "proxy: serialized data too large to create gRPC error frame")
 		return []byte{}
 	}
 	// Ensure total frame length (header + payload) fits within Go's maximum int.
 	totalLen64 := payloadLen64 + uint64(grpcHeaderLen)
 	if totalLen64 > math.MaxInt {
 		logger := log.FromContext(ctx)
-		logger.Error("proxy: total frame size too large to create gRPC error frame")
+		logger.ErrorContext(ctx, "proxy: total frame size too large to create gRPC error frame")
 		return []byte{}
 	}
 	totalLen := int(totalLen64)

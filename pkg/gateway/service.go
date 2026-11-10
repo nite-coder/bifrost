@@ -245,7 +245,7 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 					Code:       optional.Some("model_not_found"),
 				})
 			} else {
-				logger.Warn("upstream is empty",
+				logger.WarnContext(ctx, "upstream is empty",
 					slog.String("path", string(c.Request.Path())),
 				)
 				c.Abort()
@@ -269,7 +269,7 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 					Code:       optional.Some("model_not_found"),
 				})
 			} else {
-				logger.Warn("upstream is not found",
+				logger.WarnContext(ctx, "upstream is not found",
 					slog.String("name", upstreamID),
 				)
 				c.Abort()
@@ -284,7 +284,7 @@ func (s *Service) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 		bal := s.upstream.Balancer()
 		if bal == nil {
-			logger.Warn("balancer is nil, upstream may not be initialized",
+			logger.WarnContext(ctx, "balancer is nil, upstream may not be initialized",
 				"upstream_id", s.upstream.options.ID,
 				"service_id", s.options.ID,
 			)
@@ -755,7 +755,7 @@ func (s *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	if len(serviceName) == 0 {
 		routeID := variable.GetString(variable.RouteID, c)
 		fullURI := fullURI(&c.Request)
-		logger.Error("service name is empty",
+		logger.ErrorContext(ctx, "service name is empty",
 			slog.String("route_id", routeID),
 			slog.String("client_ip", c.ClientIP()),
 			slog.String("full_uri", fullURI),
@@ -769,7 +769,7 @@ func (s *DynamicService) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	if !found {
 		routeID := variable.GetString(variable.RouteID, c)
 		fullURI := fullURI(&c.Request)
-		logger.Warn("service name is not found",
+		logger.WarnContext(ctx, "service name is not found",
 			slog.String("route_id", routeID),
 			slog.String("client_ip", c.ClientIP()),
 			slog.String("full_uri", fullURI),

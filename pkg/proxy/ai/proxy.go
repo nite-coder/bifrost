@@ -275,8 +275,7 @@ func (p *Proxy) handleChatUnary(
 
 	resp, err := adapter.Chat(ctx, chatReq)
 	if err != nil {
-		var aiErr *ai.AIError
-		if errors.As(err, &aiErr) {
+		if aiErr, ok := errors.AsType[*ai.AIError](err); ok {
 			_ = hzCtx.Error(aiErr)
 		} else {
 			_ = hzCtx.Error(&ai.AIError{
@@ -362,8 +361,7 @@ func (p *Proxy) handleChatStream(
 
 	stream, err := adapter.StreamChat(ctx, chatReq)
 	if err != nil {
-		var aiErr *ai.AIError
-		if errors.As(err, &aiErr) {
+		if aiErr, ok := errors.AsType[*ai.AIError](err); ok {
 			_ = hzCtx.Error(aiErr)
 		} else {
 			_ = hzCtx.Error(&ai.AIError{
@@ -470,8 +468,7 @@ func (p *Proxy) handleChatStream(
 
 			// Mid-stream error
 			var sseErrBytes []byte
-			var aiErr *ai.AIError
-			if errors.As(err, &aiErr) {
+			if aiErr, ok := errors.AsType[*ai.AIError](err); ok {
 				formattedErr, _ := clientAdapter.ToClientError(aiErr)
 				if errJSON, errMar := sonic.Marshal(formattedErr); errMar == nil {
 					sseErrBytes = fmt.Appendf(nil, "data: %s\n\n", errJSON)
@@ -536,8 +533,7 @@ func (p *Proxy) handleResponses(
 
 	resp, err := adapter.Responses(ctx, req)
 	if err != nil {
-		var aiErr *ai.AIError
-		if errors.As(err, &aiErr) {
+		if aiErr, ok := errors.AsType[*ai.AIError](err); ok {
 			_ = hzCtx.Error(aiErr)
 		} else {
 			_ = hzCtx.Error(&ai.AIError{

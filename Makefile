@@ -13,7 +13,6 @@ coverage: test
 	go tool cover -func=cover.out
 
 lint:
-	go tool golangci-lint cache clean
 	go tool golangci-lint run --timeout 5m ./pkg/... ./internal/pkg/...
 
 lintd:

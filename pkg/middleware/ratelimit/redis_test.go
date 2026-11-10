@@ -221,7 +221,7 @@ func TestRedisCluster(t *testing.T) {
 			})
 			defer rdb.Close()
 
-			slots, err := rdb.ClusterSlots(ctx).Result()
+			slots, err := rdb.ClusterSlots(ctx).Result() //nolint:staticcheck
 			if err != nil {
 				return nil, err
 			}

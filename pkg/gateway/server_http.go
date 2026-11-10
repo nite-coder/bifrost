@@ -244,9 +244,8 @@ func newHTTPServer(
 	var tlsConfig *tls.Config
 	if len(serverOptions.TLS.CertPEM) > 0 || len(serverOptions.TLS.KeyPEM) > 0 {
 		tlsConfig = &tls.Config{
-			MinVersion:               tls.VersionTLS13,
-			CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256},
-			PreferServerCipherSuites: true,
+			MinVersion:       tls.VersionTLS13,
+			CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
 			CipherSuites: []uint16{
 				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
 				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,

@@ -30,7 +30,7 @@ func TestLogRotation_InodeVerification(t *testing.T) {
 
 	// Run the test in a separate process to avoid global state interference
 	// (like os.Stdout redirection and signal handlers) with other tests.
-	/* #nosec G204 */
+	/* #nosec G204, G702 */
 	cmd := exec.Command(os.Args[0], "-test.run=TestLogRotation_InodeVerification")
 	cmd.Env = append(os.Environ(), "GO_WANT_LOG_HELPER=1")
 	out, err := cmd.CombinedOutput()

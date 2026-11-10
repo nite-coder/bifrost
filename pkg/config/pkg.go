@@ -71,8 +71,7 @@ func loadConfig(path string, mode skipResolverMode) (Options, error) {
 
 	err = ValidateConfig(mainOpts, ModeBasic)
 	if err != nil {
-		var errInvalidConfig InvalidConfigError
-		if errors.As(err, &errInvalidConfig) {
+		if errInvalidConfig, ok := errors.AsType[InvalidConfigError](err); ok {
 			line := findConfigurationLine(content, errInvalidConfig.Structure, errInvalidConfig.Value)
 			return mainOpts, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), path, line)
 		}
@@ -137,8 +136,7 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 		for _, c := range cInfo {
 			mainOptions, err = mergeOptions(mainOptions, c.Content)
 			if err != nil {
-				var errInvalidConfig InvalidConfigError
-				if errors.As(err, &errInvalidConfig) {
+				if errInvalidConfig, ok := errors.AsType[InvalidConfigError](err); ok {
 					line := findConfigurationLine(c.Content, errInvalidConfig.Structure, errInvalidConfig.Value)
 					return nil, mainOptions, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), c.Path, line)
 				}
@@ -194,8 +192,7 @@ func loadDynamic(mainOptions Options) ([]provider.Provider, Options, error) {
 		for _, f := range files {
 			mainOptions, err = mergeOptions(mainOptions, f.Content)
 			if err != nil {
-				var errInvalidConfig InvalidConfigError
-				if errors.As(err, &errInvalidConfig) {
+				if errInvalidConfig, ok := errors.AsType[InvalidConfigError](err); ok {
 					line := findConfigurationLine(f.Content, errInvalidConfig.Structure, errInvalidConfig.Value)
 					return nil, mainOptions, fmt.Errorf("%s; in %s:%d", errInvalidConfig.Error(), f.DataID, line)
 				}

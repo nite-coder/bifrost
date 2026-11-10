@@ -297,7 +297,7 @@ func (b *Bifrost) doShutdown(ctx context.Context, mode ShutdownMode) error {
 				_ = server.Shutdown(ctx)
 			}
 
-			slog.Debug("http server shutdown", "id", server.options.ID)
+			slog.DebugContext(ctx, "http server shutdown", "id", server.options.ID)
 		})
 	}
 

@@ -56,6 +56,7 @@ type (
 )
 
 func (d *defaultCommandRunner) Command(name string, arg ...string) *exec.Cmd {
+	/* #nosec G204, G702 */
 	return exec.CommandContext(context.TODO(), name, arg...)
 }
 
@@ -182,14 +183,14 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 			// Try new BIFROST_LISTENER_KEYS mechanism first
 			listeners, e := InheritedListeners()
 			if e != nil {
-				slog.Error("failed to get inherited listeners", "error", e)
+				slog.ErrorContext(ctx, "failed to get inherited listeners", "error", e)
 			}
 
 			if len(listeners) > 0 {
 				for key, file := range listeners {
 					fileListener, e := net.FileListener(file)
 					if e != nil {
-						slog.Error("failed to create file listener", "error", e, "key", key)
+						slog.ErrorContext(ctx, "failed to create file listener", "error", e, "key", key)
 						_ = file.Close()
 						continue
 					}
@@ -206,7 +207,14 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 					z.listeners = append(z.listeners, info)
 					z.mu.Unlock()
 
-					slog.Info("file Listener is created from inheritance", "addr", fileListener.Addr(), "key", key)
+					slog.InfoContext(
+						ctx,
+						"file Listener is created from inheritance",
+						"addr",
+						fileListener.Addr(),
+						"key",
+						key,
+					)
 				}
 				return
 			}
@@ -226,20 +234,20 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 				}
 				fileListener, e := net.FileListener(f)
 				if e != nil {
-					slog.Error("failed to create file listener", "error", e, "fd", fd)
+					slog.ErrorContext(ctx, "failed to create file listener", "error", e, "fd", fd)
 					continue
 				}
 				l.Listener = fileListener
 				if options.ProxyProtocol {
 					l.Listener = &proxyproto.Listener{Listener: fileListener}
 				}
-				slog.Info("file Listener is created", "addr", fileListener.Addr(), "fd", fd)
+				slog.InfoContext(ctx, "file Listener is created", "addr", fileListener.Addr(), "fd", fd)
 			}
 		}
 	})
 	for _, l := range z.listeners {
 		if l.Key == options.Address {
-			slog.Info("get listener from cache", "addr", options.Address)
+			slog.InfoContext(ctx, "get listener from cache", "addr", options.Address)
 			return l.Listener, nil
 		}
 	}
@@ -247,7 +255,7 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 	if options.Config != nil {
 		listener, err = options.Config.Listen(ctx, options.Network, options.Address)
 		if err != nil {
-			slog.Error(
+			slog.ErrorContext(ctx,
 				"failed to create listener from config",
 				"error",
 				err,
@@ -262,7 +270,16 @@ func (z *ZeroDownTime) Listener(ctx context.Context, options *ListenerOptions) (
 		config := &net.ListenConfig{}
 		listener, err = config.Listen(ctx, options.Network, options.Address)
 		if err != nil {
-			slog.Error("failed to create listener", "error", err, "addr", options.Address, "network", options.Network)
+			slog.ErrorContext(
+				ctx,
+				"failed to create listener",
+				"error",
+				err,
+				"addr",
+				options.Address,
+				"network",
+				options.Network,
+			)
 			return nil, err
 		}
 	}
@@ -305,9 +322,9 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGHUP)
 
-	slog.Info("waiting for SIGHUP signal to trigger upgrade", "pid", os.Getpid())
+	slog.InfoContext(ctx, "waiting for SIGHUP signal to trigger upgrade", "pid", os.Getpid())
 
-	go safety.Go(context.Background(), func() {
+	go safety.Go(ctx, func() {
 		defer func() {
 			signal.Stop(sigCh)
 			z.isShutdownCh <- true
@@ -317,17 +334,17 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 		for {
 			select {
 			case <-z.stopWaitingCh:
-				slog.Info("stop waiting for upgrade signal", "pid", os.Getpid())
+				slog.InfoContext(ctx, "stop waiting for upgrade signal", "pid", os.Getpid())
 				return
 			case sig := <-sigCh:
 				upgradeCount++
-				slog.Info("upgrade signal received",
+				slog.InfoContext(ctx, "upgrade signal received",
 					"signal", sig,
 					"upgradeCount", upgradeCount,
 					"currentPID", os.Getpid(),
 				)
 
-				slog.Debug("collecting listener file descriptors", "listenerCount", len(z.listeners))
+				slog.DebugContext(ctx, "collecting listener file descriptors", "listenerCount", len(z.listeners))
 				files := []*os.File{}
 				for _, l := range z.listeners {
 					proxylistener, ok := l.Listener.(*proxyproto.Listener)
@@ -343,7 +360,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 							continue
 						}
 						files = append(files, f)
-						slog.Debug("listener file descriptor collected", "key", l.Key, "fd", f.Fd())
+						slog.DebugContext(ctx, "listener file descriptor collected", "key", l.Key, "fd", f.Fd())
 					} else {
 						tcpListener, ok := l.Listener.(*net.TCPListener)
 						if !ok {
@@ -356,18 +373,18 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 							continue
 						}
 						files = append(files, f)
-						slog.Debug("listener file descriptor collected", "key", l.Key, "fd", f.Fd())
+						slog.DebugContext(ctx, "listener file descriptor collected", "key", l.Key, "fd", f.Fd())
 					}
 				}
-				slog.Info("listener file descriptors ready for transfer", "count", len(files))
+				slog.InfoContext(ctx, "listener file descriptors ready for transfer", "count", len(files))
 
 				b, err := sonic.Marshal(z.listeners)
 				if err != nil {
-					slog.Error("failed to marshal listeners", "error", err)
+					slog.ErrorContext(ctx, "failed to marshal listeners", "error", err)
 					continue
 				}
 
-				slog.Debug("spawning new process",
+				slog.DebugContext(ctx, "spawning new process",
 					"executable", os.Args[0],
 					"args", os.Args[1:],
 					"fdCount", len(files),
@@ -384,7 +401,7 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 					continue
 				}
 
-				slog.Info("new process spawned successfully",
+				slog.InfoContext(ctx, "new process spawned successfully",
 					"newPID", cmd.Process.Pid,
 					"currentPID", os.Getpid(),
 					"fdCount", len(files),
@@ -395,6 +412,6 @@ func (z *ZeroDownTime) WaitForUpgrade(ctx context.Context) error {
 
 	// Wait for goroutine to complete (triggered by Close sending to stopWaitingCh)
 	<-z.isShutdownCh
-	slog.Info("WaitForUpgrade completed", "pid", os.Getpid())
+	slog.InfoContext(ctx, "WaitForUpgrade completed", "pid", os.Getpid())
 	return nil
 }

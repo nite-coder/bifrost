@@ -121,7 +121,7 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		if !c.Request.IsBodyStream() && len(c.Request.Body()) > 0 {
 			itBody, _, e := tx.WriteRequestBody(c.Request.Body())
 			if e != nil {
-				logger.Warn("coraza: failed to write request body", "error", e)
+				logger.WarnContext(ctx, "coraza: failed to write request body", "error", e)
 				return
 			}
 			m.processInterruption(ctx, c, tx, itBody)
@@ -129,7 +129,7 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 	}
 	itRes, e := tx.ProcessRequestBody()
 	if e != nil {
-		logger.Warn("coraza: failed to process request body", "error", e)
+		logger.WarnContext(ctx, "coraza: failed to process request body", "error", e)
 		return
 	}
 	m.processInterruption(ctx, c, tx, itRes)

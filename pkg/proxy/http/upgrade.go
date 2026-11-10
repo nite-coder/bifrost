@@ -140,7 +140,7 @@ func (p *Proxy) handleUpgradeResponse(ctx context.Context, clientConn network.Co
 		return
 	}
 
-	slog.Info("finish proxy upgrade")
+	slog.InfoContext(ctx, "finish proxy upgrade")
 }
 
 // switchProtocolCopier exists so goroutines proxying data back and

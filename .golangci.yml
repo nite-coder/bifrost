@@ -21,6 +21,8 @@ linters:
     - maintidx
     - depguard
     - exhaustruct
+    - exhaustruct_v5
+    - gomodguard
     - wrapcheck
     - varnamelen
     - gochecknoglobals
@@ -31,6 +33,8 @@ linters:
     - nonamedreturns
     - ireturn
     - dupl
+    - goconst
+    - prealloc
 
   settings:
     errcheck:
@@ -45,6 +49,8 @@ linters:
       min-complexity: 25
     gocyclo:
       min-complexity: 20
+    gomoddirectives:
+      replace-local: true
     govet:
       enable-all: true
       disable:
@@ -83,6 +89,8 @@ linters:
           severity: warning
         - name: cyclomatic
           disabled: true
+        - name: epoch-naming
+          disabled: true
         - name: file-header
           disabled: true
         - name: function-result-limit
@@ -91,7 +99,13 @@ linters:
           severity: warning
         - name: function-length
           disabled: true
+        - name: get-return
+          disabled: true
+        - name: inefficient-map-lookup
+          disabled: true
         - name: line-length-limit
+          disabled: true
+        - name: marshal-receiver
           disabled: true
         - name: max-public-structs
           disabled: true
@@ -99,8 +113,22 @@ linters:
           disabled: true
         - name: package-comments
           disabled: true
+        - name: package-naming
+          disabled: true
         - name: unused-receiver
           disabled: true
+        - name: use-slices-sort
+          disabled: true
+        - name: use-waitgroup-go
+          disabled: true
+    sloglint:
+      context: scope
+    perfsprint:
+      int-conversion: true
+      err-error: true
+      errorf: true
+      sprintf1: true
+      strconcat: true
   exclusions:
     generated: lax
     rules:
@@ -123,6 +151,10 @@ linters:
           - gosec
         text: "G101:"
         path: ^pkg/variable/constant\.go$
+      - linters:
+          - staticcheck
+        text: "SA1019:"
+        path: ^pkg/gateway/bifrost_test\.go$
 
 
 issues:

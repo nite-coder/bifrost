@@ -138,7 +138,7 @@ func (cp *ControlPlane) Accept(ctx context.Context) error {
 			if closed {
 				return nil
 			}
-			slog.Error("failed to accept connection", "error", err)
+			slog.ErrorContext(ctx, "failed to accept connection", "error", err)
 			continue
 		}
 
@@ -277,28 +277,28 @@ func (cp *ControlPlane) handleConnection(ctx context.Context, conn net.Conn) {
 			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 				return
 			}
-			slog.Error("failed to decode control message", "error", err)
+			slog.ErrorContext(ctx, "failed to decode control message", "error", err)
 			return
 		}
 
-		slog.Debug("received message", "type", msg.Type, "workerPID", msg.WorkerPID)
+		slog.DebugContext(ctx, "received message", "type", msg.Type, "workerPID", msg.WorkerPID)
 
 		// Handle Special FD Transfer Protocol
 		if msg.Type == MessageTypeFDTransferStart {
-			slog.Debug("starting FD transfer protocol", "workerPID", msg.WorkerPID)
+			slog.DebugContext(ctx, "starting FD transfer protocol", "workerPID", msg.WorkerPID)
 
 			// Extract Keys from Payload
 			var keys []string
 			if len(msg.Payload) > 0 {
 				if e := sonic.Unmarshal(msg.Payload, &keys); e != nil {
-					slog.Error("failed to unmarshal listener keys", "error", e)
+					slog.ErrorContext(ctx, "failed to unmarshal listener keys", "error", e)
 					// Continue, but keys will be empty
 				}
 			}
 
 			// 1. Send Ack to flush any buffers and signal readiness
 			if e := encoder.Encode(&ControlMessage{Type: MessageTypeAck}); e != nil {
-				slog.Error("failed to send Ack for FD transfer", "error", e)
+				slog.ErrorContext(ctx, "failed to send Ack for FD transfer", "error", e)
 				return
 			}
 
@@ -306,11 +306,11 @@ func (cp *ControlPlane) handleConnection(ctx context.Context, conn net.Conn) {
 			// Read FDs from the connection immediately
 			fds, e := cp.ReceiveFDsFromConn(conn)
 			if e != nil {
-				slog.Error("failed to receive FDs", "error", e)
+				slog.ErrorContext(ctx, "failed to receive FDs", "error", e)
 				return
 			}
 
-			slog.Info("successfully received transferred FDs", "count", len(fds), "keys", len(keys))
+			slog.InfoContext(ctx, "successfully received transferred FDs", "count", len(fds), "keys", len(keys))
 
 			// 3. Dispatch FDs to handler
 			cp.mu.RLock()
@@ -341,7 +341,7 @@ func (cp *ControlPlane) handleConnection(ctx context.Context, conn net.Conn) {
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Error("control message handler panicked", "recover", r)
+						slog.ErrorContext(ctx, "control message handler panicked", "recover", r)
 					}
 				}()
 				handler(conn, &msg)
@@ -505,28 +505,28 @@ func (wcp *WorkerControlPlane) Start(ctx context.Context, fdHandler FDHandler) e
 			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 				return nil
 			}
-			slog.Error("worker failed to decode message", "error", err)
+			slog.ErrorContext(ctx, "worker failed to decode message", "error", err)
 			return err
 		}
 
-		slog.Debug("worker received message", "type", msg.Type)
+		slog.DebugContext(ctx, "worker received message", "type", msg.Type)
 
 		switch msg.Type {
 		case MessageTypeFDRequest:
 			if fdHandler != nil {
 				if e := fdHandler.HandleFDRequest(); e != nil {
-					slog.Error("worker failed to handle FD request", "error", e)
+					slog.ErrorContext(ctx, "worker failed to handle FD request", "error", e)
 				}
 			}
 		case MessageTypeShutdown:
-			slog.Info("worker received shutdown request")
+			slog.InfoContext(ctx, "worker received shutdown request")
 			// Send SIGTERM to self to trigger graceful shutdown
 			if e := wcp.signalFunc(wcp.pid, syscall.SIGTERM); e != nil {
-				slog.Error("failed to signal self", "error", e)
+				slog.ErrorContext(ctx, "failed to signal self", "error", e)
 			}
 			return nil
 		default:
-			slog.Debug("worker ignored message", "type", msg.Type)
+			slog.DebugContext(ctx, "worker ignored message", "type", msg.Type)
 		}
 	}
 }

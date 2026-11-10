@@ -90,10 +90,9 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 
 	// --- Phase 2: Egress (After Next) ---
 	if len(c.Errors) > 0 {
-		var aiErr *ai.AIError
 		for _, err := range slices.Backward(c.Errors) {
 			errObj := err.Err
-			if errors.As(errObj, &aiErr) {
+			if aiErr, ok := errors.AsType[*ai.AIError](errObj); ok {
 				c.Set(variable.ErrorType, aiErr.Type)
 				c.Set(variable.ErrorMessage, aiErr.Message)
 
@@ -110,8 +109,7 @@ func (m *Middleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 		// Log full details internally, return generic error to client
 		for _, err := range slices.Backward(c.Errors) {
 			errObj := err.Err
-			var aiErr *ai.AIError
-			if !errors.As(errObj, &aiErr) {
+			if _, ok := errors.AsType[*ai.AIError](errObj); !ok {
 				// This is a plain error (not AIError)
 				routeID := variable.GetString(variable.RouteID, c)
 				virtualModel := ""
