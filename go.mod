@@ -1,6 +1,6 @@
 module github.com/nite-coder/bifrost
 
-go 1.26.9
+go 1.26.0
 
 tool (
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
@@ -27,7 +27,7 @@ require (
 	github.com/miekg/dns v1.1.73
 	github.com/nacos-group/nacos-sdk-go/v2 v2.3.6
 	github.com/nite-coder/blackbear v0.0.0-20260330013000-ea924e8b0fdb
-	github.com/pires/go-proxyproto v0.16.0
+	github.com/pires/go-proxyproto v0.15.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/client_model v0.6.3
 	github.com/redis/go-redis/v9 v9.23.0
@@ -58,7 +58,6 @@ require (
 	k8s.io/api v0.37.2
 	k8s.io/apimachinery v0.37.2
 	k8s.io/client-go v0.37.2
-	k8s.io/utils v0.0.0-20261023123148-ca04ba58ecab
 )
 
 require (
@@ -399,6 +398,7 @@ require (
 	honnef.co/go/tools v0.8.2 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
+	k8s.io/utils v0.0.0-20261023123148-ca04ba58ecab // indirect
 	mvdan.cc/gofumpt v0.12.0 // indirect
 	mvdan.cc/unparam v0.0.0-20260823230713-2fa3d841b0c8 // indirect
 	rsc.io/binaryregexp v0.2.0 // indirect
