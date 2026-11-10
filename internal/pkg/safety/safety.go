@@ -16,7 +16,7 @@ var Go func(ctx context.Context, f func())
 
 func init() {
 	// Default implementation runs the function synchronously with panic recovery.
-	Go = func(_ context.Context, f func()) {
+	Go = func(ctx context.Context, f func()) {
 		defer func() {
 			if r := recover(); r != nil {
 				var err error
@@ -27,7 +27,7 @@ func init() {
 					err = fmt.Errorf("%v", v)
 				}
 				stackTrace := debug.Stack()
-				slog.Error("safety Go panic recovered",
+				slog.ErrorContext(ctx, "safety Go panic recovered",
 					slog.String("error", err.Error()),
 					slog.String("stack", cast.B2S(stackTrace)),
 				)

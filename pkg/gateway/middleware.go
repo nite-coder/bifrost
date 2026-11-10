@@ -49,7 +49,7 @@ func (m *initMiddleware) ServeHTTP(ctx context.Context, c *app.RequestContext) {
 			fullURI := fullURI(&c.Request)
 			routeID := variable.GetString(variable.RouteID, c)
 
-			logger.Error("http request recovered",
+			logger.ErrorContext(ctx, "http request recovered",
 				slog.String("route_id", routeID),
 				slog.String("client_ip", c.ClientIP()),
 				slog.String("full_uri", fullURI),

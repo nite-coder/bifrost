@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -215,8 +216,15 @@ func createOTLPReader(
 	opts.Endpoint = strings.ToLower(opts.Endpoint)
 
 	if strings.HasPrefix(opts.Endpoint, "https") || strings.HasPrefix(opts.Endpoint, "http") {
+		endpointURL := opts.Endpoint
+		if u, parseErr := url.Parse(endpointURL); parseErr == nil {
+			if u.Path == "" || u.Path == "/" {
+				u.Path = "/v1/metrics"
+				endpointURL = u.String()
+			}
+		}
 		httpOpts := []otlpmetrichttp.Option{
-			otlpmetrichttp.WithEndpointURL(opts.Endpoint),
+			otlpmetrichttp.WithEndpointURL(endpointURL),
 			otlpmetrichttp.WithTimeout(timeout),
 		}
 		if opts.Insecure {

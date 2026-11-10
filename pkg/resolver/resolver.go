@@ -159,7 +159,16 @@ func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]stri
 			for _, server := range r.options.Servers {
 				in, _, err := r.client.ExchangeContext(ctx, m, server)
 				if err != nil {
-					slog.Debug("dns: failed to resolve A record", "host", host, "server", server, "error", err)
+					slog.DebugContext(
+						ctx,
+						"dns: failed to resolve A record",
+						"host",
+						host,
+						"server",
+						server,
+						"error",
+						err,
+					)
 					continue
 				}
 
@@ -197,7 +206,16 @@ func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]stri
 			for _, server := range r.options.Servers {
 				in, _, err := r.client.ExchangeContext(ctx, m, server)
 				if err != nil {
-					slog.Debug("dns: failed to resolve CNAME record", "host", host, "server", server, "error", err)
+					slog.DebugContext(
+						ctx,
+						"dns: failed to resolve CNAME record",
+						"host",
+						host,
+						"server",
+						server,
+						"error",
+						err,
+					)
 					continue
 				}
 
@@ -205,7 +223,7 @@ func (r *Resolver) Lookup(ctx context.Context, host string, queryOrder ...[]stri
 					if cname, ok := answer.(*dns.CNAME); ok {
 						resolvedIPs, err := r.Lookup(ctx, cname.Target, []string{"a"})
 						if err != nil {
-							slog.Debug(
+							slog.DebugContext(ctx,
 								"dns: failed to resolve CNAME record",
 								"host",
 								cname.String(),

@@ -13,11 +13,10 @@ coverage: test
 	go tool cover -func=cover.out
 
 lint:
-	go tool golangci-lint cache clean
 	go tool golangci-lint run --timeout 5m ./pkg/... ./internal/pkg/...
 
 lintd:
-	docker run -it --rm -v "${LOCAL_WORKSPACE_FOLDER}:/app" -w /app golangci/golangci-lint:v2.7.2-alpine golangci-lint run --timeout 5m --verbose ./pkg/...
+	docker run -it --rm -v "${LOCAL_WORKSPACE_FOLDER}:/app" -w /app golangci/golangci-lint:v2.15.0-alpine golangci-lint run --timeout 5m --verbose ./pkg/...
 
 fix:
 	go tool golangci-lint run --fix ./pkg/... ./internal/pkg/...
@@ -26,8 +25,6 @@ build:
 	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -o bin/bifrost server/bifrost/main.go
 	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -o bin/testServer server/testserver/main.go
 
-buildd:
-	docker buildx build --tag jasonsoft/bifrost .
 
 rund:
 	docker run -it --rm --name bifrost --net=host \

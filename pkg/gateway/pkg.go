@@ -78,7 +78,7 @@ func Run(mainOptions config.Options) (err error) {
 	}
 
 	if mainOptions.Gopool {
-		cgopool.SetPanicHandler(func(_ context.Context, _ any) {
+		cgopool.SetPanicHandler(func(ctx context.Context, _ any) {
 			if r := recover(); r != nil {
 				var e error
 				switch v := r.(type) {
@@ -88,7 +88,7 @@ func Run(mainOptions config.Options) (err error) {
 					e = fmt.Errorf("%v", v)
 				}
 				stackTrace := cast.B2S(debug.Stack())
-				slog.Error("netpoll panic recovered",
+				slog.ErrorContext(ctx, "netpoll panic recovered",
 					slog.String("error", e.Error()),
 					slog.String("stack", stackTrace),
 				)

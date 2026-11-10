@@ -145,7 +145,7 @@ func (d *Discovery) Lookup(ctx context.Context, host string) ([]string, error) {
 	for _, server := range d.servers {
 		in, _, err := d.client.ExchangeContext(ctx, m, server)
 		if err != nil {
-			slog.Debug("dns: failed to resolve host", "host", host, "server", server, "error", err.Error())
+			slog.DebugContext(ctx, "dns: failed to resolve host", "host", host, "server", server, "error", err.Error())
 			continue
 		}
 		for _, answer := range in.Answer {
@@ -164,7 +164,7 @@ func (d *Discovery) Lookup(ctx context.Context, host string) ([]string, error) {
 			ttlDuration = d.valid
 		}
 		d.ticker.Reset(ttlDuration)
-		slog.Debug("ttl updated", "host", host, "ips", ips, "ttl", ttlDuration)
+		slog.DebugContext(ctx, "ttl updated", "host", host, "ips", ips, "ttl", ttlDuration)
 	}
 	if len(ips) == 0 {
 		return nil, fmt.Errorf("dns: %w; cannot resolve host '%s'", ErrNotFound, host)

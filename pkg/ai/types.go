@@ -94,7 +94,7 @@ func (r *ChatRequest) UnmarshalJSON(data []byte) error {
 // MarshalJSON implements custom marshaling to flatten unknown fields.
 func (r *ChatRequest) MarshalJSON() ([]byte, error) {
 	type Alias ChatRequest
-	aux := (Alias)(*r)
+	aux := Alias(*r)
 
 	b, err := sonic.Marshal(aux)
 	if err != nil {

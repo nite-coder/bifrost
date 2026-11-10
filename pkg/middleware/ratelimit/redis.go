@@ -85,7 +85,7 @@ func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 	).Result()
 	if err != nil {
 		// downgrade
-		logger.Warn("ratelimit: redis eval error", "error", err)
+		logger.WarnContext(ctx, "ratelimit: redis eval error", "error", err)
 		now := timecache.Now()
 		return &AllowResult{
 			Allow:     true,
@@ -98,7 +98,7 @@ func (l *RedisLimiter) Allow(ctx context.Context, key string) *AllowResult {
 	resultArray, ok := result.([]any)
 	if !ok || len(resultArray) < 4 {
 		// downgrade
-		logger.Warn("ratelimit: redis result format error")
+		logger.WarnContext(ctx, "ratelimit: redis result format error")
 		now := timecache.Now()
 		return &AllowResult{
 			Allow:     true,

@@ -239,7 +239,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info, ok := (val).(*RequestOriginal)
+		info, ok := val.(*RequestOriginal)
 		if !ok {
 			return nil, false
 		}
@@ -251,7 +251,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info, ok := (val).(*RequestOriginal)
+		info, ok := val.(*RequestOriginal)
 		if !ok {
 			return nil, false
 		}
@@ -332,7 +332,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info, ok := (val).(*RequestOriginal)
+		info, ok := val.(*RequestOriginal)
 		if !ok {
 			return nil, false
 		}
@@ -354,7 +354,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info, ok := (val).(*RequestRoute)
+		info, ok := val.(*RequestRoute)
 		if !ok {
 			return nil, false
 		}
@@ -362,7 +362,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case HTTPRequestScheme:
 		val, found := c.Get(RequestOrig)
 		if found {
-			info, ok := (val).(*RequestOriginal)
+			info, ok := val.(*RequestOriginal)
 			if ok {
 				scheme := string(info.Scheme)
 				return scheme, true
@@ -377,7 +377,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 
 		val, found := c.Get(RequestOrig)
 		if found {
-			info, ok := (val).(*RequestOriginal)
+			info, ok := val.(*RequestOriginal)
 			if ok {
 				path = string(info.Path)
 			}
@@ -389,7 +389,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case HTTPRequestURI:
 		val, found := c.Get(RequestOrig)
 		if found {
-			info, ok := (val).(*RequestOriginal)
+			info, ok := val.(*RequestOriginal)
 			if ok {
 				builder := strings.Builder{}
 				_, _ = builder.Write(info.Path)
@@ -408,7 +408,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case HTTPRequestMethod:
 		val, found := c.Get(RequestOrig)
 		if found {
-			info, ok := (val).(*RequestOriginal)
+			info, ok := val.(*RequestOriginal)
 			if ok {
 				return info.Method, true
 			}
@@ -419,7 +419,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 	case HTTPRequestQuery:
 		val, found := c.Get(RequestOrig)
 		if found {
-			info, ok := (val).(*RequestOriginal)
+			info, ok := val.(*RequestOriginal)
 			if ok {
 				query := string(info.Query)
 				return query, true
@@ -441,7 +441,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info, ok := (val).(*RequestOriginal)
+		info, ok := val.(*RequestOriginal)
 		if !ok {
 			return nil, false
 		}
@@ -452,7 +452,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return nil, false
 		}
 
-		info, ok := (val).(*RequestRoute)
+		info, ok := val.(*RequestRoute)
 		if !ok {
 			return nil, false
 		}
@@ -463,7 +463,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 		if !found {
 			return nil, false
 		}
-		info, ok := (val).(*RequestRoute)
+		info, ok := val.(*RequestRoute)
 		if !ok {
 			return nil, false
 		}
@@ -474,7 +474,7 @@ func directive(key string, c *app.RequestContext) (val any, found bool) {
 			return nil, false
 		}
 
-		info, ok := (val).(*RequestRoute)
+		info, ok := val.(*RequestRoute)
 		if !ok {
 			return nil, false
 		}

@@ -171,7 +171,7 @@ func (m *Master) Run(ctx context.Context) error {
 	go safety.Go(ctx, func() {
 		e := m.controlPlane.Accept(ctx)
 		if e != nil && !errors.Is(e, context.Canceled) {
-			slog.Error("control plane accept loop exited", "error", e)
+			slog.ErrorContext(ctx, "control plane accept loop exited", "error", e)
 		}
 	})
 
@@ -186,7 +186,7 @@ func (m *Master) Run(ctx context.Context) error {
 	signal.Notify(sigCh, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGINT, syscall.SIGUSR1)
 	defer signal.Stop(sigCh)
 
-	slog.Info("master started",
+	slog.InfoContext(ctx, "master started",
 		"pid", os.Getpid(),
 		"workerPID", m.WorkerPID(),
 	)
@@ -195,9 +195,9 @@ func (m *Master) Run(ctx context.Context) error {
 	// This ensures we digest the initial "ready" signal so it doesn't linger for hot reload.
 	select {
 	case <-m.readyCh:
-		slog.Info("initial worker is ready")
+		slog.InfoContext(ctx, "initial worker is ready")
 	case <-time.After(readyWaitTimeout):
-		slog.Warn("initial worker ready timeout, proceeding anyway")
+		slog.WarnContext(ctx, "initial worker ready timeout, proceeding anyway")
 	}
 
 	// Notify systemd that service is ready (for Type=notify)
@@ -218,15 +218,15 @@ func (m *Master) Run(ctx context.Context) error {
 				slog.Log(ctx, log.LevelNotice, "received SIGHUP, triggering hot reload")
 				err := m.handleReload(ctx)
 				if err != nil {
-					slog.Error("hot reload failed", "error", err)
+					slog.ErrorContext(ctx, "hot reload failed", "error", err)
 				}
 
 			case syscall.SIGTERM, syscall.SIGINT:
-				slog.Info("received shutdown signal", "signal", sig)
+				slog.InfoContext(ctx, "received shutdown signal", "signal", sig)
 				return m.Shutdown(ctx)
 
 			case syscall.SIGUSR1:
-				slog.Info("received SIGUSR1, forwarding to worker for log rotation")
+				slog.InfoContext(ctx, "received SIGUSR1, forwarding to worker for log rotation")
 				// Note: Master's own log rotation is handled automatically by pkg/log
 				// which also listens for SIGUSR1 in a background goroutine.
 				m.mu.RLock()
@@ -236,7 +236,14 @@ func (m *Master) Run(ctx context.Context) error {
 				if worker != nil && worker.Process != nil {
 					err := worker.Process.Signal(syscall.SIGUSR1)
 					if err != nil {
-						slog.Error("failed to forward SIGUSR1 to worker", "error", err, "workerPID", worker.Process.Pid)
+						slog.ErrorContext(
+							ctx,
+							"failed to forward SIGUSR1 to worker",
+							"error",
+							err,
+							"workerPID",
+							worker.Process.Pid,
+						)
 					}
 				}
 			default:
@@ -252,18 +259,18 @@ func (m *Master) Run(ctx context.Context) error {
 			// If we are reloading, the old worker is expected to exit (or if it crashed early,
 			// the new worker is already on the way). We shouldn't restart the old one.
 			if m.State() == MasterStateReloading {
-				slog.Info("worker exited during hot reload (expected or ignored)", "pid", m.WorkerPID())
+				slog.InfoContext(ctx, "worker exited during hot reload (expected or ignored)", "pid", m.WorkerPID())
 				continue
 			}
 
 			shouldRestart, backoff, err := m.keepAlive.ShouldRestart()
 			if err != nil {
-				slog.Error("restart limit exceeded, master exiting", "error", err)
+				slog.ErrorContext(ctx, "restart limit exceeded, master exiting", "error", err)
 				return err
 			}
 
 			if shouldRestart {
-				slog.Warn("worker exited unexpectedly, restarting",
+				slog.WarnContext(ctx, "worker exited unexpectedly, restarting",
 					"backoff", backoff,
 				)
 				m.keepAlive.RecordRestart()
@@ -278,7 +285,7 @@ func (m *Master) Run(ctx context.Context) error {
 
 				err := m.spawnAndWatch(ctx)
 				if err != nil {
-					slog.Error("failed to restart worker", "error", err)
+					slog.ErrorContext(ctx, "failed to restart worker", "error", err)
 				}
 			}
 		}
@@ -286,7 +293,7 @@ func (m *Master) Run(ctx context.Context) error {
 }
 
 // Shutdown gracefully stops the Master and its Worker.
-func (m *Master) Shutdown(_ context.Context) error {
+func (m *Master) Shutdown(ctx context.Context) error {
 	m.mu.Lock()
 	if m.state == MasterStateShuttingDown {
 		m.mu.Unlock()
@@ -295,14 +302,14 @@ func (m *Master) Shutdown(_ context.Context) error {
 	m.state = MasterStateShuttingDown
 	m.mu.Unlock()
 
-	slog.Info("master shutting down")
+	slog.InfoContext(ctx, "master shutting down")
 
 	// Send SIGTERM to worker
 	if m.currentWorker != nil && m.currentWorker.Process != nil {
 		err := m.currentWorker.Process.Signal(syscall.SIGTERM)
 		if err != nil {
 			if !errors.Is(err, os.ErrProcessDone) {
-				slog.Error("failed to send SIGTERM to worker", "error", err)
+				slog.ErrorContext(ctx, "failed to send SIGTERM to worker", "error", err)
 			}
 		}
 
@@ -312,9 +319,9 @@ func (m *Master) Shutdown(_ context.Context) error {
 
 		select {
 		case <-done:
-			slog.Info("worker exited gracefully")
+			slog.InfoContext(ctx, "worker exited gracefully")
 		case <-time.After(m.options.GracefulTimeout):
-			slog.Warn("worker graceful timeout exceeded, sending SIGKILL")
+			slog.WarnContext(ctx, "worker graceful timeout exceeded, sending SIGKILL")
 			_ = m.currentWorker.Process.Kill()
 		}
 	}
@@ -439,7 +446,7 @@ func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File, keys []
 				Gid: gid,
 			}
 			cmd.SysProcAttr = sysProcAttr
-			slog.Info("configured worker credentials", "uid", uid, "gid", gid)
+			slog.InfoContext(ctx, "configured worker credentials", "uid", uid, "gid", gid)
 		}
 	}
 
@@ -484,7 +491,7 @@ func (m *Master) spawnWorker(ctx context.Context, extraFiles []*os.File, keys []
 		return nil, fmt.Errorf("failed to start worker: %w", err)
 	}
 
-	slog.Debug("spawned new worker",
+	slog.DebugContext(ctx, "spawned new worker",
 		"workerPID", cmd.Process.Pid,
 		"extraFiles", len(extraFiles),
 		"keys", keys,
@@ -509,8 +516,7 @@ func (m *Master) watchWorker(cmd *exec.Cmd, exitCh chan struct{}) {
 	// Only notify if this is still the current worker
 	if currentWorker == cmd {
 		exitCode := -1
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
+		if exitError, ok := errors.AsType[*exec.ExitError](err); ok {
 			exitCode = exitError.ExitCode()
 		}
 
@@ -554,7 +560,7 @@ func (m *Master) handleReload(ctx context.Context) error {
 		m.mu.Unlock()
 	}()
 
-	slog.Info("starting hot reload", "oldWorkerPID", oldWorkerPID)
+	slog.InfoContext(ctx, "starting hot reload", "oldWorkerPID", oldWorkerPID)
 
 	// Step 1: Request FDs from old worker
 	var fds []*os.File
@@ -570,7 +576,7 @@ func (m *Master) handleReload(ctx context.Context) error {
 			Type: MessageTypeFDRequest,
 		})
 		if err != nil {
-			slog.Warn("failed to request FDs from old worker", "error", err)
+			slog.WarnContext(ctx, "failed to request FDs from old worker", "error", err)
 			// Continue without FDs - new worker will create new listeners
 		} else {
 			// Wait for FDs via channel
@@ -579,7 +585,7 @@ func (m *Master) handleReload(ctx context.Context) error {
 				fds = data.fds
 				keys = data.keys
 			case <-time.After(fdWaitTimeout):
-				slog.Warn("timeout waiting for FDs from old worker")
+				slog.WarnContext(ctx, "timeout waiting for FDs from old worker")
 			}
 		}
 	}
@@ -595,7 +601,7 @@ func (m *Master) handleReload(ctx context.Context) error {
 	// Step 2b: Drain any stale ready signals
 	select {
 	case <-m.readyCh:
-		slog.Info("drained stale ready signal")
+		slog.InfoContext(ctx, "drained stale ready signal")
 	default:
 	}
 
@@ -603,9 +609,9 @@ func (m *Master) handleReload(ctx context.Context) error {
 	readyTimeout := readyWaitTimeout
 	select {
 	case <-m.readyCh:
-		slog.Info("new worker is ready", "newWorkerPID", newCmd.Process.Pid)
+		slog.InfoContext(ctx, "new worker is ready", "newWorkerPID", newCmd.Process.Pid)
 	case <-time.After(readyTimeout):
-		slog.Warn("new worker ready timeout, proceeding anyway")
+		slog.WarnContext(ctx, "new worker ready timeout, proceeding anyway")
 	}
 
 	// Step 4: Update current worker and stop old one
@@ -623,11 +629,11 @@ func (m *Master) handleReload(ctx context.Context) error {
 
 	// Gracefully stop old worker
 	if oldWorker != nil && oldWorker.Process != nil {
-		slog.Info("stopping old worker", "oldWorkerPID", oldWorkerPID)
+		slog.InfoContext(ctx, "stopping old worker", "oldWorkerPID", oldWorkerPID)
 		err := oldWorker.Process.Signal(syscall.SIGTERM)
 		if err != nil {
 			if !errors.Is(err, os.ErrProcessDone) {
-				slog.Error("failed to send SIGTERM to old worker", "error", err)
+				slog.ErrorContext(ctx, "failed to send SIGTERM to old worker", "error", err)
 			}
 		}
 	}

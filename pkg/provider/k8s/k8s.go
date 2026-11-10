@@ -143,7 +143,7 @@ func (k *Discovery) GetInstances(
 		}
 	}
 
-	logger.Info("discovered instances", "count", len(instances))
+	logger.InfoContext(ctx, "discovered instances", "count", len(instances))
 	return []provider.DiscoveryResult{
 		{
 			Target: options.Name,
@@ -189,7 +189,12 @@ func (k *Discovery) Watch(
 					if isEndpointSliceReady(endpointSlice) {
 						instances, err := k.GetInstances(ctx, options)
 						if err != nil {
-							logger.Warn("failed to get instances after endpoints update", "error", err.Error())
+							logger.WarnContext(
+								ctx,
+								"failed to get instances after endpoints update",
+								"error",
+								err.Error(),
+							)
 							continue
 						}
 						ch <- instances
@@ -197,7 +202,7 @@ func (k *Discovery) Watch(
 				case watch.Deleted:
 					ch <- []provider.DiscoveryResult{{Target: options.Name, Nodes: []provider.Instancer{}}} // service is down
 				case watch.Error:
-					logger.Warn("received error event from endpoints watcher")
+					logger.WarnContext(ctx, "received error event from endpoints watcher")
 					continue
 				default:
 					continue

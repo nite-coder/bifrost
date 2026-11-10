@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/utils/ptr"
 
 	"github.com/nite-coder/bifrost/pkg/provider"
 )
@@ -45,13 +44,13 @@ func TestGetInstances(t *testing.T) {
 							Name: "test-pod-1",
 						},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready: ptr.To(true),
+							Ready: new(true),
 						},
 					},
 				},
 				Ports: []discoveryv1.EndpointPort{
 					{
-						Port: ptr.To(int32(8080)),
+						Port: new(int32(8080)),
 					},
 				},
 			},
@@ -109,13 +108,13 @@ func TestGetInstances(t *testing.T) {
 					{
 						Addresses: []string{"192.168.1.1"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready: ptr.To(true),
+							Ready: new(true),
 						},
 					},
 				},
 				Ports: []discoveryv1.EndpointPort{
 					{
-						Port: ptr.To(int32(8080)),
+						Port: new(int32(8080)),
 					},
 				},
 			},
@@ -206,13 +205,13 @@ func TestWatch(t *testing.T) {
 							Name: "test-pod-1",
 						},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready: ptr.To(true),
+							Ready: new(true),
 						},
 					},
 				},
 				Ports: []discoveryv1.EndpointPort{
 					{
-						Port: ptr.To(int32(8080)),
+						Port: new(int32(8080)),
 					},
 				},
 			},
@@ -270,13 +269,13 @@ func TestWatch(t *testing.T) {
 									Name: "test-pod-2",
 								},
 								Conditions: discoveryv1.EndpointConditions{
-									Ready: ptr.To(true),
+									Ready: new(true),
 								},
 							},
 						},
 						Ports: []discoveryv1.EndpointPort{
 							{
-								Port: ptr.To(int32(8080)),
+								Port: new(int32(8080)),
 							},
 						},
 					},
@@ -328,24 +327,34 @@ func TestWatch(t *testing.T) {
 					)
 					require.NoError(t, e)
 
-					select {
-					case results := <-ch:
-						instances := results[0].Nodes
-						assert.Len(t, instances, op.expected)
-						found := false
-						for _, instance := range instances {
-							t.Logf("Found instance: %s", instance.Address().String())
-							if instance.Address().String() == op.instance {
-								found = true
-								if op.hasWeight {
-									assert.Equal(t, uint32(1), instance.Weight())
-								}
+					var instances []provider.Instancer
+					deadline := time.Now().Add(5 * time.Second)
+				waitLoop:
+					for time.Now().Before(deadline) {
+						select {
+						case results := <-ch:
+							if len(results) > 0 && len(results[0].Nodes) == op.expected {
+								instances = results[0].Nodes
+								break waitLoop
+							}
+						case <-time.After(500 * time.Millisecond):
+						}
+						if len(instances) == op.expected {
+							break
+						}
+					}
+					require.Len(t, instances, op.expected)
+					found := false
+					for _, instance := range instances {
+						t.Logf("Found instance: %s", instance.Address().String())
+						if instance.Address().String() == op.instance {
+							found = true
+							if op.hasWeight {
+								assert.Equal(t, uint32(1), instance.Weight())
 							}
 						}
-						assert.True(t, found, "Expected instance %s not found", op.instance)
-					case <-time.After(5 * time.Second):
-						t.Fatal("timeout waiting for watch update")
 					}
+					assert.True(t, found, "Expected instance %s not found", op.instance)
 				}
 			}
 		})
